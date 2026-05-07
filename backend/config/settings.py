@@ -152,4 +152,3 @@ CORS_ALLOW_METHODS = [
     "POST",
     "PUT",
 ]
-]
