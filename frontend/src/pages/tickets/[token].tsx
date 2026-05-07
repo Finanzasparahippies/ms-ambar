@@ -23,7 +23,7 @@ export default function TicketPage() {
         <title>Tu Boleto | MS AMBAR</title>
       </Head>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-md bg-white text-black rounded-[40px] overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.1)]"
@@ -35,7 +35,7 @@ export default function TicketPage() {
 
         <div className="p-10 flex flex-col items-center">
           <div className="bg-white p-4 rounded-3xl shadow-xl mb-8">
-            <QRCodeSVG value={`https://msambar.dev/tickets/${token}`} size={200} />
+            <QRCodeSVG value={`https://msambar.com/tickets/${token}`} size={200} />
           </div>
 
           <div className="w-full space-y-6">
