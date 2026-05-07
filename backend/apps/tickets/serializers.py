@@ -4,7 +4,7 @@ from .models import Event, Theater, Seat, Ticket
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seat
-        fields = '__all__'
+        fields = ['id', 'section', 'row', 'number', 'category', 'base_price', 'x', 'y', 'angle']
 
 class TheaterSerializer(serializers.ModelSerializer):
     seats = SeatSerializer(many=True, read_only=True)

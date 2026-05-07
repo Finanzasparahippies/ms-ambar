@@ -11,42 +11,55 @@ class Theater(models.Model):
 
     def generate_seats(self):
         """
-        Generates Seat objects based on the layout JSON.
-        Expected format: 
-        {
-            "sections": [
-                {
-                    "name": "VIP Frontal",
-                    "position": "front",
-                    "rows": [
-                        {"label": "A", "count": 10, "category": "vip", "base_price": 2500},
-                        ...
-                    ]
-                }
-            ]
-        }
+        Generates Seat objects with 2D coordinates.
+        Supports 'grid' (default) and 'arc' (future) layouts.
         """
+        import math
         sections = self.layout.get('sections', [])
         created_count = 0
+        
         for section in sections:
             sec_name = section.get('name')
-            pos = section.get('position', 'front')
-            for row_data in section.get('rows', []):
+            # Section Base Parameters
+            base_x = section.get('x', 500)
+            base_y = section.get('y', 500)
+            sec_angle_deg = section.get('angle', 0)
+            sec_angle_rad = math.radians(sec_angle_deg)
+            
+            row_spacing = section.get('row_spacing', 40)
+            seat_spacing = section.get('seat_spacing', 30)
+            
+            for r_idx, row_data in enumerate(section.get('rows', [])):
                 label = row_data.get('label')
                 count = row_data.get('count', 0)
                 cat = row_data.get('category', 'standard')
                 price = row_data.get('base_price', 1000)
                 
-                for i in range(1, count + 1):
-                    Seat.objects.get_or_create(
+                for s_idx in range(count):
+                    # Local coordinates relative to section center
+                    # We center the row horizontally
+                    local_x = (s_idx - (count - 1) / 2) * seat_spacing
+                    local_y = r_idx * row_spacing
+                    
+                    # Apply Rotation Matrix
+                    rotated_x = local_x * math.cos(sec_angle_rad) - local_y * math.sin(sec_angle_rad)
+                    rotated_y = local_x * math.sin(sec_angle_rad) + local_y * math.cos(sec_angle_rad)
+                    
+                    # Final Global Coordinates
+                    final_x = base_x + rotated_x
+                    final_y = base_y + rotated_y
+                    
+                    Seat.objects.update_or_create(
                         theater=self,
                         section=sec_name,
-                        position=pos,
                         row=label,
-                        number=i,
+                        number=s_idx + 1,
                         defaults={
                             'category': cat,
-                            'base_price': price
+                            'base_price': price,
+                            'x': final_x,
+                            'y': final_y,
+                            'angle': sec_angle_deg
                         }
                     )
                     created_count += 1
@@ -96,6 +109,11 @@ class Seat(models.Model):
     number = models.IntegerField()
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='standard')
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Precise positioning
+    x = models.FloatField(default=0)
+    y = models.FloatField(default=0)
+    angle = models.FloatField(default=0) # In degrees
 
     class Meta:
         unique_together = ('theater', 'section', 'row', 'number')
