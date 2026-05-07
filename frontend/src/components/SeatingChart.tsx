@@ -1,5 +1,4 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { cn } from '../lib/utils';
 
 interface Seat {
@@ -20,107 +19,260 @@ interface SeatingChartProps {
 }
 
 const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
-  if (!seats || seats.length === 0) {
-    return (
-      <div className="h-[600px] flex items-center justify-center bg-neutral-900/20 rounded-[4rem] border border-neutral-800 border-dashed">
-        <div className="text-neutral-600 font-black uppercase tracking-[0.5em] text-center px-10">
-          No hay asientos configurados para este evento.<br/>
-          <span className="text-[10px] mt-4 block opacity-50 font-bold">Genera los asientos desde el panel administrativo.</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Find the bounds of the map to center and scale it
-  const allX = seats.map(s => s.x);
-  const allY = seats.map(s => s.y);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
-  const minX = Math.min(...allX);
-  const maxX = Math.max(...allX);
-  const minY = Math.min(...allY);
-  const maxY = Math.max(...allY);
+  // Transform state (Pan & Zoom)
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const [hoveredSeatId, setHoveredSeatId] = useState<number | null>(null);
 
-  const rawWidth = maxX - minX;
-  const rawHeight = maxY - minY;
-  
-  // Adding padding
-  const padding = 100;
-  const width = rawWidth + padding * 2;
-  const height = rawHeight + padding * 2;
+  // Initialize view to center seats
+  useEffect(() => {
+    if (seats.length > 0 && containerRef.current) {
+      const allX = seats.map(s => s.x);
+      const allY = seats.map(s => s.y);
+      const minX = Math.min(...allX);
+      const maxX = Math.max(...allX);
+      const minY = Math.min(...allY);
+      const maxY = Math.max(...allY);
+      
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+      
+      const width = maxX - minX + 200;
+      const height = maxY - minY + 200;
+      
+      const container = containerRef.current;
+      const scale = Math.min(container.clientWidth / width, container.clientHeight / height, 1);
+      
+      setTransform({
+        x: container.clientWidth / 2 - centerX * scale,
+        y: container.clientHeight / 2 - centerY * scale,
+        scale: scale
+      });
+    }
+  }, [seats.length]);
 
-  // Scaling to fit a reasonable container
-  const containerWidth = 1000;
-  const scale = containerWidth / width;
-  const containerHeight = height * scale;
+  // Main Render Loop
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Handle High DPI
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(transform.x, transform.y);
+      ctx.scale(transform.scale, transform.scale);
+
+      // 1. Draw Stage (Static Position)
+      drawStage(ctx);
+
+      // 2. Draw Seats
+      seats.forEach(seat => {
+        drawSeat(ctx, seat, hoveredSeatId === seat.id);
+      });
+
+      ctx.restore();
+    };
+
+    render();
+  }, [seats, transform, hoveredSeatId]);
+
+  const drawStage = (ctx: CanvasRenderingContext2D) => {
+    const stageWidth = 600;
+    const stageHeight = 10;
+    ctx.save();
+    
+    // Stage Glow
+    const gradient = ctx.createLinearGradient(500 - stageWidth/2, 0, 500 + stageWidth/2, 0);
+    gradient.addColorStop(0, 'rgba(245, 158, 11, 0)');
+    gradient.addColorStop(0.5, 'rgba(245, 158, 11, 0.8)');
+    gradient.addColorStop(1, 'rgba(245, 158, 11, 0)');
+    
+    ctx.fillStyle = gradient;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#f59e0b';
+    ctx.fillRect(500 - stageWidth/2, 50, stageWidth, stageHeight);
+    
+    ctx.font = 'bold 12px Inter';
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.3)';
+    ctx.textAlign = 'center';
+    ctx.fillText('ESCENARIO PRINCIPAL', 500, 40);
+    ctx.restore();
+  };
+
+  const drawSeat = (ctx: CanvasRenderingContext2D, seat: Seat, isHovered: boolean) => {
+    const size = 18;
+    ctx.save();
+    ctx.translate(seat.x, seat.y);
+    ctx.rotate((seat.angle * Math.PI) / 180);
+
+    // Styling based on status
+    let color = '#262626'; // Default (standard available)
+    let borderColor = '#404040';
+    let textColor = '#525252';
+
+    if (seat.status === 'occupied') {
+       color = '#171717';
+       borderColor = '#262626';
+       ctx.globalAlpha = 0.5;
+    } else if (seat.status === 'selected') {
+       color = '#ffffff';
+       borderColor = '#ffffff';
+       textColor = '#000000';
+    } else if (seat.category === 'vip') {
+       color = 'rgba(245, 158, 11, 0.1)';
+       borderColor = 'rgba(245, 158, 11, 0.5)';
+       textColor = '#f59e0b';
+    }
+
+    if (isHovered && seat.status !== 'occupied') {
+       ctx.scale(1.2, 1.2);
+       if (seat.status !== 'selected') borderColor = '#f59e0b';
+    }
+
+    // Draw Seat Rect
+    ctx.fillStyle = color;
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    
+    // Rounded Rect Path
+    const r = 4;
+    ctx.beginPath();
+    ctx.roundRect(-size/2, -size/2, size, size, r);
+    ctx.fill();
+    ctx.stroke();
+
+    // Seat Number
+    ctx.font = '9px Inter';
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(seat.number.toString(), 0, 0);
+
+    // VIP Dot
+    if (seat.category === 'vip' && seat.status !== 'selected' && seat.status !== 'occupied') {
+      ctx.beginPath();
+      ctx.arc(0, size/2 - 3, 1, 0, Math.PI * 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fill();
+    }
+
+    ctx.restore();
+  };
+
+  // Interaction Handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setLastMousePos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      const dx = e.clientX - lastMousePos.x;
+      const dy = e.clientY - lastMousePos.y;
+      setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+      setLastMousePos({ x: e.clientX, y: e.clientY });
+    }
+
+    // Hit Testing for hover
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
+    const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
+    
+    const hitSeat = seats.find(s => {
+      const dx = s.x - mouseX;
+      const dy = s.y - mouseY;
+      return Math.sqrt(dx*dx + dy*dy) < 12; // 12px radius hit test
+    });
+
+    setHoveredSeatId(hitSeat?.id || null);
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    setIsDragging(false);
+    
+    // Handle Click (only if not dragging much)
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
+    const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
+    
+    const hitSeat = seats.find(s => {
+      const dx = s.x - mouseX;
+      const dy = s.y - mouseY;
+      return Math.sqrt(dx*dx + dy*dy) < 12;
+    });
+
+    if (hitSeat && hitSeat.status !== 'occupied') {
+      onSeatSelect(hitSeat);
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = -e.deltaY;
+    const factor = delta > 0 ? 1.1 : 0.9;
+    const newScale = Math.max(0.1, Math.min(transform.scale * factor, 5));
+    
+    // Zoom toward mouse position
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const newX = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    const newY = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+
+    setTransform({ x: newX, y: newY, scale: newScale });
+  };
 
   return (
-    <div className="w-full bg-neutral-900/40 rounded-[4rem] border border-neutral-800 p-10 overflow-hidden relative min-h-[600px] flex flex-col items-center select-none">
-      
-      {/* Legend Top */}
-      <div className="w-full flex justify-between items-center mb-10 text-[8px] font-black uppercase tracking-widest text-neutral-500">
-         <div className="flex gap-6">
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-500 rounded-sm" /> VIP</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 bg-neutral-700 rounded-sm" /> General</div>
-         </div>
-         <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> Recinto Sincronizado
-         </div>
-      </div>
+    <div 
+      ref={containerRef}
+      className="w-full h-[700px] bg-black rounded-[4rem] border border-neutral-900 relative overflow-hidden group cursor-grab active:cursor-grabbing"
+    >
+      <canvas
+        ref={canvasRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onWheel={handleWheel}
+        className="w-full h-full"
+      />
 
-      <div className="relative w-full overflow-auto scrollbar-hide py-20 flex justify-center">
-        <div 
-          className="relative" 
-          style={{ 
-            width: width * scale, 
-            height: height * scale,
-            minWidth: width * scale
-          }}
-        >
-          {/* Stage Visualization (Fixed at top) */}
-          <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-[40%] h-1 bg-amber-500/50 blur-[2px] rounded-full" />
-          <div className="absolute top-[-30px] left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-[0.8em] text-amber-500/20 whitespace-nowrap">
-            Escenario
-          </div>
-
-          {seats.map((seat) => (
-            <motion.div
-              key={seat.id}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              whileHover={{ scale: 1.4, zIndex: 100 }}
-              onClick={() => seat.status !== 'occupied' && onSeatSelect(seat)}
-              style={{
-                position: 'absolute',
-                // Map coordinates and center
-                left: (seat.x - minX + padding) * scale,
-                top: (seat.y - minY + padding) * scale,
-                transform: `translate(-50%, -50%) rotate(${seat.angle}deg)`,
-                width: 24 * scale,
-                height: 24 * scale,
-              }}
-              className={cn(
-                "rounded-md cursor-pointer flex items-center justify-center text-[10px] font-black transition-all border shadow-lg group",
-                seat.status === 'occupied' && "bg-neutral-800 border-neutral-700 text-neutral-600 cursor-not-allowed opacity-40",
-                seat.status === 'available' && seat.category === 'vip' && "bg-amber-500/10 border-amber-500/40 text-amber-500 hover:bg-amber-500 hover:text-black",
-                seat.status === 'available' && seat.category !== 'vip' && "bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:border-amber-500/50 hover:text-white",
-                seat.status === 'selected' && "bg-white border-white text-black scale-125 z-50 shadow-[0_0_20px_rgba(255,255,255,0.4)]"
-              )}
-            >
-              <span style={{ transform: `scale(${scale})` }}>
-                {seat.number}
-              </span>
-
-              {/* Tooltip */}
-              <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white text-black px-2 py-1 rounded text-[7px] font-black whitespace-nowrap z-[200] pointer-events-none shadow-xl">
-                 {seat.section} • {seat.row}{seat.number}
-              </div>
-            </motion.div>
-          ))}
+      {/* UI Overlays */}
+      <div className="absolute bottom-8 right-8 flex flex-col gap-4">
+        <div className="bg-neutral-900/80 backdrop-blur px-6 py-4 rounded-3xl border border-neutral-800 flex gap-8 items-center">
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-black text-white">{Math.round(transform.scale * 100)}%</span>
+              <span className="text-[8px] font-bold text-neutral-500">ZOOM</span>
+            </div>
+            <div className="h-8 w-px bg-neutral-800" />
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-black text-white">{seats.length.toLocaleString()}</span>
+              <span className="text-[8px] font-bold text-neutral-500">ASIENTOS</span>
+            </div>
         </div>
       </div>
 
-      <div className="mt-10 text-[9px] font-medium text-neutral-600 italic">
-        * Selecciona tus asientos haciendo clic sobre ellos. El precio se actualizará automáticamente.
+      <div className="absolute top-8 left-1/2 -translate-x-1/2 pointer-events-none">
+        <div className="px-6 py-2 bg-amber-500/10 border border-amber-500/20 rounded-full backdrop-blur-sm">
+           <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest">Vista de Estadio Activada</p>
+        </div>
       </div>
     </div>
   );

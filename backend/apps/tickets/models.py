@@ -20,7 +20,9 @@ class Theater(models.Model):
         
         for section in sections:
             sec_name = section.get('name')
-            # Section Base Parameters
+            layout_type = section.get('layout_type', 'grid') # grid or arc
+            
+            # Base Position
             base_x = section.get('x', 500)
             base_y = section.get('y', 500)
             sec_angle_deg = section.get('angle', 0)
@@ -36,18 +38,30 @@ class Theater(models.Model):
                 price = row_data.get('base_price', 1000)
                 
                 for s_idx in range(count):
-                    # Local coordinates relative to section center
-                    # We center the row horizontally
-                    local_x = (s_idx - (count - 1) / 2) * seat_spacing
-                    local_y = r_idx * row_spacing
+                    final_x, final_y, final_angle = 0, 0, sec_angle_deg
                     
-                    # Apply Rotation Matrix
-                    rotated_x = local_x * math.cos(sec_angle_rad) - local_y * math.sin(sec_angle_rad)
-                    rotated_y = local_x * math.sin(sec_angle_rad) + local_y * math.cos(sec_angle_rad)
+                    if layout_type == 'grid':
+                        # Local grid coordinates
+                        local_x = (s_idx - (count - 1) / 2) * seat_spacing
+                        local_y = r_idx * row_spacing
+                        # Rotation Matrix
+                        rotated_x = local_x * math.cos(sec_angle_rad) - local_y * math.sin(sec_angle_rad)
+                        rotated_y = local_x * math.sin(sec_angle_rad) + local_y * math.cos(sec_angle_rad)
+                        final_x, final_y = base_x + rotated_x, base_y + rotated_y
                     
-                    # Final Global Coordinates
-                    final_x = base_x + rotated_x
-                    final_y = base_y + rotated_y
+                    elif layout_type == 'arc':
+                        # Radial logic: seats distributed along an arc
+                        radius = section.get('radius', 300) + (r_idx * row_spacing)
+                        # Spread seats over a specific aperture (angle)
+                        aperture = section.get('aperture', 90)
+                        seat_angle_step = aperture / max(1, count - 1)
+                        # Current seat angle relative to section center
+                        seat_angle_deg = sec_angle_deg + (s_idx * seat_angle_step) - (aperture / 2)
+                        seat_angle_rad = math.radians(seat_angle_deg)
+                        
+                        final_x = base_x + radius * math.cos(seat_angle_rad)
+                        final_y = base_y + radius * math.sin(seat_angle_rad)
+                        final_angle = seat_angle_deg + 90 # Face the center
                     
                     Seat.objects.update_or_create(
                         theater=self,
@@ -59,7 +73,7 @@ class Theater(models.Model):
                             'base_price': price,
                             'x': final_x,
                             'y': final_y,
-                            'angle': sec_angle_deg
+                            'angle': final_angle
                         }
                     )
                     created_count += 1
