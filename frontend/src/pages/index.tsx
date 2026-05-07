@@ -17,7 +17,7 @@ const Home = () => {
   // Fetch Events
   React.useEffect(() => {
     setIsMounted(true);
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
     console.log("Using API URL:", apiUrl);
     fetch(`${apiUrl}/tickets/events/`)
       .then(res => res.json())
@@ -32,8 +32,8 @@ const Home = () => {
   // Fetch Seats for current event
   React.useEffect(() => {
     if (!currentEvent) return;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
+
     fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
       .then(res => res.json())
       .then(data => {
@@ -60,7 +60,7 @@ const Home = () => {
   };
 
   const getPrice = (cat) => {
-    switch(cat) {
+    switch (cat) {
       case 'vip': return 3500;
       case 'general_a': return 1800;
       default: return 1200;
@@ -129,9 +129,9 @@ const Home = () => {
           <div className="lg:col-span-4">
             <motion.div layout className="bg-neutral-900/50 backdrop-blur-2xl p-8 rounded-[3rem] border border-neutral-800 sticky top-8">
               <h3 className="text-2xl font-black mb-8 tracking-tight text-center">Confirmación</h3>
-              
+
               {/* Meet & Greet Toggle */}
-              <div 
+              <div
                 onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
                 className={cn(
                   "mb-8 p-6 rounded-3xl border transition-all cursor-pointer group relative overflow-hidden",
@@ -160,7 +160,7 @@ const Home = () => {
               <div className="space-y-4 mb-10">
                 <AnimatePresence mode="popLayout">
                   {selectedSeats.map(seat => (
-                    <motion.div 
+                    <motion.div
                       key={seat.id}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -175,7 +175,7 @@ const Home = () => {
                     </motion.div>
                   ))}
                 </AnimatePresence>
-                
+
                 {selectedSeats.length === 0 && (
                   <div className="py-10 text-center border-2 border-dashed border-neutral-800 rounded-3xl">
                     <Ticket className="mx-auto mb-3 opacity-20" size={32} />
@@ -194,7 +194,7 @@ const Home = () => {
                 </div>
               </div>
 
-              <motion.button 
+              <motion.button
                 whileTap={{ scale: 0.95 }}
                 disabled={selectedSeats.length === 0}
                 className="w-full py-6 bg-white text-black text-xs font-black uppercase tracking-[0.4em] rounded-2xl disabled:opacity-20 hover:bg-amber-500 transition-colors shadow-2xl shadow-amber-500/10"
