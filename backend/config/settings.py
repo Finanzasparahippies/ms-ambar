@@ -108,6 +108,8 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 # Stripe Settings
 STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")

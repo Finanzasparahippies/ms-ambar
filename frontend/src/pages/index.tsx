@@ -18,6 +18,7 @@ const Home = () => {
   React.useEffect(() => {
     setIsMounted(true);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    console.log("Using API URL:", apiUrl);
     fetch(`${apiUrl}/tickets/events/`)
       .then(res => res.json())
       .then(data => {
