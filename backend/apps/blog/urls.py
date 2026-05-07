@@ -1,12 +1,11 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CategoryViewSet, ProductViewSet, stripe_webhook
+from .views import CategoryViewSet, PostViewSet
 
 router = DefaultRouter()
 router.register('categories', CategoryViewSet)
-router.register('products', ProductViewSet)
+router.register('posts', PostViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('webhook/', stripe_webhook, name='stripe-webhook'),
 ]

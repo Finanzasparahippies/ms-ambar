@@ -6,4 +6,6 @@ urlpatterns = [
     path('api/tickets/', include('apps.tickets.urls')),
     path('api/shop/', include('apps.shop.urls')),
     path('api/users/', include('apps.users.urls')),
+    # path('api/blog/', include('apps.blog.urls')),
+    # path('api/bookings/', include('apps.bookings.urls')),
 ]

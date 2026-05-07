@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     "apps.users",
     "apps.tickets",
     "apps.shop",
+    "apps.blog",
+    "apps.bookings",
 ]
 
 MIDDLEWARE = [
