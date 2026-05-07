@@ -3,6 +3,7 @@ import Head from 'next/head';
 import SeatingChart from '../components/SeatingChart';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Ticket, Users, Music2, MapPin, Calendar, Star } from 'lucide-react';
+import { cn } from '../lib/utils';
 
 const Home = () => {
   const [seats, setSeats] = useState([]);
