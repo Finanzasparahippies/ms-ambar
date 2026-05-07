@@ -126,4 +126,21 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS and CSRF Settings
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all during development/debug
+
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        env("FRONTEND_URL", default=""),
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        env("FRONTEND_URL", default=""),
+    ]
+else:
+    # In debug mode, allow all origins and CSRF for easier testing in Codespaces
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://*.github.dev",
+        "https://*.app.github.dev",
+    ]

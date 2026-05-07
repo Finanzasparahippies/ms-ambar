@@ -17,11 +17,12 @@ const Home = () => {
   // Fetch Events
   React.useEffect(() => {
     setIsMounted(true);
-    fetch('http://localhost:8000/api/tickets/events/')
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    fetch(`${apiUrl}/tickets/events/`)
       .then(res => res.json())
       .then(data => {
         setEvents(data);
-        if (data.length > 0) setCurrentEvent(data[0]);
+        if (data && data.length > 0) setCurrentEvent(data[0]);
         setIsLoading(false);
       })
       .catch(err => console.error("Error fetching events:", err));
@@ -30,11 +31,11 @@ const Home = () => {
   // Fetch Seats for current event
   React.useEffect(() => {
     if (!currentEvent) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
     
-    fetch(`http://localhost:8000/api/tickets/events/${currentEvent.id}/seats/`)
+    fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
       .then(res => res.json())
       .then(data => {
-        // Map backend seat status/category to frontend expectations if necessary
         setSeats(data);
       })
       .catch(err => console.error("Error fetching seats:", err));
