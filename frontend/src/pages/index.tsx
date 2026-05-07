@@ -6,42 +6,39 @@ import { Ticket, Users, Music2, MapPin, Calendar, Star } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const Home = () => {
+  const [events, setEvents] = useState([]);
+  const [currentEvent, setCurrentEvent] = useState(null);
   const [seats, setSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [wantsMG, setWantsMG] = useState(false);
-  const [mgAvailable, setMgAvailable] = useState(15); // Mock availability
 
+  // Fetch Events
   React.useEffect(() => {
     setIsMounted(true);
-    const initial = [];
-    
-    // Define sections based on the new logic
-    const sections = [
-      { name: 'VIP Frontal', pos: 'front', rows: ['A', 'B'], count: 8, cat: 'vip' },
-      { name: 'General A', pos: 'front', rows: ['C', 'D', 'E'], count: 12, cat: 'general_a' },
-      { name: 'Lateral Izq', pos: 'side_left', rows: ['L1', 'L2'], count: 10, cat: 'standard' },
-      { name: 'Lateral Der', pos: 'side_right', rows: ['R1', 'R2'], count: 10, cat: 'standard' }
-    ];
-
-    let id = 0;
-    sections.forEach(sec => {
-      sec.rows.forEach(row => {
-        for (let i = 1; i <= sec.count; i++) {
-          initial.push({
-            id: id++,
-            row: row,
-            number: i,
-            status: Math.random() > 0.9 ? 'occupied' : 'available',
-            category: sec.cat,
-            section: sec.name,
-            position: sec.pos
-          });
-        }
-      });
-    });
-    setSeats(initial);
+    fetch('http://localhost:8000/api/tickets/events/')
+      .then(res => res.json())
+      .then(data => {
+        setEvents(data);
+        if (data.length > 0) setCurrentEvent(data[0]);
+        setIsLoading(false);
+      })
+      .catch(err => console.error("Error fetching events:", err));
   }, []);
+
+  // Fetch Seats for current event
+  React.useEffect(() => {
+    if (!currentEvent) return;
+    
+    fetch(`http://localhost:8000/api/tickets/events/${currentEvent.id}/seats/`)
+      .then(res => res.json())
+      .then(data => {
+        // Map backend seat status/category to frontend expectations if necessary
+        setSeats(data);
+      })
+      .catch(err => console.error("Error fetching seats:", err));
+  }, [currentEvent]);
 
   if (!isMounted) return <div className="min-h-screen bg-black" />;
 
@@ -104,21 +101,27 @@ const Home = () => {
           <div className="lg:col-span-8">
             <header className="mb-10">
               <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-6">
-                Tour 2026: <span className="text-amber-500 italic">Eclipse</span>
+                {currentEvent ? currentEvent.title : 'Cargando Evento...'}
               </h2>
               <div className="flex flex-wrap gap-6 text-sm text-neutral-500">
                 <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
                   <MapPin size={14} className="text-amber-500" />
-                  <span>Teatro Metropolitan, CDMX</span>
+                  <span>{currentEvent ? currentEvent.theater_name : 'Cargando Recinto...'}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
                   <Calendar size={14} className="text-amber-500" />
-                  <span>15 de Junio, 2026</span>
+                  <span>{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
                 </div>
               </div>
             </header>
 
-            <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} />
+            {isLoading ? (
+              <div className="h-[600px] flex items-center justify-center bg-neutral-900/20 rounded-[4rem] border border-neutral-800">
+                <div className="text-amber-500 animate-pulse font-black uppercase tracking-[0.5em]">Sincronizando con el Recinto...</div>
+              </div>
+            ) : (
+              <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} />
+            )}
           </div>
 
           <div className="lg:col-span-4">
@@ -127,7 +130,7 @@ const Home = () => {
               
               {/* Meet & Greet Toggle */}
               <div 
-                onClick={() => mgAvailable > 0 && setWantsMG(!wantsMG)}
+                onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
                 className={cn(
                   "mb-8 p-6 rounded-3xl border transition-all cursor-pointer group relative overflow-hidden",
                   wantsMG ? "bg-amber-500 border-amber-400" : "bg-neutral-800/30 border-neutral-700 hover:border-amber-500/50"
@@ -143,11 +146,13 @@ const Home = () => {
                   <div>
                     <h4 className={cn("font-black text-sm uppercase tracking-widest", wantsMG ? "text-black" : "text-white")}>Meet & Greet</h4>
                     <p className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-black/60" : "text-amber-500/80")}>
-                      {mgAvailable > 0 ? `${mgAvailable} Cupos Disponibles` : 'Agotado'}
+                      {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Cupos Disponibles` : 'Agotado'}
                     </p>
                   </div>
                 </div>
-                {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-neutral-600">+$2,500</span>}
+                {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-neutral-600">
+                  {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
+                </span>}
               </div>
 
               <div className="space-y-4 mb-10">
