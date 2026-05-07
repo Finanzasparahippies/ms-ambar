@@ -2,32 +2,42 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 import SeatingChart from '../components/SeatingChart';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Ticket, Users, Music2, MapPin, Calendar } from 'lucide-react';
+import { Ticket, Users, Music2, MapPin, Calendar, Star } from 'lucide-react';
 
 const Home = () => {
   const [seats, setSeats] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [wantsMG, setWantsMG] = useState(false);
+  const [mgAvailable, setMgAvailable] = useState(15); // Mock availability
 
   React.useEffect(() => {
     setIsMounted(true);
-    // Generate 8 rows (A-H) with varying seat counts for a curved theater look
     const initial = [];
-    const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-    let id = 0;
     
-    rows.forEach((row, rowIndex) => {
-      // Inner rows have fewer seats, outer rows have more
-      const seatCount = 8 + (rowIndex * 2); 
-      for (let i = 1; i <= seatCount; i++) {
-        initial.push({
-          id: id++,
-          row: row,
-          number: i,
-          status: Math.random() > 0.85 ? 'occupied' : 'available',
-          category: rowIndex < 3 ? 'vip' : 'standard',
-        });
-      }
+    // Define sections based on the new logic
+    const sections = [
+      { name: 'VIP Frontal', pos: 'front', rows: ['A', 'B'], count: 8, cat: 'vip' },
+      { name: 'General A', pos: 'front', rows: ['C', 'D', 'E'], count: 12, cat: 'general_a' },
+      { name: 'Lateral Izq', pos: 'side_left', rows: ['L1', 'L2'], count: 10, cat: 'standard' },
+      { name: 'Lateral Der', pos: 'side_right', rows: ['R1', 'R2'], count: 10, cat: 'standard' }
+    ];
+
+    let id = 0;
+    sections.forEach(sec => {
+      sec.rows.forEach(row => {
+        for (let i = 1; i <= sec.count; i++) {
+          initial.push({
+            id: id++,
+            row: row,
+            number: i,
+            status: Math.random() > 0.9 ? 'occupied' : 'available',
+            category: sec.cat,
+            section: sec.name,
+            position: sec.pos
+          });
+        }
+      });
     });
     setSeats(initial);
   }, []);
@@ -49,66 +59,60 @@ const Home = () => {
     });
   };
 
-  const totalPrice = selectedSeats.reduce((acc, seat) => acc + (seat.category === 'vip' ? 2400 : 1200), 0);
+  const getPrice = (cat) => {
+    switch(cat) {
+      case 'vip': return 3500;
+      case 'general_a': return 1800;
+      default: return 1200;
+    }
+  };
+
+  const seatsTotal = selectedSeats.reduce((acc, seat) => acc + getPrice(seat.category), 0);
+  const mgPrice = wantsMG ? 2500 : 0;
+  const totalPrice = seatsTotal + mgPrice;
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-amber-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-black text-white selection:bg-amber-500/30 overflow-x-hidden font-['Inter']">
       <Head>
         <title>MS AMBAR | Boletos Oficiales</title>
-        <meta name="description" content="Gira Mundial 2026 - MS AMBAR" />
       </Head>
 
-      {/* Decorative Background Elements */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-500/10 blur-[150px] rounded-full" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neutral-800/20 blur-[150px] rounded-full" />
       </div>
 
-      <main className="relative z-10 max-w-[1600px] mx-auto px-10 py-16">
-        {/* Navigation / Artist Brand */}
-        <nav className="flex justify-between items-center mb-24">
+      <main className="relative z-10 max-w-[1600px] mx-auto px-6 md:px-10 py-10">
+        {/* Nav Bar */}
+        <nav className="flex justify-between items-center mb-16">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-              <span className="text-black font-black text-xl">A</span>
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
+              <span className="text-black font-black text-lg">A</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-black tracking-tighter leading-none">MS AMBAR</h1>
-              <span className="text-[10px] text-neutral-500 uppercase tracking-[0.4em]">Official Store</span>
-            </div>
+            <h1 className="text-xl font-black tracking-tighter">MS AMBAR</h1>
           </div>
-          
-          <div className="hidden md:flex gap-10 text-[10px] uppercase font-black tracking-widest text-neutral-400">
-            <a href="#" className="hover:text-amber-500 transition-colors">Tour</a>
-            <a href="#" className="hover:text-amber-500 transition-colors">Music</a>
-            <a href="#" className="hover:text-amber-500 transition-colors">Merch</a>
-            <a href="#" className="text-amber-500">Tickets</a>
+          <div className="flex gap-8 text-[10px] uppercase font-black tracking-[0.3em] text-neutral-500">
+            <a href="/merch" className="hover:text-amber-500 transition-colors">Shop</a>
+            <a href="/music" className="hover:text-amber-500 transition-colors">Music</a>
+            <a href="/blog" className="hover:text-amber-500 transition-colors">Blog</a>
+            <a href="/contact" className="hover:text-amber-500 transition-colors">Booking</a>
           </div>
         </nav>
 
-        <div className="grid lg:grid-cols-12 gap-20">
-          {/* Main Seating Area */}
+        <div className="grid lg:grid-cols-12 gap-12 xl:gap-20">
           <div className="lg:col-span-8">
-            <header className="mb-12">
-              <div className="flex items-center gap-3 text-amber-500 mb-4">
-                <Music2 size={16} />
-                <span className="text-xs font-black uppercase tracking-[0.3em]">En Vivo</span>
-              </div>
-              <h2 className="text-5xl font-black tracking-tight mb-6 leading-none">
-                Selecciona tu Experiencia
+            <header className="mb-10">
+              <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-6">
+                Tour 2026: <span className="text-amber-500 italic">Eclipse</span>
               </h2>
-              
-              <div className="flex flex-wrap gap-6 text-sm text-neutral-400">
-                <div className="flex items-center gap-2">
-                  <Calendar size={16} className="text-neutral-600" />
-                  <span>15 Junio, 2026</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={16} className="text-neutral-600" />
+              <div className="flex flex-wrap gap-6 text-sm text-neutral-500">
+                <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
+                  <MapPin size={14} className="text-amber-500" />
                   <span>Teatro Metropolitan, CDMX</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Users size={16} className="text-neutral-600" />
-                  <span>Capacidad: {seats.length} Asientos</span>
+                <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
+                  <Calendar size={14} className="text-amber-500" />
+                  <span>15 de Junio, 2026</span>
                 </div>
               </div>
             </header>
@@ -116,76 +120,79 @@ const Home = () => {
             <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} />
           </div>
 
-          {/* Checkout Summary Sidebar */}
-          <div className="lg:col-span-4 lg:pt-24">
-            <motion.div 
-              layout
-              className="bg-neutral-900/40 backdrop-blur-3xl p-10 rounded-[2.5rem] border border-neutral-800 shadow-2xl sticky top-12"
-            >
-              <div className="flex justify-between items-center mb-10">
-                <h3 className="text-2xl font-black tracking-tight">Tu Selección</h3>
-                <div className="bg-amber-500 text-black w-8 h-8 rounded-full flex items-center justify-center font-black text-sm">
-                  {selectedSeats.length}
+          <div className="lg:col-span-4">
+            <motion.div layout className="bg-neutral-900/50 backdrop-blur-2xl p-8 rounded-[3rem] border border-neutral-800 sticky top-8">
+              <h3 className="text-2xl font-black mb-8 tracking-tight text-center">Confirmación</h3>
+              
+              {/* Meet & Greet Toggle */}
+              <div 
+                onClick={() => mgAvailable > 0 && setWantsMG(!wantsMG)}
+                className={cn(
+                  "mb-8 p-6 rounded-3xl border transition-all cursor-pointer group relative overflow-hidden",
+                  wantsMG ? "bg-amber-500 border-amber-400" : "bg-neutral-800/30 border-neutral-700 hover:border-amber-500/50"
+                )}
+              >
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className={cn(
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
+                    wantsMG ? "bg-black text-amber-500" : "bg-amber-500 text-black"
+                  )}>
+                    <Star size={24} fill="currentColor" />
+                  </div>
+                  <div>
+                    <h4 className={cn("font-black text-sm uppercase tracking-widest", wantsMG ? "text-black" : "text-white")}>Meet & Greet</h4>
+                    <p className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-black/60" : "text-amber-500/80")}>
+                      {mgAvailable > 0 ? `${mgAvailable} Cupos Disponibles` : 'Agotado'}
+                    </p>
+                  </div>
                 </div>
+                {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-neutral-600">+$2,500</span>}
               </div>
 
-              <div className="space-y-6 mb-12 max-h-[300px] overflow-y-auto pr-4 custom-scrollbar">
+              <div className="space-y-4 mb-10">
                 <AnimatePresence mode="popLayout">
                   {selectedSeats.map(seat => (
                     <motion.div 
                       key={seat.id}
-                      initial={{ opacity: 0, x: 20 }}
-                      animate={{ opacity: 1, x: 0 }}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5"
                     >
                       <div>
-                        <p className="text-xs font-black text-amber-500 uppercase tracking-widest mb-1">
-                          {seat.category === 'vip' ? 'Experiencia VIP' : 'General'}
-                        </p>
-                        <p className="text-sm font-bold">Fila {seat.row} • Asiento {seat.number}</p>
+                        <p className="text-[9px] font-black text-amber-500 uppercase mb-1">{seat.section}</p>
+                        <p className="text-xs font-bold">Fila {seat.row} • {seat.number}</p>
                       </div>
-                      <span className="font-mono text-sm font-black text-neutral-300">
-                        ${(seat.category === 'vip' ? 2400 : 1200).toLocaleString()}
-                      </span>
+                      <span className="font-mono text-sm font-black">${getPrice(seat.category).toLocaleString()}</span>
                     </motion.div>
                   ))}
                 </AnimatePresence>
                 
                 {selectedSeats.length === 0 && (
-                  <div className="py-12 text-center">
-                    <div className="w-16 h-16 bg-neutral-800/30 rounded-full flex items-center justify-center mx-auto mb-4 border border-neutral-800">
-                      <Ticket size={24} className="text-neutral-600" />
-                    </div>
-                    <p className="text-neutral-500 text-sm italic">
-                      Selecciona tus asientos para continuar
-                    </p>
+                  <div className="py-10 text-center border-2 border-dashed border-neutral-800 rounded-3xl">
+                    <Ticket className="mx-auto mb-3 opacity-20" size={32} />
+                    <p className="text-xs text-neutral-600 font-bold uppercase tracking-widest">Selecciona Asientos</p>
                   </div>
                 )}
               </div>
 
-              <div className="pt-8 border-t border-neutral-800 mb-10">
+              <div className="pt-8 border-t border-neutral-800 mb-8">
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-[10px] uppercase font-black text-neutral-500 tracking-[0.2em] mb-1">Total a Pagar</p>
-                    <p className="text-4xl font-black text-white leading-none">${totalPrice.toLocaleString()}</p>
+                    <p className="text-[10px] uppercase font-black text-neutral-500 tracking-[0.2em] mb-1">Total MXN</p>
+                    <p className="text-5xl font-black leading-none">${totalPrice.toLocaleString()}</p>
                   </div>
-                  <span className="text-[10px] text-neutral-500 font-bold uppercase mb-1">MXN</span>
+                  <Users size={20} className="text-neutral-700 mb-1" />
                 </div>
               </div>
 
               <motion.button 
-                whileHover={{ scale: 1.02, backgroundColor: '#f59e0b', color: '#000' }}
-                whileTap={{ scale: 0.98 }}
+                whileTap={{ scale: 0.95 }}
                 disabled={selectedSeats.length === 0}
-                className="w-full py-6 bg-white text-black text-xs font-black uppercase tracking-[0.3em] rounded-2xl transition-all disabled:opacity-20 disabled:cursor-not-allowed shadow-[0_20px_40px_rgba(0,0,0,0.3)] hover:shadow-amber-500/20"
+                className="w-full py-6 bg-white text-black text-xs font-black uppercase tracking-[0.4em] rounded-2xl disabled:opacity-20 hover:bg-amber-500 transition-colors shadow-2xl shadow-amber-500/10"
               >
-                Completar Compra
+                Checkout con Stripe
               </motion.button>
-              
-              <p className="mt-6 text-[10px] text-neutral-600 text-center uppercase font-bold tracking-widest">
-                Transacción Protegida por Stripe
-              </p>
             </motion.div>
           </div>
         </div>
