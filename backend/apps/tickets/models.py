@@ -177,6 +177,8 @@ class Ticket(models.Model):
     user_phone = models.CharField(max_length=20, null=True, blank=True)
     token = models.UUIDField(default=uuid.uuid4, unique=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='reserved')
+    is_scanned = models.BooleanField(default=False)
+    scanned_at = models.DateTimeField(null=True, blank=True)
     
     # Meet & Greet Upgrade
     has_mg = models.BooleanField(default=False)

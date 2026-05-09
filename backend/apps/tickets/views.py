@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -44,10 +45,47 @@ class TheaterViewSet(viewsets.ModelViewSet):
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
-    permission_classes = [permissions.AllowAny] # Changed to allow any for demo, should be authenticated in prod
+    permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
         email = self.request.query_params.get('email')
         if email:
             return Ticket.objects.filter(user_email=email)
-        return Ticket.objects.none()
+        return Ticket.objects.all()
+
+    @action(detail=False, methods=['post'], url_path='validate')
+    def validate(self, request):
+        token = request.data.get('token')
+        if not token:
+            return Response({'error': 'Token QR no proporcionado'}, status=400)
+        
+        try:
+            ticket = Ticket.objects.get(token=token)
+            
+            if ticket.status != 'paid':
+                return Response({
+                    'status': 'error',
+                    'message': 'Este boleto no ha sido pagado todavía.'
+                }, status=400)
+                
+            if ticket.is_scanned:
+                return Response({
+                    'status': 'already_used',
+                    'message': f'Boleto ya utilizado el {ticket.scanned_at.strftime("%d/%m %H:%M")}',
+                    'scanned_at': ticket.scanned_at
+                }, status=400)
+                
+            # Validar y marcar
+            ticket.is_scanned = True
+            ticket.scanned_at = timezone.now()
+            ticket.save()
+            
+            return Response({
+                'status': 'success',
+                'message': 'Acceso Permitido',
+                'event': ticket.event.title,
+                'seat': f"{ticket.seat.row}{ticket.seat.number}"
+            })
+            
+        except Ticket.DoesNotExist:
+            return Response({'error': 'Boleto Inválido o Falsificado'}, status=404)

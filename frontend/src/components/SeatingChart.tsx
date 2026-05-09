@@ -209,18 +209,18 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       // Hit detection for elements
       const hitEl = elements.find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
       if (hitEl) {
-        setSelectedId(hitEl.id);
+        onSelect?.(hitEl.id);
         setDraggedItem({ type: 'element', id: hitEl.id });
         return;
       }
       // Hit detection for seats
       const hitSeat = seats.find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
       if (hitSeat) {
-        setSelectedId(hitSeat.id);
+        onSelect?.(hitSeat.id);
         setDraggedItem({ type: 'seat', id: hitSeat.id });
         return;
       }
-      setSelectedId(null);
+      onSelect?.(null);
     }
 
     setIsDragging(true);
@@ -288,27 +288,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         onWheel={handleWheel}
         className="w-full h-full block"
       />
-      
-      {isDesignMode && (
-        <div className="absolute top-6 left-6 flex flex-col gap-3">
-          <div className="p-2 amber-glass rounded-2xl flex flex-col gap-2">
-            <button className="p-3 hover:bg-amber-honey/20 rounded-xl transition-all"><Plus size={20}/></button>
-            <button className="p-3 hover:bg-amber-honey/20 rounded-xl transition-all"><Square size={20}/></button>
-            <button className="p-3 hover:bg-amber-honey/20 rounded-xl transition-all"><MapIcon size={20}/></button>
-          </div>
-          <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-2xl">
-             <button onClick={() => {
-               if (selectedId) {
-                 setSeats(prev => prev.filter(s => s.id !== selectedId));
-                 setElements(prev => prev.filter(el => el.id !== selectedId));
-                 setSelectedId(null);
-               }
-             }} className="p-3 text-red-500 hover:bg-red-500/20 rounded-xl transition-all">
-               <Trash2 size={20}/>
-             </button>
-          </div>
-        </div>
-      )}
 
       <div className="absolute bottom-6 right-6 flex items-center gap-4">
         <div className="px-4 py-2 bg-nature-night/80 dark:bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest text-white/60">
