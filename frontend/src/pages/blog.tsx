@@ -32,95 +32,96 @@ const POSTS = [
 
 const BlogPage = () => {
   return (
-    <div className="min-h-screen bg-black text-white font-['Inter'] selection:bg-amber-500/30">
+    <div className="selection:bg-amber-honey/30">
       <Head>
-        <title>MS AMBAR | Blog</title>
+        <title>MS AMBAR | Journal</title>
       </Head>
 
-      <main className="max-w-[1200px] mx-auto px-10 py-24">
-        <header className="mb-32 flex justify-between items-end">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20">
+        <header className="mb-24 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div>
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-8xl font-black tracking-tighter"
+              className="text-7xl md:text-9xl font-black tracking-tighter"
             >
               JOURNAL
             </motion.h1>
-            <p className="text-neutral-500 mt-4 text-xl italic uppercase tracking-widest">Update & Stories</p>
+            <p className="opacity-40 mt-4 text-sm font-bold uppercase tracking-[0.4em] text-glow text-amber-honey">Bitácora de Luz & Sonido</p>
           </div>
-          <div className="hidden md:block text-right">
-            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500">Filtrar por</p>
-            <div className="flex gap-6 mt-4 text-[10px] uppercase font-bold text-neutral-600">
-               <span className="text-white">Todos</span>
-               <span className="hover:text-white cursor-pointer">Tour</span>
-               <span className="hover:text-white cursor-pointer">Music</span>
-               <span className="hover:text-white cursor-pointer">Personal</span>
+          <div className="amber-glass px-8 py-4 rounded-2xl">
+            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-amber-honey mb-4">Filtrar Historias</p>
+            <div className="flex gap-8 text-[10px] uppercase font-bold opacity-60">
+               <span className="text-amber-honey cursor-pointer underline decoration-2 underline-offset-8">Todos</span>
+               <span className="hover:text-amber-honey cursor-pointer transition-colors">Tour</span>
+               <span className="hover:text-amber-honey cursor-pointer transition-colors">Proceso</span>
+               <span className="hover:text-amber-honey cursor-pointer transition-colors">Prensa</span>
             </div>
           </div>
         </header>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
           {POSTS.map((post, i) => (
             <motion.article 
               key={post.id}
               initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="group cursor-pointer"
+              className="group cursor-pointer amber-glass p-6 rounded-[3rem] hover:scale-[1.02] transition-all"
             >
-              <div className="aspect-[16/10] bg-neutral-900 rounded-[2.5rem] overflow-hidden mb-8 relative">
+              <div className="aspect-[16/11] rounded-[2rem] overflow-hidden mb-8 relative">
                 <img 
                   src={post.image} 
                   alt={post.title} 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100" 
                 />
                 <div className="absolute top-6 left-6">
-                   <span className="bg-amber-500 text-black px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
+                   <span className="bg-amber-honey text-nature-night px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20">
                      {post.tag}
                    </span>
                 </div>
               </div>
               
-              <div className="flex items-center gap-6 mb-6 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-600">
+              <div className="flex items-center gap-6 mb-6 text-[9px] font-black uppercase tracking-[0.2em] opacity-40">
                  <div className="flex items-center gap-2">
-                    <Calendar size={12} /> {post.date}
+                    <Calendar size={12} className="text-amber-honey" /> {post.date}
                  </div>
                  <div className="flex items-center gap-2">
-                    <User size={12} /> MS Ambar
+                    <User size={12} className="text-amber-honey" /> MS Ambar
                  </div>
               </div>
 
-              <h2 className="text-2xl font-black tracking-tight mb-4 group-hover:text-amber-500 transition-colors leading-tight">
+              <h2 className="text-2xl font-extrabold tracking-tight mb-4 group-hover:text-amber-honey transition-colors leading-tight">
                 {post.title}
               </h2>
-              <p className="text-neutral-500 text-sm leading-relaxed mb-8 line-clamp-2">
+              <p className="opacity-50 text-sm leading-relaxed mb-8 line-clamp-2">
                 {post.excerpt}
               </p>
               
-              <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-neutral-400 group-hover:text-white transition-all">
-                 Leer Más <ArrowUpRight size={14} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+              <button className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-amber-honey group-hover:text-glow transition-all">
+                 Inmersión <ArrowUpRight size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
               </button>
             </motion.article>
           ))}
         </div>
 
         {/* Newsletter Section */}
-        <div className="mt-40 bg-neutral-900/30 p-20 rounded-[4rem] border border-neutral-800 text-center">
-           <h3 className="text-4xl font-black mb-6 tracking-tight">Únete a la Comunidad</h3>
-           <p className="text-neutral-500 mb-12 max-w-lg mx-auto italic">Recibe contenido exclusivo, preventas y noticias antes que nadie.</p>
-           <form className="max-w-md mx-auto flex gap-4">
+        <div className="mt-40 amber-glass p-12 md:p-24 rounded-[4rem] text-center border-2 border-amber-honey/5">
+           <h3 className="text-4xl md:text-6xl font-black mb-6 tracking-tighter">Únete al <span className="text-amber-honey text-glow">Círculo</span></h3>
+           <p className="opacity-50 mb-12 max-w-lg mx-auto text-sm italic">Recibe contenido exclusivo, preventas y crónicas antes que nadie.</p>
+           <form className="max-w-md mx-auto flex flex-col md:flex-row gap-4">
               <input 
                 type="email" 
-                placeholder="TU EMAIL" 
-                className="flex-1 bg-black/50 border border-neutral-800 rounded-2xl px-6 py-4 text-xs font-black focus:outline-none focus:border-amber-500 transition-colors"
+                placeholder="TU CORREO ELECTRÓNICO" 
+                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-8 py-5 text-xs font-bold focus:outline-none focus:border-amber-honey/50 transition-colors"
               />
-              <button className="bg-white text-black px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 transition-all">
+              <button className="btn-amber">
                 Suscribir
               </button>
            </form>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

@@ -11,85 +11,88 @@ const ALBUMS = [
 
 const MusicPage = () => {
   return (
-    <div className="min-h-screen bg-black text-white font-['Inter'] selection:bg-amber-500/30">
+    <div className="selection:bg-amber-honey/30">
       <Head>
-        <title>MS AMBAR | Música</title>
+        <title>MS AMBAR | Discografía</title>
       </Head>
 
-      <main className="max-w-[1400px] mx-auto px-10 py-24">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20">
         <header className="mb-32">
           <motion.h1 
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-[12vw] font-black tracking-tighter leading-[0.8] mb-10"
+            className="text-[12vw] font-black tracking-tighter leading-[0.8] mb-12"
           >
-            DISCOGRAFÍA
+            DISCO<span className="text-amber-honey text-glow">GRAFÍA</span>
           </motion.h1>
-          <div className="flex gap-4">
-            <button className="bg-amber-500 text-black px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3">
-              <Play size={14} fill="black" /> Escuchar en Spotify
+          <div className="flex flex-wrap gap-6">
+            <button className="btn-amber flex items-center gap-4 px-10">
+              <Play size={18} fill="currentColor" /> Escuchar en Spotify
             </button>
-            <button className="border border-neutral-800 px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-3 hover:bg-white hover:text-black transition-all">
-              <Disc size={14} /> Apple Music
+            <button className="amber-glass border border-white/10 px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-4 hover:bg-white/10 transition-all">
+              <Disc size={18} /> Apple Music
             </button>
           </div>
         </header>
 
-        <div className="space-y-40">
+        <div className="space-y-60">
           {ALBUMS.map((album, i) => (
             <motion.section 
               key={album.id}
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="flex flex-col lg:flex-row items-center gap-20"
+              className="flex flex-col lg:flex-row items-center gap-24"
             >
               <div className="w-full lg:w-1/2 relative group">
-                <div className="absolute inset-0 bg-amber-500 blur-[100px] opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
-                <img 
-                  src={album.cover} 
-                  alt={album.title} 
-                  className="w-full aspect-square object-cover rounded-[3rem] shadow-2xl relative z-10 grayscale group-hover:grayscale-0 transition-all duration-700" 
-                />
+                <div className="absolute inset-0 bg-amber-honey blur-[120px] opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
+                <div className="relative z-10 aspect-square rounded-[4rem] overflow-hidden amber-glass border-2 border-amber-honey/10">
+                  <img 
+                    src={album.cover} 
+                    alt={album.title} 
+                    className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 scale-105 group-hover:scale-100" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-nature-night/60 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                </div>
               </div>
 
               <div className="flex-1">
-                <span className="text-amber-500 text-sm font-black tracking-[0.5em] mb-4 block">{album.year}</span>
-                <h2 className="text-7xl font-black tracking-tighter mb-8">{album.title}</h2>
-                <p className="text-neutral-500 mb-12 text-lg italic leading-relaxed">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+                <span className="text-amber-honey text-sm font-black tracking-[0.5em] mb-4 block opacity-60">{album.year}</span>
+                <h2 className="text-6xl md:text-8xl font-black tracking-tighter mb-8">{album.title}</h2>
+                <p className="opacity-50 mb-12 text-lg italic leading-relaxed max-w-xl">
+                  Explorando texturas orgánicas y ritmos ancestrales, este álbum redefine el sonido contemporáneo de MS AMBAR.
                 </p>
                 
-                <div className="space-y-4 mb-16">
+                <div className="space-y-2 mb-16 amber-glass p-8 rounded-[3rem]">
                    {[1, 2, 3, 4].map(track => (
-                     <div key={track} className="flex items-center justify-between py-4 border-b border-neutral-900 group cursor-pointer hover:border-amber-500/50 transition-colors">
+                     <div key={track} className="flex items-center justify-between py-5 border-b border-white/5 group cursor-pointer hover:bg-white/5 px-6 rounded-2xl transition-all">
                         <div className="flex items-center gap-6">
-                           <span className="text-neutral-700 font-mono text-sm group-hover:text-amber-500 transition-colors">0{track}</span>
-                           <span className="text-sm font-bold tracking-tight uppercase">Canción de Ejemplo {track}</span>
+                           <span className="opacity-20 font-mono text-sm group-hover:text-amber-honey group-hover:opacity-100 transition-all">0{track}</span>
+                           <span className="text-sm font-extrabold tracking-tight uppercase">Sinfonía del Ámbar {track}</span>
                         </div>
-                        <div className="flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                           <Share2 size={16} className="text-neutral-500 hover:text-white" />
-                           <ExternalLink size={16} className="text-neutral-500 hover:text-white" />
+                        <div className="flex items-center gap-5 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                           <Share2 size={16} className="opacity-40 hover:text-amber-honey hover:opacity-100" />
+                           <ExternalLink size={16} className="opacity-40 hover:text-amber-honey hover:opacity-100" />
                         </div>
                      </div>
                    ))}
                 </div>
 
-                <button className="text-xs font-black uppercase tracking-[0.4em] text-neutral-400 hover:text-amber-500 transition-colors flex items-center gap-3">
-                  Ver Álbum Completo <ArrowRight size={14} />
+                <button className="text-[10px] font-black uppercase tracking-[0.5em] text-amber-honey hover:text-glow transition-all flex items-center gap-4 group">
+                  Explorar Obra Completa <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </button>
               </div>
             </motion.section>
           ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
 
-const ArrowRight = ({ size }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14M12 5l7 7-7 7" />
+const ArrowUpRight = ({ size, className }: { size: number, className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M7 17L17 7M17 7H7M17 7V17" />
   </svg>
 );
 

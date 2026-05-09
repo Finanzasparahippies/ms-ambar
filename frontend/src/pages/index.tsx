@@ -77,61 +77,12 @@ const Home = () => {
   const totalPrice = seatsTotal + mgPrice;
 
   return (
-    <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit">
+    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit">
       <Head>
         <title>MS AMBAR | Esencia de Ámbar</title>
       </Head>
 
-      {/* Decorative Nature Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <AnimatePresence>
-          {theme === 'light' ? (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute top-0 left-0 w-full h-full"
-            >
-              <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-honey/20 blur-[120px] rounded-full animate-pulse" />
-              <div className="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-nature-sky/10 blur-[100px] rounded-full" />
-            </motion.div>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute top-0 left-0 w-full h-full"
-            >
-              <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] bg-amber-cherry/10 blur-[120px] rounded-full" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-nature-night/40 blur-[150px] rounded-full" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <main className="relative z-10 max-w-[1600px] mx-auto px-6 md:px-10 py-10">
-        {/* Nav Bar */}
-        <nav className="flex justify-between items-center mb-16 amber-glass px-8 py-4 rounded-3xl">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-amber-honey rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20">
-              <span className="text-nature-night font-black text-lg">A</span>
-            </div>
-            <h1 className="text-2xl font-extrabold tracking-tighter text-glow">MS AMBAR</h1>
-          </div>
-          
-          <div className="hidden md:flex gap-8 text-[10px] uppercase font-bold tracking-[0.3em] opacity-70">
-            <a href="/merch" className="hover:text-amber-honey transition-colors">Shop</a>
-            <a href="/music" className="hover:text-amber-honey transition-colors">Music</a>
-            <a href="/blog" className="hover:text-amber-honey transition-colors">Blog</a>
-            <button 
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              className="p-2 rounded-full bg-amber-honey/10 text-amber-honey hover:bg-amber-honey/20 transition-all"
-            >
-              {theme === 'light' ? '🌙' : '☀️'}
-            </button>
-          </div>
-        </nav>
-
+      <div className="max-w-[1600px] mx-auto px-6 md:px-10 pb-20">
         <div className="grid lg:grid-cols-12 gap-12 xl:gap-20">
           <div className="lg:col-span-8">
             <header className="mb-10">
