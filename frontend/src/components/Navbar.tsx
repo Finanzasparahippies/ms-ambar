@@ -26,6 +26,7 @@ const Navbar = () => {
 
   const navLinks = [
     { name: 'Tour', href: '/' },
+    { name: 'Designer', href: '/designer' },
     { name: 'Galería', href: '/gallery' },
     { name: 'Música', href: '/music' },
     { name: 'Shop', href: '/merch' },

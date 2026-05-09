@@ -39,7 +39,7 @@ class EventViewSet(viewsets.ModelViewSet):
 class TheaterViewSet(viewsets.ModelViewSet):
     queryset = Theater.objects.all()
     serializer_class = TheaterSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.AllowAny] # Changed to AllowAny for Nectar Designer integration
 
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()

@@ -93,31 +93,42 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     render();
   }, [seats, elements, transform, selectedId, theme]);
 
-  const drawElement = (ctx: CanvasRenderingContext2D, el: MapElement) => {
-    ctx.save();
-    ctx.translate(el.x, el.y);
-    const isSelected = selectedId === el.id;
-
-    if (el.type === 'rect') {
-      ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
-      ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
-      ctx.lineWidth = isSelected ? 3 : 1;
+    const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
       ctx.beginPath();
-      ctx.roundRect(-el.w!/2, -el.h!/2, el.w!, el.h!, 8);
-      
-      // Pattern for Zones
-      if (el.label?.toLowerCase().includes('zona') || el.label?.toLowerCase().includes('explanada')) {
-        ctx.save();
-        ctx.clip();
-        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,191,0,0.1)' : 'rgba(0,0,0,0.05)';
-        for(let i=-500; i<500; i+=15) {
-          ctx.moveTo(i*2, -500); ctx.lineTo(i*2-500, 500);
+      ctx.moveTo(x + radius, y);
+      ctx.arcTo(x + width, y, x + width, y + height, radius);
+      ctx.arcTo(x + width, y + height, x, y + height, radius);
+      ctx.arcTo(x, y + height, x, y, radius);
+      ctx.arcTo(x, y, x + width, y, radius);
+      ctx.closePath();
+    };
+
+    const drawElement = (ctx: CanvasRenderingContext2D, el: MapElement) => {
+      ctx.save();
+      ctx.translate(el.x, el.y);
+      const isSelected = selectedId === el.id;
+
+      if (el.type === 'rect') {
+        ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
+        ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+        ctx.lineWidth = isSelected ? 3 : 1;
+        
+        drawRoundedRect(ctx, -el.w!/2, -el.h!/2, el.w!, el.h!, 8);
+        
+        // Pattern for Zones
+        if (el.label?.toLowerCase().includes('zona') || el.label?.toLowerCase().includes('explanada')) {
+          ctx.save();
+          ctx.clip();
+          ctx.strokeStyle = theme === 'dark' ? 'rgba(255,191,0,0.1)' : 'rgba(0,0,0,0.05)';
+          for(let i=-500; i<500; i+=15) {
+            ctx.moveTo(i*2, -500); ctx.lineTo(i*2-500, 500);
+          }
+          ctx.stroke();
+          ctx.restore();
         }
+
+        ctx.fill();
         ctx.stroke();
-        ctx.restore();
-      }
-      ctx.fill();
-      ctx.stroke();
       if (el.label) {
         ctx.font = '800 12px Outfit';
         ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
@@ -174,8 +185,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     ctx.fillStyle = color;
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.roundRect(-9, -9, 18, 18, 4);
+    drawRoundedRect(ctx, -9, -9, 18, 18, 4);
     ctx.fill();
     ctx.stroke();
 
