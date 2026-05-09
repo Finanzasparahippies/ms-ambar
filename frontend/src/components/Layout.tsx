@@ -1,12 +1,12 @@
-import React from 'react';
+import * as React from 'react';
 import Navbar from './Navbar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative">
       <Navbar />

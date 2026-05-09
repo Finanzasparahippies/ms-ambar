@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import SeatingChart from '../components/SeatingChart';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,17 +7,16 @@ import { Ticket, Users, Music2, MapPin, Calendar, Star } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const Home = () => {
-  const [events, setEvents] = useState([]);
-  const [currentEvent, setCurrentEvent] = useState(null);
-  const [seats, setSeats] = useState([]);
-  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [currentEvent, setCurrentEvent] = useState<any>(null);
+  const [seats, setSeats] = useState<any[]>([]);
+  const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [wantsMG, setWantsMG] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
-  // Fetch Events
-  React.useEffect(() => {
+  useEffect(() => {
     setIsMounted(true);
     document.documentElement.setAttribute('data-theme', theme);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
@@ -30,12 +30,11 @@ const Home = () => {
       .catch(err => console.error("Error fetching events:", err));
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Fetch Seats for current event
-  React.useEffect(() => {
+  useEffect(() => {
     if (!currentEvent) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
 
@@ -47,9 +46,9 @@ const Home = () => {
       .catch(err => console.error("Error fetching seats:", err));
   }, [currentEvent]);
 
-  if (!isMounted) return <div className="min-h-screen bg-nature-night" />;
+  if (!isMounted) return null;
 
-  const handleSeatSelect = (seat) => {
+  const handleSeatSelect = (seat: any) => {
     setSeats(prev => prev.map(s => {
       if (s.id === seat.id) {
         return { ...s, status: s.status === 'selected' ? 'available' : 'selected' };
@@ -64,7 +63,7 @@ const Home = () => {
     });
   };
 
-  const getPrice = (cat) => {
+  const getPrice = (cat: string) => {
     switch (cat) {
       case 'vip': return 3500;
       case 'general_a': return 1800;
@@ -198,6 +197,7 @@ const Home = () => {
               </motion.button>
             </motion.div>
           </div>
+        </div>
       </div>
     </div>
   );
