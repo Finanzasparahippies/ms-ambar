@@ -25,6 +25,7 @@ interface MapElement {
   label?: string;
   icon?: 'stairs' | 'wc' | 'bar' | 'exit';
   color?: string;
+  angle?: number;
 }
 
 interface SeatingChartProps {
@@ -124,6 +125,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const drawElement = (ctx: CanvasRenderingContext2D, el: MapElement) => {
       ctx.save();
       ctx.translate(el.x, el.y);
+      ctx.rotate((el.angle || 0) * Math.PI / 180);
       const isSelected = selectedId === el.id;
 
       if (el.type === 'rect') {
@@ -131,9 +133,42 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
         ctx.lineWidth = isSelected ? 2 : 1;
         
-        drawRoundedRect(ctx, -el.w!/2, -el.h!/2, el.w!, el.h!, 8);
-        ctx.fill();
-        ctx.stroke();
+        if (el.label?.toLowerCase().includes('mesa')) {
+          // Circular Table
+          ctx.beginPath();
+          ctx.arc(0, 0, el.w!/2, 0, Math.PI*2);
+          ctx.fill();
+          ctx.stroke();
+        } else if (el.label?.toLowerCase().includes('arbol')) {
+          // Organic Tree Shape
+          ctx.fillStyle = 'rgba(46, 204, 113, 0.15)';
+          ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
+          ctx.beginPath();
+          for(let i=0; i<6; i++) {
+            const ang = (i * 60) * Math.PI/180;
+            const r = (el.w!/2) * (0.8 + Math.random()*0.4);
+            ctx.lineTo(Math.cos(ang)*r, Math.sin(ang)*r);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          drawRoundedRect(ctx, -el.w!/2, -el.h!/2, el.w!, el.h!, 8);
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // Patterns for Esplanades/Gardens
+        if (el.label?.toLowerCase().includes('explanada') || el.label?.toLowerCase().includes('jardin')) {
+          ctx.save();
+          ctx.clip();
+          ctx.strokeStyle = el.label.includes('jardin') ? 'rgba(46, 204, 113, 0.1)' : 'rgba(255,255,255,0.03)';
+          for(let i=-1000; i<1000; i+=20) {
+            ctx.moveTo(i, -1000); ctx.lineTo(i-200, 1000);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
 
         // Draw Selection Handles
         if (isSelected && isDesignMode) {
@@ -178,7 +213,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const drawSeat = (ctx: CanvasRenderingContext2D, seat: Seat, isSelected: boolean) => {
     ctx.save();
     ctx.translate(seat.x, seat.y);
-    ctx.rotate((seat.angle * Math.PI) / 180);
+    ctx.rotate((seat.angle || 0) * Math.PI / 180);
     
     let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.1)'; 
     let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(28, 33, 48, 0.3)';
