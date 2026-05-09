@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  /* Day Mode - Nature */
-  --foreground-rgb: 45, 52, 70;
-  --background-start: #f8f9fa;
-  --background-end: #e9ecef;
+  /* Day Mode - Earth & Nature */
+  --foreground-rgb: 28, 33, 48;
+  --background-start: #fdfaf3; /* Creamy/Amber touch */
+  --background-end: #f5efe2;   /* Earthy beige */
   --sky-accent: 34, 166, 179;
   --amber-primary: 255, 191, 0;
 }
@@ -56,7 +56,7 @@ body {
 
 @layer components {
   .amber-glass {
-    @apply bg-white/70 backdrop-blur-md border border-amber-honey/20 shadow-lg transition-all duration-300;
+    @apply bg-white/40 backdrop-blur-xl border border-amber-honey/30 shadow-xl transition-all duration-300;
   }
   
   [data-theme='dark'] .amber-glass {

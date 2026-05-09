@@ -120,25 +120,28 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                           "w-full text-left p-8 rounded-[2.5rem] border transition-all duration-500 relative overflow-hidden group/card",
                           isActive 
                             ? "amber-glass border-amber-honey/50 shadow-2xl shadow-amber-honey/10" 
-                            : "bg-white/5 border-white/5 hover:border-amber-honey/30 hover:bg-white/10"
+                            : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 hover:border-amber-honey/30 hover:bg-black/10 dark:hover:bg-white/10"
                         )}
                       >
                         <div className="relative z-10">
                           <div className="flex justify-between items-start mb-4">
                              <div className={cn(
                                "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
-                               isActive ? "bg-amber-honey text-nature-night" : "bg-white/5 text-white/40"
+                               isActive ? "bg-amber-honey text-nature-night" : "bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40"
                              )}>
                                {event.theater_location}
                              </div>
-                             {isActive && <motion.div layoutId="active-indicator" className="w-2 h-2 bg-amber-honey rounded-full animate-pulse" />}
+                             {isActive && <motion.div layoutId="active-indicator" className="w-2 h-2 bg-amber-honey rounded-full animate-pulse shadow-[0_0_10px_#FFBF00]" />}
                           </div>
                           
-                          <h4 className="text-xl font-extrabold tracking-tight mb-2 line-clamp-1">
+                          <h4 className={cn(
+                            "text-xl font-extrabold tracking-tight mb-2 line-clamp-1",
+                            isActive ? "text-nature-night dark:text-white" : "text-nature-night/80 dark:text-white/80"
+                          )}>
                             {event.theater_name}
                           </h4>
                           
-                          <div className="flex items-center gap-2 opacity-40 text-[10px] font-bold uppercase tracking-wider">
+                          <div className="flex items-center gap-2 opacity-40 text-[10px] font-bold uppercase tracking-wider text-nature-night dark:text-white">
                              <Calendar size={12} />
                              {date.toLocaleDateString('es-MX', { weekday: 'long' })}
                           </div>
