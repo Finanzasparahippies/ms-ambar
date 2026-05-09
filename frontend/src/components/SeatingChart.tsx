@@ -59,6 +59,13 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
+    // Prevent default scroll when zooming
+    const preventDefault = (e: WheelEvent) => {
+      e.preventDefault();
+    };
+    canvas.addEventListener('wheel', preventDefault, { passive: false });
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -86,6 +93,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
     };
 
     render();
+
+    return () => {
+      canvas.removeEventListener('wheel', preventDefault);
+    };
   }, [seats, transform, hoveredSeatId]);
 
   const drawStage = (ctx: CanvasRenderingContext2D) => {
@@ -219,7 +230,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
   };
 
   const handleWheel = (e: React.WheelEvent) => {
-    // e.preventDefault(); // Comentado para evitar conflictos de scroll si no es necesario
     const delta = -e.deltaY;
     const factor = delta > 0 ? 1.1 : 0.9;
     const newScale = Math.max(0.1, Math.min(transform.scale * factor, 5));
