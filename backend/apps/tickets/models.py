@@ -12,9 +12,33 @@ class Theater(models.Model):
     def generate_seats(self):
         """
         Generates Seat objects with 2D coordinates.
-        Supports 'grid' (default) and 'arc' (future) layouts.
+        Supports:
+        1. Schema-based: {"sections": [...]}
+        2. Direct list: [{"row": "A", "number": 1, "x": 100, "y": 100, ...}]
         """
         import math
+        
+        # Case 1: Direct list of seats
+        if isinstance(self.layout, list):
+            created_count = 0
+            for seat_data in self.layout:
+                Seat.objects.update_or_create(
+                    theater=self,
+                    section=seat_data.get('section', 'General'),
+                    row=seat_data.get('row', '1'),
+                    number=seat_data.get('number', 1),
+                    defaults={
+                        'category': seat_data.get('category', 'standard'),
+                        'base_price': seat_data.get('base_price', 1000),
+                        'x': seat_data.get('x', 0),
+                        'y': seat_data.get('y', 0),
+                        'angle': seat_data.get('angle', 0)
+                    }
+                )
+                created_count += 1
+            return created_count
+
+        # Case 2: Schema-based (current logic)
         sections = self.layout.get('sections', [])
         created_count = 0
         
@@ -50,18 +74,16 @@ class Theater(models.Model):
                         final_x, final_y = base_x + rotated_x, base_y + rotated_y
                     
                     elif layout_type == 'arc':
-                        # Radial logic: seats distributed along an arc
+                        # Radial logic
                         radius = section.get('radius', 300) + (r_idx * row_spacing)
-                        # Spread seats over a specific aperture (angle)
                         aperture = section.get('aperture', 90)
                         seat_angle_step = aperture / max(1, count - 1)
-                        # Current seat angle relative to section center
                         seat_angle_deg = sec_angle_deg + (s_idx * seat_angle_step) - (aperture / 2)
                         seat_angle_rad = math.radians(seat_angle_deg)
                         
                         final_x = base_x + radius * math.cos(seat_angle_rad)
                         final_y = base_y + radius * math.sin(seat_angle_rad)
-                        final_angle = seat_angle_deg + 90 # Face the center
+                        final_angle = seat_angle_deg + 90
                     
                     Seat.objects.update_or_create(
                         theater=self,
