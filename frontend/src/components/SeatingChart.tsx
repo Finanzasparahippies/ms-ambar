@@ -160,7 +160,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     } else if (seat.status === 'selected' || isSelected) {
        color = '#FFBF00';
        borderColor = '#FFBF00';
-       if (isSelected) ctx.shadowBlur = 15; ctx.shadowColor = '#FFBF00';
+       if (isSelected) {
+         ctx.shadowBlur = 15;
+         ctx.shadowColor = '#FFBF00';
+       }
     } else {
        const cat = seat.category.toLowerCase();
        if (cat.includes('vip')) { color = 'rgba(255, 191, 0, 0.15)'; borderColor = 'rgba(255, 191, 0, 0.6)'; }

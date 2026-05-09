@@ -12,6 +12,7 @@ export default function DesignerPage() {
   const [elements, setElements] = useState<any[]>([]);
   const [activeTool, setActiveTool] = useState('select');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [canvasHeight, setCanvasHeight] = useState(900);
 
   const handleUpdate = (updatedSeats: any[], updatedElements: any[]) => {
     setSeats(updatedSeats);
@@ -47,10 +48,10 @@ export default function DesignerPage() {
       type: 'rect',
       x: 500,
       y: 500,
-      w: 200,
-      h: 100,
-      label: "NUEVA ZONA",
-      color: "rgba(255,191,0,0.1)"
+      w: 300,
+      h: 150,
+      label: "NUEVA ZONA EXPLANADA",
+      color: "rgba(34,166,179,0.1)"
     };
     setElements([...elements, newZone]);
   };
@@ -89,6 +90,17 @@ export default function DesignerPage() {
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center gap-4 bg-black/20 px-4 py-2 rounded-xl border border-white/5">
+              <label className="text-[9px] font-black uppercase tracking-widest text-white/40">Altura:</label>
+              <input 
+                type="range" min="600" max="3000" step="100" 
+                value={canvasHeight} 
+                onChange={(e) => setCanvasHeight(parseInt(e.target.value))}
+                className="w-32 accent-amber-honey"
+              />
+              <span className="text-[10px] font-bold text-amber-honey w-10">{canvasHeight}px</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-4">
@@ -109,24 +121,26 @@ export default function DesignerPage() {
         </div>
 
         {/* Main Canvas Area */}
-        <div className="flex-1 p-8 bg-[#0b0d17] relative">
-          <SeatingChart 
-            seats={seats} 
-            elements={elements} 
-            isDesignMode={true}
-            theme={theme}
-            onUpdate={handleUpdate}
-          />
+        <div className="flex-1 p-8 bg-[#0b0d17] relative flex justify-center">
+          <div style={{ height: canvasHeight }} className="w-full max-w-6xl transition-all duration-500">
+            <SeatingChart 
+              seats={seats} 
+              elements={elements} 
+              isDesignMode={true}
+              theme={theme}
+              onUpdate={handleUpdate}
+            />
+          </div>
           
           {/* Instructions Overlay */}
           <div className="absolute bottom-12 left-12 pointer-events-none">
-            <div className="bg-nature-night/80 backdrop-blur-md p-6 rounded-3xl border border-white/5 max-w-xs">
+            <div className="bg-nature-night/80 backdrop-blur-md p-6 rounded-3xl border border-white/5 max-w-xs shadow-2xl">
               <h3 className="text-xs font-bold text-amber-honey uppercase tracking-widest mb-2">Instrucciones Nectar</h3>
               <ul className="text-[10px] text-white/40 space-y-2 font-medium">
                 <li>• Arrastra cualquier elemento para posicionarlo.</li>
+                <li>• Ajusta la altura del recinto con el deslizador.</li>
                 <li>• Usa la rueda del mouse para hacer Zoom.</li>
-                <li>• Selecciona y presiona el botón rojo para borrar.</li>
-                <li>• El escenario está siempre al tope (y=0).</li>
+                <li>• Exporta el JSON y pégalo en el Theater Layout.</li>
               </ul>
             </div>
           </div>

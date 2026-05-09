@@ -134,18 +134,20 @@ const Home = () => {
             </header>
 
             {isLoading ? (
-              <div className="h-[600px] flex items-center justify-center amber-glass rounded-[4rem]">
+              <div className="h-[900px] flex items-center justify-center amber-glass rounded-[4rem]">
                 <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em] text-glow">Tejiendo la Red...</div>
               </div>
             ) : (
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/20 to-nature-sky/20 rounded-[4.1rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <SeatingChart 
-                  seats={seats} 
-                  onSeatSelect={handleSeatSelect} 
-                  theme={theme} 
-                  elements={elements}
-                />
+                <div className="h-[900px]">
+                  <SeatingChart 
+                    seats={seats} 
+                    onSeatSelect={handleSeatSelect} 
+                    theme={theme} 
+                    elements={elements}
+                  />
+                </div>
               </div>
             )}
           </div>
