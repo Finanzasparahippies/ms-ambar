@@ -65,7 +65,13 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
   const [isDragging, setIsDragging] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
-  const [draggedItem, setDraggedItem] = useState<{type: 'seat' | 'element', id: string | number} | null>(null);
+  const [draggedItem, setDraggedItem] = useState<{
+    type: 'seat' | 'element', 
+    id: string | number,
+    offsetX: number,
+    offsetY: number,
+    handle?: 'br' // Bottom-right resize handle
+  } | null>(null);
 
   useEffect(() => {
     setSeats(initialSeats);
@@ -123,24 +129,24 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       if (el.type === 'rect') {
         ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
         ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
-        ctx.lineWidth = isSelected ? 3 : 1;
+        ctx.lineWidth = isSelected ? 2 : 1;
         
         drawRoundedRect(ctx, -el.w!/2, -el.h!/2, el.w!, el.h!, 8);
-        
-        // Pattern for Zones
-        if (el.label?.toLowerCase().includes('zona') || el.label?.toLowerCase().includes('explanada')) {
-          ctx.save();
-          ctx.clip();
-          ctx.strokeStyle = theme === 'dark' ? 'rgba(255,191,0,0.1)' : 'rgba(0,0,0,0.05)';
-          for(let i=-500; i<500; i+=15) {
-            ctx.moveTo(i*2, -500); ctx.lineTo(i*2-500, 500);
-          }
-          ctx.stroke();
-          ctx.restore();
-        }
-
         ctx.fill();
         ctx.stroke();
+
+        // Draw Selection Handles
+        if (isSelected && isDesignMode) {
+           ctx.strokeStyle = '#FFBF00';
+           ctx.lineWidth = 1;
+           ctx.setLineDash([5, 5]);
+           ctx.strokeRect(-el.w!/2 - 4, -el.h!/2 - 4, el.w! + 8, el.h! + 8);
+           ctx.setLineDash([]);
+           
+           // Resize Handle (Bottom-Right)
+           ctx.fillStyle = '#FFBF00';
+           ctx.fillRect(el.w!/2 - 4, el.h!/2 - 4, 8, 8);
+        }
       if (el.label) {
         ctx.font = '800 12px Outfit';
         ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
@@ -218,18 +224,31 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const y = (e.clientY - rect.top - transform.y) / transform.scale;
 
     if (isDesignMode) {
-      // Hit detection for elements
-      const hitEl = elements.find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
+      // 1. Check for Resize Handles (only for selected element)
+      if (selectedId) {
+        const el = elements.find(e => e.id === selectedId);
+        if (el && el.type === 'rect') {
+          const hx = el.x + el.w!/2;
+          const hy = el.y + el.h!/2;
+          if (Math.abs(hx - x) < 15 && Math.abs(hy - y) < 15) {
+            setDraggedItem({ type: 'element', id: el.id, offsetX: 0, offsetY: 0, handle: 'br' });
+            return;
+          }
+        }
+      }
+
+      // 2. Hit detection for elements
+      const hitEl = [...elements].reverse().find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
       if (hitEl) {
         onSelect?.(hitEl.id);
-        setDraggedItem({ type: 'element', id: hitEl.id });
+        setDraggedItem({ type: 'element', id: hitEl.id, offsetX: hitEl.x - x, offsetY: hitEl.y - y });
         return;
       }
-      // Hit detection for seats
-      const hitSeat = seats.find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
+      // 3. Hit detection for seats
+      const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
       if (hitSeat) {
         onSelect?.(hitSeat.id);
-        setDraggedItem({ type: 'seat', id: hitSeat.id });
+        setDraggedItem({ type: 'seat', id: hitSeat.id, offsetX: hitSeat.x - x, offsetY: hitSeat.y - y });
         return;
       }
       onSelect?.(null);
@@ -246,10 +265,17 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const x = (e.clientX - rect.left - transform.x) / transform.scale;
       const y = (e.clientY - rect.top - transform.y) / transform.scale;
 
-      if (draggedItem.type === 'seat') {
-        setSeats(prev => prev.map(s => s.id === draggedItem.id ? { ...s, x, y } : s));
+      if (draggedItem.handle === 'br') {
+        setElements(prev => prev.map(el => {
+          if (el.id === draggedItem.id) {
+            return { ...el, w: Math.max(20, (x - el.x)*2), h: Math.max(20, (y - el.y)*2) };
+          }
+          return el;
+        }));
+      } else if (draggedItem.type === 'seat') {
+        setSeats(prev => prev.map(s => s.id === draggedItem.id ? { ...s, x: x + draggedItem.offsetX, y: y + draggedItem.offsetY } : s));
       } else {
-        setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, x, y } : el));
+        setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, x: x + draggedItem.offsetX, y: y + draggedItem.offsetY } : el));
       }
       return;
     }
