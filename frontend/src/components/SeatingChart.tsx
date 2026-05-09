@@ -26,6 +26,7 @@ interface MapElement {
   icon?: 'stairs' | 'wc' | 'bar' | 'exit';
   color?: string;
   angle?: number;
+  sides?: number;
 }
 
 interface SeatingChartProps {
@@ -35,8 +36,8 @@ interface SeatingChartProps {
   elements?: MapElement[];
   isDesignMode?: boolean;
   onUpdate?: (seats: Seat[], elements: MapElement[]) => void;
-  onSelect?: (id: string | null) => void;
-  selectedId?: string | null;
+  onSelect?: (ids: string[]) => void;
+  selectedIds?: string[];
 }
 
 const SeatingChart: React.FC<SeatingChartProps> = ({ 
@@ -47,42 +48,33 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   isDesignMode = false,
   onUpdate,
   onSelect,
-  selectedId: externalSelectedId
+  selectedIds: externalSelectedIds = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [elements, setElements] = useState<MapElement[]>(initialElements);
-  const [selectedId, setSelectedId] = useState<string | number | null>(null);
-  
-  // Sync internal selectedId with external if provided
-  useEffect(() => {
-    if (externalSelectedId !== undefined) {
-      setSelectedId(externalSelectedId || null);
-    }
-  }, [externalSelectedId]);
-
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const [selectedIds, setSelectedIds] = useState<string[]>(externalSelectedIds);
+  const [selectionRect, setSelectionRect] = useState<{x: number, y: number, w: number, h: number} | null>(null);
   const [draggedItem, setDraggedItem] = useState<{
     type: 'seat' | 'element', 
     id: string | number,
     offsetX: number,
     offsetY: number,
-    handle?: 'br' // Bottom-right resize handle
+    handle?: 'br',
+    groupSnapshot?: Map<string, {x: number, y: number}>
   } | null>(null);
 
-  useEffect(() => {
-    setSeats(initialSeats);
-  }, [initialSeats]);
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
-    setElements(initialElements);
-  }, [initialElements]);
+  useEffect(() => { setSeats(initialSeats); }, [initialSeats]);
+  useEffect(() => { setElements(initialElements); }, [initialElements]);
+  useEffect(() => { setSelectedIds(externalSelectedIds); }, [externalSelectedIds]);
 
-  // Canvas Setup & Rendering
+  // --- Rendering Engine ---
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -95,11 +87,78 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.translate(transform.x, transform.y);
       ctx.scale(transform.scale, transform.scale);
 
-      // Draw Elements
-      elements.forEach(el => drawElement(ctx, el));
-      
-      // Draw Seats
-      seats.forEach(seat => drawSeat(ctx, seat, selectedId === seat.id));
+      // 1. Draw Elements
+      elements.forEach(el => {
+        ctx.save();
+        ctx.translate(el.x, el.y);
+        ctx.rotate((el.angle || 0) * Math.PI / 180);
+        const isSelected = selectedIds.includes(el.id);
+
+        ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
+        ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+        ctx.lineWidth = isSelected ? 3 : 1;
+        
+        const sides = el.sides ?? 4;
+        if (sides === 0) {
+          ctx.beginPath(); ctx.arc(0, 0, el.w!/2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        } else if (sides > 4) {
+          ctx.beginPath();
+          for(let i=0; i<sides; i++) {
+            const ang = (i * (360/sides)) * Math.PI/180;
+            ctx.lineTo(Math.cos(ang)*el.w!/2, Math.sin(ang)*el.w!/2);
+          }
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+        } else {
+          // Rounded Rect
+          const w = el.w!, h = el.h!, r = 8;
+          ctx.beginPath();
+          ctx.moveTo(-w/2+r, -h/2); ctx.arcTo(w/2, -h/2, w/2, h/2, r); ctx.arcTo(w/2, h/2, -w/2, h/2, r);
+          ctx.arcTo(-w/2, h/2, -w/2, -h/2, r); ctx.arcTo(-w/2, -h/2, w/2, -h/2, r);
+          ctx.fill(); ctx.stroke();
+        }
+
+        if (isSelected && isDesignMode) {
+           ctx.strokeStyle = '#FFBF00'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
+           ctx.strokeRect(-el.w!/2 - 4, -el.h!/2 - 4, el.w! + 8, el.h! + 8); ctx.setLineDash([]);
+           ctx.fillStyle = '#FFBF00'; ctx.fillRect(el.w!/2 - 4, el.h!/2 - 4, 8, 8);
+        }
+        if (el.label) {
+          ctx.font = '800 12px Outfit'; ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+          ctx.textAlign = 'center'; ctx.fillText(el.label.toUpperCase(), 0, 5);
+        }
+        ctx.restore();
+      });
+
+      // 2. Draw Seats
+      seats.forEach(seat => {
+        ctx.save();
+        ctx.translate(seat.x, seat.y);
+        ctx.rotate((seat.angle || 0) * Math.PI / 180);
+        const isSelected = selectedIds.includes(seat.id.toString());
+        
+        let color = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.1)');
+        let borderColor = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(28, 33, 48, 0.3)');
+        
+        if (isSelected) { ctx.shadowBlur = 10; ctx.shadowColor = '#FFBF00'; }
+        
+        ctx.fillStyle = color; ctx.strokeStyle = borderColor; ctx.lineWidth = 1.5;
+        // Simple Square for seat
+        ctx.beginPath();
+        const r = 4; const w = 18, h = 18;
+        ctx.moveTo(-9+r, -9); ctx.arcTo(9, -9, 9, 9, r); ctx.arcTo(9, 9, -9, 9, r);
+        ctx.arcTo(-9, 9, -9, -9, r); ctx.arcTo(-9, -9, 9, -9, r);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      });
+
+      // 3. Selection Rect (Marquee)
+      if (selectionRect) {
+        ctx.fillStyle = 'rgba(255, 191, 0, 0.15)';
+        ctx.strokeStyle = '#FFBF00';
+        ctx.lineWidth = 1;
+        ctx.fillRect(selectionRect.x, selectionRect.y, selectionRect.w, selectionRect.h);
+        ctx.strokeRect(selectionRect.x, selectionRect.y, selectionRect.w, selectionRect.h);
+      }
 
       ctx.restore();
     };
@@ -108,150 +167,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     canvas.width = canvas.clientWidth * dpr;
     canvas.height = canvas.clientHeight * dpr;
     ctx.scale(dpr, dpr);
-
     render();
-  }, [seats, elements, transform, selectedId, theme]);
+  }, [seats, elements, transform, theme, selectedIds, selectionRect]);
 
-    const drawRoundedRect = (ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
-      ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.arcTo(x + width, y, x + width, y + height, radius);
-      ctx.arcTo(x + width, y + height, x, y + height, radius);
-      ctx.arcTo(x, y + height, x, y, radius);
-      ctx.arcTo(x, y, x + width, y, radius);
-      ctx.closePath();
-    };
-
-    const drawElement = (ctx: CanvasRenderingContext2D, el: MapElement) => {
-      ctx.save();
-      ctx.translate(el.x, el.y);
-      ctx.rotate((el.angle || 0) * Math.PI / 180);
-      const isSelected = selectedId === el.id;
-
-      if (el.type === 'rect') {
-        ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
-        ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
-        ctx.lineWidth = isSelected ? 2 : 1;
-        
-        if (el.label?.toLowerCase().includes('mesa')) {
-          // Circular Table
-          ctx.beginPath();
-          ctx.arc(0, 0, el.w!/2, 0, Math.PI*2);
-          ctx.fill();
-          ctx.stroke();
-        } else if (el.label?.toLowerCase().includes('arbol')) {
-          // Organic Tree Shape
-          ctx.fillStyle = 'rgba(46, 204, 113, 0.15)';
-          ctx.strokeStyle = 'rgba(46, 204, 113, 0.5)';
-          ctx.beginPath();
-          for(let i=0; i<6; i++) {
-            const ang = (i * 60) * Math.PI/180;
-            const r = (el.w!/2) * (0.8 + Math.random()*0.4);
-            ctx.lineTo(Math.cos(ang)*r, Math.sin(ang)*r);
-          }
-          ctx.closePath();
-          ctx.fill();
-          ctx.stroke();
-        } else {
-          drawRoundedRect(ctx, -el.w!/2, -el.h!/2, el.w!, el.h!, 8);
-          ctx.fill();
-          ctx.stroke();
-        }
-
-        // Patterns for Esplanades/Gardens
-        if (el.label?.toLowerCase().includes('explanada') || el.label?.toLowerCase().includes('jardin')) {
-          ctx.save();
-          ctx.clip();
-          ctx.strokeStyle = el.label.includes('jardin') ? 'rgba(46, 204, 113, 0.1)' : 'rgba(255,255,255,0.03)';
-          for(let i=-1000; i<1000; i+=20) {
-            ctx.moveTo(i, -1000); ctx.lineTo(i-200, 1000);
-          }
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        // Draw Selection Handles
-        if (isSelected && isDesignMode) {
-           ctx.strokeStyle = '#FFBF00';
-           ctx.lineWidth = 1;
-           ctx.setLineDash([5, 5]);
-           ctx.strokeRect(-el.w!/2 - 4, -el.h!/2 - 4, el.w! + 8, el.h! + 8);
-           ctx.setLineDash([]);
-           
-           // Resize Handle (Bottom-Right)
-           ctx.fillStyle = '#FFBF00';
-           ctx.fillRect(el.w!/2 - 4, el.h!/2 - 4, 8, 8);
-        }
-      if (el.label) {
-        ctx.font = '800 12px Outfit';
-        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
-        ctx.textAlign = 'center';
-        ctx.fillText(el.label.toUpperCase(), 0, 5);
-      }
-    } else if (el.type === 'icon') {
-      ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? '#FFBF00' : '#B8860B');
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      if (el.icon === 'stairs') {
-        for(let i=0; i<3; i++) { ctx.moveTo(-10, 10 - i*8); ctx.lineTo(-10 + i*8, 10 - i*8); ctx.lineTo(-10 + i*8, 10 - (i+1)*8); }
-      } else if (el.icon === 'wc') {
-        ctx.arc(-5, -5, 5, 0, Math.PI*2); ctx.moveTo(-10, 12); ctx.lineTo(10, 12);
-      } else if (el.icon === 'bar') {
-        ctx.moveTo(-10, -10); ctx.lineTo(10, -10); ctx.lineTo(0, 10); ctx.closePath();
-      }
-      ctx.stroke();
-      if (el.label) {
-        ctx.font = '700 9px Outfit';
-        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.6)';
-        ctx.textAlign = 'center';
-        ctx.fillText(el.label.toUpperCase(), 0, 25);
-      }
-    }
-    ctx.restore();
-  };
-
-  const drawSeat = (ctx: CanvasRenderingContext2D, seat: Seat, isSelected: boolean) => {
-    ctx.save();
-    ctx.translate(seat.x, seat.y);
-    ctx.rotate((seat.angle || 0) * Math.PI / 180);
-    
-    let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.1)'; 
-    let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(28, 33, 48, 0.3)';
-    
-    if (seat.status === 'occupied') {
-       color = theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(28, 33, 48, 0.05)';
-       borderColor = 'transparent';
-    } else if (seat.status === 'selected' || isSelected) {
-       color = '#FFBF00';
-       borderColor = '#FFBF00';
-       if (isSelected) {
-         ctx.shadowBlur = 15;
-         ctx.shadowColor = '#FFBF00';
-       }
-    } else {
-       const cat = seat.category.toLowerCase();
-       if (cat.includes('vip')) { color = 'rgba(255, 191, 0, 0.15)'; borderColor = 'rgba(255, 191, 0, 0.6)'; }
-       else if (cat.includes('general_a')) { color = 'rgba(34, 166, 179, 0.15)'; borderColor = 'rgba(34, 166, 179, 0.6)'; }
-       else if (cat.includes('general_b')) { color = 'rgba(139, 69, 19, 0.12)'; borderColor = 'rgba(139, 69, 19, 0.5)'; }
-    }
-
-    ctx.fillStyle = color;
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, -9, -9, 18, 18, 4);
-    ctx.fill();
-    ctx.stroke();
-
-    if (transform.scale > 1.2) {
-      ctx.font = '600 7px Outfit';
-      ctx.fillStyle = (seat.status === 'selected' || isSelected) ? '#0B0D17' : (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.6)');
-      ctx.textAlign = 'center';
-      ctx.fillText(seat.number.toString(), 0, 3);
-    }
-    ctx.restore();
-  };
-
-  // Interaction Logic
+  // --- Interaction Logic ---
   const handleMouseDown = (e: React.MouseEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -259,34 +178,53 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const y = (e.clientY - rect.top - transform.y) / transform.scale;
 
     if (isDesignMode) {
-      // 1. Check for Resize Handles (only for selected element)
-      if (selectedId) {
-        const el = elements.find(e => e.id === selectedId);
-        if (el && el.type === 'rect') {
-          const hx = el.x + el.w!/2;
-          const hy = el.y + el.h!/2;
-          if (Math.abs(hx - x) < 15 && Math.abs(hy - y) < 15) {
-            setDraggedItem({ type: 'element', id: el.id, offsetX: 0, offsetY: 0, handle: 'br' });
-            return;
-          }
+      // 1. Resize Handle
+      if (selectedIds.length === 1) {
+        const el = elements.find(e => e.id === selectedIds[0]);
+        if (el && Math.abs(el.x + el.w!/2 - x) < 15 && Math.abs(el.y + el.h!/2 - y) < 15) {
+          setDraggedItem({ type: 'element', id: el.id, offsetX: 0, offsetY: 0, handle: 'br' });
+          return;
         }
       }
 
-      // 2. Hit detection for elements
+      // 2. Hit detection for objects
       const hitEl = [...elements].reverse().find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
-      if (hitEl) {
-        onSelect?.(hitEl.id);
-        setDraggedItem({ type: 'element', id: hitEl.id, offsetX: hitEl.x - x, offsetY: hitEl.y - y });
-        return;
-      }
-      // 3. Hit detection for seats
       const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
-      if (hitSeat) {
-        onSelect?.(hitSeat.id);
-        setDraggedItem({ type: 'seat', id: hitSeat.id, offsetX: hitSeat.x - x, offsetY: hitSeat.y - y });
+      const hit = hitSeat || hitEl;
+
+      if (hit) {
+        const id = hit.id.toString();
+        let newSelection = selectedIds;
+        if (!selectedIds.includes(id)) {
+          newSelection = e.shiftKey ? [...selectedIds, id] : [id];
+          setSelectedIds(newSelection);
+          onSelect?.(newSelection);
+        }
+
+        // Prepare Group Drag Snapshot
+        const snapshot = new Map();
+        newSelection.forEach(sid => {
+          const s = seats.find(st => st.id.toString() === sid);
+          const e = elements.find(el => el.id === sid);
+          if (s) snapshot.set(sid, { x: s.x, y: s.y });
+          if (e) snapshot.set(sid, { x: e.x, y: e.y });
+        });
+
+        setDraggedItem({ 
+          type: hitSeat ? 'seat' : 'element', 
+          id: id, 
+          offsetX: hit.x - x, 
+          offsetY: hit.y - y,
+          groupSnapshot: snapshot
+        });
         return;
       }
-      onSelect?.(null);
+
+      // 3. Empty Area -> Start Marquee
+      if (!e.shiftKey) { setSelectedIds([]); onSelect?.([]); }
+      setSelectionRect({ x, y, w: 0, h: 0 });
+      setLastMousePos({ x, y }); // Store start canvas pos
+      return;
     }
 
     setIsDragging(true);
@@ -294,79 +232,71 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (draggedItem) {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      const x = (e.clientX - rect.left - transform.x) / transform.scale;
-      const y = (e.clientY - rect.top - transform.y) / transform.scale;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = (e.clientX - rect.left - transform.x) / transform.scale;
+    const y = (e.clientY - rect.top - transform.y) / transform.scale;
 
+    if (selectionRect) {
+      setSelectionRect(prev => ({ ...prev!, w: x - prev!.x, h: y - prev!.y }));
+      return;
+    }
+
+    if (draggedItem) {
       if (draggedItem.handle === 'br') {
-        setElements(prev => prev.map(el => {
-          if (el.id === draggedItem.id) {
-            return { ...el, w: Math.max(20, (x - el.x)*2), h: Math.max(20, (y - el.y)*2) };
-          }
-          return el;
+        setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, w: Math.max(20, (x - el.x)*2), h: Math.max(20, (y - el.y)*2) } : el));
+      } else if (draggedItem.groupSnapshot) {
+        // Move entire group
+        const dx = x - (draggedItem.groupSnapshot.get(draggedItem.id.toString())!.x - draggedItem.offsetX);
+        const dy = y - (draggedItem.groupSnapshot.get(draggedItem.id.toString())!.y - draggedItem.offsetY);
+        
+        setSeats(prev => prev.map(s => {
+          const snap = draggedItem.groupSnapshot!.get(s.id.toString());
+          return snap ? { ...s, x: snap.x + dx, y: snap.y + dy } : s;
         }));
-      } else if (draggedItem.type === 'seat') {
-        setSeats(prev => prev.map(s => s.id === draggedItem.id ? { ...s, x: x + draggedItem.offsetX, y: y + draggedItem.offsetY } : s));
-      } else {
-        setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, x: x + draggedItem.offsetX, y: y + draggedItem.offsetY } : el));
+        setElements(prev => prev.map(el => {
+          const snap = draggedItem.groupSnapshot!.get(el.id);
+          return snap ? { ...el, x: snap.x + dx, y: snap.y + dy } : el;
+        }));
       }
       return;
     }
 
     if (isDragging) {
-      setTransform(prev => ({
-        ...prev,
-        x: prev.x + (e.clientX - lastMousePos.x),
-        y: prev.y + (e.clientY - lastMousePos.y)
-      }));
+      setTransform(prev => ({ ...prev, x: prev.x + (e.clientX - lastMousePos.x), y: prev.y + (e.clientY - lastMousePos.y) }));
       setLastMousePos({ x: e.clientX, y: e.clientY });
     }
   };
 
   const handleMouseUp = () => {
+    if (selectionRect) {
+      const x1 = Math.min(selectionRect.x, selectionRect.x + selectionRect.w);
+      const x2 = Math.max(selectionRect.x, selectionRect.x + selectionRect.w);
+      const y1 = Math.min(selectionRect.y, selectionRect.y + selectionRect.h);
+      const y2 = Math.max(selectionRect.y, selectionRect.y + selectionRect.h);
+
+      const inSeats = seats.filter(s => s.x >= x1 && s.x <= x2 && s.y >= y1 && s.y <= y2).map(s => s.id.toString());
+      const inEls = elements.filter(el => el.x >= x1 && el.x <= x2 && el.y >= y1 && el.y <= y2).map(el => el.id);
+      
+      const newSelection = [...inSeats, ...inEls];
+      setSelectedIds(newSelection);
+      onSelect?.(newSelection);
+      setSelectionRect(null);
+    }
     setIsDragging(false);
     if (draggedItem && onUpdate) onUpdate(seats, elements);
     setDraggedItem(null);
   };
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const preventDefault = (e: WheelEvent) => {
-      e.preventDefault();
-    };
-
-    // Force non-passive wheel listener to allow preventDefault
-    canvas.addEventListener('wheel', preventDefault, { passive: false });
-    return () => canvas.removeEventListener('wheel', preventDefault);
-  }, []);
-
   const handleWheel = (e: React.WheelEvent) => {
-    const delta = -e.deltaY;
-    const factor = delta > 0 ? 1.1 : 0.9;
-    const newScale = Math.max(0.05, Math.min(transform.scale * factor, 5));
-    setTransform(prev => ({ ...prev, scale: newScale }));
+    const factor = e.deltaY > 0 ? 0.9 : 1.1;
+    setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * factor, 5)) }));
   };
 
   return (
-    <div ref={containerRef} className="w-full h-full relative cursor-crosshair bg-nature-night/5 dark:bg-black/20 rounded-[3rem] overflow-hidden border border-white/5 shadow-inner">
-      <canvas
-        ref={canvasRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onWheel={handleWheel}
-        className="w-full h-full block"
-      />
-
-      <div className="absolute bottom-6 right-6 flex items-center gap-4">
-        <div className="px-4 py-2 bg-nature-night/80 dark:bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest text-white/60">
-          Zoom: {Math.round(transform.scale * 100)}%
-        </div>
-      </div>
+    <div ref={containerRef} className="w-full h-full relative cursor-crosshair bg-[#0b0d17] overflow-hidden">
+      <canvas ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={handleWheel} className="w-full h-full block" />
+      <div className="absolute bottom-6 right-6 px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest opacity-50">Zoom: {Math.round(transform.scale * 100)}%</div>
     </div>
   );
 };
