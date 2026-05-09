@@ -8,7 +8,9 @@ import {
   Moon, Sun, Layout as LayoutIcon, 
   Settings2, Layers, Grid3X3, Trash2, 
   Copy, Type, Palette, Compass, RotateCw, 
-  Coffee, Trees, Zap
+  Coffee, Trees, Zap, AlignLeft, AlignCenter, 
+  AlignRight, AlignVerticalJustifyCenter, 
+  ChevronUp, ChevronDown as ChevronDownIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -30,10 +32,7 @@ export default function DesignerPage() {
       .then(res => res.json())
       .then(data => {
         setTheaters(data);
-        if (data.length > 0) {
-          setSelectedTheaterId(data[0].id);
-          loadTheater(data[0]);
-        }
+        if (data.length > 0) { setSelectedTheaterId(data[0].id); loadTheater(data[0]); }
       });
   }, []);
 
@@ -55,8 +54,6 @@ export default function DesignerPage() {
     setElements(updatedElements);
   };
 
-  const handleSelect = (ids: string[]) => setSelectedIds(ids);
-
   const saveToDB = async () => {
     if (!selectedTheaterId) return;
     setIsSaving(true);
@@ -72,6 +69,40 @@ export default function DesignerPage() {
     finally { setIsSaving(false); }
   };
 
+  // --- Pro Actions ---
+  const alignSelected = (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    if (selectedIds.length < 2) return;
+    const selectedSeats = seats.filter(s => selectedIds.includes(String(s.id)));
+    const selectedEls = elements.filter(e => selectedIds.includes(e.id));
+    const all = [...selectedSeats, ...selectedEls];
+    
+    if (type === 'left') {
+      const minX = Math.min(...all.map(i => i.x));
+      setSeats(seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, x: minX } : s));
+      setElements(elements.map(e => selectedIds.includes(e.id) ? { ...e, x: minX } : e));
+    } else if (type === 'top') {
+      const minY = Math.min(...all.map(i => i.y));
+      setSeats(seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, y: minY } : s));
+      setElements(elements.map(e => selectedIds.includes(e.id) ? { ...e, y: minY } : e));
+    }
+  };
+
+  const moveLayer = (direction: 'up' | 'down') => {
+    if (selectedIds.length !== 1) return;
+    const id = selectedIds[0];
+    const isEl = elements.some(e => e.id === id);
+    if (!isEl) return;
+    
+    const idx = elements.findIndex(e => e.id === id);
+    const newEls = [...elements];
+    if (direction === 'up' && idx < elements.length - 1) {
+      [newEls[idx], newEls[idx+1]] = [newEls[idx+1], newEls[idx]];
+    } else if (direction === 'down' && idx > 0) {
+      [newEls[idx], newEls[idx-1]] = [newEls[idx-1], newEls[idx]];
+    }
+    setElements(newEls);
+  };
+
   const addElement = (type: string, label: string, color: string) => {
     const newEl = { id: `el-${crypto.randomUUID()}`, type: 'rect', x: 500, y: 500, w: 150, h: 100, label, color, angle: 0, sides: 4 };
     setElements(prev => [...prev, newEl]);
@@ -79,43 +110,29 @@ export default function DesignerPage() {
   };
 
   const addBatchSeats = (type: 'grid' | 'arc') => {
-    const input = window.prompt(`¿Cuántos asientos en el ${type === 'grid' ? 'bloque' : 'arco'}?`, "10");
+    const input = window.prompt(`¿Cuántos asientos?`, "12");
     const count = parseInt(input || "0");
     if (count <= 0) return;
-    const center = { x: 500, y: 500 };
-    let newBatch: any[] = [];
-    if (type === 'grid') {
-      newBatch = Array.from({ length: count }).map((_, i) => ({
-        id: `seat-${crypto.randomUUID()}`, x: center.x + i * 35, y: center.y, row: "A", number: seats.length + i + 1, status: 'available', category: 'standard', angle: 0
-      }));
-    } else {
-      const radius = 350, startAngle = -60, angleStep = 120 / (count - 1 || 1);
-      newBatch = Array.from({ length: count }).map((_, i) => {
-        const ang = (startAngle + i * angleStep) * Math.PI / 180;
-        return { id: `seat-${crypto.randomUUID()}`, x: 500 + Math.sin(ang) * radius, y: 350 + Math.cos(ang) * radius, row: "ARC", number: seats.length + i + 1, status: 'available', category: 'vip', angle: -(startAngle + i * angleStep) };
-      });
-    }
+    const newBatch = Array.from({ length: count }).map((_, i) => {
+      const id = `seat-${crypto.randomUUID()}`;
+      if (type === 'grid') return { id, x: 500 + i * 35, y: 500, row: "A", number: seats.length + i + 1, status: 'available', category: 'standard', angle: 0 };
+      const ang = (-60 + i * (120/(count-1))) * Math.PI / 180;
+      return { id, x: 500 + Math.sin(ang) * 350, y: 350 + Math.cos(ang) * 350, row: "ARC", number: seats.length + i + 1, status: 'available', category: 'vip', angle: -(-60 + i * (120/(count-1))) };
+    });
     setSeats(prev => [...prev, ...newBatch]);
     setSelectedIds(newBatch.map(s => s.id));
   };
 
-  const deleteSelected = () => {
-    setSeats(prev => prev.filter(s => !selectedIds.includes(s.id.toString())));
-    setElements(prev => prev.filter(e => !selectedIds.includes(e.id)));
-    setSelectedIds([]);
-  };
-
   const updateSelectedProperty = (prop: string, value: any) => {
-    setSeats(prev => prev.map(s => selectedIds.includes(s.id.toString()) ? { ...s, [prop]: value } : s));
+    setSeats(prev => prev.map(s => selectedIds.includes(String(s.id)) ? { ...s, [prop]: value } : s));
     setElements(prev => prev.map(e => selectedIds.includes(e.id) ? { ...e, [prop]: value } : e));
   };
 
-  const isMultiSelect = selectedIds.length > 1;
-  const firstSelectedItem = seats.find(s => s.id.toString() === selectedIds[0]) || elements.find(e => e.id === selectedIds[0]);
+  const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(e.id));
 
   return (
-    <div className="h-screen w-screen bg-[#0b0d17] overflow-hidden flex flex-col font-sans selection:bg-amber-honey/30 text-white">
-      <Head><title>Nectar Studio Pro | Engineering Suite</title></Head>
+    <div className="h-screen w-screen bg-[#0b0d17] overflow-hidden flex flex-col font-sans text-white">
+      <Head><title>Nectar Studio Pro | Architecture Edition</title></Head>
 
       <header className="h-16 px-6 border-b border-white/5 bg-black/60 backdrop-blur-3xl flex items-center justify-between z-50">
         <div className="flex items-center gap-6">
@@ -125,7 +142,7 @@ export default function DesignerPage() {
             </div>
             <div className="flex flex-col">
               <span className="text-[10px] font-black uppercase tracking-[0.4em] leading-none">Nectar Studio</span>
-              <span className="text-[8px] font-bold opacity-30 uppercase tracking-[0.2em]">Engineering Suite</span>
+              <span className="text-[8px] font-bold opacity-30 uppercase tracking-[0.2em]">Architecture Edition</span>
             </div>
           </div>
           <div className="h-6 w-px bg-white/10 mx-2" />
@@ -162,62 +179,62 @@ export default function DesignerPage() {
 
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 relative bg-dot-pattern">
-          <SeatingChart seats={seats} elements={elements} isDesignMode={true} theme={theme} selectedIds={selectedIds} onUpdate={handleUpdate} onSelect={handleSelect} />
+          <SeatingChart seats={seats} elements={elements} isDesignMode={true} theme={theme} selectedIds={selectedIds} onUpdate={handleUpdate} onSelect={setSelectedIds} />
         </main>
 
         <aside className={cn("w-80 bg-black/40 backdrop-blur-3xl border-l border-white/10 flex flex-col transition-all duration-500", selectedIds.length === 0 && "translate-x-full w-0 opacity-0")}>
           <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <Settings2 size={14} className="text-amber-honey" />
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-white/80">{isMultiSelect ? `Lote (${selectedIds.length})` : 'Propiedades'}</h3>
-              </div>
-              <button onClick={deleteSelected} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-white/80">{selectedIds.length > 1 ? `Lote (${selectedIds.length})` : 'Propiedades'}</h3>
+              <button onClick={() => { setSeats(seats.filter(s => !selectedIds.includes(String(s.id)))); setElements(elements.filter(e => !selectedIds.includes(e.id))); setSelectedIds([]); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
             </div>
 
-            {firstSelectedItem && (
+            {selectedIds.length > 1 && (
+              <div className="mb-8 p-4 bg-white/5 rounded-2xl border border-white/5 space-y-4">
+                <label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Alineación</label>
+                <div className="flex gap-2">
+                  <button onClick={() => alignSelected('left')} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all"><AlignLeft size={16}/></button>
+                  <button onClick={() => alignSelected('top')} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all rotate-90"><AlignLeft size={16}/></button>
+                </div>
+              </div>
+            )}
+
+            {selectedIds.length === 1 && elements.some(e => e.id === selectedIds[0]) && (
+              <div className="mb-8 p-4 bg-white/5 rounded-2xl border border-white/5 space-y-4">
+                <label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Capa (Z-Index)</label>
+                <div className="flex gap-2">
+                  <button onClick={() => moveLayer('up')} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all flex items-center gap-2 text-[10px] font-bold"><ChevronUp size={16}/> Subir</button>
+                  <button onClick={() => moveLayer('down')} className="p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-all flex items-center gap-2 text-[10px] font-bold"><ChevronDownIcon size={16}/> Bajar</button>
+                </div>
+              </div>
+            )}
+
+            {firstSelected && (
               <div className="space-y-6">
                 <div className="space-y-3">
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Identificación {isMultiSelect && '(Múltiple)'}</label>
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Identificación</label>
                   <div className="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/5">
                     <Type size={14} className="text-white/20" />
-                    <input type="text" value={isMultiSelect ? 'SELECCIÓN MÚLTIPLE' : (firstSelectedItem.label || firstSelectedItem.row || '')} onChange={(e) => updateSelectedProperty(firstSelectedItem.row ? 'row' : 'label', e.target.value)} disabled={isMultiSelect} className="bg-transparent text-xs font-bold outline-none w-full"/>
+                    <input type="text" value={selectedIds.length > 1 ? 'MÚLTIPLE' : (firstSelected.label || firstSelected.row || '')} onChange={(e) => updateSelectedProperty(firstSelected.row ? 'row' : 'label', e.target.value)} className="bg-transparent text-xs font-bold outline-none w-full"/>
                   </div>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Geometría {isMultiSelect && '(Batch)'}</label>
-                  {!firstSelectedItem.row && (
+                  <label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Geometría</label>
+                  {!firstSelected.row && (
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                        <span className="text-[8px] font-bold block opacity-30 mb-1">Ancho</span>
-                        <input type="number" value={firstSelectedItem.w || 0} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} className="bg-transparent text-xs font-bold outline-none w-full"/>
-                      </div>
-                      <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                        <span className="text-[8px] font-bold block opacity-30 mb-1">Alto</span>
-                        <input type="number" value={firstSelectedItem.h || 0} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} className="bg-transparent text-xs font-bold outline-none w-full"/>
-                      </div>
+                      <div className="bg-white/5 p-3 rounded-xl border border-white/5"><span className="text-[8px] font-bold block opacity-30 mb-1">Ancho</span><input type="number" value={firstSelected.w || 0} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} className="bg-transparent text-xs font-bold outline-none w-full"/></div>
+                      <div className="bg-white/5 p-3 rounded-xl border border-white/5"><span className="text-[8px] font-bold block opacity-30 mb-1">Alto</span><input type="number" value={firstSelected.h || 0} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} className="bg-transparent text-xs font-bold outline-none w-full"/></div>
                     </div>
                   )}
                   <div className="space-y-2">
-                    <div className="flex justify-between px-1"><span className="text-[8px] font-bold uppercase opacity-30">Rotación Lote</span><span className="text-[8px] font-bold text-amber-honey">{firstSelectedItem.angle || 0}°</span></div>
-                    <input type="range" min="0" max="360" value={firstSelectedItem.angle || 0} onChange={(e) => updateSelectedProperty('angle', parseInt(e.target.value))} className="w-full accent-amber-honey"/>
+                    <div className="flex justify-between px-1"><span className="text-[8px] font-bold uppercase opacity-30">Rotación</span><span className="text-[8px] font-bold text-amber-honey">{firstSelected.angle || 0}°</span></div>
+                    <input type="range" min="0" max="360" value={firstSelected.angle || 0} onChange={(e) => updateSelectedProperty('angle', parseInt(e.target.value))} className="w-full accent-amber-honey"/>
                   </div>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Material {isMultiSelect && '(Global)'}</label>
-                  <select onChange={(e) => updateSelectedProperty('category', e.target.value)} className="w-full bg-white/5 border border-white/5 p-3 rounded-xl text-[10px] font-bold uppercase outline-none">
-                    <option value="standard" className="bg-nature-night">Standard</option>
-                    <option value="vip" className="bg-nature-night">VIP Gold</option>
-                    <option value="platinum" className="bg-nature-night">Platinum Elite</option>
-                    <option value="accessible" className="bg-nature-night">Accessible</option>
-                  </select>
                 </div>
               </div>
             )}
           </div>
-          <div className="p-6 border-t border-white/5 bg-white/5"><p className="text-[9px] text-white/30 italic">Modificaciones aplicadas al lote seleccionado.</p></div>
         </aside>
       </div>
 

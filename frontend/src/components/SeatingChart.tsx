@@ -47,6 +47,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   selectedIds: externalSelectedIds = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [elements, setElements] = useState<MapElement[]>(initialElements);
@@ -69,7 +70,34 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   useEffect(() => { setElements(initialElements); }, [initialElements]);
   useEffect(() => { setSelectedIds(externalSelectedIds); }, [externalSelectedIds]);
 
-  // Rendering
+  // Keyboard Shortcuts Handler
+  useEffect(() => {
+    if (!isDesignMode) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedIds.length === 0) return;
+      const step = e.shiftKey ? 10 : 1;
+      
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const newSeats = seats.filter(s => !selectedIds.includes(String(s.id)));
+        const newElements = elements.filter(el => !selectedIds.includes(el.id));
+        setSeats(newSeats); setElements(newElements); setSelectedIds([]);
+        onUpdate?.(newSeats, newElements);
+      } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        e.preventDefault();
+        const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+        const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
+        
+        const newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, x: s.x + dx, y: s.y + dy } : s);
+        const newEls = elements.map(el => selectedIds.includes(el.id) ? { ...el, x: el.x + dx, y: el.y + dy } : el);
+        setSeats(newSeats); setElements(newEls);
+        onUpdate?.(newSeats, newEls);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds, seats, elements, isDesignMode]);
+
+  // Render Engine
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -82,19 +110,16 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.translate(transform.x, transform.y);
       ctx.scale(transform.scale, transform.scale);
 
+      // Elements (Order determines layers)
       elements.forEach(el => {
-        ctx.save();
-        ctx.translate(el.x, el.y);
-        ctx.rotate((el.angle || 0) * Math.PI / 180);
+        ctx.save(); ctx.translate(el.x, el.y); ctx.rotate((el.angle || 0) * Math.PI / 180);
         const isSelected = selectedIds.includes(el.id);
         ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
         ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
         ctx.lineWidth = isSelected ? 3 : 1;
-        
         const sides = el.sides ?? 4;
-        if (sides === 0) {
-          ctx.beginPath(); ctx.arc(0, 0, el.w!/2, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        } else {
+        if (sides === 0) { ctx.beginPath(); ctx.arc(0, 0, el.w!/2, 0, Math.PI*2); ctx.fill(); ctx.stroke(); }
+        else {
           ctx.beginPath();
           for(let i=0; i<sides; i++) {
             const ang = (i * (360/sides)) * Math.PI/180;
@@ -102,9 +127,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
           }
           ctx.closePath(); ctx.fill(); ctx.stroke();
         }
-        if (isSelected && isDesignMode) {
-          ctx.fillStyle = '#FFBF00'; ctx.fillRect(el.w!/2 - 4, el.h!/2 - 4, 8, 8);
-        }
+        if (isSelected && isDesignMode) { ctx.fillStyle = '#FFBF00'; ctx.fillRect(el.w!/2 - 4, el.h!/2 - 4, 8, 8); }
         if (el.label) {
           ctx.font = '800 12px Outfit'; ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
           ctx.textAlign = 'center'; ctx.fillText(el.label.toUpperCase(), 0, 5);
@@ -112,10 +135,9 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.restore();
       });
 
+      // Seats
       seats.forEach(seat => {
-        ctx.save();
-        ctx.translate(seat.x, seat.y);
-        ctx.rotate((seat.angle || 0) * Math.PI / 180);
+        ctx.save(); ctx.translate(seat.x, seat.y); ctx.rotate((seat.angle || 0) * Math.PI / 180);
         const isSelected = selectedIds.includes(String(seat.id));
         ctx.fillStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)');
         ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.3)');
@@ -133,8 +155,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
     const dpr = window.devicePixelRatio || 1;
     canvas.width = canvas.clientWidth * dpr; canvas.height = canvas.clientHeight * dpr;
-    ctx.scale(dpr, dpr);
-    render();
+    ctx.scale(dpr, dpr); render();
   }, [seats, elements, transform, theme, selectedIds, selectionRect]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -143,52 +164,38 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const x = (e.clientX - rect.left - transform.x) / transform.scale;
     const y = (e.clientY - rect.top - transform.y) / transform.scale;
 
-    // Pan with Right Click or Middle Click
     if (e.button === 1 || e.button === 2) {
-      setIsPanning(true);
-      setLastMousePos({ x: e.clientX, y: e.clientY });
-      return;
+      setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY }); return;
     }
 
     if (isDesignMode && e.button === 0) {
-      if (selectedIds.length === 1) {
-        const el = elements.find(e => e.id === selectedIds[0]);
-        if (el && Math.abs(el.x + el.w!/2 - x) < 15 && Math.abs(el.y + el.h!/2 - y) < 15) {
-          setDraggedItem({ type: 'element', id: el.id, offsetX: 0, offsetY: 0, handle: 'br' });
-          return;
-        }
-      }
-
       const hitEl = [...elements].reverse().find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
       const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
       const hit = hitSeat || hitEl;
 
       if (hit) {
-        const id = String(hit.id || '');
+        const id = String(hit.id);
         let newSelection = selectedIds;
         if (!selectedIds.includes(id)) {
           newSelection = e.shiftKey ? [...selectedIds, id] : [id];
-          setSelectedIds(newSelection);
-          onSelect?.(newSelection);
+          setSelectedIds(newSelection); onSelect?.(newSelection);
         }
         const snapshot = new Map();
         newSelection.forEach(sid => {
           const s = seats.find(st => String(st.id) === sid);
           const el = elements.find(el => el.id === sid);
-          if (s) snapshot.set(sid, { x: s.x, y: s.y });
-          if (el) snapshot.set(sid, { x: el.x, y: el.y });
+          if (s) snapshot.set(sid, { x: s.x, y: s.y }); else if (el) snapshot.set(sid, { x: el.x, y: el.y });
         });
-        setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, groupSnapshot: snapshot });
+        setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, 
+          handle: (hitEl && Math.abs(hitEl.x + hitEl.w!/2 - x) < 15 && Math.abs(hitEl.y + hitEl.h!/2 - y) < 15) ? 'br' : undefined,
+          groupSnapshot: snapshot 
+        });
         return;
       }
-
       if (!e.shiftKey) { setSelectedIds([]); onSelect?.([]); }
-      setSelectionRect({ x, y, w: 0, h: 0 });
-      return;
+      setSelectionRect({ x, y, w: 0, h: 0 }); return;
     }
-
-    setIsPanning(true);
-    setLastMousePos({ x: e.clientX, y: e.clientY });
+    setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -197,29 +204,28 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const x = (e.clientX - rect.left - transform.x) / transform.scale;
     const y = (e.clientY - rect.top - transform.y) / transform.scale;
 
-    if (selectionRect) {
-      setSelectionRect(prev => ({ ...prev!, w: x - prev!.x, h: y - prev!.y }));
-      return;
-    }
+    if (selectionRect) { setSelectionRect(prev => ({ ...prev!, w: x - prev!.x, h: y - prev!.y })); return; }
 
     if (draggedItem) {
       if (draggedItem.handle === 'br') {
         setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, w: Math.max(20, (x - el.x)*2), h: Math.max(20, (y - el.y)*2) } : el));
       } else if (draggedItem.groupSnapshot) {
-        const dx = x - (draggedItem.groupSnapshot.get(draggedItem.id)!.x - draggedItem.offsetX);
-        const dy = y - (draggedItem.groupSnapshot.get(draggedItem.id)!.y - draggedItem.offsetY);
-        setSeats(prev => prev.map(s => {
-          const snap = draggedItem.groupSnapshot!.get(String(s.id));
-          return snap ? { ...s, x: snap.x + dx, y: snap.y + dy } : s;
-        }));
-        setElements(prev => prev.map(el => {
-          const snap = draggedItem.groupSnapshot!.get(el.id);
-          return snap ? { ...el, x: snap.x + dx, y: snap.y + dy } : el;
-        }));
+        const snap = draggedItem.groupSnapshot.get(draggedItem.id);
+        if (snap) {
+          const dx = x - (snap.x - draggedItem.offsetX);
+          const dy = y - (snap.y - draggedItem.offsetY);
+          setSeats(prev => prev.map(s => {
+            const sSnap = draggedItem.groupSnapshot!.get(String(s.id));
+            return sSnap ? { ...s, x: sSnap.x + dx, y: sSnap.y + dy } : s;
+          }));
+          setElements(prev => prev.map(el => {
+            const eSnap = draggedItem.groupSnapshot!.get(el.id);
+            return eSnap ? { ...el, x: eSnap.x + dx, y: eSnap.y + dy } : el;
+          }));
+        }
       }
       return;
     }
-
     if (isPanning) {
       setTransform(prev => ({ ...prev, x: prev.x + (e.clientX - lastMousePos.x), y: prev.y + (e.clientY - lastMousePos.y) }));
       setLastMousePos({ x: e.clientX, y: e.clientY });
@@ -235,14 +241,15 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const newSel = [...inSeats, ...inEls]; setSelectedIds(newSel); onSelect?.(newSel);
       setSelectionRect(null);
     }
-    setIsPanning(false);
-    if (draggedItem && onUpdate) onUpdate(seats, elements);
-    setDraggedItem(null);
+    setIsPanning(false); if (draggedItem && onUpdate) onUpdate(seats, elements); setDraggedItem(null);
   };
 
   return (
     <div className="w-full h-full relative cursor-crosshair bg-[#0b0d17] overflow-hidden" onContextMenu={(e) => e.preventDefault()}>
-      <canvas ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={(e) => setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5)) }))} className="w-full h-full block" />
+      <canvas ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={(e) => setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5)) }))} className="w-full h-full block outline-none" tabIndex={0} />
+      <div className="absolute bottom-6 left-6 flex gap-2">
+        <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50">Del: Borrar | Shift+Drag: Multi | Arrows: Precision</div>
+      </div>
       <div className="absolute bottom-6 right-6 px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-[10px] font-black opacity-50 uppercase tracking-widest">Zoom: {Math.round(transform.scale * 100)}%</div>
     </div>
   );
