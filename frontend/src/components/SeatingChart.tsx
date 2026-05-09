@@ -1,19 +1,22 @@
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import * as React from 'react';
+import { useRef, useEffect, useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { Settings, Plus, Square, Map as MapIcon, RotateCw, Trash2, Download } from 'lucide-react';
 
 interface Seat {
-  id: number;
-  row: string;
-  number: number;
-  status: 'available' | 'occupied' | 'selected';
-  category: string;
-  section: string;
+  id: string | number;
   x: number;
   y: number;
+  row: string;
+  number: number;
+  status: 'available' | 'occupied' | 'selected' | 'reserved';
+  category: string;
   angle: number;
 }
 
 interface MapElement {
+  id: string;
   type: 'rect' | 'icon' | 'text';
   x: number;
   y: number;
@@ -26,130 +29,46 @@ interface MapElement {
 
 interface SeatingChartProps {
   seats: Seat[];
-  onSeatSelect: (seat: Seat) => void;
+  onSeatSelect?: (seat: Seat) => void;
   theme?: 'light' | 'dark';
   elements?: MapElement[];
+  isDesignMode?: boolean;
+  onUpdate?: (seats: Seat[], elements: MapElement[]) => void;
 }
 
-const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme = 'dark', elements = [] }) => {
+const SeatingChart: React.FC<SeatingChartProps> = ({ 
+  seats: initialSeats, 
+  onSeatSelect, 
+  theme = 'dark', 
+  elements: initialElements = [],
+  isDesignMode = false,
+  onUpdate
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Transform state (Pan & Zoom)
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [seats, setSeats] = useState<Seat[]>(initialSeats);
+  const [elements, setElements] = useState<MapElement[]>(initialElements);
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
   const [isDragging, setIsDragging] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
-  const [hoveredSeatId, setHoveredSeatId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
+  const [draggedItem, setDraggedItem] = useState<{type: 'seat' | 'element', id: string | number} | null>(null);
 
-  // Initialize view to center seats
   useEffect(() => {
-    if (seats.length > 0 && containerRef.current) {
-      const allX = seats.map(s => s.x);
-      const allY = seats.map(s => s.y);
-      const minX = Math.min(...allX);
-      const maxX = Math.max(...allX);
-      const minY = Math.min(...allY);
-      const maxY = Math.max(...allY);
-      
-      const centerX = (minX + maxX) / 2;
-      const centerY = (minY + maxY) / 2;
-      
-      const width = maxX - minX + 200;
-      const height = maxY - minY + 200;
-      
-      const container = containerRef.current;
-      const scale = Math.min(container.clientWidth / width, container.clientHeight / height, 1);
-      
-      setTransform({
-        x: container.clientWidth / 2 - centerX * scale,
-        y: container.clientHeight / 2 - centerY * scale,
-        scale: scale
-      });
-    }
-  }, [seats.length]);
+    setSeats(initialSeats);
+  }, [initialSeats]);
 
-  // Main Render Loop
+  useEffect(() => {
+    setElements(initialElements);
+  }, [initialElements]);
+
+  // Canvas Setup & Rendering
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
-    // Prevent default scroll when zooming
-    const preventDefault = (e: WheelEvent) => {
-      e.preventDefault();
-    };
-    canvas.addEventListener('wheel', preventDefault, { passive: false });
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Handle High DPI
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = canvas.clientWidth * dpr;
-    canvas.height = canvas.clientHeight * dpr;
-    ctx.scale(dpr, dpr);
-
-    const drawElement = (ctx: CanvasRenderingContext2D, el: MapElement) => {
-      ctx.save();
-      ctx.translate(el.x, el.y);
-      
-      if (el.type === 'rect') {
-        ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
-        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(-el.w!/2, -el.h!/2, el.w!, el.h!, 8);
-        
-        // Nectarlabs Special: Pattern for 'Zones'
-        if (el.label?.toLowerCase().includes('zona') || el.label?.toLowerCase().includes('explanada')) {
-          ctx.save();
-          ctx.clip();
-          ctx.strokeStyle = theme === 'dark' ? 'rgba(255,191,0,0.1)' : 'rgba(0,0,0,0.05)';
-          ctx.lineWidth = 0.5;
-          for(let i=-200; i<200; i+=10) {
-            ctx.moveTo(i*2, -200); ctx.lineTo(i*2-200, 200);
-          }
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        ctx.fill();
-        ctx.stroke();
-        
-        if (el.label) {
-          ctx.font = '800 10px Outfit';
-          ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
-          ctx.textAlign = 'center';
-          ctx.fillText(el.label.toUpperCase(), 0, 4);
-        }
-      } else if (el.type === 'icon') {
-        // Draw professional icons
-        ctx.strokeStyle = theme === 'dark' ? '#FFBF00' : '#B8860B';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        
-        if (el.icon === 'stairs') {
-          for(let i=0; i<3; i++) {
-            ctx.moveTo(-10, 10 - i*8);
-            ctx.lineTo(-10 + i*8, 10 - i*8);
-            ctx.lineTo(-10 + i*8, 10 - (i+1)*8);
-          }
-        } else if (el.icon === 'wc') {
-          ctx.arc(-5, -5, 4, 0, Math.PI*2);
-          ctx.moveTo(-10, 10); ctx.lineTo(0, 10);
-        } else if (el.icon === 'bar') {
-          ctx.moveTo(-8, -8); ctx.lineTo(8, -8); ctx.lineTo(0, 8); ctx.closePath();
-        }
-        ctx.stroke();
-        
-        if (el.label) {
-          ctx.font = '700 8px Outfit';
-          ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.5)';
-          ctx.textAlign = 'center';
-          ctx.fillText(el.label.toUpperCase(), 0, 20);
-        }
-      }
-      ctx.restore();
-    };
 
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -157,223 +76,218 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme 
       ctx.translate(transform.x, transform.y);
       ctx.scale(transform.scale, transform.scale);
 
-      // 1. Draw Architectural Elements First (Background)
+      // Draw Elements
       elements.forEach(el => drawElement(ctx, el));
-
-      // 2. Draw Stage
-      drawStage(ctx);
-
-      // 3. Draw Seats
-      seats.forEach(seat => {
-        drawSeat(ctx, seat, hoveredSeatId === seat.id);
-      });
+      
+      // Draw Seats
+      seats.forEach(seat => drawSeat(ctx, seat, selectedId === seat.id));
 
       ctx.restore();
     };
 
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
     render();
+  }, [seats, elements, transform, selectedId, theme]);
 
-    return () => {
-      canvas.removeEventListener('wheel', preventDefault);
-    };
-  }, [seats, transform, hoveredSeatId]);
-
-  const drawStage = (ctx: CanvasRenderingContext2D) => {
-    const stageWidth = 600;
-    const stageHeight = 12;
+  const drawElement = (ctx: CanvasRenderingContext2D, el: MapElement) => {
     ctx.save();
-    
-    // Stage Glow - Amber Honey
-    const gradient = ctx.createLinearGradient(500 - stageWidth/2, 0, 500 + stageWidth/2, 0);
-    gradient.addColorStop(0, 'rgba(255, 191, 0, 0)');
-    gradient.addColorStop(0.5, 'rgba(255, 191, 0, 0.6)');
-    gradient.addColorStop(1, 'rgba(255, 191, 0, 0)');
-    
-    ctx.fillStyle = gradient;
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = '#FFBF00';
-    ctx.fillRect(500 - stageWidth/2, 50, stageWidth, stageHeight);
-    
-    ctx.font = '800 14px Outfit';
-    ctx.fillStyle = theme === 'dark' ? 'rgba(255, 191, 0, 0.4)' : 'rgba(28, 33, 48, 0.4)';
-    ctx.textAlign = 'center';
-    ctx.letterSpacing = '4px';
-    ctx.fillText('ESCENARIO PRINCIPAL', 500, 35);
+    ctx.translate(el.x, el.y);
+    const isSelected = selectedId === el.id;
+
+    if (el.type === 'rect') {
+      ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
+      ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+      ctx.lineWidth = isSelected ? 3 : 1;
+      ctx.beginPath();
+      ctx.roundRect(-el.w!/2, -el.h!/2, el.w!, el.h!, 8);
+      
+      // Pattern for Zones
+      if (el.label?.toLowerCase().includes('zona') || el.label?.toLowerCase().includes('explanada')) {
+        ctx.save();
+        ctx.clip();
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,191,0,0.1)' : 'rgba(0,0,0,0.05)';
+        for(let i=-500; i<500; i+=15) {
+          ctx.moveTo(i*2, -500); ctx.lineTo(i*2-500, 500);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.fill();
+      ctx.stroke();
+      if (el.label) {
+        ctx.font = '800 12px Outfit';
+        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+        ctx.textAlign = 'center';
+        ctx.fillText(el.label.toUpperCase(), 0, 5);
+      }
+    } else if (el.type === 'icon') {
+      ctx.strokeStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? '#FFBF00' : '#B8860B');
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      if (el.icon === 'stairs') {
+        for(let i=0; i<3; i++) { ctx.moveTo(-10, 10 - i*8); ctx.lineTo(-10 + i*8, 10 - i*8); ctx.lineTo(-10 + i*8, 10 - (i+1)*8); }
+      } else if (el.icon === 'wc') {
+        ctx.arc(-5, -5, 5, 0, Math.PI*2); ctx.moveTo(-10, 12); ctx.lineTo(10, 12);
+      } else if (el.icon === 'bar') {
+        ctx.moveTo(-10, -10); ctx.lineTo(10, -10); ctx.lineTo(0, 10); ctx.closePath();
+      }
+      ctx.stroke();
+      if (el.label) {
+        ctx.font = '700 9px Outfit';
+        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.6)';
+        ctx.textAlign = 'center';
+        ctx.fillText(el.label.toUpperCase(), 0, 25);
+      }
+    }
     ctx.restore();
   };
 
-  const drawSeat = (ctx: CanvasRenderingContext2D, seat: Seat, isHovered: boolean) => {
-    const size = 18;
+  const drawSeat = (ctx: CanvasRenderingContext2D, seat: Seat, isSelected: boolean) => {
     ctx.save();
     ctx.translate(seat.x, seat.y);
     ctx.rotate((seat.angle * Math.PI) / 180);
-
-    // Styling based on status - Using new palette
+    
     let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.1)'; 
     let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(28, 33, 48, 0.3)';
-    let textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(28, 33, 48, 0.7)';
-
+    
     if (seat.status === 'occupied') {
        color = theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(28, 33, 48, 0.05)';
        borderColor = 'transparent';
-       ctx.globalAlpha = 0.3;
-    } else if (seat.status === 'selected') {
+    } else if (seat.status === 'selected' || isSelected) {
        color = '#FFBF00';
        borderColor = '#FFBF00';
-       textColor = '#0B0D17';
+       if (isSelected) ctx.shadowBlur = 15; ctx.shadowColor = '#FFBF00';
     } else {
-       // Category-based colors (Earthy & Nature)
        const cat = seat.category.toLowerCase();
-       if (cat.includes('vip')) {
-          color = 'rgba(255, 191, 0, 0.15)'; 
-          borderColor = 'rgba(255, 191, 0, 0.6)';
-          textColor = theme === 'dark' ? '#FFBF00' : '#B8860B';
-       } else if (cat.includes('general_a') || cat.includes('sky')) {
-          color = 'rgba(34, 166, 179, 0.15)'; 
-          borderColor = 'rgba(34, 166, 179, 0.6)';
-          textColor = '#22A6B3';
-       } else if (cat.includes('general_b') || cat.includes('earth') || cat.includes('standard')) {
-          color = 'rgba(139, 69, 19, 0.12)'; 
-          borderColor = 'rgba(139, 69, 19, 0.5)';
-          textColor = '#8B4513';
-       } else {
-          // Fallback visibility for any other category
-          color = theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(28, 33, 48, 0.15)';
-          borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(28, 33, 48, 0.4)';
-          textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(28, 33, 48, 0.8)';
-       }
+       if (cat.includes('vip')) { color = 'rgba(255, 191, 0, 0.15)'; borderColor = 'rgba(255, 191, 0, 0.6)'; }
+       else if (cat.includes('general_a')) { color = 'rgba(34, 166, 179, 0.15)'; borderColor = 'rgba(34, 166, 179, 0.6)'; }
+       else if (cat.includes('general_b')) { color = 'rgba(139, 69, 19, 0.12)'; borderColor = 'rgba(139, 69, 19, 0.5)'; }
     }
 
-    if (isHovered && seat.status !== 'occupied') {
-       ctx.scale(1.25, 1.25);
-       if (seat.status !== 'selected') {
-         borderColor = '#FFBF00';
-         ctx.shadowBlur = 15;
-         ctx.shadowColor = '#FFBF00';
-       }
-    }
-
-    // Draw Seat Rect
     ctx.fillStyle = color;
     ctx.strokeStyle = borderColor;
     ctx.lineWidth = 1.5;
-    
-    const r = 5;
     ctx.beginPath();
-    ctx.roundRect(-size/2, -size/2, size, size, r);
+    ctx.roundRect(-9, -9, 18, 18, 4);
     ctx.fill();
     ctx.stroke();
 
-    // Seat Number
-    ctx.font = 'bold 9px Outfit';
-    ctx.fillStyle = textColor;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(seat.number.toString(), 0, 0);
-
+    if (transform.scale > 1.2) {
+      ctx.font = '600 7px Outfit';
+      ctx.fillStyle = (seat.status === 'selected' || isSelected) ? '#0B0D17' : (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.6)');
+      ctx.textAlign = 'center';
+      ctx.fillText(seat.number.toString(), 0, 3);
+    }
     ctx.restore();
   };
 
-  // Interaction Handlers
+  // Interaction Logic
   const handleMouseDown = (e: React.MouseEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = (e.clientX - rect.left - transform.x) / transform.scale;
+    const y = (e.clientY - rect.top - transform.y) / transform.scale;
+
+    if (isDesignMode) {
+      // Hit detection for elements
+      const hitEl = elements.find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
+      if (hitEl) {
+        setSelectedId(hitEl.id);
+        setDraggedItem({ type: 'element', id: hitEl.id });
+        return;
+      }
+      // Hit detection for seats
+      const hitSeat = seats.find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
+      if (hitSeat) {
+        setSelectedId(hitSeat.id);
+        setDraggedItem({ type: 'seat', id: hitSeat.id });
+        return;
+      }
+      setSelectedId(null);
+    }
+
     setIsDragging(true);
     setLastMousePos({ x: e.clientX, y: e.clientY });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (draggedItem) {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const x = (e.clientX - rect.left - transform.x) / transform.scale;
+      const y = (e.clientY - rect.top - transform.y) / transform.scale;
+
+      if (draggedItem.type === 'seat') {
+        setSeats(prev => prev.map(s => s.id === draggedItem.id ? { ...s, x, y } : s));
+      } else {
+        setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, x, y } : el));
+      }
+      return;
+    }
+
     if (isDragging) {
-      const dx = e.clientX - lastMousePos.x;
-      const dy = e.clientY - lastMousePos.y;
-      setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+      setTransform(prev => ({
+        ...prev,
+        x: prev.x + (e.clientX - lastMousePos.x),
+        y: prev.y + (e.clientY - lastMousePos.y)
+      }));
       setLastMousePos({ x: e.clientX, y: e.clientY });
     }
-
-    // Hit Testing for hover
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
-    const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
-    
-    const hitSeat = seats.find(s => {
-      const dx = s.x - mouseX;
-      const dy = s.y - mouseY;
-      return Math.sqrt(dx*dx + dy*dy) < 12; // 12px radius hit test
-    });
-
-    setHoveredSeatId(hitSeat?.id || null);
   };
 
-  const handleMouseUp = (e: React.MouseEvent) => {
+  const handleMouseUp = () => {
     setIsDragging(false);
-    
-    // Handle Click (only if not dragging much)
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
-    const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
-    
-    const hitSeat = seats.find(s => {
-      const dx = s.x - mouseX;
-      const dy = s.y - mouseY;
-      return Math.sqrt(dx*dx + dy*dy) < 12;
-    });
-
-    if (hitSeat && hitSeat.status !== 'occupied') {
-      onSeatSelect(hitSeat);
-    }
+    if (draggedItem && onUpdate) onUpdate(seats, elements);
+    setDraggedItem(null);
   };
 
   const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
     const delta = -e.deltaY;
     const factor = delta > 0 ? 1.1 : 0.9;
     const newScale = Math.max(0.1, Math.min(transform.scale * factor, 5));
-    
-    // Zoom toward mouse position
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const newX = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
-    const newY = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
-
-    setTransform({ x: newX, y: newY, scale: newScale });
+    setTransform(prev => ({ ...prev, scale: newScale }));
   };
 
   return (
-    <div 
-      ref={containerRef}
-      className="w-full h-[750px] amber-glass rounded-[4rem] relative overflow-hidden group cursor-grab active:cursor-grabbing border-2"
-    >
+    <div ref={containerRef} className="w-full h-full relative cursor-crosshair bg-nature-night/5 dark:bg-black/20 rounded-[3rem] overflow-hidden border border-white/5 shadow-inner">
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
-        className="w-full h-full"
+        className="w-full h-full block"
       />
-
-      {/* UI Overlays */}
-      <div className="absolute bottom-10 right-10 flex flex-col gap-4">
-        <div className="bg-white/5 backdrop-blur-xl px-8 py-5 rounded-[2rem] border border-white/10 flex gap-10 items-center shadow-2xl">
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-xs font-black text-amber-honey">{Math.round(transform.scale * 100)}%</span>
-              <span className="text-[8px] font-bold opacity-40 uppercase tracking-widest">Zoom</span>
-            </div>
-            <div className="h-10 w-px bg-white/10" />
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-xs font-black text-amber-honey">{seats.length.toLocaleString()}</span>
-              <span className="text-[8px] font-bold opacity-40 uppercase tracking-widest">Butacas</span>
-            </div>
+      
+      {isDesignMode && (
+        <div className="absolute top-6 left-6 flex flex-col gap-3">
+          <div className="p-2 amber-glass rounded-2xl flex flex-col gap-2">
+            <button className="p-3 hover:bg-amber-honey/20 rounded-xl transition-all"><Plus size={20}/></button>
+            <button className="p-3 hover:bg-amber-honey/20 rounded-xl transition-all"><Square size={20}/></button>
+            <button className="p-3 hover:bg-amber-honey/20 rounded-xl transition-all"><MapIcon size={20}/></button>
+          </div>
+          <div className="p-2 bg-red-500/10 border border-red-500/20 rounded-2xl">
+             <button onClick={() => {
+               if (selectedId) {
+                 setSeats(prev => prev.filter(s => s.id !== selectedId));
+                 setElements(prev => prev.filter(el => el.id !== selectedId));
+                 setSelectedId(null);
+               }
+             }} className="p-3 text-red-500 hover:bg-red-500/20 rounded-xl transition-all">
+               <Trash2 size={20}/>
+             </button>
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="absolute top-10 left-10 pointer-events-none">
-        <div className="px-6 py-3 bg-amber-honey text-nature-night rounded-2xl shadow-xl shadow-amber-honey/20">
-           <p className="text-[10px] font-black uppercase tracking-[0.2em]">Selección Interactiva</p>
+      <div className="absolute bottom-6 right-6 flex items-center gap-4">
+        <div className="px-4 py-2 bg-nature-night/80 dark:bg-white/10 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-widest text-white/60">
+          Zoom: {Math.round(transform.scale * 100)}%
         </div>
       </div>
     </div>
