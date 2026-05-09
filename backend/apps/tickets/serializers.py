@@ -14,9 +14,10 @@ class TheaterSerializer(serializers.ModelSerializer):
 
 class EventSerializer(serializers.ModelSerializer):
     theater_name = serializers.CharField(source='theater.name', read_only=True)
+    theater_location = serializers.CharField(source='theater.location', read_only=True)
     class Meta:
         model = Event
-        fields = '__all__'
+        fields = ['id', 'title', 'artist', 'date', 'theater', 'theater_name', 'theater_location', 'image', 'is_active', 'mg_price', 'mg_limit', 'price_multiplier']
 
 class TicketSerializer(serializers.ModelSerializer):
     event_title = serializers.CharField(source='event.title', read_only=True)
