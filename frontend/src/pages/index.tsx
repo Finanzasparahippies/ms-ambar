@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import SeatingChart from '../components/SeatingChart';
+import TourTimeline from '../components/TourTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Ticket, Users, Music2, MapPin, Calendar, Star } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -82,62 +83,15 @@ const Home = () => {
       </Head>
 
       <div className="max-w-[1600px] mx-auto px-6 md:px-10 pb-20">
-        {/* Tour Dates Selector */}
-        <div className="mb-16">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-honey/20 to-transparent"></div>
-            <h3 className="text-[10px] font-black uppercase tracking-[0.5em] opacity-40">Ruta de Esencia: Tour 2026</h3>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-honey/20 to-transparent"></div>
-          </div>
-          
-          <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar no-scrollbar-md">
-            {events.map((event) => (
-              <motion.button
-                key={event.id}
-                whileHover={{ y: -4 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => {
-                  setCurrentEvent(event);
-                  setSelectedSeats([]);
-                  setWantsMG(false);
-                }}
-                className={cn(
-                  "flex-shrink-0 px-8 py-5 rounded-3xl border transition-all duration-500 text-left min-w-[280px] relative overflow-hidden group",
-                  currentEvent?.id === event.id 
-                    ? "bg-amber-honey border-amber-honey shadow-2xl shadow-amber-honey/20" 
-                    : "bg-white/5 border-white/10 hover:border-amber-honey/40"
-                )}
-              >
-                <div className="relative z-10">
-                  <p className={cn(
-                    "text-[8px] font-black uppercase tracking-widest mb-1",
-                    currentEvent?.id === event.id ? "text-nature-night/60" : "text-amber-honey"
-                  )}>
-                    {new Date(event.date).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'short' })}
-                  </p>
-                  <h4 className={cn(
-                    "text-lg font-extrabold tracking-tight",
-                    currentEvent?.id === event.id ? "text-nature-night" : "text-white"
-                  )}>
-                    {event.theater_name}
-                  </h4>
-                  <p className={cn(
-                    "text-[10px] font-bold opacity-60 mt-1",
-                    currentEvent?.id === event.id ? "text-nature-night/80" : ""
-                  )}>
-                    {event.theater_location}
-                  </p>
-                </div>
-                {currentEvent?.id === event.id && (
-                  <motion.div 
-                    layoutId="active-date-bg"
-                    className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent pointer-events-none"
-                  />
-                )}
-              </motion.button>
-            ))}
-          </div>
-        </div>
+        <TourTimeline 
+          events={events} 
+          currentEvent={currentEvent} 
+          onEventSelect={(event) => {
+            setCurrentEvent(event);
+            setSelectedSeats([]);
+            setWantsMG(false);
+          }}
+        />
 
         <div className="grid lg:grid-cols-12 gap-12 xl:gap-20">
           <div className="lg:col-span-8">
