@@ -89,7 +89,8 @@ class Theater(models.Model):
                         
                         final_x = base_x + radius * math.cos(seat_angle_rad)
                         final_y = base_y + radius * math.sin(seat_angle_rad)
-                        final_angle = seat_angle_deg + 90
+                        # Rotate to face the center of the arc (Nectarlabs logic)
+                        final_angle = seat_angle_deg + 180
                     
                     Seat.objects.update_or_create(
                         theater=self,

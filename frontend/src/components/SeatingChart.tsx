@@ -98,6 +98,20 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme 
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.roundRect(-el.w!/2, -el.h!/2, el.w!, el.h!, 8);
+        
+        // Nectarlabs Special: Pattern for 'Zones'
+        if (el.label?.toLowerCase().includes('zona') || el.label?.toLowerCase().includes('explanada')) {
+          ctx.save();
+          ctx.clip();
+          ctx.strokeStyle = theme === 'dark' ? 'rgba(255,191,0,0.1)' : 'rgba(0,0,0,0.05)';
+          ctx.lineWidth = 0.5;
+          for(let i=-200; i<200; i+=10) {
+            ctx.moveTo(i*2, -200); ctx.lineTo(i*2-200, 200);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
+
         ctx.fill();
         ctx.stroke();
         
