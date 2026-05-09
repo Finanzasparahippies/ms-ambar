@@ -65,7 +65,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
            </div>
         </div>
         
-        <div className="hidden md:flex items-center gap-3 opacity-30 text-[10px] font-black uppercase tracking-widest">
+        <div className="hidden md:flex items-center gap-3 opacity-30 text-[10px] font-black uppercase tracking-widest text-nature-night dark:text-white">
           <ArrowLeft size={12} /> Desliza para explorar <ArrowRight size={12} />
         </div>
       </div>
@@ -73,7 +73,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
       {/* Timeline Track */}
       <div className="relative group">
         {/* The Track Line */}
-        <div className="absolute top-[4.5rem] left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent z-0" />
+        <div className="absolute top-[4.5rem] left-0 w-full h-px bg-gradient-to-r from-transparent via-nature-night/10 dark:via-white/10 to-transparent z-0" />
         
         <div className="flex gap-8 overflow-x-auto pb-12 pt-4 px-4 no-scrollbar scroll-smooth">
           <AnimatePresence mode="wait">
@@ -101,13 +101,21 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                       {/* Date Bubble */}
                       <div className="flex flex-col items-center mb-6">
                          <div className={cn(
-                           "w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-500 mb-4 bg-nature-night z-10",
-                           isActive ? "border-amber-honey shadow-[0_0_20px_rgba(255,191,0,0.3)] scale-110" : "border-white/10 group-hover:border-white/20"
+                           "w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-500 mb-4 bg-nature-night dark:bg-nature-night z-10",
+                           isActive 
+                            ? "border-amber-honey shadow-[0_0_20px_rgba(255,191,0,0.3)] scale-110" 
+                            : "border-nature-night/10 dark:border-white/10 group-hover:border-nature-night/30 dark:group-hover:border-white/30"
                          )}>
-                            <span className={cn("text-[8px] font-black uppercase", isActive ? "text-amber-honey" : "text-white/40")}>
+                            <span className={cn(
+                              "text-[8px] font-black uppercase", 
+                              isActive ? "text-amber-honey" : "text-nature-night/40 dark:text-white/40"
+                            )}>
                               {date.toLocaleDateString('es-MX', { month: 'short' })}
                             </span>
-                            <span className={cn("text-sm font-black", isActive ? "text-white" : "text-white/60")}>
+                            <span className={cn(
+                              "text-sm font-black", 
+                              isActive ? "text-white" : "text-nature-night/60 dark:text-white/60"
+                            )}>
                               {date.getDate()}
                             </span>
                          </div>
@@ -143,7 +151,10 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                             {event.theater_name}
                           </h4>
                           
-                          <div className="flex items-center gap-2 opacity-40 text-[10px] font-bold uppercase tracking-wider text-nature-night dark:text-white">
+                          <div className={cn(
+                            "flex items-center gap-2 opacity-40 text-[10px] font-bold uppercase tracking-wider",
+                            "text-nature-night dark:text-white"
+                          )}>
                              <Calendar size={12} />
                              {date.toLocaleDateString('es-MX', { weekday: 'long' })}
                           </div>
@@ -159,10 +170,10 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                 <motion.div 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="w-full py-20 text-center amber-glass rounded-[3rem] border-2 border-dashed border-white/5"
+                  className="w-full py-20 text-center amber-glass rounded-[3rem] border-2 border-dashed border-nature-night/5 dark:border-white/5"
                 >
                    <Calendar className="mx-auto mb-4 opacity-20" size={48} />
-                   <p className="text-sm font-black uppercase tracking-[0.4em] opacity-30">Caminos por Descubrir en {selectedYear}</p>
+                   <p className="text-sm font-black uppercase tracking-[0.4em] opacity-30 text-nature-night dark:text-white">Caminos por Descubrir en {selectedYear}</p>
                 </motion.div>
               )}
             </motion.div>
