@@ -23,7 +23,6 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
 
   const years = useMemo(() => {
     const yearsSet = new Set(events.map(e => new Date(e.date).getFullYear()));
-    // Ensure 2026 and 2027 are at least visible or available
     yearsSet.add(2026);
     yearsSet.add(2027);
     return Array.from(yearsSet).sort();
@@ -101,20 +100,20 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                       {/* Date Bubble */}
                       <div className="flex flex-col items-center mb-6">
                          <div className={cn(
-                           "w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-500 mb-4 bg-nature-night dark:bg-nature-night z-10",
+                           "w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-500 mb-4 z-10 shadow-sm",
                            isActive 
-                            ? "border-amber-honey shadow-[0_0_20px_rgba(255,191,0,0.3)] scale-110" 
-                            : "border-nature-night/10 dark:border-white/10 group-hover:border-nature-night/30 dark:group-hover:border-white/30"
+                            ? "bg-amber-honey border-amber-honey shadow-[0_0_20px_rgba(255,191,0,0.3)] scale-110" 
+                            : "bg-white dark:bg-nature-night border-nature-night/10 dark:border-white/10 group-hover:border-amber-honey/50"
                          )}>
                             <span className={cn(
-                              "text-[8px] font-black uppercase", 
-                              isActive ? "text-amber-honey" : "text-nature-night/40 dark:text-white/40"
+                              "text-[8px] font-black uppercase leading-none mb-0.5", 
+                              isActive ? "text-nature-night/60" : "text-nature-night/40 dark:text-white/40"
                             )}>
                               {date.toLocaleDateString('es-MX', { month: 'short' })}
                             </span>
                             <span className={cn(
-                              "text-sm font-black", 
-                              isActive ? "text-white" : "text-nature-night/60 dark:text-white/60"
+                              "text-sm font-black leading-none", 
+                              isActive ? "text-nature-night" : "text-nature-night dark:text-white"
                             )}>
                               {date.getDate()}
                             </span>
@@ -130,14 +129,14 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                           "w-full text-left p-8 rounded-[2.5rem] border transition-all duration-500 relative overflow-hidden group/card",
                           isActive 
                             ? "amber-glass border-amber-honey/50 shadow-2xl shadow-amber-honey/10" 
-                            : "bg-black/5 dark:bg-white/5 border-black/5 dark:border-white/5 hover:border-amber-honey/30 hover:bg-black/10 dark:hover:bg-white/10"
+                            : "bg-white/40 dark:bg-white/5 border-nature-night/5 dark:border-white/5 hover:border-amber-honey/30 hover:bg-white/60 dark:hover:bg-white/10"
                         )}
                       >
                         <div className="relative z-10">
                           <div className="flex justify-between items-start mb-4">
                              <div className={cn(
                                "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
-                               isActive ? "bg-amber-honey text-nature-night" : "bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40"
+                               isActive ? "bg-amber-honey text-nature-night" : "bg-nature-night/5 dark:bg-white/5 text-nature-night/40 dark:text-white/40"
                              )}>
                                {event.theater_location}
                              </div>
@@ -146,7 +145,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                           
                           <h4 className={cn(
                             "text-xl font-extrabold tracking-tight mb-2 line-clamp-1",
-                            isActive ? "text-nature-night dark:text-white" : "text-nature-night/80 dark:text-white/80"
+                            isActive ? "text-nature-night" : "text-nature-night/80 dark:text-white/80"
                           )}>
                             {event.theater_name}
                           </h4>
@@ -172,7 +171,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                   animate={{ opacity: 1 }}
                   className="w-full py-20 text-center amber-glass rounded-[3rem] border-2 border-dashed border-nature-night/5 dark:border-white/5"
                 >
-                   <Calendar className="mx-auto mb-4 opacity-20" size={48} />
+                   <Calendar className="mx-auto mb-4 opacity-20 text-nature-night dark:text-white" size={48} />
                    <p className="text-sm font-black uppercase tracking-[0.4em] opacity-30 text-nature-night dark:text-white">Caminos por Descubrir en {selectedYear}</p>
                 </motion.div>
               )}

@@ -131,12 +131,12 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme 
     ctx.rotate((seat.angle * Math.PI) / 180);
 
     // Styling based on status - Using new palette
-    let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.05)'; 
-    let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(28, 33, 48, 0.1)';
-    let textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(28, 33, 48, 0.4)';
+    let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.08)'; 
+    let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(28, 33, 48, 0.2)';
+    let textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(28, 33, 48, 0.6)';
 
     if (seat.status === 'occupied') {
-       color = 'rgba(255, 255, 255, 0.02)';
+       color = theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(28, 33, 48, 0.03)';
        borderColor = 'transparent';
        ctx.globalAlpha = 0.3;
     } else if (seat.status === 'selected') {
