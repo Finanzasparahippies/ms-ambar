@@ -258,11 +258,23 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     setDraggedItem(null);
   };
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const preventDefault = (e: WheelEvent) => {
+      e.preventDefault();
+    };
+
+    // Force non-passive wheel listener to allow preventDefault
+    canvas.addEventListener('wheel', preventDefault, { passive: false });
+    return () => canvas.removeEventListener('wheel', preventDefault);
+  }, []);
+
   const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
     const delta = -e.deltaY;
     const factor = delta > 0 ? 1.1 : 0.9;
-    const newScale = Math.max(0.1, Math.min(transform.scale * factor, 5));
+    const newScale = Math.max(0.05, Math.min(transform.scale * factor, 5));
     setTransform(prev => ({ ...prev, scale: newScale }));
   };
 
