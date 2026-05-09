@@ -24,11 +24,18 @@ const Home = () => {
     fetch(`${apiUrl}/tickets/events/`)
       .then(res => res.json())
       .then(data => {
+        console.log("Tour Events Data:", data);
         setEvents(data);
-        if (data && data.length > 0) setCurrentEvent(data[0]);
+        if (data && data.length > 0) {
+          console.log("Current Event M&G Availability:", data[0].mg_available);
+          setCurrentEvent(data[0]);
+        }
         setIsLoading(false);
       })
-      .catch(err => console.error("Error fetching events:", err));
+      .catch(err => {
+        console.error("Error fetching events:", err);
+        setIsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -123,7 +130,7 @@ const Home = () => {
             ) : (
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/20 to-nature-sky/20 rounded-[4.1rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} />
+                <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} theme={theme} />
               </div>
             )}
           </div>

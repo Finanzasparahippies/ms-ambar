@@ -48,7 +48,9 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                  onClick={() => setSelectedYear(year)}
                  className={cn(
                    "text-2xl font-black transition-all relative px-2",
-                   selectedYear === year ? "text-white" : "text-white/20 hover:text-white/40"
+                   selectedYear === year 
+                    ? "text-nature-night dark:text-white" 
+                    : "text-nature-night/20 dark:text-white/20 hover:text-nature-night/40 dark:hover:text-white/40"
                  )}
                >
                  {year}

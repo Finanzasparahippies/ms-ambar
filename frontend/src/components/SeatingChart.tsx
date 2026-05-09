@@ -16,9 +16,10 @@ interface Seat {
 interface SeatingChartProps {
   seats: Seat[];
   onSeatSelect: (seat: Seat) => void;
+  theme?: 'light' | 'dark';
 }
 
-const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
+const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme = 'dark' }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -116,7 +117,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
     ctx.fillRect(500 - stageWidth/2, 50, stageWidth, stageHeight);
     
     ctx.font = '800 14px Outfit';
-    ctx.fillStyle = 'rgba(255, 191, 0, 0.4)';
+    ctx.fillStyle = theme === 'dark' ? 'rgba(255, 191, 0, 0.4)' : 'rgba(28, 33, 48, 0.4)';
     ctx.textAlign = 'center';
     ctx.letterSpacing = '4px';
     ctx.fillText('ESCENARIO PRINCIPAL', 500, 35);
@@ -130,9 +131,9 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
     ctx.rotate((seat.angle * Math.PI) / 180);
 
     // Styling based on status - Using new palette
-    let color = 'rgba(255, 255, 255, 0.05)'; 
-    let borderColor = 'rgba(255, 255, 255, 0.1)';
-    let textColor = 'rgba(255, 255, 255, 0.3)';
+    let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.05)'; 
+    let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(28, 33, 48, 0.1)';
+    let textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(28, 33, 48, 0.4)';
 
     if (seat.status === 'occupied') {
        color = 'rgba(255, 255, 255, 0.02)';
