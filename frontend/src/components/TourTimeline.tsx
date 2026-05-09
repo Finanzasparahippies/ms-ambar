@@ -100,19 +100,19 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                       {/* Date Bubble */}
                       <div className="flex flex-col items-center mb-6">
                          <div className={cn(
-                           "w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-500 mb-4 z-10 shadow-sm",
+                           "w-14 h-14 rounded-full border-2 flex flex-col items-center justify-center transition-all duration-500 mb-4 z-10 shadow-xl",
                            isActive 
-                            ? "bg-amber-honey border-amber-honey shadow-[0_0_20px_rgba(255,191,0,0.3)] scale-110" 
+                            ? "bg-amber-honey border-amber-honey shadow-[0_0_30px_rgba(255,191,0,0.4)] scale-110" 
                             : "bg-white dark:bg-nature-night border-nature-night/10 dark:border-white/10 group-hover:border-amber-honey/50"
                          )}>
                             <span className={cn(
-                              "text-[8px] font-black uppercase leading-none mb-0.5", 
-                              isActive ? "text-nature-night/60" : "text-nature-night/40 dark:text-white/40"
+                              "text-[9px] font-black uppercase leading-none mb-0.5 transition-colors duration-500", 
+                              isActive ? "text-nature-night/70" : "text-nature-night/40 dark:text-white/40"
                             )}>
                               {date.toLocaleDateString('es-MX', { month: 'short' })}
                             </span>
                             <span className={cn(
-                              "text-sm font-black leading-none", 
+                              "text-base font-black leading-none transition-colors duration-500", 
                               isActive ? "text-nature-night" : "text-nature-night dark:text-white"
                             )}>
                               {date.getDate()}
@@ -128,31 +128,31 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                         className={cn(
                           "w-full text-left p-8 rounded-[2.5rem] border transition-all duration-500 relative overflow-hidden group/card",
                           isActive 
-                            ? "amber-glass border-amber-honey/50 shadow-2xl shadow-amber-honey/10" 
-                            : "bg-white/40 dark:bg-white/5 border-nature-night/5 dark:border-white/5 hover:border-amber-honey/30 hover:bg-white/60 dark:hover:bg-white/10"
+                            ? "bg-amber-honey border-amber-honey shadow-2xl shadow-amber-honey/30" 
+                            : "bg-white/40 dark:bg-white/5 border-nature-night/5 dark:border-white/5 hover:border-amber-honey/30"
                         )}
                       >
                         <div className="relative z-10">
                           <div className="flex justify-between items-start mb-4">
                              <div className={cn(
                                "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
-                               isActive ? "bg-amber-honey text-nature-night" : "bg-nature-night/5 dark:bg-white/5 text-nature-night/40 dark:text-white/40"
+                               isActive ? "bg-nature-night text-amber-honey" : "bg-nature-night/5 dark:bg-white/5 text-nature-night/40 dark:text-white/40"
                              )}>
                                {event.theater_location}
                              </div>
-                             {isActive && <motion.div layoutId="active-indicator" className="w-2 h-2 bg-amber-honey rounded-full animate-pulse shadow-[0_0_10px_#FFBF00]" />}
+                             {isActive && <motion.div layoutId="active-indicator" className="w-2.5 h-2.5 bg-nature-night rounded-full shadow-lg" />}
                           </div>
                           
                           <h4 className={cn(
                             "text-xl font-extrabold tracking-tight mb-2 line-clamp-1",
-                            isActive ? "text-nature-night" : "text-nature-night/80 dark:text-white/80"
+                            isActive ? "text-nature-night" : "text-nature-night dark:text-white"
                           )}>
                             {event.theater_name}
                           </h4>
                           
                           <div className={cn(
-                            "flex items-center gap-2 opacity-40 text-[10px] font-bold uppercase tracking-wider",
-                            "text-nature-night dark:text-white"
+                            "flex items-center gap-2 opacity-60 text-[10px] font-bold uppercase tracking-wider",
+                            isActive ? "text-nature-night" : "text-nature-night dark:text-white"
                           )}>
                              <Calendar size={12} />
                              {date.toLocaleDateString('es-MX', { weekday: 'long' })}
