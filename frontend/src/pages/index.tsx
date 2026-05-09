@@ -49,6 +49,10 @@ const Home = () => {
     fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
       .then(res => res.json())
       .then(data => {
+        console.log(`Seats for Event ${currentEvent.id}:`, data);
+        if (data && data.length > 0) {
+          console.log("Sample Seat Category:", data[0].category);
+        }
         setSeats(data);
       })
       .catch(err => console.error("Error fetching seats:", err));

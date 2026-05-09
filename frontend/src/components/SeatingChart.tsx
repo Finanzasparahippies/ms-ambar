@@ -145,18 +145,24 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme 
        textColor = '#0B0D17';
     } else {
        // Category-based colors (Earthy & Nature)
-       if (seat.category === 'vip') {
-          color = 'rgba(255, 191, 0, 0.1)'; // Subtle Amber
-          borderColor = 'rgba(255, 191, 0, 0.5)';
+       const cat = seat.category.toLowerCase();
+       if (cat.includes('vip')) {
+          color = 'rgba(255, 191, 0, 0.15)'; 
+          borderColor = 'rgba(255, 191, 0, 0.6)';
           textColor = theme === 'dark' ? '#FFBF00' : '#B8860B';
-       } else if (seat.category === 'general_a') {
-          color = 'rgba(34, 166, 179, 0.1)'; // Sky
-          borderColor = 'rgba(34, 166, 179, 0.5)';
+       } else if (cat.includes('general_a') || cat.includes('sky')) {
+          color = 'rgba(34, 166, 179, 0.15)'; 
+          borderColor = 'rgba(34, 166, 179, 0.6)';
           textColor = '#22A6B3';
-       } else if (seat.category === 'general_b') {
-          color = 'rgba(139, 69, 19, 0.08)'; // Earth/Brown
-          borderColor = 'rgba(139, 69, 19, 0.4)';
+       } else if (cat.includes('general_b') || cat.includes('earth') || cat.includes('standard')) {
+          color = 'rgba(139, 69, 19, 0.12)'; 
+          borderColor = 'rgba(139, 69, 19, 0.5)';
           textColor = '#8B4513';
+       } else {
+          // Fallback visibility for any other category
+          color = theme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(28, 33, 48, 0.15)';
+          borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(28, 33, 48, 0.4)';
+          textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(28, 33, 48, 0.8)';
        }
     }
 
