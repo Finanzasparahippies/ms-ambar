@@ -167,8 +167,74 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect }) => {
     ctx.restore();
   };
 
-  // Interaction Handlers (omitted for brevity in replacement chunk but kept in file)
-  // ... handleMouseDown, handleMouseMove, handleMouseUp, handleWheel ...
+  // Interaction Handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    setLastMousePos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging) {
+      const dx = e.clientX - lastMousePos.x;
+      const dy = e.clientY - lastMousePos.y;
+      setTransform(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+      setLastMousePos({ x: e.clientX, y: e.clientY });
+    }
+
+    // Hit Testing for hover
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
+    const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
+    
+    const hitSeat = seats.find(s => {
+      const dx = s.x - mouseX;
+      const dy = s.y - mouseY;
+      return Math.sqrt(dx*dx + dy*dy) < 12; // 12px radius hit test
+    });
+
+    setHoveredSeatId(hitSeat?.id || null);
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    setIsDragging(false);
+    
+    // Handle Click (only if not dragging much)
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = (e.clientX - rect.left - transform.x) / transform.scale;
+    const mouseY = (e.clientY - rect.top - transform.y) / transform.scale;
+    
+    const hitSeat = seats.find(s => {
+      const dx = s.x - mouseX;
+      const dy = s.y - mouseY;
+      return Math.sqrt(dx*dx + dy*dy) < 12;
+    });
+
+    if (hitSeat && hitSeat.status !== 'occupied') {
+      onSeatSelect(hitSeat);
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    // e.preventDefault(); // Comentado para evitar conflictos de scroll si no es necesario
+    const delta = -e.deltaY;
+    const factor = delta > 0 ? 1.1 : 0.9;
+    const newScale = Math.max(0.1, Math.min(transform.scale * factor, 5));
+    
+    // Zoom toward mouse position
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const newX = mouseX - (mouseX - transform.x) * (newScale / transform.scale);
+    const newY = mouseY - (mouseY - transform.y) * (newScale / transform.scale);
+
+    setTransform({ x: newX, y: newY, scale: newScale });
+  };
 
   return (
     <div 
