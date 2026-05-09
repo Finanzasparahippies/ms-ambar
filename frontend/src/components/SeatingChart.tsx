@@ -131,22 +131,33 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme 
     ctx.rotate((seat.angle * Math.PI) / 180);
 
     // Styling based on status - Using new palette
-    let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.08)'; 
-    let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(28, 33, 48, 0.2)';
-    let textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(28, 33, 48, 0.6)';
+    let color = theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(28, 33, 48, 0.1)'; 
+    let borderColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(28, 33, 48, 0.3)';
+    let textColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.4)' : 'rgba(28, 33, 48, 0.7)';
 
     if (seat.status === 'occupied') {
-       color = theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(28, 33, 48, 0.03)';
+       color = theme === 'dark' ? 'rgba(255, 255, 255, 0.02)' : 'rgba(28, 33, 48, 0.05)';
        borderColor = 'transparent';
        ctx.globalAlpha = 0.3;
     } else if (seat.status === 'selected') {
        color = '#FFBF00';
        borderColor = '#FFBF00';
        textColor = '#0B0D17';
-    } else if (seat.category === 'vip') {
-       color = 'rgba(34, 166, 179, 0.1)';
-       borderColor = 'rgba(34, 166, 179, 0.4)';
-       textColor = '#22A6B3';
+    } else {
+       // Category-based colors (Earthy & Nature)
+       if (seat.category === 'vip') {
+          color = 'rgba(255, 191, 0, 0.1)'; // Subtle Amber
+          borderColor = 'rgba(255, 191, 0, 0.5)';
+          textColor = theme === 'dark' ? '#FFBF00' : '#B8860B';
+       } else if (seat.category === 'general_a') {
+          color = 'rgba(34, 166, 179, 0.1)'; // Sky
+          borderColor = 'rgba(34, 166, 179, 0.5)';
+          textColor = '#22A6B3';
+       } else if (seat.category === 'general_b') {
+          color = 'rgba(139, 69, 19, 0.08)'; // Earth/Brown
+          borderColor = 'rgba(139, 69, 19, 0.4)';
+          textColor = '#8B4513';
+       }
     }
 
     if (isHovered && seat.status !== 'occupied') {
