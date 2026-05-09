@@ -13,12 +13,13 @@ const Home = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [wantsMG, setWantsMG] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 
   // Fetch Events
   React.useEffect(() => {
     setIsMounted(true);
+    document.documentElement.setAttribute('data-theme', theme);
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
-    console.log("Using API URL:", apiUrl);
     fetch(`${apiUrl}/tickets/events/`)
       .then(res => res.json())
       .then(data => {
@@ -28,6 +29,10 @@ const Home = () => {
       })
       .catch(err => console.error("Error fetching events:", err));
   }, []);
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   // Fetch Seats for current event
   React.useEffect(() => {
@@ -42,7 +47,7 @@ const Home = () => {
       .catch(err => console.error("Error fetching seats:", err));
   }, [currentEvent]);
 
-  if (!isMounted) return <div className="min-h-screen bg-black" />;
+  if (!isMounted) return <div className="min-h-screen bg-nature-night" />;
 
   const handleSeatSelect = (seat) => {
     setSeats(prev => prev.map(s => {
@@ -72,134 +77,173 @@ const Home = () => {
   const totalPrice = seatsTotal + mgPrice;
 
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-amber-500/30 overflow-x-hidden font-['Inter']">
+    <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit">
       <Head>
-        <title>MS AMBAR | Boletos Oficiales</title>
+        <title>MS AMBAR | Esencia de Ámbar</title>
       </Head>
 
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-500/10 blur-[150px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neutral-800/20 blur-[150px] rounded-full" />
+      {/* Decorative Nature Elements */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <AnimatePresence>
+          {theme === 'light' ? (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute top-0 left-0 w-full h-full"
+            >
+              <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-honey/20 blur-[120px] rounded-full animate-pulse" />
+              <div className="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-nature-sky/10 blur-[100px] rounded-full" />
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute top-0 left-0 w-full h-full"
+            >
+              <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] bg-amber-cherry/10 blur-[120px] rounded-full" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-nature-night/40 blur-[150px] rounded-full" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       <main className="relative z-10 max-w-[1600px] mx-auto px-6 md:px-10 py-10">
         {/* Nav Bar */}
-        <nav className="flex justify-between items-center mb-16">
+        <nav className="flex justify-between items-center mb-16 amber-glass px-8 py-4 rounded-3xl">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-              <span className="text-black font-black text-lg">A</span>
+            <div className="w-10 h-10 bg-amber-honey rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20">
+              <span className="text-nature-night font-black text-lg">A</span>
             </div>
-            <h1 className="text-xl font-black tracking-tighter">MS AMBAR</h1>
+            <h1 className="text-2xl font-extrabold tracking-tighter text-glow">MS AMBAR</h1>
           </div>
-          <div className="flex gap-8 text-[10px] uppercase font-black tracking-[0.3em] text-neutral-500">
-            <a href="/merch" className="hover:text-amber-500 transition-colors">Shop</a>
-            <a href="/music" className="hover:text-amber-500 transition-colors">Music</a>
-            <a href="/blog" className="hover:text-amber-500 transition-colors">Blog</a>
-            <a href="/contact" className="hover:text-amber-500 transition-colors">Booking</a>
+          
+          <div className="hidden md:flex gap-8 text-[10px] uppercase font-bold tracking-[0.3em] opacity-70">
+            <a href="/merch" className="hover:text-amber-honey transition-colors">Shop</a>
+            <a href="/music" className="hover:text-amber-honey transition-colors">Music</a>
+            <a href="/blog" className="hover:text-amber-honey transition-colors">Blog</a>
+            <button 
+              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+              className="p-2 rounded-full bg-amber-honey/10 text-amber-honey hover:bg-amber-honey/20 transition-all"
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
           </div>
         </nav>
 
         <div className="grid lg:grid-cols-12 gap-12 xl:gap-20">
           <div className="lg:col-span-8">
             <header className="mb-10">
-              <h2 className="text-4xl md:text-6xl font-black tracking-tight mb-6">
-                {currentEvent ? currentEvent.title : 'Cargando Evento...'}
-              </h2>
-              <div className="flex flex-wrap gap-6 text-sm text-neutral-500">
-                <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
-                  <MapPin size={14} className="text-amber-500" />
-                  <span>{currentEvent ? currentEvent.theater_name : 'Cargando Recinto...'}</span>
+              <motion.h2 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8"
+              >
+                {currentEvent ? currentEvent.title : 'Cargando Magia...'}
+              </motion.h2>
+              <div className="flex flex-wrap gap-6 text-sm">
+                <div className="flex items-center gap-3 bg-nature-sky/5 border border-nature-sky/10 px-6 py-3 rounded-full backdrop-blur-md">
+                  <MapPin size={16} className="text-nature-sky" />
+                  <span className="font-semibold">{currentEvent ? currentEvent.theater_name : 'Cargando Recinto...'}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-full">
-                  <Calendar size={14} className="text-amber-500" />
-                  <span>{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
+                <div className="flex items-center gap-3 bg-amber-honey/5 border border-amber-honey/10 px-6 py-3 rounded-full backdrop-blur-md">
+                  <Calendar size={16} className="text-amber-honey" />
+                  <span className="font-semibold">{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
                 </div>
               </div>
             </header>
 
             {isLoading ? (
-              <div className="h-[600px] flex items-center justify-center bg-neutral-900/20 rounded-[4rem] border border-neutral-800">
-                <div className="text-amber-500 animate-pulse font-black uppercase tracking-[0.5em]">Sincronizando con el Recinto...</div>
+              <div className="h-[600px] flex items-center justify-center amber-glass rounded-[4rem]">
+                <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em] text-glow">Tejiendo la Red...</div>
               </div>
             ) : (
-              <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} />
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/20 to-nature-sky/20 rounded-[4.1rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
+                <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} />
+              </div>
             )}
           </div>
 
           <div className="lg:col-span-4">
-            <motion.div layout className="bg-neutral-900/50 backdrop-blur-2xl p-8 rounded-[3rem] border border-neutral-800 sticky top-8">
-              <h3 className="text-2xl font-black mb-8 tracking-tight text-center">Confirmación</h3>
+            <motion.div layout className="amber-glass p-8 rounded-[3.5rem] sticky top-8">
+              <div className="text-center mb-8">
+                <h3 className="text-3xl font-extrabold tracking-tight mb-2">Reserva</h3>
+                <p className="text-[10px] uppercase tracking-[0.3em] opacity-40 font-bold">Asegura tu lugar en la historia</p>
+              </div>
 
               {/* Meet & Greet Toggle */}
               <div
                 onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
                 className={cn(
-                  "mb-8 p-6 rounded-3xl border transition-all cursor-pointer group relative overflow-hidden",
-                  wantsMG ? "bg-amber-500 border-amber-400" : "bg-neutral-800/30 border-neutral-700 hover:border-amber-500/50"
+                  "mb-8 p-6 rounded-3xl border-2 transition-all cursor-pointer group relative overflow-hidden",
+                  wantsMG ? "bg-amber-honey border-amber-honey" : "bg-white/5 border-white/5 hover:border-amber-honey/40"
                 )}
               >
                 <div className="flex items-center gap-4 relative z-10">
                   <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
-                    wantsMG ? "bg-black text-amber-500" : "bg-amber-500 text-black"
+                    "w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500",
+                    wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
                   )}>
-                    <Star size={24} fill="currentColor" />
+                    <Star size={28} fill="currentColor" />
                   </div>
                   <div>
-                    <h4 className={cn("font-black text-sm uppercase tracking-widest", wantsMG ? "text-black" : "text-white")}>Meet & Greet</h4>
-                    <p className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-black/60" : "text-amber-500/80")}>
-                      {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Cupos Disponibles` : 'Agotado'}
+                    <h4 className={cn("font-extrabold text-sm uppercase tracking-widest", wantsMG ? "text-nature-night" : "")}>Meet & Greet</h4>
+                    <p className={cn("text-[10px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-nature-night/60" : "text-amber-honey")}>
+                      {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Cupos` : 'Agotado'}
                     </p>
                   </div>
                 </div>
-                {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-neutral-600">
+                {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black opacity-30 italic">
                   {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
                 </span>}
               </div>
 
-              <div className="space-y-4 mb-10">
+              <div className="space-y-4 mb-10 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                 <AnimatePresence mode="popLayout">
                   {selectedSeats.map(seat => (
                     <motion.div
                       key={seat.id}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, scale: 0.8 }}
-                      className="flex justify-between items-center bg-white/5 p-4 rounded-2xl border border-white/5"
+                      className="flex justify-between items-center bg-amber-honey/5 p-5 rounded-2xl border border-amber-honey/10"
                     >
                       <div>
-                        <p className="text-[9px] font-black text-amber-500 uppercase mb-1">{seat.section}</p>
-                        <p className="text-xs font-bold">Fila {seat.row} • {seat.number}</p>
+                        <p className="text-[10px] font-extrabold text-amber-honey uppercase mb-1 tracking-wider">{seat.section}</p>
+                        <p className="text-xs font-bold opacity-80">Fila {seat.row} • Asiento {seat.number}</p>
                       </div>
-                      <span className="font-mono text-sm font-black">${getPrice(seat.category).toLocaleString()}</span>
+                      <span className="font-extrabold text-sm">${getPrice(seat.category).toLocaleString()}</span>
                     </motion.div>
                   ))}
                 </AnimatePresence>
 
                 {selectedSeats.length === 0 && (
-                  <div className="py-10 text-center border-2 border-dashed border-neutral-800 rounded-3xl">
-                    <Ticket className="mx-auto mb-3 opacity-20" size={32} />
-                    <p className="text-xs text-neutral-600 font-bold uppercase tracking-widest">Selecciona Asientos</p>
+                  <div className="py-12 text-center border-2 border-dashed border-white/10 rounded-3xl opacity-30">
+                    <Ticket className="mx-auto mb-4" size={40} />
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.3em]">Explora el Mapa</p>
                   </div>
                 )}
               </div>
 
-              <div className="pt-8 border-t border-neutral-800 mb-8">
+              <div className="pt-8 border-t border-white/10 mb-8">
                 <div className="flex justify-between items-end">
                   <div>
-                    <p className="text-[10px] uppercase font-black text-neutral-500 tracking-[0.2em] mb-1">Total MXN</p>
-                    <p className="text-5xl font-black leading-none">${totalPrice.toLocaleString()}</p>
+                    <p className="text-[10px] uppercase font-bold opacity-40 tracking-[0.3em] mb-2">Inversión Total</p>
+                    <p className="text-5xl font-black leading-none text-glow">${totalPrice.toLocaleString()}</p>
                   </div>
-                  <Users size={20} className="text-neutral-700 mb-1" />
+                  <Users size={24} className="opacity-20 mb-1" />
                 </div>
               </div>
 
               <motion.button
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 disabled={selectedSeats.length === 0}
-                className="w-full py-6 bg-white text-black text-xs font-black uppercase tracking-[0.4em] rounded-2xl disabled:opacity-20 hover:bg-amber-500 transition-colors shadow-2xl shadow-amber-500/10"
+                className="btn-amber w-full py-6 text-[10px] uppercase tracking-[0.5em] disabled:opacity-30 disabled:grayscale"
               >
-                Checkout con Stripe
+                Proceder al Pago
               </motion.button>
             </motion.div>
           </div>

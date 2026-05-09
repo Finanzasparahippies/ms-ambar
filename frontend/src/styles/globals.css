@@ -3,32 +3,73 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 0, 0, 0;
+  /* Day Mode - Nature */
+  --foreground-rgb: 45, 52, 70;
+  --background-start: #f8f9fa;
+  --background-end: #e9ecef;
+  --sky-accent: 34, 166, 179;
+  --amber-primary: 255, 191, 0;
+}
+
+[data-theme='dark'] {
+  /* Night Mode - Stars */
+  --foreground-rgb: 245, 246, 250;
+  --background-start: #0b0d17;
+  --background-end: #05060b;
+  --sky-accent: 159, 43, 0;
+  --amber-primary: 255, 191, 0;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
-  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, var(--background-start), var(--background-end));
+  min-height: 100vh;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  transition: background 0.5s ease, color 0.5s ease;
+}
+
+/* Star Background Effect for Dark Mode */
+[data-theme='dark'] body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: 0.15;
+  z-index: -1;
+  animation: stars 100s linear infinite;
+}
+
+@keyframes stars {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100%); }
+}
+
+@layer components {
+  .amber-glass {
+    @apply bg-white/70 backdrop-blur-md border border-amber-honey/20 shadow-lg transition-all duration-300;
+  }
+  
+  [data-theme='dark'] .amber-glass {
+    @apply bg-nature-night/60 border-amber-honey/30 shadow-amber-honey/5;
+  }
+
+  .btn-amber {
+    @apply bg-amber-honey text-nature-night px-6 py-3 rounded-full font-bold hover:bg-amber-butterscotch hover:scale-105 active:scale-95 transition-all shadow-md;
+  }
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-  }
-  .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
-  }
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-  }
-  .mask-linear {
-    mask-image: linear-gradient(to bottom, black, transparent);
+  .text-glow {
+    text-shadow: 0 0 10px rgba(var(--amber-primary), 0.5);
   }
 }
