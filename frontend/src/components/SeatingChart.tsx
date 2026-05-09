@@ -34,6 +34,8 @@ interface SeatingChartProps {
   elements?: MapElement[];
   isDesignMode?: boolean;
   onUpdate?: (seats: Seat[], elements: MapElement[]) => void;
+  onSelect?: (id: string | null) => void;
+  selectedId?: string | null;
 }
 
 const SeatingChart: React.FC<SeatingChartProps> = ({ 
@@ -42,17 +44,27 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   theme = 'dark', 
   elements: initialElements = [],
   isDesignMode = false,
-  onUpdate
+  onUpdate,
+  onSelect,
+  selectedId: externalSelectedId
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [elements, setElements] = useState<MapElement[]>(initialElements);
+  const [selectedId, setSelectedId] = useState<string | number | null>(null);
+  
+  // Sync internal selectedId with external if provided
+  useEffect(() => {
+    if (externalSelectedId !== undefined) {
+      setSelectedId(externalSelectedId || null);
+    }
+  }, [externalSelectedId]);
+
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
   const [isDragging, setIsDragging] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
-  const [selectedId, setSelectedId] = useState<string | number | null>(null);
   const [draggedItem, setDraggedItem] = useState<{type: 'seat' | 'element', id: string | number} | null>(null);
 
   useEffect(() => {
