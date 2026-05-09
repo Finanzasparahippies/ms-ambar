@@ -42,6 +42,8 @@ const Home = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  const [elements, setElements] = useState<any[]>([]);
+
   useEffect(() => {
     if (!currentEvent) return;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
@@ -49,11 +51,15 @@ const Home = () => {
     fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
       .then(res => res.json())
       .then(data => {
-        console.log(`Seats for Event ${currentEvent.id}:`, data);
-        if (data && data.length > 0) {
-          console.log("Sample Seat Category:", data[0].category);
+        console.log(`Venue Data for Event ${currentEvent.id}:`, data);
+        if (data.seats) {
+          setSeats(data.seats);
+          setElements(data.elements || []);
+        } else {
+          // Fallback for old list-only format
+          setSeats(data);
+          setElements([]);
         }
-        setSeats(data);
       })
       .catch(err => console.error("Error fetching seats:", err));
   }, [currentEvent]);
@@ -134,7 +140,12 @@ const Home = () => {
             ) : (
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/20 to-nature-sky/20 rounded-[4.1rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <SeatingChart seats={seats} onSeatSelect={handleSeatSelect} theme={theme} />
+                <SeatingChart 
+                  seats={seats} 
+                  onSeatSelect={handleSeatSelect} 
+                  theme={theme} 
+                  elements={elements}
+                />
               </div>
             )}
           </div>

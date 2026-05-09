@@ -18,10 +18,16 @@ class Theater(models.Model):
         """
         import math
         
-        # Case 1: Direct list of seats
+        # Case 1: Direct list or Object with seats key
+        seats_data = None
         if isinstance(self.layout, list):
+            seats_data = self.layout
+        elif isinstance(self.layout, dict) and 'seats' in self.layout:
+            seats_data = self.layout['seats']
+
+        if seats_data:
             created_count = 0
-            for seat_data in self.layout:
+            for seat_data in seats_data:
                 Seat.objects.update_or_create(
                     theater=self,
                     section=seat_data.get('section', 'General'),

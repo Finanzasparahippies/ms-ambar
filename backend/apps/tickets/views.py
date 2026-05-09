@@ -31,7 +31,10 @@ class EventViewSet(viewsets.ModelViewSet):
             else:
                 seat_data['status'] = 'available'
         
-        return Response(data)
+        return Response({
+            "seats": data,
+            "elements": theater.layout.get('map_elements', []) if isinstance(theater.layout, dict) else []
+        })
 
 class TheaterViewSet(viewsets.ModelViewSet):
     queryset = Theater.objects.all()

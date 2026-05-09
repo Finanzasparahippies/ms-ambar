@@ -1,0 +1,20 @@
+{
+  "map_elements": [
+    { "type": "rect", "x": 500, "y": 60, "w": 300, "h": 80, "label": "ESCENARIO PRINCIPAL", "color": "rgba(255,191,0,0.1)" },
+    { "type": "rect", "x": 150, "y": 700, "w": 40, "h": 200, "label": "BARRA 1", "color": "rgba(34,166,179,0.1)" },
+    { "type": "rect", "x": 850, "y": 700, "w": 40, "h": 200, "label": "BARRA 2", "color": "rgba(34,166,179,0.1)" },
+    { "type": "icon", "x": 50, "y": 1000, "icon": "stairs", "label": "SUBIDA TERRAZA" },
+    { "type": "icon", "x": 950, "y": 1000, "icon": "stairs", "label": "SUBIDA TERRAZA" },
+    { "type": "icon", "x": 500, "y": 1100, "icon": "wc", "label": "BAÑOS" },
+    { "type": "rect", "x": 500, "y": 1200, "w": 1000, "h": 400, "label": "ZONA TERRAZA ALTA", "color": "rgba(139,69,19,0.05)" }
+  ],
+  "seats": [
+    { "id": 1, "row": "PB-A", "number": 1, "status": "available", "section": "Planta Baja - VIP", "category": "vip", "x": 350, "y": 250, "angle": 0 },
+    { "id": 2, "row": "PB-A", "number": 2, "status": "available", "section": "Planta Baja - VIP", "category": "vip", "x": 400, "y": 250, "angle": 0 },
+    { "id": 3, "row": "PB-A", "number": 3, "status": "available", "section": "Planta Baja - VIP", "category": "vip", "x": 450, "y": 250, "angle": 0 },
+    { "id": 4, "row": "PB-A", "number": 4, "status": "available", "section": "Planta Baja - VIP", "category": "vip", "x": 500, "y": 250, "angle": 0 },
+    { "id": 5, "row": "PB-A", "number": 5, "status": "available", "section": "Planta Baja - VIP", "category": "vip", "x": 550, "y": 250, "angle": 0 },
+    { "id": 6, "row": "PB-A", "number": 6, "status": "available", "section": "Planta Baja - VIP", "category": "vip", "x": 600, "y": 250, "angle": 0 },
+    { "id": 7, "row": "PB-A", "number": 7, "status": "available", "section": "Planta Baja - VIP", "category": "vip", "x": 650, "y": 250, "angle": 0 }
+  ]
+}

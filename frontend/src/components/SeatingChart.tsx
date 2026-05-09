@@ -13,13 +13,25 @@ interface Seat {
   angle: number;
 }
 
+interface MapElement {
+  type: 'rect' | 'icon' | 'text';
+  x: number;
+  y: number;
+  w?: number;
+  h?: number;
+  label?: string;
+  icon?: 'stairs' | 'wc' | 'bar' | 'exit';
+  color?: string;
+}
+
 interface SeatingChartProps {
   seats: Seat[];
   onSeatSelect: (seat: Seat) => void;
   theme?: 'light' | 'dark';
+  elements?: MapElement[];
 }
 
-const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme = 'dark' }) => {
+const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme = 'dark', elements = [] }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -76,16 +88,68 @@ const SeatingChart: React.FC<SeatingChartProps> = ({ seats, onSeatSelect, theme 
     canvas.height = canvas.clientHeight * dpr;
     ctx.scale(dpr, dpr);
 
+    const drawElement = (ctx: CanvasRenderingContext2D, el: MapElement) => {
+      ctx.save();
+      ctx.translate(el.x, el.y);
+      
+      if (el.type === 'rect') {
+        ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(-el.w!/2, -el.h!/2, el.w!, el.h!, 8);
+        ctx.fill();
+        ctx.stroke();
+        
+        if (el.label) {
+          ctx.font = '800 10px Outfit';
+          ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+          ctx.textAlign = 'center';
+          ctx.fillText(el.label.toUpperCase(), 0, 4);
+        }
+      } else if (el.type === 'icon') {
+        // Draw professional icons
+        ctx.strokeStyle = theme === 'dark' ? '#FFBF00' : '#B8860B';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        
+        if (el.icon === 'stairs') {
+          for(let i=0; i<3; i++) {
+            ctx.moveTo(-10, 10 - i*8);
+            ctx.lineTo(-10 + i*8, 10 - i*8);
+            ctx.lineTo(-10 + i*8, 10 - (i+1)*8);
+          }
+        } else if (el.icon === 'wc') {
+          ctx.arc(-5, -5, 4, 0, Math.PI*2);
+          ctx.moveTo(-10, 10); ctx.lineTo(0, 10);
+        } else if (el.icon === 'bar') {
+          ctx.moveTo(-8, -8); ctx.lineTo(8, -8); ctx.lineTo(0, 8); ctx.closePath();
+        }
+        ctx.stroke();
+        
+        if (el.label) {
+          ctx.font = '700 8px Outfit';
+          ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.5)';
+          ctx.textAlign = 'center';
+          ctx.fillText(el.label.toUpperCase(), 0, 20);
+        }
+      }
+      ctx.restore();
+    };
+
     const render = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.translate(transform.x, transform.y);
       ctx.scale(transform.scale, transform.scale);
 
-      // 1. Draw Stage (Static Position)
+      // 1. Draw Architectural Elements First (Background)
+      elements.forEach(el => drawElement(ctx, el));
+
+      // 2. Draw Stage
       drawStage(ctx);
 
-      // 2. Draw Seats
+      // 3. Draw Seats
       seats.forEach(seat => {
         drawSeat(ctx, seat, hoveredSeatId === seat.id);
       });
