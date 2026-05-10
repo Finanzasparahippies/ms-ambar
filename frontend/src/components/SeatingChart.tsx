@@ -74,12 +74,16 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   useEffect(() => {
     if (!isDesignMode) return;
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent deletion if the user is typing in an input or textarea
+      const isTyping = ['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName);
+      if (isTyping) return;
+
       if (selectedIds.length === 0) return;
       const step = e.shiftKey ? 10 : 1;
       
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const newSeats = seats.filter(s => !selectedIds.includes(String(s.id)));
-        const newElements = elements.filter(el => !selectedIds.includes(el.id));
+        const newElements = elements.filter(el => !selectedIds.includes(String(el.id)));
         setSeats(newSeats); setElements(newElements); setSelectedIds([]);
         onUpdate?.(newSeats, newElements);
       } else if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
@@ -88,14 +92,14 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
         
         const newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, x: s.x + dx, y: s.y + dy } : s);
-        const newEls = elements.map(el => selectedIds.includes(el.id) ? { ...el, x: el.x + dx, y: el.y + dy } : el);
+        const newEls = elements.map(el => selectedIds.includes(String(el.id)) ? { ...el, x: el.x + dx, y: el.y + dy } : el);
         setSeats(newSeats); setElements(newEls);
         onUpdate?.(newSeats, newEls);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, seats, elements, isDesignMode]);
+  }, [selectedIds, seats, elements, isDesignMode, onUpdate]);
 
   // Render Engine
   useEffect(() => {
