@@ -199,6 +199,13 @@ export default function DesignerPage() {
     if (activeTool === 'grid' || activeTool === 'arc') confirmBatchSeats(x, y);
   };
 
+  const updateSelectedProperty = (key: string, value: any) => {
+    const newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, [key]: value } : s);
+    const newEls = elements.map(el => selectedIds.includes(el.id) ? { ...el, [key]: value } : el);
+    setSeats(newSeats);
+    setElements(newEls);
+  };
+
   const commitPropertyChange = () => {
     addToHistory(seats, elements);
   };

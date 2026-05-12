@@ -233,20 +233,42 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY });
   };
 
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+
   const handleMouseMove = (e: React.MouseEvent) => {
     const { x, y } = getMouseCoords(e); setMousePos({ x, y });
-    const hitEl = [...elements].reverse().find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
-    const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
+    
+    const hitSlop = 20 / transform.scale;
+    const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < hitSlop && Math.abs(s.y - y) < hitSlop);
+    const hitEl = [...elements].reverse().find(el => {
+      const w = el.w || 100, h = el.h || 100;
+      return x >= el.x - w/2 - hitSlop && x <= el.x + w/2 + hitSlop && 
+             y >= el.y - h/2 - hitSlop && y <= el.y + h/2 + hitSlop;
+    });
     setHoveredId(hitSeat || hitEl ? String((hitSeat || hitEl)!.id) : null);
+
     if (selectionRect) { setSelectionRect(prev => ({ ...prev!, w: x - prev!.x, h: y - prev!.y })); return; }
+    
     if (draggedItem) {
-      if (draggedItem.handle === 'br') { setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, w: Math.max(20, (x - el.x)*2), h: Math.max(20, (y - el.y)*2) } : el)); }
-      else if (draggedItem.groupSnapshot) {
+      if (draggedItem.handle === 'br') { 
+        setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, w: Math.max(20, (x - el.x)*2), h: Math.max(20, (y - el.y)*2) } : el)); 
+      } else if (draggedItem.groupSnapshot) {
         const snap = draggedItem.groupSnapshot.get(draggedItem.id);
         if (snap) {
-          const dx = x - (snap.x - draggedItem.offsetX), dy = y - (snap.y - draggedItem.offsetY);
-          setSeats(prev => prev.map(s => { const sSnap = draggedItem.groupSnapshot!.get(String(s.id)); return sSnap ? { ...s, x: sSnap.x + dx, y: sSnap.y + dy } : s; }));
-          setElements(prev => prev.map(el => { const eSnap = draggedItem.groupSnapshot!.get(el.id); return eSnap ? { ...el, x: eSnap.x + dx, y: eSnap.y + dy } : el; }));
+          const dx = x - (snap.x - draggedItem.offsetX);
+          const dy = y - (snap.y - draggedItem.offsetY);
+          
+          const updatedSeats = seats.map(s => {
+            const sSnap = draggedItem.groupSnapshot!.get(String(s.id));
+            return sSnap ? { ...s, x: sSnap.x + dx, y: sSnap.y + dy } : s;
+          });
+          const updatedEls = elements.map(el => {
+            const eSnap = draggedItem.groupSnapshot!.get(el.id);
+            return eSnap ? { ...el, x: eSnap.x + dx, y: eSnap.y + dy } : el;
+          });
+          
+          setSeats(updatedSeats);
+          setElements(updatedEls);
         }
       }
       return;
