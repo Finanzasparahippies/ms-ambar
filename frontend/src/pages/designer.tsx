@@ -27,6 +27,10 @@ export default function DesignerPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   
+  // History System (Undo/Redo)
+  const [history, setHistory] = useState<{ seats: any[], elements: any[] }[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
   // New UI states
   const [batchPanel, setBatchPanel] = useState<{ type: 'grid' | 'arc', isOpen: boolean }>({ type: 'grid', isOpen: false });
   const [batchConfig, setBatchConfig] = useState({ count: 12, rowLabel: 'A', category: 'standard' });
@@ -42,10 +46,55 @@ export default function DesignerPage() {
       });
   }, []);
 
+  const addToHistory = (s: any[], e: any[]) => {
+    const newState = { seats: s, elements: e };
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newState);
+    if (newHistory.length > 50) newHistory.shift();
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      setSeats(prevState.seats);
+      setElements(prevState.elements);
+      setHistoryIndex(historyIndex - 1);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      setSeats(nextState.seats);
+      setElements(nextState.elements);
+      setHistoryIndex(historyIndex + 1);
+    }
+  };
+
+  useEffect(() => {
+    const handleUndoRedo = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) redo(); else undo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleUndoRedo);
+    return () => window.removeEventListener('keydown', handleUndoRedo);
+  }, [historyIndex, history]);
+
   const loadTheater = (theater: any) => {
     const layout = theater.layout || {};
-    setSeats(layout.seats || []);
-    setElements(layout.map_elements || []);
+    const s = layout.seats || [];
+    const e = layout.map_elements || [];
+    setSeats(s);
+    setElements(e);
+    setHistory([{ seats: s, elements: e }]);
+    setHistoryIndex(0);
   };
 
   const handleTheaterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -58,6 +107,7 @@ export default function DesignerPage() {
   const handleUpdate = (updatedSeats: any[], updatedElements: any[]) => {
     setSeats(updatedSeats);
     setElements(updatedElements);
+    addToHistory(updatedSeats, updatedElements);
   };
 
   const saveToDB = async () => {
@@ -81,15 +131,21 @@ export default function DesignerPage() {
     const selectedEls = elements.filter(e => selectedIds.includes(e.id));
     const all = [...selectedSeats, ...selectedEls];
     
+    let newSeats = [...seats];
+    let newEls = [...elements];
+
     if (type === 'left') {
       const minX = Math.min(...all.map(i => i.x));
-      setSeats(seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, x: minX } : s));
-      setElements(elements.map(e => selectedIds.includes(e.id) ? { ...e, x: minX } : e));
+      newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, x: minX } : s);
+      newEls = elements.map(e => selectedIds.includes(e.id) ? { ...e, x: minX } : e);
     } else if (type === 'top') {
       const minY = Math.min(...all.map(i => i.y));
-      setSeats(seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, y: minY } : s));
-      setElements(elements.map(e => selectedIds.includes(e.id) ? { ...e, y: minY } : e));
+      newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, y: minY } : s);
+      newEls = elements.map(e => selectedIds.includes(e.id) ? { ...e, y: minY } : e);
     }
+    
+    setSeats(newSeats); setElements(newEls);
+    addToHistory(newSeats, newEls);
   };
 
   const moveLayer = (direction: 'up' | 'down') => {
@@ -106,33 +162,41 @@ export default function DesignerPage() {
       [newEls[idx], newEls[idx-1]] = [newEls[idx-1], newEls[idx]];
     }
     setElements(newEls);
+    addToHistory(seats, newEls);
   };
 
-  const addElement = (type: string, label: string, color: string) => {
-    const newEl = { id: `el-${crypto.randomUUID()}`, type: 'rect', x: 500, y: 500, w: 150, h: 100, label, color, angle: 0, sides: 4 };
-    setElements(prev => [...prev, newEl]);
+  const addElement = (type: string, label: string, color: string, x: number = 500, y: number = 500) => {
+    const newEl = { id: `el-${crypto.randomUUID()}`, type: 'rect', x, y, w: 150, h: 100, label, color, angle: 0, sides: 4 };
+    const newEls = [...elements, newEl];
+    setElements(newEls);
     setSelectedIds([newEl.id]);
+    addToHistory(seats, newEls);
+    setActiveTool('select');
   };
 
-  const confirmBatchSeats = () => {
+  const confirmBatchSeats = (x: number = 500, y: number = 500) => {
     const { count, rowLabel, category } = batchConfig;
     const type = batchPanel.type;
     if (count <= 0) return;
     
     const newBatch = Array.from({ length: count }).map((_, i) => {
       const id = `seat-${crypto.randomUUID()}`;
-      if (type === 'grid') return { id, x: 500 + i * 35, y: 500, row: rowLabel, number: seats.length + i + 1, status: 'available', category, angle: 0 };
+      if (type === 'grid') return { id, x: x + i * 35, y, row: rowLabel, number: seats.length + i + 1, status: 'available', category, angle: 0 };
       const ang = (-60 + i * (120/(count-1))) * Math.PI / 180;
-      return { id, x: 500 + Math.sin(ang) * 350, y: 350 + Math.cos(ang) * 350, row: rowLabel, number: seats.length + i + 1, status: 'available', category, angle: -(-60 + i * (120/(count-1))) };
+      return { id, x: x + Math.sin(ang) * 350, y: y + Math.cos(ang) * 350, row: rowLabel, number: seats.length + i + 1, status: 'available', category, angle: -(-60 + i * (120/(count-1))) };
     });
-    setSeats(prev => [...prev, ...newBatch]);
+    const updatedSeats = [...seats, ...newBatch];
+    setSeats(updatedSeats);
     setSelectedIds(newBatch.map(s => s.id));
     setBatchPanel({ ...batchPanel, isOpen: false });
+    addToHistory(updatedSeats, elements);
+    setActiveTool('select');
   };
 
-  const updateSelectedProperty = (prop: string, value: any) => {
-    setSeats(prev => prev.map(s => selectedIds.includes(String(s.id)) ? { ...s, [prop]: value } : s));
-    setElements(prev => prev.map(e => selectedIds.includes(e.id) ? { ...e, [prop]: value } : e));
+  const handleChartClick = (x: number, y: number) => {
+    if (activeTool === 'zone') addElement('rect', 'ZONA', 'rgba(34,166,179,0.1)', x, y);
+    if (activeTool === 'stage') addElement('rect', 'ESCENARIO', 'rgba(255,191,0,0.15)', x, y);
+    if (activeTool === 'grid' || activeTool === 'arc') confirmBatchSeats(x, y);
   };
 
   const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(e.id));
@@ -170,16 +234,21 @@ export default function DesignerPage() {
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" size={14} />
           </div>
+
+          <div className="flex items-center gap-2">
+            <button onClick={undo} disabled={historyIndex <= 0} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 disabled:opacity-20 transition-all"><RotateCw size={14} className="-scale-x-100"/></button>
+            <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 disabled:opacity-20 transition-all"><RotateCw size={14}/></button>
+          </div>
         </div>
 
         {/* --- Central Toolbar --- */}
         <div className="absolute left-1/2 -translate-x-1/2 flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-3xl shadow-2xl">
           {[
             { id: 'select', icon: MousePointer2, label: 'Select' },
-            { id: 'grid', icon: Grid3X3, label: 'Add Row', action: () => setBatchPanel({ type: 'grid', isOpen: true }) },
-            { id: 'arc', icon: Compass, label: 'Add Arc', action: () => setBatchPanel({ type: 'arc', isOpen: true }) },
-            { id: 'zone', icon: Square, label: 'Add Zone', action: () => addElement('rect', 'ZONA', 'rgba(34,166,179,0.1)') },
-            { id: 'stage', icon: Maximize, label: 'Stage', action: () => addElement('rect', 'ESCENARIO', 'rgba(255,191,0,0.15)') },
+            { id: 'grid', icon: Grid3X3, label: 'Add Row', action: () => { setBatchPanel({ type: 'grid', isOpen: true }); setActiveTool('grid'); } },
+            { id: 'arc', icon: Compass, label: 'Add Arc', action: () => { setBatchPanel({ type: 'arc', isOpen: true }); setActiveTool('arc'); } },
+            { id: 'zone', icon: Square, label: 'Add Zone', action: () => setActiveTool('zone') },
+            { id: 'stage', icon: Maximize, label: 'Stage', action: () => setActiveTool('stage') },
           ].map((tool) => (
             <button 
               key={tool.id} 
@@ -231,8 +300,10 @@ export default function DesignerPage() {
             isDesignMode={true} 
             theme={theme} 
             selectedIds={selectedIds} 
+            activeTool={activeTool}
             onUpdate={handleUpdate} 
             onSelect={setSelectedIds} 
+            onChartClick={handleChartClick}
           />
           
           {/* --- Tooltips / Overlays --- */}
@@ -294,7 +365,11 @@ export default function DesignerPage() {
                     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Properties</h3>
                     <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-1">{selectedIds.length} Object(s) Selected</span>
                   </div>
-                  <button onClick={() => { setSeats(seats.filter(s => !selectedIds.includes(String(s.id)))); setElements(elements.filter(e => !selectedIds.includes(e.id))); setSelectedIds([]); }} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
+                  <button onClick={() => { 
+                    const ns = seats.filter(s => !selectedIds.includes(String(s.id)));
+                    const ne = elements.filter(e => !selectedIds.includes(e.id));
+                    setSeats(ns); setElements(ne); setSelectedIds([]); addToHistory(ns, ne);
+                  }} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
                 </div>
 
                 <div className="space-y-10">
@@ -343,6 +418,7 @@ export default function DesignerPage() {
                                 type="text" 
                                 value={selectedIds.length > 1 ? 'MULTIPLE' : (firstSelected.label || firstSelected.row || '')} 
                                 onChange={(e) => updateSelectedProperty(firstSelected.row ? 'row' : 'label', e.target.value)} 
+                                onBlur={commitPropertyChange}
                                 className="bg-transparent text-[11px] font-bold outline-none w-full"
                               />
                             </div>
@@ -352,11 +428,11 @@ export default function DesignerPage() {
                             <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
                               <div className="space-y-1">
                                 <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Width</span>
-                                <input type="number" value={firstSelected.w || 0} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} className="bg-transparent text-[11px] font-bold outline-none w-full"/>
+                                <input type="number" value={firstSelected.w || 0} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} onBlur={commitPropertyChange} className="bg-transparent text-[11px] font-bold outline-none w-full"/>
                               </div>
                               <div className="space-y-1">
                                 <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Height</span>
-                                <input type="number" value={firstSelected.h || 0} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} className="bg-transparent text-[11px] font-bold outline-none w-full"/>
+                                <input type="number" value={firstSelected.h || 0} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} onBlur={commitPropertyChange} className="bg-transparent text-[11px] font-bold outline-none w-full"/>
                               </div>
                             </div>
                           )}
@@ -375,6 +451,7 @@ export default function DesignerPage() {
                             max="360" 
                             value={firstSelected.angle || 0} 
                             onChange={(e) => updateSelectedProperty('angle', parseInt(e.target.value))} 
+                            onMouseUp={commitPropertyChange}
                             className="w-full accent-amber-honey cursor-pointer"
                           />
                         </div>
