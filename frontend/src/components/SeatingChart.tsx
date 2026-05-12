@@ -142,9 +142,17 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.save(); ctx.translate(seat.x, seat.y); ctx.rotate((seat.angle || 0) * Math.PI / 180);
       const isSelected = selectedIds.includes(String(seat.id));
       const isHovered = hoveredId === String(seat.id);
+      
       if (isSelected) { ctx.shadowBlur = 10; ctx.shadowColor = '#FFBF00'; }
-      ctx.fillStyle = isSelected ? '#FFBF00' : isHovered ? 'rgba(255,255,255,0.2)' : (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)');
-      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? 'rgba(255,255,255,0.4)' : (theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.3)');
+      
+      // Category-based coloring
+      let fillColor = theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)';
+      if (seat.category === 'vip') fillColor = 'rgba(255, 191, 0, 0.4)';
+      else if (seat.category === 'premium') fillColor = 'rgba(34, 166, 179, 0.4)';
+      else if (seat.category === 'disabled') fillColor = 'rgba(106, 176, 76, 0.4)';
+      
+      ctx.fillStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : fillColor;
+      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') : (theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.3)');
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.beginPath(); ctx.roundRect(-9, -9, 18, 18, 5); ctx.fill(); ctx.stroke();
       ctx.restore();
@@ -212,7 +220,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
           if (!selectedIds.includes(id)) { newSelection = e.shiftKey ? [...selectedIds, id] : [id]; setSelectedIds(newSelection); onSelect?.(newSelection); }
           const snapshot = new Map();
           newSelection.forEach(sid => {
-            const s = seats.find(st => String(st.id) === sid), el = elements.find(el => el.id === sid);
+            const s = seats.find(st => String(st.id) === sid), el = elements.find(e => String(e.id) === sid);
             if (s) snapshot.set(sid, { x: s.x, y: s.y }); else if (el) snapshot.set(sid, { x: el.x, y: el.y });
           });
           setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, handle: (hitEl && Math.abs(hitEl.x + hitEl.w! / 2 - x) < hitSlop && Math.abs(hitEl.y + hitEl.h! / 2 - y) < hitSlop) ? 'br' : undefined, groupSnapshot: snapshot });

@@ -11,7 +11,7 @@ import {
   Coffee, Trees, Zap, AlignLeft, AlignCenter, 
   AlignRight, AlignVerticalJustifyCenter, 
   ChevronUp, ChevronDown as ChevronDownIcon,
-  X, Info
+  X, Info, Circle as CircleIcon, Triangle, Hexagon, Octagon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -89,8 +89,18 @@ export default function DesignerPage() {
 
   const loadTheater = (theater: any) => {
     const layout = theater.layout || {};
-    const s = layout.seats || [];
-    const e = layout.map_elements || [];
+    
+    // Ensure all elements and seats have unique IDs to prevent the "update all" bug
+    const s = (layout.seats || []).map((seat: any, idx: number) => ({
+      ...seat,
+      id: seat.id !== undefined && seat.id !== null ? seat.id : `seat-init-${idx}-${crypto.randomUUID()}`
+    }));
+    
+    const e = (layout.map_elements || []).map((el: any, idx: number) => ({
+      ...el,
+      id: el.id !== undefined && el.id !== null ? el.id : `el-init-${idx}-${crypto.randomUUID()}`
+    }));
+    
     setSeats(s);
     setElements(e);
     setHistory([{ seats: s, elements: e }]);
@@ -201,7 +211,7 @@ export default function DesignerPage() {
 
   const updateSelectedProperty = (key: string, value: any) => {
     const newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, [key]: value } : s);
-    const newEls = elements.map(el => selectedIds.includes(el.id) ? { ...el, [key]: value } : el);
+    const newEls = elements.map(el => selectedIds.includes(String(el.id)) ? { ...el, [key]: value } : el);
     setSeats(newSeats);
     setElements(newEls);
   };
@@ -210,14 +220,19 @@ export default function DesignerPage() {
     addToHistory(seats, elements);
   };
 
-  const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(e.id));
+  const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(String(e.id)));
+
+  const isDark = theme === 'dark';
 
   return (
-    <div className="h-screen w-screen bg-[#06070b] overflow-hidden flex flex-col font-sans text-white">
+    <div className={cn("h-screen w-screen overflow-hidden flex flex-col font-sans transition-colors duration-500", isDark ? "bg-[#06070b] text-white" : "bg-slate-50 text-slate-900")}>
       <Head><title>Nectar Studio Pro | Venue Architecture</title></Head>
 
       {/* --- Header --- */}
-      <header className="h-20 px-8 border-b border-white/5 bg-black/40 backdrop-blur-3xl flex items-center justify-between z-50">
+      <header className={cn(
+        "h-20 px-8 border-b flex items-center justify-between z-50 backdrop-blur-3xl transition-all",
+        isDark ? "border-white/5 bg-black/40" : "border-slate-200 bg-white/70"
+      )}>
         <div className="flex items-center gap-8">
           <motion.div 
             whileHover={{ scale: 1.05 }}
@@ -228,32 +243,38 @@ export default function DesignerPage() {
               <LayoutIcon size={22} className="text-nature-night" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[11px] font-black uppercase tracking-[0.4em] leading-none text-white/90">Nectar Studio</span>
+              <span className={cn("text-[11px] font-black uppercase tracking-[0.4em] leading-none", isDark ? "text-white/90" : "text-slate-900")}>Nectar Studio</span>
               <span className="text-[8px] font-bold text-amber-honey/50 uppercase tracking-[0.2em] mt-1">Architecture Pro</span>
             </div>
           </motion.div>
           
-          <div className="h-8 w-px bg-white/10 mx-2" />
+          <div className={cn("h-8 w-px mx-2", isDark ? "bg-white/10" : "bg-slate-200")} />
           
           <div className="relative group">
             <select 
               value={selectedTheaterId} 
               onChange={handleTheaterChange} 
-              className="bg-white/5 px-5 py-2.5 rounded-xl text-[11px] font-bold outline-none border border-white/10 hover:border-amber-honey/50 transition-all appearance-none cursor-pointer pr-10 min-w-[180px]"
+              className={cn(
+                "px-5 py-2.5 rounded-xl text-[11px] font-bold outline-none border transition-all appearance-none cursor-pointer pr-10 min-w-[180px]",
+                isDark ? "bg-white/5 border-white/10 hover:border-amber-honey/50 text-white" : "bg-slate-100 border-slate-200 hover:border-amber-honey/50 text-slate-900"
+              )}
             >
-              {theaters.map(t => <option key={t.id} value={t.id} className="bg-[#0b0d17]">{t.name}</option>)}
+              {theaters.map(t => <option key={t.id} value={t.id} className={isDark ? "bg-[#0b0d17]" : "bg-white"}>{t.name}</option>)}
             </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" size={14} />
+            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-honey/50 pointer-events-none" size={14} />
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={undo} disabled={historyIndex <= 0} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 disabled:opacity-20 transition-all"><RotateCw size={14} className="-scale-x-100"/></button>
-            <button onClick={redo} disabled={historyIndex >= history.length - 1} className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/5 disabled:opacity-20 transition-all"><RotateCw size={14}/></button>
+            <button onClick={undo} disabled={historyIndex <= 0} className={cn("p-2.5 rounded-lg border disabled:opacity-20 transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14} className="-scale-x-100"/></button>
+            <button onClick={redo} disabled={historyIndex >= history.length - 1} className={cn("p-2.5 rounded-lg border disabled:opacity-20 transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14}/></button>
           </div>
         </div>
 
         {/* --- Central Toolbar --- */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-3xl shadow-2xl">
+        <div className={cn(
+          "absolute left-1/2 -translate-x-1/2 flex p-1.5 rounded-2xl border backdrop-blur-3xl shadow-2xl transition-all",
+          isDark ? "bg-white/5 border-white/10" : "bg-white/80 border-slate-200"
+        )}>
           {[
             { id: 'select', icon: MousePointer2, label: 'Select' },
             { id: 'grid', icon: Grid3X3, label: 'Add Row', action: () => { setBatchPanel({ type: 'grid', isOpen: true }); setActiveTool('grid'); } },
@@ -266,7 +287,8 @@ export default function DesignerPage() {
               onClick={tool.action || (() => setActiveTool(tool.id))} 
               className={cn(
                 "w-12 h-12 rounded-xl flex items-center justify-center transition-all relative group", 
-                activeTool === tool.id ? "bg-amber-honey text-nature-night shadow-[0_0_15px_rgba(255,191,0,0.4)]" : "text-white/40 hover:text-white hover:bg-white/10"
+                activeTool === tool.id ? "bg-amber-honey text-nature-night shadow-[0_0_15px_rgba(255,191,0,0.4)]" : 
+                isDark ? "text-white/40 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-slate-900 hover:bg-slate-100"
               )}
             >
               <tool.icon size={20} />
@@ -281,9 +303,12 @@ export default function DesignerPage() {
           <motion.button 
             whileTap={{ scale: 0.9 }}
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} 
-            className="w-11 h-11 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-xl border border-white/10 transition-all text-white/60 hover:text-amber-honey"
+            className={cn(
+              "w-11 h-11 flex items-center justify-center rounded-xl border transition-all",
+              isDark ? "bg-white/5 border-white/10 text-white/60 hover:text-amber-honey" : "bg-slate-100 border-slate-200 text-slate-500 hover:text-amber-honey"
+            )}
           >
-            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+            {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </motion.button>
           
           <motion.button 
@@ -319,9 +344,12 @@ export default function DesignerPage() {
           
           {/* --- Tooltips / Overlays --- */}
           <div className="absolute top-6 left-6 flex flex-col gap-2 pointer-events-none">
-            <div className="px-4 py-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center gap-3">
+            <div className={cn(
+              "px-4 py-2 backdrop-blur-xl border rounded-2xl flex items-center gap-3 shadow-lg",
+              isDark ? "bg-black/40 border-white/10" : "bg-white/80 border-slate-200"
+            )}>
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] font-bold text-white/50 tracking-wider">LIVE EDITING MODE</span>
+              <span className={cn("text-[10px] font-bold tracking-wider", isDark ? "text-white/50" : "text-slate-500")}>LIVE EDITING MODE</span>
             </div>
           </div>
 
@@ -334,26 +362,29 @@ export default function DesignerPage() {
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="absolute top-1/3 left-1/3 w-80 bg-black/80 backdrop-blur-3xl border border-white/10 p-8 rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.6)] z-[100] cursor-move"
+                className={cn(
+                  "absolute top-1/3 left-1/3 w-80 backdrop-blur-3xl border p-8 rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.6)] z-[100] cursor-move",
+                  isDark ? "bg-black/80 border-white/10" : "bg-white/90 border-slate-200"
+                )}
               >
                 <div className="flex items-center justify-between mb-8 pointer-events-none">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-amber-honey/20 rounded-lg flex items-center justify-center text-amber-honey">
                       {batchPanel.type === 'grid' ? <Grid3X3 size={16}/> : <Compass size={16}/>}
                     </div>
-                    <h3 className="text-[11px] font-black uppercase tracking-[0.2em]">Add {batchPanel.type}</h3>
+                    <h3 className={cn("text-[11px] font-black uppercase tracking-[0.2em]", isDark ? "text-white" : "text-slate-900")}>Add {batchPanel.type}</h3>
                   </div>
                   <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="text-white/30 hover:text-white transition-colors pointer-events-auto"><X size={18}/></button>
                 </div>
 
                 <div className="space-y-6 cursor-default">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Quantity</label>
-                    <input type="number" value={batchConfig.count} onChange={e => setBatchConfig({...batchConfig, count: parseInt(e.target.value)})} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all" />
+                    <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Quantity</label>
+                    <input type="number" value={batchConfig.count} onChange={e => setBatchConfig({...batchConfig, count: parseInt(e.target.value)})} className={cn("w-full border p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Row Label</label>
-                    <input type="text" value={batchConfig.rowLabel} onChange={e => setBatchConfig({...batchConfig, rowLabel: e.target.value})} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all" />
+                    <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Row Label</label>
+                    <input type="text" value={batchConfig.rowLabel} onChange={e => setBatchConfig({...batchConfig, rowLabel: e.target.value})} className={cn("w-full border p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
                   </div>
                   <button 
                     onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} 
@@ -363,7 +394,7 @@ export default function DesignerPage() {
                   </button>
                 </div>
                 <div className="mt-4 flex justify-center opacity-20 pointer-events-none">
-                  <div className="w-12 h-1 bg-white/40 rounded-full" />
+                  <div className={cn("w-12 h-1 rounded-full", isDark ? "bg-white/40" : "bg-slate-300")} />
                 </div>
               </motion.div>
             )}
@@ -378,17 +409,20 @@ export default function DesignerPage() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: 400, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-80 bg-[#0b0d17]/80 backdrop-blur-3xl border-l border-white/10 flex flex-col z-40 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
+              className={cn(
+                "w-80 backdrop-blur-3xl border-l flex flex-col z-40 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]",
+                isDark ? "bg-[#0b0d17]/80 border-white/10" : "bg-white/90 border-slate-200"
+              )}
             >
               <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
                 <div className="flex items-center justify-between mb-10">
                   <div className="flex flex-col">
                     <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Properties</h3>
-                    <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest mt-1">{selectedIds.length} Object(s) Selected</span>
+                    <span className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", isDark ? "text-white/20" : "text-slate-400")}>{selectedIds.length} Object(s) Selected</span>
                   </div>
                   <button onClick={() => { 
                     const ns = seats.filter(s => !selectedIds.includes(String(s.id)));
-                    const ne = elements.filter(e => !selectedIds.includes(e.id));
+                    const ne = elements.filter(e => !selectedIds.includes(String(e.id)));
                     setSeats(ns); setElements(ne); setSelectedIds([]); addToHistory(ns, ne);
                   }} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button>
                 </div>
@@ -396,7 +430,7 @@ export default function DesignerPage() {
                 <div className="space-y-10">
                   {selectedIds.length > 1 && (
                     <div className="space-y-4">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 flex items-center gap-2">
+                      <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2", isDark ? "text-white/30" : "text-slate-400")}>
                         <AlignLeft size={12}/> Alignment
                       </label>
                       <div className="grid grid-cols-4 gap-2">
@@ -406,7 +440,7 @@ export default function DesignerPage() {
                           { id: 'right', icon: AlignRight },
                           { id: 'top', icon: AlignLeft, rotate: 90 },
                         ].map(act => (
-                          <button key={act.id} onClick={() => alignSelected(act.id as any)} className="h-12 bg-white/5 hover:bg-white/10 rounded-xl transition-all flex items-center justify-center">
+                          <button key={act.id} onClick={() => alignSelected(act.id as any)} className={cn("h-12 rounded-xl transition-all flex items-center justify-center", isDark ? "bg-white/5 hover:bg-white/10" : "bg-slate-100 hover:bg-slate-200")}>
                             <act.icon size={16} style={{ transform: act.rotate ? `rotate(${act.rotate}deg)` : '' }} />
                           </button>
                         ))}
@@ -414,25 +448,99 @@ export default function DesignerPage() {
                     </div>
                   )}
 
-                  {selectedIds.length === 1 && elements.some(e => e.id === selectedIds[0]) && (
+                  {selectedIds.length === 1 && elements.some(e => String(e.id) === selectedIds[0]) && (
                     <div className="space-y-4">
-                      <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 flex items-center gap-2">
+                      <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2", isDark ? "text-white/30" : "text-slate-400")}>
                         <Layers size={12}/> Hierarchy
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => moveLayer('up')} className="h-12 bg-white/5 hover:bg-white/10 rounded-xl transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase"><ChevronUp size={14}/> Forward</button>
-                        <button onClick={() => moveLayer('down')} className="h-12 bg-white/5 hover:bg-white/10 rounded-xl transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase"><ChevronDownIcon size={14}/> Backward</button>
+                        <button onClick={() => moveLayer('up')} className={cn("h-12 rounded-xl transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase", isDark ? "bg-white/5 hover:bg-white/10" : "bg-slate-100 hover:bg-slate-200")}><ChevronUp size={14}/> Forward</button>
+                        <button onClick={() => moveLayer('down')} className={cn("h-12 rounded-xl transition-all flex items-center justify-center gap-2 text-[9px] font-black uppercase", isDark ? "bg-white/5 hover:bg-white/10" : "bg-slate-100 hover:bg-slate-200")}><ChevronDownIcon size={14}/> Backward</button>
                       </div>
                     </div>
                   )}
 
                   {firstSelected && (
-                    <div className="space-y-8">
-                      <div className="space-y-4">
-                        <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Configuration</label>
-                        <div className="bg-white/5 p-5 rounded-2xl border border-white/5 space-y-6">
+                      <div className="space-y-8">
+                        {/* --- Style & Appearance --- */}
+                        <div className="space-y-4">
+                          <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isDark ? "text-white/30" : "text-slate-400")}>Style & Appearance</label>
+                          
+                          {/* Shape Selector */}
+                          {!(firstSelected as any).row && (
+                            <div className="grid grid-cols-5 gap-2 mb-4">
+                              {[
+                                { label: 'Circle', sides: 0, icon: CircleIcon },
+                                { label: 'Tri', sides: 3, icon: Triangle },
+                                { label: 'Rect', sides: 4, icon: Square },
+                                { label: 'Hex', sides: 6, icon: Hexagon },
+                                { label: 'Oct', sides: 8, icon: Octagon },
+                              ].map(shape => (
+                                <button 
+                                  key={shape.label}
+                                  onClick={() => updateSelectedProperty('sides', shape.sides)}
+                                  className={cn(
+                                    "h-10 rounded-lg border transition-all flex items-center justify-center",
+                                    (firstSelected as any).sides === shape.sides ? "bg-amber-honey border-amber-honey text-nature-night" : 
+                                    isDark ? "bg-white/5 border-white/10 text-white/40 hover:bg-white/10" : "bg-slate-100 border-slate-200 text-slate-400 hover:bg-slate-200"
+                                  )}
+                                >
+                                  <shape.icon size={14} />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Color Palette */}
+                          <div className="grid grid-cols-6 gap-2">
+                            {[
+                              '#FFBF00', '#22a6b3', '#eb4d4b', '#6ab04c', '#4834d4', '#ffffff'
+                            ].map(color => (
+                              <button 
+                                key={color}
+                                onClick={() => updateSelectedProperty('color', color)}
+                                className="h-8 rounded-full border-2 transition-transform hover:scale-110 active:scale-95"
+                                style={{ 
+                                  backgroundColor: color, 
+                                  borderColor: firstSelected.color === color ? '#FFBF00' : 'rgba(255,255,255,0.1)' 
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Seat Category */}
+                        {(firstSelected as any).row && (
+                          <div className="space-y-4">
+                            <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isDark ? "text-white/30" : "text-slate-400")}>Seat Category</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { id: 'standard', label: 'Standard' },
+                                { id: 'vip', label: 'VIP Gold' },
+                                { id: 'premium', label: 'Premium' },
+                                { id: 'disabled', label: 'Accessible' },
+                              ].map(cat => (
+                                <button 
+                                  key={cat.id}
+                                  onClick={() => updateSelectedProperty('category', cat.id)}
+                                  className={cn(
+                                    "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all",
+                                    (firstSelected as any).category === cat.id ? "bg-amber-honey border-amber-honey text-nature-night" : 
+                                    isDark ? "bg-white/5 border-white/10 text-white/40" : "bg-slate-100 border-slate-200 text-slate-500"
+                                  )}
+                                >
+                                  {cat.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="space-y-4">
+                          <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isDark ? "text-white/30" : "text-slate-400")}>Configuration</label>
+                        <div className={cn("p-5 rounded-2xl border space-y-6", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}>
                           <div className="space-y-2">
-                            <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Label / Group</span>
+                            <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Label / Group</span>
                             <div className="flex items-center gap-3">
                               <Type size={14} className="text-amber-honey" />
                               <input 
@@ -440,20 +548,20 @@ export default function DesignerPage() {
                                 value={selectedIds.length > 1 ? 'MULTIPLE' : (firstSelected.label || firstSelected.row || '')} 
                                 onChange={(e) => updateSelectedProperty(firstSelected.row ? 'row' : 'label', e.target.value)} 
                                 onBlur={commitPropertyChange}
-                                className="bg-transparent text-[11px] font-bold outline-none w-full"
+                                className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}
                               />
                             </div>
                           </div>
                           
-                          {!firstSelected.row && (
-                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                          {!(firstSelected as any).row && (
+                            <div className={cn("grid grid-cols-2 gap-4 pt-4 border-t", isDark ? "border-white/5" : "border-slate-200")}>
                               <div className="space-y-1">
-                                <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Width</span>
-                                <input type="number" value={firstSelected.w || 0} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} onBlur={commitPropertyChange} className="bg-transparent text-[11px] font-bold outline-none w-full"/>
+                                <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Width</span>
+                                <input type="number" value={(firstSelected as any).w || (firstSelected as any).width || 100} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/>
                               </div>
                               <div className="space-y-1">
-                                <span className="text-[8px] font-bold text-white/20 uppercase tracking-widest">Height</span>
-                                <input type="number" value={firstSelected.h || 0} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} onBlur={commitPropertyChange} className="bg-transparent text-[11px] font-bold outline-none w-full"/>
+                                <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Height</span>
+                                <input type="number" value={(firstSelected as any).h || (firstSelected as any).height || 100} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/>
                               </div>
                             </div>
                           )}
@@ -462,10 +570,10 @@ export default function DesignerPage() {
 
                       <div className="space-y-4">
                         <div className="flex justify-between px-1">
-                          <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Orientation</label>
+                          <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isDark ? "text-white/30" : "text-slate-400")}>Orientation</label>
                           <span className="text-[9px] font-black text-amber-honey">{firstSelected.angle || 0}°</span>
                         </div>
-                        <div className="bg-white/5 p-6 rounded-2xl border border-white/5">
+                        <div className={cn("p-6 rounded-2xl border", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}>
                           <input 
                             type="range" 
                             min="0" 
@@ -484,6 +592,7 @@ export default function DesignerPage() {
             </motion.aside>
           )}
         </AnimatePresence>
+
       </div>
 
       <style jsx global>{`
