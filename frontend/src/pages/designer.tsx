@@ -322,22 +322,24 @@ export default function DesignerPage() {
           <AnimatePresence>
             {batchPanel.isOpen && (
               <motion.div 
+                drag
+                dragMomentum={false}
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 bg-black/80 backdrop-blur-3xl border border-white/10 p-8 rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.6)] z-[100]"
+                className="absolute top-1/3 left-1/3 w-80 bg-black/80 backdrop-blur-3xl border border-white/10 p-8 rounded-[32px] shadow-[0_40px_100px_rgba(0,0,0,0.6)] z-[100] cursor-move"
               >
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-8 pointer-events-none">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-amber-honey/20 rounded-lg flex items-center justify-center text-amber-honey">
                       {batchPanel.type === 'grid' ? <Grid3X3 size={16}/> : <Compass size={16}/>}
                     </div>
                     <h3 className="text-[11px] font-black uppercase tracking-[0.2em]">Add {batchPanel.type}</h3>
                   </div>
-                  <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="text-white/30 hover:text-white transition-colors"><X size={18}/></button>
+                  <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="text-white/30 hover:text-white transition-colors pointer-events-auto"><X size={18}/></button>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-6 cursor-default">
                   <div className="space-y-2">
                     <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Quantity</label>
                     <input type="number" value={batchConfig.count} onChange={e => setBatchConfig({...batchConfig, count: parseInt(e.target.value)})} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all" />
@@ -346,7 +348,15 @@ export default function DesignerPage() {
                     <label className="text-[9px] font-bold text-white/30 uppercase tracking-widest">Row Label</label>
                     <input type="text" value={batchConfig.rowLabel} onChange={e => setBatchConfig({...batchConfig, rowLabel: e.target.value})} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all" />
                   </div>
-                  <button onClick={confirmBatchSeats} className="w-full bg-amber-honey text-nature-night py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow">Generate Batch</button>
+                  <button 
+                    onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} 
+                    className="w-full bg-amber-honey text-nature-night py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow"
+                  >
+                    Ready to Place
+                  </button>
+                </div>
+                <div className="mt-4 flex justify-center opacity-20 pointer-events-none">
+                  <div className="w-12 h-1 bg-white/40 rounded-full" />
                 </div>
               </motion.div>
             )}

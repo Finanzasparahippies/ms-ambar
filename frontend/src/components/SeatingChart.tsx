@@ -194,24 +194,41 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const handleMouseDown = (e: React.MouseEvent) => {
     const { x, y } = getMouseCoords(e);
     if (e.button === 1 || e.button === 2) { setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY }); return; }
-    if (isDesignMode && e.button === 0) {
-      if (activeTool !== 'select') { onChartClick?.(x, y); return; }
-      const hitEl = [...elements].reverse().find(el => Math.abs(el.x - x) < (el.w || 20)/2 && Math.abs(el.y - y) < (el.h || 20)/2);
-      const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < 15 && Math.abs(s.y - y) < 15);
-      const hit = hitSeat || hitEl;
-      if (hit) {
-        const id = String(hit.id); let newSelection = selectedIds;
-        if (!selectedIds.includes(id)) { newSelection = e.shiftKey ? [...selectedIds, id] : [id]; setSelectedIds(newSelection); onSelect?.(newSelection); }
-        const snapshot = new Map();
-        newSelection.forEach(sid => {
-          const s = seats.find(st => String(st.id) === sid), el = elements.find(el => el.id === sid);
-          if (s) snapshot.set(sid, { x: s.x, y: s.y }); else if (el) snapshot.set(sid, { x: el.x, y: el.y });
+    
+    if (e.button === 0) {
+      const hitSlop = 20 / transform.scale;
+      const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < hitSlop && Math.abs(s.y - y) < hitSlop);
+      
+      if (isDesignMode) {
+        if (activeTool !== 'select') { onChartClick?.(x, y); return; }
+        const hitEl = [...elements].reverse().find(el => {
+          const w = el.w || 100, h = el.h || 100;
+          return x >= el.x - w/2 - hitSlop && x <= el.x + w/2 + hitSlop && 
+                 y >= el.y - h/2 - hitSlop && y <= el.y + h/2 + hitSlop;
         });
-        setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, handle: (hitEl && Math.abs(hitEl.x + hitEl.w!/2 - x) < 15 && Math.abs(hitEl.y + hitEl.h!/2 - y) < 15) ? 'br' : undefined, groupSnapshot: snapshot });
-        return;
+        const hit = hitSeat || hitEl;
+        if (hit) {
+          const id = String(hit.id); let newSelection = selectedIds;
+          if (!selectedIds.includes(id)) { newSelection = e.shiftKey ? [...selectedIds, id] : [id]; setSelectedIds(newSelection); onSelect?.(newSelection); }
+          const snapshot = new Map();
+          newSelection.forEach(sid => {
+            const s = seats.find(st => String(st.id) === sid), el = elements.find(el => el.id === sid);
+            if (s) snapshot.set(sid, { x: s.x, y: s.y }); else if (el) snapshot.set(sid, { x: el.x, y: el.y });
+          });
+          setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, handle: (hitEl && Math.abs(hitEl.x + hitEl.w!/2 - x) < hitSlop && Math.abs(hitEl.y + hitEl.h!/2 - y) < hitSlop) ? 'br' : undefined, groupSnapshot: snapshot });
+          return;
+        }
+        if (!e.shiftKey) { setSelectedIds([]); onSelect?.([]); }
+        setSelectionRect({ x, y, w: 0, h: 0 });
+      } else {
+        // Buyer Mode: Toggle single seat
+        if (hitSeat && hitSeat.status === 'available') {
+          const id = String(hitSeat.id);
+          const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
+          setSelectedIds(newSelection); onSelect?.(newSelection);
+        }
       }
-      if (!e.shiftKey) { setSelectedIds([]); onSelect?.([]); }
-      setSelectionRect({ x, y, w: 0, h: 0 }); return;
+      return;
     }
     setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY });
   };
