@@ -199,6 +199,10 @@ export default function DesignerPage() {
     if (activeTool === 'grid' || activeTool === 'arc') confirmBatchSeats(x, y);
   };
 
+  const commitPropertyChange = () => {
+    addToHistory(seats, elements);
+  };
+
   const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(e.id));
 
   return (

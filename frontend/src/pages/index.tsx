@@ -66,19 +66,14 @@ const Home = () => {
 
   if (!isMounted) return null;
 
-  const handleSeatSelect = (seat: any) => {
-    setSeats(prev => prev.map(s => {
-      if (s.id === seat.id) {
-        return { ...s, status: s.status === 'selected' ? 'available' : 'selected' };
-      }
-      return s;
-    }));
-
-    setSelectedSeats(prev => {
-      const isSelected = prev.find(s => s.id === seat.id);
-      if (isSelected) return prev.filter(s => s.id !== seat.id);
-      return [...prev, seat];
-    });
+  const handleSelectionChange = (ids: string[]) => {
+    // Sync internal seats status for visual feedback if needed, 
+    // but SeatingChart now handles its own selection state visually via selectedIds
+    const selectedObjects = ids.map(id => {
+      return seats.find(s => String(s.id) === id);
+    }).filter(Boolean);
+    
+    setSelectedSeats(selectedObjects);
   };
 
   const getPrice = (cat: string) => {
@@ -143,7 +138,8 @@ const Home = () => {
                 <div className="h-[900px]">
                   <SeatingChart 
                     seats={seats} 
-                    onSeatSelect={handleSeatSelect} 
+                    onSelect={handleSelectionChange} 
+                    selectedIds={selectedSeats.map(s => String(s.id))}
                     theme={theme} 
                     elements={elements}
                   />
