@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import SeatingChart from '../components/SeatingChart';
 import { 
@@ -231,8 +230,13 @@ export default function DesignerPage() {
   const isDark = theme === 'dark';
 
   return (
-    <div className={cn("h-screen w-screen overflow-hidden flex flex-col font-sans transition-colors duration-500", isDark ? "bg-[#06070b] text-white" : "bg-slate-50 text-slate-900")}>
-      <Head><title>Nectar Studio Pro | Venue Architecture</title></Head>
+    <div className={cn(
+      "h-screen w-screen overflow-hidden flex flex-col font-sans transition-colors duration-500", 
+      isDark ? "bg-[#06070b] text-white" : "bg-slate-50 text-slate-900"
+    )}>
+      <Head>
+        <title>Nectar Studio Pro | Venue Architecture</title>
+      </Head>
 
       {/* --- Header --- */}
       <header className={cn(

@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { cn } from '../lib/utils';
 
 interface Seat {
