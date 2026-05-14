@@ -26,6 +26,7 @@ export default function DesignerPage() {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [occupancySim, setOccupancySim] = useState<any>({});
   
   // History System (Undo/Redo)
   const [history, setHistory] = useState<{ seats: any[], elements: any[] }[]>([]);
@@ -105,6 +106,11 @@ export default function DesignerPage() {
     setElements(e);
     setHistory([{ seats: s, elements: e }]);
     setHistoryIndex(0);
+    
+    // Initialize simulation
+    const sim: any = {};
+    e.forEach((el: any) => { if (el.isGA && el.capacity) sim[el.id] = Math.floor(el.capacity * 0.4); });
+    setOccupancySim(sim);
   };
 
   const handleTheaterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -337,19 +343,71 @@ export default function DesignerPage() {
             theme={theme} 
             selectedIds={selectedIds} 
             activeTool={activeTool}
+            occupancy={occupancySim}
             onUpdate={handleUpdate} 
             onSelect={setSelectedIds} 
             onChartClick={handleChartClick}
           />
           
           {/* --- Tooltips / Overlays --- */}
-          <div className="absolute top-6 left-6 flex flex-col gap-2 pointer-events-none">
+          <div className="absolute top-6 left-6 flex flex-col gap-3 pointer-events-none">
             <div className={cn(
-              "px-4 py-2 backdrop-blur-xl border rounded-2xl flex items-center gap-3 shadow-lg",
+              "px-4 py-2 backdrop-blur-xl border rounded-2xl flex items-center gap-3 shadow-lg w-fit",
               isDark ? "bg-black/40 border-white/10" : "bg-white/80 border-slate-200"
             )}>
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <span className={cn("text-[10px] font-bold tracking-wider", isDark ? "text-white/50" : "text-slate-500")}>LIVE EDITING MODE</span>
+            </div>
+
+            <div className={cn(
+              "p-5 backdrop-blur-3xl border rounded-[24px] shadow-2xl flex flex-col gap-4 min-w-[200px]",
+              isDark ? "bg-black/60 border-white/10" : "bg-white/90 border-slate-200"
+            )}>
+              <div className="flex flex-col gap-1">
+                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-amber-honey">Venue Statistics</span>
+                <span className={cn("text-[14px] font-black tracking-tight", isDark ? "text-white" : "text-slate-900")}>
+                  {seats.length + elements.reduce((acc, el) => acc + (el.isGA ? (el.capacity || 0) : 0), 0)} Total Capacity
+                </span>
+              </div>
+              
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                    <span className={cn("text-[9px] font-bold uppercase tracking-wider", isDark ? "text-white/40" : "text-slate-500")}>Available Seats</span>
+                  </div>
+                  <span className={cn("text-[10px] font-black", isDark ? "text-white" : "text-slate-900")}>{seats.filter(s => s.status === 'available').length} / {seats.length}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    <span className={cn("text-[9px] font-bold uppercase tracking-wider", isDark ? "text-white/40" : "text-slate-500")}>Reserved/Sold</span>
+                  </div>
+                  <span className={cn("text-[10px] font-black", isDark ? "text-white" : "text-slate-900")}>{seats.filter(s => s.status !== 'available').length}</span>
+                </div>
+                <div className="h-px bg-white/5 my-1" />
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-honey" />
+                    <span className={cn("text-[9px] font-bold uppercase tracking-wider", isDark ? "text-white/40" : "text-slate-500")}>GA Capacity</span>
+                  </div>
+                  <span className={cn("text-[10px] font-black", isDark ? "text-white" : "text-slate-900")}>
+                    {elements.reduce((acc, el) => acc + (el.isGA ? (el.capacity || 0) : 0), 0)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className={cn("grid grid-cols-2 gap-2 mt-2 pt-3 border-t", isDark ? "border-white/5" : "border-slate-200")}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className={cn("text-[7px] font-black uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  <span className={cn("text-[7px] font-black uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Reserved</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -509,10 +567,11 @@ export default function DesignerPage() {
                           </div>
                         </div>
 
-                        {/* Seat Category */}
-                        {(firstSelected as any).row && (
-                          <div className="space-y-4">
-                            <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isDark ? "text-white/30" : "text-slate-400")}>Seat Category</label>
+                        {/* Category Selection */}
+                        <div className="space-y-4">
+                          <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isDark ? "text-white/30" : "text-slate-400")}>
+                            {(firstSelected as any).row ? 'Seat Category' : 'Zone Category'}
+                          </label>
                             <div className="grid grid-cols-2 gap-2">
                               {[
                                 { id: 'standard', label: 'Standard' },
@@ -530,6 +589,33 @@ export default function DesignerPage() {
                                   )}
                                 >
                                   {cat.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status Selection (Only for Seats) */}
+                        {(firstSelected as any).row && (
+                          <div className="space-y-4">
+                            <label className={cn("text-[9px] font-bold uppercase tracking-[0.2em]", isDark ? "text-white/30" : "text-slate-400")}>Operational Status</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { id: 'available', label: 'Available', color: 'bg-green-500' },
+                                { id: 'reserved', label: 'Reserved', color: 'bg-red-500' },
+                                { id: 'occupied', label: 'Occupied', color: 'bg-slate-500' },
+                              ].map(status => (
+                                <button 
+                                  key={status.id}
+                                  onClick={() => { updateSelectedProperty('status', status.id); commitPropertyChange(); }}
+                                  className={cn(
+                                    "py-3 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all flex items-center justify-center gap-2",
+                                    (firstSelected as any).status === status.id ? "bg-amber-honey text-nature-night border-amber-honey shadow-[0_0_15px_rgba(255,191,0,0.4)]" : 
+                                    isDark ? "bg-white/5 border-white/10 text-white/40" : "bg-slate-100 border-slate-200 text-slate-500"
+                                  )}
+                                >
+                                  <div className={cn("w-1.5 h-1.5 rounded-full", status.color)} />
+                                  {status.label}
                                 </button>
                               ))}
                             </div>
@@ -554,16 +640,41 @@ export default function DesignerPage() {
                           </div>
                           
                           {!(firstSelected as any).row && (
-                            <div className={cn("grid grid-cols-2 gap-4 pt-4 border-t", isDark ? "border-white/5" : "border-slate-200")}>
-                              <div className="space-y-1">
-                                <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Width</span>
-                                <input type="number" value={(firstSelected as any).w || (firstSelected as any).width || 100} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/>
+                            <>
+                              <div className={cn("grid grid-cols-2 gap-4 pt-4 border-t", isDark ? "border-white/5" : "border-slate-200")}>
+                                <div className="space-y-1">
+                                  <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Width</span>
+                                  <input type="number" value={(firstSelected as any).w || (firstSelected as any).width || 100} onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value))} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/>
+                                </div>
+                                <div className="space-y-1">
+                                  <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Height</span>
+                                  <input type="number" value={(firstSelected as any).h || (firstSelected as any).height || 100} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/>
+                                </div>
                               </div>
-                              <div className="space-y-1">
-                                <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Height</span>
-                                <input type="number" value={(firstSelected as any).h || (firstSelected as any).height || 100} onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value))} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/>
+                              <div className={cn("pt-4 border-t space-y-4", isDark ? "border-white/5" : "border-slate-200")}>
+                                <div className="flex items-center justify-between">
+                                  <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>General Admission</span>
+                                  <button 
+                                    onClick={() => { updateSelectedProperty('isGA', !(firstSelected as any).isGA); commitPropertyChange(); }}
+                                    className={cn(
+                                      "w-10 h-5 rounded-full relative transition-all",
+                                      (firstSelected as any).isGA ? "bg-amber-honey shadow-[0_0_10px_rgba(255,191,0,0.4)]" : (isDark ? "bg-white/10" : "bg-slate-200")
+                                    )}
+                                  >
+                                    <div className={cn("absolute top-1 w-3 h-3 rounded-full transition-all", (firstSelected as any).isGA ? "right-1 bg-nature-night" : "left-1 bg-white")} />
+                                  </button>
+                                </div>
+                                {(firstSelected as any).isGA && (
+                                  <div className="space-y-1">
+                                    <span className={cn("text-[8px] font-bold uppercase tracking-widest", isDark ? "text-white/20" : "text-slate-400")}>Capacity</span>
+                                    <div className="flex items-center gap-2">
+                                      <Maximize size={12} className="text-amber-honey" />
+                                      <input type="number" value={(firstSelected as any).capacity || 0} onChange={(e) => updateSelectedProperty('capacity', parseInt(e.target.value))} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            </div>
+                            </>
                           )}
                         </div>
                       </div>

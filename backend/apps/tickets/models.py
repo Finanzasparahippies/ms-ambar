@@ -35,6 +35,7 @@ class Theater(models.Model):
                     number=seat_data.get('number', 1),
                     defaults={
                         'category': seat_data.get('category', 'standard'),
+                        'status': seat_data.get('status', 'available'),
                         'base_price': seat_data.get('base_price', 1000),
                         'x': seat_data.get('x', 0),
                         'y': seat_data.get('y', 0),
@@ -42,6 +43,21 @@ class Theater(models.Model):
                     }
                 )
                 created_count += 1
+            
+            # Sync GA Zones
+            elements_data = self.layout.get('map_elements', [])
+            for el_data in elements_data:
+                if el_data.get('isGA'):
+                    GADeclaration.objects.update_or_create(
+                        theater=self,
+                        external_id=el_data.get('id'),
+                        defaults={
+                            'name': el_data.get('label', 'General Admission'),
+                            'capacity': el_data.get('capacity', 0),
+                            'category': el_data.get('category', 'standard'),
+                            'base_price': el_data.get('base_price', 500)
+                        }
+                    )
             return created_count
 
         # Case 2: Schema-based (current logic)
@@ -134,16 +150,15 @@ class Event(models.Model):
 class Seat(models.Model):
     CATEGORY_CHOICES = [
         ('standard', 'Standard'),
-        ('vip', 'VIP'),
-        ('general_a', 'General A'),
-        ('general_b', 'General B'),
-        ('accessible', 'Accessible'),
+        ('vip', 'VIP Gold'),
+        ('premium', 'Premium'),
+        ('disabled', 'Accessible'),
     ]
-    POSITION_CHOICES = [
-        ('front', 'Frontal'),
-        ('side_left', 'Lateral Izquierda'),
-        ('side_right', 'Lateral Derecha'),
-        ('back', 'Posterior'),
+    STATUS_CHOICES = [
+        ('available', 'Available'),
+        ('reserved', 'Reserved'),
+        ('occupied', 'Occupied'),
+        ('blocked', 'Blocked'),
     ]
     theater = models.ForeignKey(Theater, on_delete=models.CASCADE, related_name='seats')
     section = models.CharField(max_length=100, default='General')
@@ -151,6 +166,7 @@ class Seat(models.Model):
     row = models.CharField(max_length=10)
     number = models.IntegerField()
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='standard')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='available')
     base_price = models.DecimalField(max_digits=10, decimal_places=2)
     
     # Precise positioning
@@ -164,6 +180,19 @@ class Seat(models.Model):
     def __str__(self):
         return f"{self.theater.name} - {self.section} {self.row}{self.number}"
 
+class GADeclaration(models.Model):
+    theater = models.ForeignKey(Theater, on_delete=models.CASCADE, related_name='ga_zones')
+    name = models.CharField(max_length=100)
+    capacity = models.PositiveIntegerField()
+    category = models.CharField(max_length=20, choices=Seat.CATEGORY_CHOICES, default='standard')
+    base_price = models.DecimalField(max_digits=10, decimal_places=2)
+    
+    # Internal ID from designer to keep sync
+    external_id = models.CharField(max_length=100, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.theater.name} - GA Zone: {self.name}"
+
 class Ticket(models.Model):
     STATUS_CHOICES = [
         ('reserved', 'Reserved'),
@@ -172,7 +201,8 @@ class Ticket(models.Model):
         ('cancelled', 'Cancelled'),
     ]
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='tickets')
-    seat = models.ForeignKey(Seat, on_delete=models.CASCADE)
+    seat = models.ForeignKey(Seat, on_delete=models.CASCADE, null=True, blank=True)
+    ga_zone = models.ForeignKey(GADeclaration, on_delete=models.CASCADE, null=True, blank=True)
     user_email = models.EmailField()
     user_phone = models.CharField(max_length=20, null=True, blank=True)
     token = models.UUIDField(default=uuid.uuid4, unique=True)

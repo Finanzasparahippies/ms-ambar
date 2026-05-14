@@ -23,14 +23,18 @@ interface MapElement {
   label?: string;
   icon?: 'stairs' | 'wc' | 'bar' | 'exit';
   color?: string;
+  category?: string;
   angle?: number;
   sides?: number;
+  isGA?: boolean;
+  capacity?: number;
 }
 
 interface SeatingChartProps {
   seats: Seat[];
   theme?: 'light' | 'dark';
   elements?: MapElement[];
+  occupancy?: { [key: string]: number };
   isDesignMode?: boolean;
   onUpdate?: (seats: Seat[], elements: MapElement[]) => void;
   onSelect?: (ids: string[]) => void;
@@ -43,6 +47,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   seats: initialSeats,
   theme = 'dark',
   elements: initialElements = [],
+  occupancy = {},
   isDesignMode = false,
   onUpdate,
   onSelect,
@@ -107,12 +112,20 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     // Render Elements
     elements.forEach(el => {
       ctx.save(); ctx.translate(el.x, el.y); ctx.rotate((el.angle || 0) * Math.PI / 180);
-      const isSelected = selectedIds.includes(el.id);
+      const isSelected = selectedSet.has(el.id);
       const isHovered = hoveredId === el.id;
       if (isSelected) { ctx.shadowBlur = 15; ctx.shadowColor = '#FFBF00'; }
-      else if (isHovered) { ctx.shadowBlur = 10; ctx.shadowColor = 'rgba(255,255,255,0.2)'; }
-      ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
-      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? 'rgba(255,255,255,0.4)' : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
+      else if (isHovered) { ctx.shadowBlur = 10; ctx.shadowColor = theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'; }
+      
+      if (el.isGA) {
+        ctx.setLineDash([5, 5]);
+        ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,191,0,0.05)' : 'rgba(255,191,0,0.05)');
+      } else {
+        ctx.setLineDash([]);
+        ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
+      }
+
+      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
       ctx.lineWidth = isSelected ? 3 : 1.5;
       const sides = el.sides ?? 4, w = el.w || 100, h = el.h || 100;
       if (sides === 0) { ctx.beginPath(); ctx.arc(0, 0, w / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
@@ -129,7 +142,23 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.font = '800 12px Outfit';
         ctx.fillStyle = isSelected ? '#000' : (theme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)');
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(el.label.toUpperCase(), 0, 0);
+        ctx.fillText(el.label.toUpperCase(), 0, (el.isGA && el.capacity) ? -8 : 0);
+
+        if (el.isGA && el.capacity) {
+          const sold = occupancy[el.id] || 0;
+          const ratio = sold / el.capacity;
+          ctx.font = '800 9px Outfit';
+          ctx.fillStyle = isSelected ? '#000' : (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
+          ctx.fillText(`${sold} / ${el.capacity}`, 0, 8);
+
+          // Progress Bar
+          const w = el.w || 100, h = el.h || 100;
+          ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+          ctx.beginPath(); ctx.roundRect(-w/2 + 20, h/2 - 15, w - 40, 4, 2); ctx.fill();
+          
+          ctx.fillStyle = ratio > 0.9 ? '#eb4d4b' : '#6ab04c';
+          ctx.beginPath(); ctx.roundRect(-w/2 + 20, h/2 - 15, (w - 40) * Math.min(1, ratio), 4, 2); ctx.fill();
+        }
       }
       if (isSelected && isDesignMode) {
         ctx.fillStyle = '#FFBF00'; ctx.beginPath(); ctx.roundRect(w / 2 - 6, h / 2 - 6, 12, 12, 3); ctx.fill();
@@ -140,21 +169,34 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     // Render Seats
     seats.forEach(seat => {
       ctx.save(); ctx.translate(seat.x, seat.y); ctx.rotate((seat.angle || 0) * Math.PI / 180);
-      const isSelected = selectedIds.includes(String(seat.id));
+      const isSelected = selectedSet.has(String(seat.id));
       const isHovered = hoveredId === String(seat.id);
       
       if (isSelected) { ctx.shadowBlur = 10; ctx.shadowColor = '#FFBF00'; }
       
-      // Category-based coloring
+      // Status & Category-based coloring
       let fillColor = theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)';
-      if (seat.category === 'vip') fillColor = 'rgba(255, 191, 0, 0.4)';
-      else if (seat.category === 'premium') fillColor = 'rgba(34, 166, 179, 0.4)';
-      else if (seat.category === 'disabled') fillColor = 'rgba(106, 176, 76, 0.4)';
+      let strokeColor = theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.3)';
+      
+      if (seat.status === 'occupied' || seat.status === 'reserved') {
+        fillColor = theme === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.05)';
+        strokeColor = theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)';
+      } else {
+        if (seat.category === 'vip') fillColor = 'rgba(255, 191, 0, 0.4)';
+        else if (seat.category === 'premium') fillColor = 'rgba(34, 166, 179, 0.4)';
+        else if (seat.category === 'disabled') fillColor = 'rgba(106, 176, 76, 0.4)';
+      }
       
       ctx.fillStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : fillColor;
-      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') : (theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.3)');
+      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') : strokeColor;
       ctx.lineWidth = isSelected ? 2 : 1;
       ctx.beginPath(); ctx.roundRect(-9, -9, 18, 18, 5); ctx.fill(); ctx.stroke();
+
+      // Lock icon for reserved seats
+      if ((seat.status === 'occupied' || seat.status === 'reserved') && !isSelected) {
+        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)';
+        ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 2); ctx.fill();
+      }
       ctx.restore();
     });
 
@@ -177,7 +219,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.fillRect(selectionRect.x, selectionRect.y, selectionRect.w, selectionRect.h);
     }
     ctx.restore();
-  }, [seats, elements, transform, theme, selectedIds, hoveredId, selectionRect, isDesignMode, activeTool, mousePos, isPanning, draggedItem]);
+  }, [seats, elements, transform, theme, selectedSet, hoveredId, selectionRect, isDesignMode, activeTool, mousePos, isPanning, draggedItem, occupancy]);
 
   const animate = useCallback(() => { draw(); requestRef.current = requestAnimationFrame(animate); }, [draw]);
   useEffect(() => { requestRef.current = requestAnimationFrame(animate); return () => cancelAnimationFrame(requestRef.current!); }, [animate]);
@@ -298,7 +340,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const cursorClass = isPanning ? 'cursor-grabbing' : (activeTool !== 'select' || hoveredId) ? 'cursor-pointer' : 'cursor-default';
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full relative overflow-hidden bg-[#0b0d17]", cursorClass)} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={containerRef} className={cn("w-full h-full relative overflow-hidden transition-colors duration-500", theme === 'dark' ? "bg-[#0b0d17]" : "bg-white", cursorClass)} onContextMenu={(e) => e.preventDefault()}>
       <canvas ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={(e) => setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5)) }))} className="w-full h-full block outline-none" tabIndex={0} />
       <div className="absolute bottom-6 left-6 flex gap-2">
         <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50">Del: Borrar | Shift+Drag: Multi | Arrows: Precision</div>
