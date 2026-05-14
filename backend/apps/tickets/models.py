@@ -154,6 +154,12 @@ class Seat(models.Model):
         ('premium', 'Premium'),
         ('disabled', 'Accessible'),
     ]
+    POSITION_CHOICES = [
+        ('front', 'Frontal'),
+        ('side_left', 'Lateral Izquierda'),
+        ('side_right', 'Lateral Derecha'),
+        ('back', 'Posterior'),
+    ]
     STATUS_CHOICES = [
         ('available', 'Available'),
         ('reserved', 'Reserved'),
