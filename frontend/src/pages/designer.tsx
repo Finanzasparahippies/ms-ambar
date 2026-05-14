@@ -209,15 +209,6 @@ export default function DesignerPage() {
     const seatSpacing = 35;
     const aisleWidth = 70;
 
-  const confirmBatchSeats = (x: number = 500, y: number = 500) => {
-    const { rowLabel, category, rowsCount, rowSpacing, aisleCount, arcAngle } = batchConfig;
-    const type = batchPanel.type;
-    let allNewSeats: any[] = [];
-    let currentRowLabel = rowLabel;
-    const baseRadius = 350;
-    const seatSpacing = 35;
-    const aisleWidth = 70;
-
     for (let r = 0; r < rowsCount; r++) {
       const currentRadius = baseRadius + (r * rowSpacing);
       const straightLen = 400;
