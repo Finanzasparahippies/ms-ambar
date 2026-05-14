@@ -235,57 +235,56 @@ export default function DesignerPage() {
       }
 
       const totalPerimeter = phases[phases.length - 1].endDist;
-      let currentGlobalDist = 0;
       let seatNumberInRow = 1;
       const aislesPerPhase = Math.max(1, Math.floor(aisleCount / phases.length));
 
-      while (currentGlobalDist < totalPerimeter) {
-        const pIdx = phases.findIndex(p => currentGlobalDist >= p.startDist && currentGlobalDist < p.endDist);
-        if (pIdx === -1) break;
-        const phase = phases[pIdx];
-        const distInPhase = currentGlobalDist - phase.startDist;
+      phases.forEach((phase, pIdx) => {
+        let currentDistInPhase = 0;
 
-        // Aisle Snapping Logic
-        let inAisle = false;
-        for (let i = 1; i <= aislesPerPhase; i++) {
-          const aisleCenter = (i / (aislesPerPhase + 1)) * phase.len;
-          const aisleStart = aisleCenter - aisleWidth / 2;
-          const aisleEnd = aisleCenter + aisleWidth / 2;
-          
-          if (distInPhase >= aisleStart && distInPhase < aisleEnd) {
-            currentGlobalDist = phase.startDist + aisleEnd;
-            inAisle = true;
-            break;
+        while (currentDistInPhase < phase.len) {
+          // Aisle Snapping Logic
+          let inAisle = false;
+          for (let i = 1; i <= aislesPerPhase; i++) {
+            const aisleCenter = (i / (aislesPerPhase + 1)) * phase.len;
+            const aisleStart = aisleCenter - aisleWidth / 2;
+            const aisleEnd = aisleCenter + aisleWidth / 2;
+            
+            if (currentDistInPhase >= aisleStart && currentDistInPhase < aisleEnd) {
+              currentDistInPhase = aisleEnd;
+              inAisle = true;
+              break;
+            }
           }
-        }
-        if (inAisle) continue;
+          if (inAisle) continue;
+          if (currentDistInPhase >= phase.len) break;
 
-        const id = `seat-${crypto.randomUUID()}`;
-        let seatPos = { x: 0, y: 0, angle: 0 };
+          const id = `seat-${crypto.randomUUID()}`;
+          let seatPos = { x: 0, y: 0, angle: 0 };
 
-        if (type === 'grid') {
-          seatPos = { x: x + currentGlobalDist, y: y + r * rowSpacing, angle: 0 };
-        } else if (type === 'arc') {
-          const angDeg = phase.startAngle! + (distInPhase / currentRadius) * (180 / Math.PI);
-          const angRad = angDeg * Math.PI / 180;
-          seatPos = { x: x + Math.sin(angRad) * currentRadius, y: y + Math.cos(angRad) * currentRadius, angle: -angDeg };
-        } else if (type === 'stadium') {
-          if (pIdx === 0) { // Bottom
-            seatPos = { x: x - straightLen / 2 + distInPhase, y: y + currentRadius, angle: 0 };
-          } else if (pIdx === 1) { // Right Arc
-            const ang = phase.startAngle! - (distInPhase / currentRadius);
-            seatPos = { x: phase.center!.x + Math.cos(ang) * currentRadius, y: phase.center!.y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
-          } else if (pIdx === 2) { // Top
-            seatPos = { x: x + straightLen / 2 - distInPhase, y: y - currentRadius, angle: 180 };
-          } else if (pIdx === 3) { // Left Arc
-            const ang = phase.startAngle! - (distInPhase / currentRadius);
-            seatPos = { x: phase.center!.x + Math.cos(ang) * currentRadius, y: phase.center!.y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
+          if (type === 'grid') {
+            seatPos = { x: x + currentDistInPhase, y: y + r * rowSpacing, angle: 0 };
+          } else if (type === 'arc') {
+            const angDeg = phase.startAngle! + (currentDistInPhase / currentRadius) * (180 / Math.PI);
+            const angRad = angDeg * Math.PI / 180;
+            seatPos = { x: x + Math.sin(angRad) * currentRadius, y: y + Math.cos(angRad) * currentRadius, angle: -angDeg };
+          } else if (type === 'stadium') {
+            if (pIdx === 0) { // Bottom
+              seatPos = { x: x - straightLen / 2 + currentDistInPhase, y: y + currentRadius, angle: 0 };
+            } else if (pIdx === 1) { // Right Arc
+              const ang = phase.startAngle! - (currentDistInPhase / currentRadius);
+              seatPos = { x: phase.center!.x + Math.cos(ang) * currentRadius, y: phase.center!.y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
+            } else if (pIdx === 2) { // Top
+              seatPos = { x: x + straightLen / 2 - currentDistInPhase, y: y - currentRadius, angle: 180 };
+            } else if (pIdx === 3) { // Left Arc
+              const ang = phase.startAngle! - (currentDistInPhase / currentRadius);
+              seatPos = { x: phase.center!.x + Math.cos(ang) * currentRadius, y: phase.center!.y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
+            }
           }
-        }
 
-        allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
-        currentGlobalDist += seatSpacing;
-      }
+          allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
+          currentDistInPhase += seatSpacing;
+        }
+      });
       currentRowLabel = getNextRowLabel(currentRowLabel);
     }
 
