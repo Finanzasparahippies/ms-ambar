@@ -46,15 +46,27 @@ export default function DesignerPage() {
   const [clipboard, setClipboard] = useState<{ seats: any[], elements: any[] } | null>(null);
   const rotationRef = useRef<{ centroid: { x: number, y: number }, initialStates: Map<string, any> } | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+    (typeof window !== 'undefined' && window.location.origin.includes('github.dev') 
+      ? window.location.origin.replace('-3000', '-8000') + '/api' 
+      : 'http://localhost:8000/api');
 
   useEffect(() => {
-    fetch(`${apiUrl}/tickets/theaters/`)
-      .then(res => res.json())
-      .then(data => {
+    const fetchTheaters = async () => {
+      try {
+        const res = await fetch(`${apiUrl}/tickets/theaters/`);
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
         setTheaters(data);
-        if (data.length > 0) { setSelectedTheaterId(data[0].id); loadTheater(data[0]); }
-      });
+        if (data.length > 0) {
+          setSelectedTheaterId(data[0].id);
+          loadTheater(data[0]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch theaters:", error);
+      }
+    };
+    fetchTheaters();
   }, []);
 
   const addToHistory = (s: any[], e: any[]) => {
