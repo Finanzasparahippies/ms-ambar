@@ -234,8 +234,17 @@ export default function DesignerPage() {
 
       const totalPerimeter = phases[phases.length - 1].endDist;
       
-      // Calculate Aisle Zones (Normalized 0 to 1 for the WHOLE perimeter, but mapped to phases)
-      const aisleCenters = Array.from({ length: aisleCount }).map((_, i) => (i + 1) / (aisleCount + 1));
+      // Define Aisle Anchors per phase to ensure vertical/radial alignment
+      const getIsInAisle = (pIdx: number, dInPhase: number, pLen: number) => {
+        if (aisleCount <= 0) return false;
+        // Distribute aisle count across phases
+        const aislesPerPhase = Math.max(1, Math.floor(aisleCount / phases.length));
+        for (let i = 1; i <= aislesPerPhase; i++) {
+          const targetDist = (i / (aislesPerPhase + 1)) * pLen;
+          if (Math.abs(dInPhase - targetDist) < (aisleWidth / 2)) return true;
+        }
+        return false;
+      };
 
       let currentGlobalDist = 0;
       let seatNumberInRow = 1;
@@ -248,8 +257,8 @@ export default function DesignerPage() {
         const distInPhase = currentGlobalDist - phase.startDist;
         const globalNorm = currentGlobalDist / totalPerimeter;
 
-        // 2. Aisle Check (Using normalized global position for alignment)
-        const isInAisle = aisleCenters.some(center => Math.abs(globalNorm - center) < (aisleWidth / (2 * totalPerimeter)));
+        // 2. Aisle Check (Using Per-Phase distance for absolute alignment)
+        const isInAisle = getIsInAisle(phaseIdx, distInPhase, phase.len);
 
         if (isInAisle) {
           currentGlobalDist += aisleWidth;
