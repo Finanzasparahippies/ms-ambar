@@ -189,58 +189,86 @@ export default function DesignerPage() {
   };
 
   const confirmBatchSeats = (x: number = 500, y: number = 500) => {
-    const { count, rowLabel, category, rowsCount, rowSpacing, aisleCount, arcAngle, uniformDensity } = batchConfig;
-    const type = batchPanel.type; if (count <= 0) return;
-    let allNewSeats: any[] = []; let currentRowLabel = rowLabel; const baseRadius = 350;
-    
+    const { rowLabel, category, rowsCount, rowSpacing, aisleCount, arcAngle } = batchConfig;
+    const type = batchPanel.type;
+    let allNewSeats: any[] = [];
+    let currentRowLabel = rowLabel;
+    const baseRadius = 350;
+    const seatSpacing = 35; // Constant linear density
+    const aisleWidth = 70;  // 2-seat equivalent walking path
+
+    // Pre-calculate Aisle positions in normalized space (0 to 1)
+    const aislePositions = Array.from({ length: aisleCount }).map((_, i) => (i + 1) / (aisleCount + 1));
+
     for (let r = 0; r < rowsCount; r++) {
       const currentRadius = baseRadius + (r * rowSpacing);
-      let rowCount = count;
-      if (uniformDensity) {
-        if (type === 'arc') rowCount = Math.round(count * (currentRadius / baseRadius));
-        else if (type === 'stadium') {
-          const basePerim = (400 * 2) + (Math.PI * baseRadius);
-          const currPerim = (400 * 2) + (Math.PI * currentRadius);
-          rowCount = Math.round(count * (currPerim / basePerim));
-        }
-      }
+      let totalPathLength = 0;
+      
+      if (type === 'grid') totalPathLength = 800; // Fixed width for grid
+      else if (type === 'arc') totalPathLength = currentRadius * (arcAngle * Math.PI / 180);
+      else if (type === 'stadium') totalPathLength = (400 * 2) + (2 * Math.PI * currentRadius);
 
-      const totalSlots = rowCount + aisleCount;
-      const sectionSize = Math.floor(totalSlots / (aisleCount + 1));
+      let currentDist = 0;
       let seatNumberInRow = 1;
 
-      for (let i = 0; i < totalSlots; i++) {
-        // Skip for aisles (synchronized radially/linearly)
-        if (aisleCount > 0 && i > 0 && i % sectionSize === 0 && (i / sectionSize) <= aisleCount) continue;
+      while (currentDist < totalPathLength) {
+        const normalizedPos = currentDist / totalPathLength;
+        
+        // Check if we are in an Aisle Exclusion Zone
+        const isInAisle = aislePositions.some(pos => Math.abs(normalizedPos - pos) < (aisleWidth / (2 * totalPathLength)));
+        
+        if (isInAisle) {
+          currentDist += aisleWidth;
+          continue;
+        }
 
-        const id = `seat-${crypto.randomUUID()}`; let seatPos = { x: 0, y: 0, angle: 0 };
-        if (type === 'grid') seatPos = { x: x + i * 35, y: y + r * rowSpacing, angle: 0 };
-        else if (type === 'arc') {
-          const angDeg = -(arcAngle/2) + (i * (arcAngle / (totalSlots - 1)));
+        const id = `seat-${crypto.randomUUID()}`;
+        let seatPos = { x: 0, y: 0, angle: 0 };
+
+        if (type === 'grid') {
+          seatPos = { x: x + currentDist, y: y + r * rowSpacing, angle: 0 };
+        } else if (type === 'arc') {
+          const angDeg = -(arcAngle/2) + (normalizedPos * arcAngle);
           const angRad = angDeg * Math.PI / 180;
-          seatPos = { x: x + Math.sin(angRad) * currentRadius, y: y + Math.cos(angRad) * currentRadius, angle: -angDeg };
+          seatPos = { 
+            x: x + Math.sin(angRad) * currentRadius, 
+            y: y + Math.cos(angRad) * currentRadius, 
+            angle: -angDeg 
+          };
         } else if (type === 'stadium') {
-          const straightLen = 400; const totalPerim = (straightLen * 2) + (Math.PI * currentRadius);
-          const dist = (i / (totalSlots - 1)) * totalPerim;
-          if (dist < straightLen) seatPos = { x: x - straightLen/2 + dist, y: y + currentRadius, angle: 0 };
-          else if (dist < straightLen + (Math.PI * currentRadius / 2)) {
-            const arcDist = dist - straightLen; const ang = (arcDist / currentRadius) - (Math.PI / 2);
+          const straightLen = 400;
+          const semiPerim = Math.PI * currentRadius;
+          const fullPerim = (straightLen * 2) + (semiPerim * 2);
+          const dist = normalizedPos * fullPerim;
+          
+          if (dist < straightLen) { // Bottom
+            seatPos = { x: x - straightLen/2 + dist, y: y + currentRadius, angle: 0 };
+          } else if (dist < straightLen + semiPerim) { // Right semi-circle
+            const arcDist = dist - straightLen;
+            const ang = (arcDist / currentRadius) - (Math.PI / 2);
             seatPos = { x: x + straightLen/2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
-          } else if (dist < (straightLen * 2) + (Math.PI * currentRadius / 2)) {
-            const straightDist = dist - straightLen - (Math.PI * currentRadius / 2);
+          } else if (dist < (straightLen * 2) + semiPerim) { // Top
+            const straightDist = dist - straightLen - semiPerim;
             seatPos = { x: x + straightLen/2 - straightDist, y: y - currentRadius, angle: 180 };
-          } else {
-            const arcDist = dist - (straightLen * 2) - (Math.PI * currentRadius / 2);
+          } else { // Left semi-circle
+            const arcDist = dist - (straightLen * 2) - semiPerim;
             const ang = (arcDist / currentRadius) + (Math.PI / 2);
-            seatPos = { x: x - straightLen/2 - Math.cos(ang - Math.PI/2) * currentRadius, y: y - Math.sin(ang - Math.PI/2) * currentRadius, angle: (ang * 180 / Math.PI) + 90 };
+            seatPos = { x: x - straightLen/2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
           }
         }
+
         allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
+        currentDist += seatSpacing;
       }
       currentRowLabel = getNextRowLabel(currentRowLabel);
     }
-    const updatedSeats = [...seats, ...allNewSeats]; setSeats(updatedSeats); setSelectedIds(allNewSeats.map(s => s.id));
-    setBatchPanel({ ...batchPanel, isOpen: false }); addToHistory(updatedSeats, elements); setActiveTool('select');
+
+    const updatedSeats = [...seats, ...allNewSeats];
+    setSeats(updatedSeats);
+    setSelectedIds(allNewSeats.map(s => s.id));
+    setBatchPanel({ ...batchPanel, isOpen: false });
+    addToHistory(updatedSeats, elements);
+    setActiveTool('select');
   };
 
   const handleChartClick = (x: number, y: number) => {
