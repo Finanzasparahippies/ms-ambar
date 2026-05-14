@@ -192,31 +192,50 @@ export default function DesignerPage() {
     const { count, rowLabel, category, rowsCount, rowSpacing, aisleCount, arcAngle, uniformDensity } = batchConfig;
     const type = batchPanel.type; if (count <= 0) return;
     let allNewSeats: any[] = []; let currentRowLabel = rowLabel; const baseRadius = 350;
+    
     for (let r = 0; r < rowsCount; r++) {
       const currentRadius = baseRadius + (r * rowSpacing);
-      const rowCount = uniformDensity && type === 'arc' ? Math.round(count * (currentRadius / baseRadius)) : count;
-      const aisleInterval = aisleCount > 0 ? Math.floor(rowCount / (aisleCount + 1)) : -1;
-      let seatNumber = 1;
-      for (let i = 0; i < rowCount; i++) {
-        if (aisleInterval > 0 && i > 0 && i % aisleInterval === 0 && (i / aisleInterval) <= aisleCount) continue;
+      let rowCount = count;
+      if (uniformDensity) {
+        if (type === 'arc') rowCount = Math.round(count * (currentRadius / baseRadius));
+        else if (type === 'stadium') {
+          const basePerim = (400 * 2) + (Math.PI * baseRadius);
+          const currPerim = (400 * 2) + (Math.PI * currentRadius);
+          rowCount = Math.round(count * (currPerim / basePerim));
+        }
+      }
+
+      const totalSlots = rowCount + aisleCount;
+      const sectionSize = Math.floor(totalSlots / (aisleCount + 1));
+      let seatNumberInRow = 1;
+
+      for (let i = 0; i < totalSlots; i++) {
+        // Skip for aisles (synchronized radially/linearly)
+        if (aisleCount > 0 && i > 0 && i % sectionSize === 0 && (i / sectionSize) <= aisleCount) continue;
+
         const id = `seat-${crypto.randomUUID()}`; let seatPos = { x: 0, y: 0, angle: 0 };
         if (type === 'grid') seatPos = { x: x + i * 35, y: y + r * rowSpacing, angle: 0 };
         else if (type === 'arc') {
-          const angDeg = -(arcAngle/2) + (i * (arcAngle / (rowCount - 1))); const angRad = angDeg * Math.PI / 180;
+          const angDeg = -(arcAngle/2) + (i * (arcAngle / (totalSlots - 1)));
+          const angRad = angDeg * Math.PI / 180;
           seatPos = { x: x + Math.sin(angRad) * currentRadius, y: y + Math.cos(angRad) * currentRadius, angle: -angDeg };
         } else if (type === 'stadium') {
-          const straightLen = 400; const totalPerimeter = (straightLen * 2) + (Math.PI * currentRadius);
-          const dist = (i / (rowCount - 1)) * totalPerimeter;
+          const straightLen = 400; const totalPerim = (straightLen * 2) + (Math.PI * currentRadius);
+          const dist = (i / (totalSlots - 1)) * totalPerim;
           if (dist < straightLen) seatPos = { x: x - straightLen/2 + dist, y: y + currentRadius, angle: 0 };
-          else if (dist < straightLen + (Math.PI * currentRadius)) {
-            const arcDist = dist - straightLen; const ang = (arcDist / (Math.PI * currentRadius)) * Math.PI - (Math.PI / 2);
-            seatPos = { x: x + straightLen/2 + Math.cos(ang) * currentRadius, y: y - Math.sin(ang) * currentRadius, angle: 90 - (ang * 180 / Math.PI) };
-          } else {
-            const straightDist = dist - straightLen - (Math.PI * currentRadius);
+          else if (dist < straightLen + (Math.PI * currentRadius / 2)) {
+            const arcDist = dist - straightLen; const ang = (arcDist / currentRadius) - (Math.PI / 2);
+            seatPos = { x: x + straightLen/2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
+          } else if (dist < (straightLen * 2) + (Math.PI * currentRadius / 2)) {
+            const straightDist = dist - straightLen - (Math.PI * currentRadius / 2);
             seatPos = { x: x + straightLen/2 - straightDist, y: y - currentRadius, angle: 180 };
+          } else {
+            const arcDist = dist - (straightLen * 2) - (Math.PI * currentRadius / 2);
+            const ang = (arcDist / currentRadius) + (Math.PI / 2);
+            seatPos = { x: x - straightLen/2 - Math.cos(ang - Math.PI/2) * currentRadius, y: y - Math.sin(ang - Math.PI/2) * currentRadius, angle: (ang * 180 / Math.PI) + 90 };
           }
         }
-        allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumber++, status: 'available', category });
+        allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
       }
       currentRowLabel = getNextRowLabel(currentRowLabel);
     }
