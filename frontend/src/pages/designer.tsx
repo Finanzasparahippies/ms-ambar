@@ -209,81 +209,88 @@ export default function DesignerPage() {
     const seatSpacing = 35;
     const aisleWidth = 70;
 
+  const confirmBatchSeats = (x: number = 500, y: number = 500) => {
+    const { rowLabel, category, rowsCount, rowSpacing, aisleCount, arcAngle } = batchConfig;
+    const type = batchPanel.type;
+    let allNewSeats: any[] = [];
+    let currentRowLabel = rowLabel;
+    const baseRadius = 350;
+    const seatSpacing = 35;
+    const aisleWidth = 70;
+
     for (let r = 0; r < rowsCount; r++) {
       const currentRadius = baseRadius + (r * rowSpacing);
       const straightLen = 400;
-      const arcLen = currentRadius * (arcAngle * Math.PI / 180);
       const semiPerim = Math.PI * currentRadius;
+      const arcLen = currentRadius * (arcAngle * Math.PI / 180);
 
-      // Define Geometric Phases for this row
-      const phases: { type: 'straight' | 'arc', len: number, startAngle?: number, dir?: number }[] = [];
+      // Define Geometric Phases with global start/end boundaries
+      const phases: { type: 'straight' | 'arc', len: number, startAngle?: number, startDist: number, endDist: number }[] = [];
+      let accumulatedDist = 0;
+
       if (type === 'grid') {
-        phases.push({ type: 'straight', len: 800 });
+        phases.push({ type: 'straight', len: 800, startDist: 0, endDist: 800 });
       } else if (type === 'arc') {
-        phases.push({ type: 'arc', len: arcLen, startAngle: -(arcAngle / 2) });
+        phases.push({ type: 'arc', len: arcLen, startAngle: -(arcAngle / 2), startDist: 0, endDist: arcLen });
       } else if (type === 'stadium') {
-        phases.push({ type: 'straight', len: straightLen }); // Bottom
-        phases.push({ type: 'arc', len: semiPerim, startAngle: -90 }); // Right
-        phases.push({ type: 'straight', len: straightLen }); // Top
-        phases.push({ type: 'arc', len: semiPerim, startAngle: 90 }); // Left
+        const pLen = [straightLen, semiPerim, straightLen, semiPerim];
+        const pStartAng = [0, -90, 0, 90];
+        pLen.forEach((len, i) => {
+          phases.push({ type: i % 2 === 0 ? 'straight' : 'arc', len, startAngle: pStartAng[i], startDist: accumulatedDist, endDist: accumulatedDist + len });
+          accumulatedDist += len;
+        });
       }
 
-      // Distribute aisles across phases
-      const aisleRefs: { phaseIdx: number, pos: number }[] = [];
-      if (aisleCount > 0) {
-        if (type === 'arc') {
-          for (let a = 0; a < aisleCount; a++) aisleRefs.push({ phaseIdx: 0, pos: (a + 1) / (aisleCount + 1) });
-        } else if (type === 'stadium') {
-          // Distribute aisles: 1 per phase, or 2 on straights, etc.
-          // For simplicity and alignment: Put aisles at midpoints of available phases
-          for (let a = 0; a < aisleCount; a++) {
-            const pIdx = a % phases.length;
-            aisleRefs.push({ phaseIdx: pIdx, pos: 0.5 });
-          }
-        }
-      }
+      const totalPerimeter = phases[phases.length - 1].endDist;
+      
+      // Calculate Aisle Zones (Normalized 0 to 1 for the WHOLE perimeter, but mapped to phases)
+      const aisleCenters = Array.from({ length: aisleCount }).map((_, i) => (i + 1) / (aisleCount + 1));
 
+      let currentGlobalDist = 0;
       let seatNumberInRow = 1;
-      phases.forEach((phase, pIdx) => {
-        let currentPhaseDist = 0;
-        const phaseAisles = aisleRefs.filter(ref => ref.phaseIdx === pIdx);
 
-        while (currentPhaseDist < phase.len) {
-          const localNorm = currentPhaseDist / phase.len;
-          const isInAisle = phaseAisles.some(a => Math.abs(localNorm - a.pos) < (aisleWidth / (2 * phase.len)));
+      while (currentGlobalDist < totalPerimeter) {
+        // 1. Find Current Phase
+        const phaseIdx = phases.findIndex(p => currentGlobalDist >= p.startDist && currentGlobalDist < p.endDist);
+        if (phaseIdx === -1) break;
+        const phase = phases[phaseIdx];
+        const distInPhase = currentGlobalDist - phase.startDist;
+        const globalNorm = currentGlobalDist / totalPerimeter;
 
-          if (isInAisle) {
-            currentPhaseDist += aisleWidth;
-            continue;
-          }
+        // 2. Aisle Check (Using normalized global position for alignment)
+        const isInAisle = aisleCenters.some(center => Math.abs(globalNorm - center) < (aisleWidth / (2 * totalPerimeter)));
 
-          const id = `seat-${crypto.randomUUID()}`;
-          let seatPos = { x: 0, y: 0, angle: 0 };
-
-          if (type === 'grid') {
-            seatPos = { x: x + currentPhaseDist, y: y + r * rowSpacing, angle: 0 };
-          } else if (type === 'arc') {
-            const angDeg = phase.startAngle! + (localNorm * arcAngle);
-            const angRad = angDeg * Math.PI / 180;
-            seatPos = { x: x + Math.sin(angRad) * currentRadius, y: y + Math.cos(angRad) * currentRadius, angle: -angDeg };
-          } else if (type === 'stadium') {
-            if (pIdx === 0) { // Bottom Straight
-              seatPos = { x: x - straightLen / 2 + currentPhaseDist, y: y + currentRadius, angle: 0 };
-            } else if (pIdx === 1) { // Right Arc
-              const ang = (currentPhaseDist / currentRadius) - (Math.PI / 2);
-              seatPos = { x: x + straightLen / 2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
-            } else if (pIdx === 2) { // Top Straight
-              seatPos = { x: x + straightLen / 2 - currentPhaseDist, y: y - currentRadius, angle: 180 };
-            } else if (pIdx === 3) { // Left Arc
-              const ang = (currentPhaseDist / currentRadius) + (Math.PI / 2);
-              seatPos = { x: x - straightLen / 2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
-            }
-          }
-
-          allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
-          currentPhaseDist += seatSpacing;
+        if (isInAisle) {
+          currentGlobalDist += aisleWidth;
+          continue;
         }
-      });
+
+        const id = `seat-${crypto.randomUUID()}`;
+        let seatPos = { x: 0, y: 0, angle: 0 };
+
+        if (type === 'grid') {
+          seatPos = { x: x + currentGlobalDist, y: y + r * rowSpacing, angle: 0 };
+        } else if (type === 'arc') {
+          const angDeg = phase.startAngle! + (distInPhase / currentRadius) * (180 / Math.PI);
+          const angRad = angDeg * Math.PI / 180;
+          seatPos = { x: x + Math.sin(angRad) * currentRadius, y: y + Math.cos(angRad) * currentRadius, angle: -angDeg };
+        } else if (type === 'stadium') {
+          if (phaseIdx === 0) { // Bottom
+            seatPos = { x: x - straightLen / 2 + distInPhase, y: y + currentRadius, angle: 0 };
+          } else if (phaseIdx === 1) { // Right Arc
+            const ang = (distInPhase / currentRadius) - (Math.PI / 2);
+            seatPos = { x: x + straightLen / 2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
+          } else if (phaseIdx === 2) { // Top
+            seatPos = { x: x + straightLen / 2 - distInPhase, y: y - currentRadius, angle: 180 };
+          } else if (phaseIdx === 3) { // Left Arc
+            const ang = (distInPhase / currentRadius) + (Math.PI / 2);
+            seatPos = { x: x - straightLen / 2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
+          }
+        }
+
+        allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
+        currentGlobalDist += seatSpacing;
+      }
       currentRowLabel = getNextRowLabel(currentRowLabel);
     }
 
