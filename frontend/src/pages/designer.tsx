@@ -48,7 +48,7 @@ export default function DesignerPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
     (typeof window !== 'undefined' && window.location.origin.includes('github.dev') 
-      ? window.location.origin.replace('-3000', '-8000') + '/api' 
+      ? window.location.origin.replace(window.location.port, '8000') + '/api' 
       : 'http://localhost:8000/api');
 
   useEffect(() => {
@@ -268,17 +268,17 @@ export default function DesignerPage() {
         } else if (type === 'stadium') {
           if (phaseIdx === 0) { // Bottom
             seatPos = { x: x - straightLen / 2 + distInPhase, y: y + currentRadius, angle: 0 };
-          } else if (phaseIdx === 1) { // Right Arc
-            const ang = (distInPhase / currentRadius) - (Math.PI / 2);
+          } else if (phaseIdx === 1) { // Right Arc (Clockwise from Bottom to Top)
+            const ang = (Math.PI / 2) - (distInPhase / currentRadius);
             seatPos = { x: x + straightLen / 2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
           } else if (phaseIdx === 2) { // Top
             seatPos = { x: x + straightLen / 2 - distInPhase, y: y - currentRadius, angle: 180 };
-          } else if (phaseIdx === 3) { // Left Arc
-            const ang = (distInPhase / currentRadius) + (Math.PI / 2);
+          } else if (phaseIdx === 3) { // Left Arc (Clockwise from Top to Bottom)
+            const ang = (3 * Math.PI / 2) - (distInPhase / currentRadius);
             seatPos = { x: x - straightLen / 2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
           }
         }
-
+      
         allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
         currentGlobalDist += seatSpacing;
       }
