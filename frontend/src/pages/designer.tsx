@@ -33,7 +33,25 @@ export default function DesignerPage() {
 
   // New UI states
   const [batchPanel, setBatchPanel] = useState<{ type: 'grid' | 'arc', isOpen: boolean }>({ type: 'grid', isOpen: false });
-  const [batchConfig, setBatchConfig] = useState({ count: 12, rowLabel: 'A', category: 'standard' });
+  const [batchConfig, setBatchConfig] = useState({ count: 12, rowLabel: 'A', category: 'standard', rowsCount: 1, rowSpacing: 35 });
+  const [clipboard, setClipboard] = useState<{ seats: any[], elements: any[] } | null>(null);
+
+  const getNextRowLabel = (label: string) => {
+    let res = "";
+    let i = label.length - 1;
+    let carry = true;
+    while (i >= 0 || carry) {
+      let char = i >= 0 ? label.charCodeAt(i) : 64; // '@' is before 'A'
+      if (carry) {
+        char++;
+        if (char > 90) { char = 65; carry = true; }
+        else { carry = false; }
+      }
+      res = String.fromCharCode(char) + res;
+      i--;
+    }
+    return res;
+  };
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
 
@@ -73,19 +91,54 @@ export default function DesignerPage() {
     }
   };
 
+  const handleCopy = () => {
+    if (selectedIds.length === 0) return;
+    const copiedSeats = seats.filter(s => selectedIds.includes(String(s.id)));
+    const copiedEls = elements.filter(e => selectedIds.includes(String(e.id)));
+    setClipboard({ seats: copiedSeats, elements: copiedEls });
+  };
+
+  const handlePaste = () => {
+    if (!clipboard) return;
+    const offset = 30;
+    const newSeats = clipboard.seats.map(s => ({
+      ...s,
+      id: `seat-${crypto.randomUUID()}`,
+      x: s.x + offset,
+      y: s.y + offset
+    }));
+    const newEls = clipboard.elements.map(e => ({
+      ...e,
+      id: `el-${crypto.randomUUID()}`,
+      x: e.x + offset,
+      y: e.y + offset
+    }));
+
+    const updatedSeats = [...seats, ...newSeats];
+    const updatedEls = [...elements, ...newEls];
+    setSeats(updatedSeats);
+    setElements(updatedEls);
+    setSelectedIds([...newSeats.map(s => s.id), ...newEls.map(e => e.id)]);
+    addToHistory(updatedSeats, updatedEls);
+  };
+
   useEffect(() => {
-    const handleUndoRedo = (e: KeyboardEvent) => {
+    const handleKeys = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault();
         if (e.shiftKey) redo(); else undo();
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
         e.preventDefault();
         redo();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        handleCopy();
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        handlePaste();
       }
     };
-    window.addEventListener('keydown', handleUndoRedo);
-    return () => window.removeEventListener('keydown', handleUndoRedo);
-  }, [historyIndex, history]);
+    window.addEventListener('keydown', handleKeys);
+    return () => window.removeEventListener('keydown', handleKeys);
+  }, [historyIndex, history, selectedIds, clipboard, seats, elements]);
 
   const loadTheater = (theater: any) => {
     const layout = theater.layout || {};
@@ -180,18 +233,40 @@ export default function DesignerPage() {
   };
 
   const confirmBatchSeats = (x: number = 500, y: number = 500) => {
-    const { count, rowLabel, category } = batchConfig;
+    const { count, rowLabel, category, rowsCount, rowSpacing } = batchConfig;
     const type = batchPanel.type;
     if (count <= 0) return;
-    const newBatch = Array.from({ length: count }).map((_, i) => {
-      const id = `seat-${crypto.randomUUID()}`;
-      if (type === 'grid') return { id, x: x + i * 35, y, row: rowLabel, number: seats.length + i + 1, status: 'available', category, angle: 0 };
-      const ang = (-60 + i * (120/(count-1))) * Math.PI / 180;
-      return { id, x: x + Math.sin(ang) * 350, y: y + Math.cos(ang) * 350, row: rowLabel, number: seats.length + i + 1, status: 'available', category, angle: -(-60 + i * (120/(count-1))) };
-    });
-    const updatedSeats = [...seats, ...newBatch];
+
+    let allNewSeats: any[] = [];
+    let currentRowLabel = rowLabel;
+
+    for (let r = 0; r < rowsCount; r++) {
+      const rowBatch = Array.from({ length: count }).map((_, i) => {
+        const id = `seat-${crypto.randomUUID()}`;
+        if (type === 'grid') {
+          return { id, x: x + i * 35, y: y + r * rowSpacing, row: currentRowLabel, number: i + 1, status: 'available', category, angle: 0 };
+        } else {
+          const radius = 350 + (r * rowSpacing);
+          const ang = (-60 + i * (120 / (count - 1))) * Math.PI / 180;
+          return { 
+            id, 
+            x: x + Math.sin(ang) * radius, 
+            y: y + Math.cos(ang) * radius, 
+            row: currentRowLabel, 
+            number: i + 1, 
+            status: 'available', 
+            category, 
+            angle: -(-60 + i * (120 / (count - 1))) 
+          };
+        }
+      });
+      allNewSeats = [...allNewSeats, ...rowBatch];
+      currentRowLabel = getNextRowLabel(currentRowLabel);
+    }
+
+    const updatedSeats = [...seats, ...allNewSeats];
     setSeats(updatedSeats);
-    setSelectedIds(newBatch.map(s => s.id));
+    setSelectedIds(allNewSeats.map(s => s.id));
     setBatchPanel({ ...batchPanel, isOpen: false });
     addToHistory(updatedSeats, elements);
     setActiveTool('select');
@@ -326,14 +401,26 @@ export default function DesignerPage() {
                   </div>
                   <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="text-white/30 hover:text-white transition-colors pointer-events-auto"><X size={18}/></button>
                 </div>
-                <div className="space-y-6 cursor-default">
-                  <div className="space-y-2">
-                    <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Quantity</label>
-                    <input type="number" value={batchConfig.count} onChange={e => setBatchConfig({...batchConfig, count: parseInt(e.target.value)})} className={cn("w-full border p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
+                <div className="space-y-5 cursor-default">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Seats per Row</label>
+                      <input type="number" value={batchConfig.count} onChange={e => setBatchConfig({...batchConfig, count: parseInt(e.target.value)})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Starting Row</label>
+                      <input type="text" value={batchConfig.rowLabel} onChange={e => setBatchConfig({...batchConfig, rowLabel: e.target.value})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Row Label</label>
-                    <input type="text" value={batchConfig.rowLabel} onChange={e => setBatchConfig({...batchConfig, rowLabel: e.target.value})} className={cn("w-full border p-4 rounded-2xl text-sm font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Number of Rows</label>
+                      <input type="number" value={batchConfig.rowsCount} onChange={e => setBatchConfig({...batchConfig, rowsCount: parseInt(e.target.value)})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={cn("text-[9px] font-bold uppercase tracking-widest", isDark ? "text-white/30" : "text-slate-400")}>Row Spacing</label>
+                      <input type="number" value={batchConfig.rowSpacing} onChange={e => setBatchConfig({...batchConfig, rowSpacing: parseInt(e.target.value)})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none focus:border-amber-honey/50 transition-all", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} />
+                    </div>
                   </div>
                   <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="w-full bg-amber-honey text-nature-night py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow">Ready to Place</button>
                 </div>
