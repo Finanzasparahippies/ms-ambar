@@ -241,7 +241,9 @@ export default function DesignerPage() {
           const blockStartDist = b * (subBlockLen + aisleWidth);
           
           for (let s = 0; s < numSeatsPerBlock; s++) {
-            const distInBlock = (s / (numSeatsPerBlock - 1 || 1)) * subBlockLen;
+            const usedLen = (numSeatsPerBlock - 1) * seatSpacing;
+            const padding = (subBlockLen - usedLen) / 2;
+            const distInBlock = padding + (s * seatSpacing);
             const distInPhase = blockStartDist + distInBlock;
             const id = `seat-${crypto.randomUUID()}`;
             let seatPos = { x: 0, y: 0, angle: 0 };
