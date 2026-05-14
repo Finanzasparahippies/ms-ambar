@@ -272,7 +272,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         if (!e.shiftKey) { setSelectedIds([]); onSelect?.([]); }
         setSelectionRect({ x, y, w: 0, h: 0 });
       } else {
-        // Buyer Mode: Toggle single seat
         if (hitSeat && hitSeat.status === 'available') {
           const id = String(hitSeat.id);
           const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
@@ -283,8 +282,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     }
     setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY });
   };
-
-  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const { x, y } = getMouseCoords(e); setMousePos({ x, y });
@@ -308,7 +305,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         if (snap) {
           const dx = x - (snap.x - draggedItem.offsetX);
           const dy = y - (snap.y - draggedItem.offsetY);
-
           const updatedSeats = seats.map(s => {
             const sSnap = draggedItem.groupSnapshot!.get(String(s.id));
             return sSnap ? { ...s, x: sSnap.x + dx, y: sSnap.y + dy } : s;
@@ -317,9 +313,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
             const eSnap = draggedItem.groupSnapshot!.get(el.id);
             return eSnap ? { ...el, x: eSnap.x + dx, y: eSnap.y + dy } : el;
           });
-
-          setSeats(updatedSeats);
-          setElements(updatedEls);
+          setSeats(updatedSeats); setElements(updatedEls);
         }
       }
       return;
