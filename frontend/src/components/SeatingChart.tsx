@@ -80,6 +80,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   useEffect(() => { setSeats(initialSeats); }, [initialSeats]);
   useEffect(() => { setElements(initialElements); }, [initialElements]);
   useEffect(() => { setSelectedIds(externalSelectedIds); }, [externalSelectedIds]);
+  
+  const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
 
   // --- Premium Rendering Engine ---
   const draw = useCallback(() => {

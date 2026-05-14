@@ -231,7 +231,7 @@ export default function DesignerPage() {
 
   return (
     <div className={cn(
-      "h-screen w-screen overflow-hidden flex flex-col font-sans transition-colors duration-500", 
+      "h-screen w-screen overflow-hidden flex flex-col font-sans transition-colors duration-500",
       isDark ? "bg-[#06070b] text-white" : "bg-slate-50 text-slate-900"
     )}>
       <Head>
