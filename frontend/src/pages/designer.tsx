@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import SeatingChart from '../components/SeatingChart';
-import { 
-  Save, Plus, Square, Maximize, MousePointer2, 
-  ChevronDown, CheckCircle2, AlertCircle, 
-  Moon, Sun, Layout as LayoutIcon, 
-  Settings2, Layers, Grid3X3, Trash2, 
-  Copy, Type, Palette, Compass, RotateCw, 
-  Coffee, Trees, Zap, AlignLeft, AlignCenter, 
-  AlignRight, AlignVerticalJustifyCenter, 
+import {
+  Save, Plus, Square, Maximize, MousePointer2,
+  ChevronDown, CheckCircle2, AlertCircle,
+  Moon, Sun, Layout as LayoutIcon,
+  Settings2, Layers, Grid3X3, Trash2,
+  Copy, Type, Palette, Compass, RotateCw,
+  Coffee, Trees, Zap, AlignLeft, AlignCenter,
+  AlignRight, AlignVerticalJustifyCenter,
   ChevronUp, ChevronDown as ChevronDownIcon,
   X, Info, Circle as CircleIcon, Triangle, Hexagon, Octagon
 } from 'lucide-react';
@@ -26,18 +26,18 @@ export default function DesignerPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [occupancySim, setOccupancySim] = useState<any>({});
-  
+
   // History System (Undo/Redo)
   const [history, setHistory] = useState<{ seats: any[], elements: any[] }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Advanced UI states
   const [batchPanel, setBatchPanel] = useState<{ type: 'grid' | 'arc' | 'stadium', isOpen: boolean }>({ type: 'grid', isOpen: false });
-  const [batchConfig, setBatchConfig] = useState({ 
-    count: 12, 
-    rowLabel: 'A', 
-    category: 'standard', 
-    rowsCount: 1, 
+  const [batchConfig, setBatchConfig] = useState({
+    count: 12,
+    rowLabel: 'A',
+    category: 'standard',
+    rowsCount: 1,
     rowSpacing: 35,
     aisleCount: 0,
     arcAngle: 120,
@@ -46,9 +46,9 @@ export default function DesignerPage() {
   const [clipboard, setClipboard] = useState<{ seats: any[], elements: any[] } | null>(null);
   const rotationRef = useRef<{ centroid: { x: number, y: number }, initialStates: Map<string, any> } | null>(null);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
-    (typeof window !== 'undefined' && window.location.origin.includes('github.dev') 
-      ? window.location.origin.replace(window.location.port, '8000') + '/api' 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ||
+    (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
+      ? window.location.origin.replace(window.location.port, '8000') + '/api'
       : 'http://localhost:8000/api');
 
   useEffect(() => {
@@ -190,8 +190,8 @@ export default function DesignerPage() {
     const id = selectedIds[0]; const isEl = elements.some(e => e.id === id);
     if (!isEl) return;
     const idx = elements.findIndex(e => e.id === id); const newEls = [...elements];
-    if (direction === 'up' && idx < elements.length - 1) [newEls[idx], newEls[idx+1]] = [newEls[idx+1], newEls[idx]];
-    else if (direction === 'down' && idx > 0) [newEls[idx], newEls[idx-1]] = [newEls[idx-1], newEls[idx]];
+    if (direction === 'up' && idx < elements.length - 1) [newEls[idx], newEls[idx + 1]] = [newEls[idx + 1], newEls[idx]];
+    else if (direction === 'down' && idx > 0) [newEls[idx], newEls[idx - 1]] = [newEls[idx - 1], newEls[idx]];
     setElements(newEls); addToHistory(seats, newEls);
   };
 
@@ -233,18 +233,9 @@ export default function DesignerPage() {
       }
 
       const totalPerimeter = phases[phases.length - 1].endDist;
-      
-      // Define Aisle Anchors per phase to ensure vertical/radial alignment
-      const getIsInAisle = (pIdx: number, dInPhase: number, pLen: number) => {
-        if (aisleCount <= 0) return false;
-        // Distribute aisle count across phases
-        const aislesPerPhase = Math.max(1, Math.floor(aisleCount / phases.length));
-        for (let i = 1; i <= aislesPerPhase; i++) {
-          const targetDist = (i / (aislesPerPhase + 1)) * pLen;
-          if (Math.abs(dInPhase - targetDist) < (aisleWidth / 2)) return true;
-        }
-        return false;
-      };
+
+      // Calculate Aisle Zones (Normalized 0 to 1 for the WHOLE perimeter, but mapped to phases)
+      const aisleCenters = Array.from({ length: aisleCount }).map((_, i) => (i + 1) / (aisleCount + 1));
 
       let currentGlobalDist = 0;
       let seatNumberInRow = 1;
@@ -257,8 +248,8 @@ export default function DesignerPage() {
         const distInPhase = currentGlobalDist - phase.startDist;
         const globalNorm = currentGlobalDist / totalPerimeter;
 
-        // 2. Aisle Check (Using Per-Phase distance for absolute alignment)
-        const isInAisle = getIsInAisle(phaseIdx, distInPhase, phase.len);
+        // 2. Aisle Check (Using normalized global position for alignment)
+        const isInAisle = aisleCenters.some(center => Math.abs(globalNorm - center) < (aisleWidth / (2 * totalPerimeter)));
 
         if (isInAisle) {
           currentGlobalDist += aisleWidth;
@@ -287,7 +278,7 @@ export default function DesignerPage() {
             seatPos = { x: x - straightLen / 2 + Math.cos(ang) * currentRadius, y: y + Math.sin(ang) * currentRadius, angle: -(ang * 180 / Math.PI) - 90 };
           }
         }
-      
+
         allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
         currentGlobalDist += seatSpacing;
       }
@@ -390,8 +381,8 @@ export default function DesignerPage() {
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-honey/50 pointer-events-none" size={14} />
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={undo} disabled={historyIndex <= 0} className={cn("p-2.5 rounded-lg border transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14} className="-scale-x-100"/></button>
-            <button onClick={redo} disabled={historyIndex >= history.length - 1} className={cn("p-2.5 rounded-lg border transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14}/></button>
+            <button onClick={undo} disabled={historyIndex <= 0} className={cn("p-2.5 rounded-lg border transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14} className="-scale-x-100" /></button>
+            <button onClick={redo} disabled={historyIndex >= history.length - 1} className={cn("p-2.5 rounded-lg border transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14} /></button>
           </div>
         </div>
 
@@ -424,7 +415,7 @@ export default function DesignerPage() {
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 relative">
           <SeatingChart seats={seats} elements={elements} isDesignMode={true} theme={theme} selectedIds={selectedIds} activeTool={activeTool} occupancy={occupancySim} onUpdate={handleUpdate} onSelect={setSelectedIds} onChartClick={handleChartClick} />
-          
+
           <div className="absolute top-6 left-6 flex flex-col gap-3 pointer-events-none">
             <div className={cn("px-4 py-2 backdrop-blur-xl border rounded-2xl flex items-center gap-3 shadow-lg w-fit", isDark ? "bg-black/40 border-white/10" : "bg-white/80 border-slate-200")}><div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /><span className={cn("text-[10px] font-bold tracking-wider", isDark ? "text-white/50" : "text-slate-500")}>LIVE EDITING MODE</span></div>
             <div className={cn("p-5 backdrop-blur-3xl border rounded-[24px] shadow-2xl flex flex-col gap-4 min-w-[200px]", isDark ? "bg-black/60 border-white/10" : "bg-white/90 border-slate-200")}>
@@ -442,26 +433,26 @@ export default function DesignerPage() {
             {batchPanel.isOpen && (
               <motion.div drag dragMomentum={false} initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className={cn("absolute top-1/3 left-1/3 w-80 backdrop-blur-3xl border p-8 rounded-[32px] shadow-2xl z-[100] cursor-move", isDark ? "bg-black/80 border-white/10" : "bg-white/90 border-slate-200")}>
                 <div className="flex items-center justify-between mb-8 pointer-events-none">
-                  <div className="flex items-center gap-3"><div className="w-8 h-8 bg-amber-honey/20 rounded-lg flex items-center justify-center text-amber-honey">{batchPanel.type === 'grid' ? <Grid3X3 size={16}/> : batchPanel.type === 'arc' ? <Compass size={16}/> : <Zap size={16}/>}</div><h3 className={cn("text-[11px] font-black uppercase tracking-[0.2em]", isDark ? "text-white" : "text-slate-900")}>Add {batchPanel.type}</h3></div>
-                  <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="text-white/30 hover:text-white transition-colors pointer-events-auto"><X size={18}/></button>
+                  <div className="flex items-center gap-3"><div className="w-8 h-8 bg-amber-honey/20 rounded-lg flex items-center justify-center text-amber-honey">{batchPanel.type === 'grid' ? <Grid3X3 size={16} /> : batchPanel.type === 'arc' ? <Compass size={16} /> : <Zap size={16} />}</div><h3 className={cn("text-[11px] font-black uppercase tracking-[0.2em]", isDark ? "text-white" : "text-slate-900")}>Add {batchPanel.type}</h3></div>
+                  <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="text-white/30 hover:text-white transition-colors pointer-events-auto"><X size={18} /></button>
                 </div>
                 <div className="space-y-5 cursor-default">
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Density (Seats/Row)</label><input type="number" value={batchConfig.count} onChange={e => setBatchConfig({...batchConfig, count: parseInt(e.target.value)})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
-                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Starting Row</label><input type="text" value={batchConfig.rowLabel} onChange={e => setBatchConfig({...batchConfig, rowLabel: e.target.value})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
+                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Density (Seats/Row)</label><input type="number" value={batchConfig.count} onChange={e => setBatchConfig({ ...batchConfig, count: parseInt(e.target.value) })} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
+                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Starting Row</label><input type="text" value={batchConfig.rowLabel} onChange={e => setBatchConfig({ ...batchConfig, rowLabel: e.target.value })} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Total Rows</label><input type="number" value={batchConfig.rowsCount} onChange={e => setBatchConfig({...batchConfig, rowsCount: parseInt(e.target.value)})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
-                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Row Spacing</label><input type="number" value={batchConfig.rowSpacing} onChange={e => setBatchConfig({...batchConfig, rowSpacing: parseInt(e.target.value)})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
+                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Total Rows</label><input type="number" value={batchConfig.rowsCount} onChange={e => setBatchConfig({ ...batchConfig, rowsCount: parseInt(e.target.value) })} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
+                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Row Spacing</label><input type="number" value={batchConfig.rowSpacing} onChange={e => setBatchConfig({ ...batchConfig, rowSpacing: parseInt(e.target.value) })} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Aisle Count</label><input type="number" value={batchConfig.aisleCount} onChange={e => setBatchConfig({...batchConfig, aisleCount: parseInt(e.target.value)})} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
+                    <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Aisle Count</label><input type="number" value={batchConfig.aisleCount} onChange={e => setBatchConfig({ ...batchConfig, aisleCount: parseInt(e.target.value) })} className={cn("w-full border p-3 rounded-xl text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")} /></div>
                     {batchPanel.type === 'arc' && (
-                      <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Arc Angle ({batchConfig.arcAngle}°)</label><input type="range" min="30" max="180" step="10" value={batchConfig.arcAngle} onChange={e => setBatchConfig({...batchConfig, arcAngle: parseInt(e.target.value)})} className="w-full accent-amber-honey" /></div>
+                      <div className="space-y-2"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Arc Angle ({batchConfig.arcAngle}°)</label><input type="range" min="30" max="180" step="10" value={batchConfig.arcAngle} onChange={e => setBatchConfig({ ...batchConfig, arcAngle: parseInt(e.target.value) })} className="w-full accent-amber-honey" /></div>
                     )}
                   </div>
                   {batchPanel.type === 'arc' && (
-                    <div className="flex items-center justify-between px-1"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Uniform Density</label><button onClick={() => setBatchConfig({...batchConfig, uniformDensity: !batchConfig.uniformDensity})} className={cn("w-10 h-5 rounded-full relative transition-all", batchConfig.uniformDensity ? "bg-amber-honey" : "bg-white/10")}><div className={cn("absolute top-1 w-3 h-3 rounded-full transition-all", batchConfig.uniformDensity ? "right-1 bg-nature-night" : "left-1 bg-white")} /></button></div>
+                    <div className="flex items-center justify-between px-1"><label className="text-[9px] font-bold uppercase tracking-widest text-white/30">Uniform Density</label><button onClick={() => setBatchConfig({ ...batchConfig, uniformDensity: !batchConfig.uniformDensity })} className={cn("w-10 h-5 rounded-full relative transition-all", batchConfig.uniformDensity ? "bg-amber-honey" : "bg-white/10")}><div className={cn("absolute top-1 w-3 h-3 rounded-full transition-all", batchConfig.uniformDensity ? "right-1 bg-nature-night" : "left-1 bg-white")} /></button></div>
                   )}
                   <button onClick={() => setBatchPanel({ ...batchPanel, isOpen: false })} className="w-full bg-amber-honey text-nature-night py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow">Ready to Place</button>
                 </div>
@@ -477,7 +468,7 @@ export default function DesignerPage() {
                 <div className="flex items-center justify-between mb-10"><div className="flex flex-col"><h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Properties</h3><span className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", isDark ? "text-white/20" : "text-slate-400")}>{selectedIds.length} Object(s) Selected</span></div><button onClick={() => { const ns = seats.filter(s => !selectedIds.includes(String(s.id))); const ne = elements.filter(e => !selectedIds.includes(String(e.id))); setSeats(ns); setElements(ne); setSelectedIds([]); addToHistory(ns, ne); }} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button></div>
                 <div className="space-y-10">
                   {selectedIds.length > 1 && (
-                    <div className="space-y-4"><label className="text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 text-white/30"><AlignLeft size={12}/> Alignment</label><div className="grid grid-cols-4 gap-2">{['left', 'center', 'right', 'top'].map(act => (<button key={act} onClick={() => alignSelected(act)} className={cn("h-12 rounded-xl transition-all flex items-center justify-center", isDark ? "bg-white/5 hover:bg-white/10" : "bg-slate-100 hover:bg-slate-200")}><AlignLeft size={16} style={{ transform: act === 'top' ? 'rotate(90deg)' : '' }} /></button>))}</div></div>
+                    <div className="space-y-4"><label className="text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 text-white/30"><AlignLeft size={12} /> Alignment</label><div className="grid grid-cols-4 gap-2">{['left', 'center', 'right', 'top'].map(act => (<button key={act} onClick={() => alignSelected(act)} className={cn("h-12 rounded-xl transition-all flex items-center justify-center", isDark ? "bg-white/5 hover:bg-white/10" : "bg-slate-100 hover:bg-slate-200")}><AlignLeft size={16} style={{ transform: act === 'top' ? 'rotate(90deg)' : '' }} /></button>))}</div></div>
                   )}
                   {firstSelected && (
                     <div className="space-y-8">
@@ -492,7 +483,7 @@ export default function DesignerPage() {
                       <div className="space-y-4">
                         <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Configuration</label>
                         <div className={cn("p-5 rounded-2xl border space-y-6", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}>
-                          <div className="space-y-2"><span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Label / Group</span><div className="flex items-center gap-3"><Type size={14} className="text-amber-honey" /><input type="text" value={selectedIds.length > 1 ? 'MULTIPLE' : (firstSelected.label || firstSelected.row || '')} onChange={(e) => updateSelectedProperty(firstSelected.row ? 'row' : 'label', e.target.value)} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")}/></div></div>
+                          <div className="space-y-2"><span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Label / Group</span><div className="flex items-center gap-3"><Type size={14} className="text-amber-honey" /><input type="text" value={selectedIds.length > 1 ? 'MULTIPLE' : (firstSelected.label || firstSelected.row || '')} onChange={(e) => updateSelectedProperty(firstSelected.row ? 'row' : 'label', e.target.value)} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")} /></div></div>
                           {!(firstSelected as any).row && (
                             <div className="flex items-center justify-between"><span className="text-[8px] font-bold uppercase tracking-widest text-white/20">General Admission</span><button onClick={() => { updateSelectedProperty('isGA', !(firstSelected as any).isGA); commitPropertyChange(); }} className={cn("w-10 h-5 rounded-full relative transition-all", (firstSelected as any).isGA ? "bg-amber-honey" : "bg-white/10")}><div className={cn("absolute top-1 w-3 h-3 rounded-full transition-all", (firstSelected as any).isGA ? "right-1 bg-nature-night" : "left-1 bg-white")} /></button></div>
                           )}
@@ -500,7 +491,7 @@ export default function DesignerPage() {
                       </div>
                       <div className="space-y-4">
                         <div className="flex justify-between px-1"><label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Orientation</label><span className="text-[9px] font-black text-amber-honey">{firstSelected.angle || 0}°</span></div>
-                        <div className={cn("p-6 rounded-2xl border", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}><input type="range" min="0" max="360" value={firstSelected.angle || 0} onChange={(e) => updateSelectedProperty('angle', parseInt(e.target.value))} onMouseUp={commitPropertyChange} className="w-full accent-amber-honey cursor-pointer"/></div>
+                        <div className={cn("p-6 rounded-2xl border", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}><input type="range" min="0" max="360" value={firstSelected.angle || 0} onChange={(e) => updateSelectedProperty('angle', parseInt(e.target.value))} onMouseUp={commitPropertyChange} className="w-full accent-amber-honey cursor-pointer" /></div>
                       </div>
                     </div>
                   )}
@@ -511,7 +502,8 @@ export default function DesignerPage() {
         </AnimatePresence>
       </div>
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         body { overflow: hidden !important; }
         .shadow-glow { box-shadow: 0 0 25px rgba(255, 191, 0, 0.4); }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
