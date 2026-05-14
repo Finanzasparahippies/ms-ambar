@@ -44,6 +44,7 @@ export default function DesignerPage() {
     uniformDensity: true
   });
   const [clipboard, setClipboard] = useState<{ seats: any[], elements: any[] } | null>(null);
+  const rotationRef = useRef<{ centroid: { x: number, y: number }, initialStates: Map<string, any> } | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api';
 
@@ -230,12 +231,66 @@ export default function DesignerPage() {
   };
 
   const updateSelectedProperty = (key: string, value: any) => {
+    if (key === 'angle' && selectedIds.length > 1) {
+      if (!rotationRef.current) {
+        const selectedSeats = seats.filter(s => selectedIds.includes(String(s.id)));
+        const selectedEls = elements.filter(e => selectedIds.includes(String(e.id)));
+        const all = [...selectedSeats, ...selectedEls];
+        const cx = all.reduce((acc, i) => acc + i.x, 0) / all.length;
+        const cy = all.reduce((acc, i) => acc + i.y, 0) / all.length;
+        const states = new Map();
+        all.forEach(item => {
+          states.set(String(item.id), { x: item.x, y: item.y, angle: item.angle || 0 });
+        });
+        rotationRef.current = { centroid: { x: cx, y: cy }, initialStates: states };
+      }
+      const { centroid, initialStates } = rotationRef.current;
+      const firstId = selectedIds[0];
+      const initialStateFirst = initialStates.get(firstId);
+      if (!initialStateFirst) return;
+      const deltaAngle = (value - initialStateFirst.angle) * Math.PI / 180;
+      const cos = Math.cos(deltaAngle);
+      const sin = Math.sin(deltaAngle);
+      const newSeats = seats.map(s => {
+        if (!selectedIds.includes(String(s.id))) return s;
+        const state = initialStates.get(String(s.id));
+        if (!state) return s;
+        const dx = state.x - centroid.x;
+        const dy = state.y - centroid.y;
+        return {
+          ...s,
+          x: centroid.x + dx * cos - dy * sin,
+          y: centroid.y + dx * sin + dy * cos,
+          angle: (state.angle + (value - initialStateFirst.angle)) % 360
+        };
+      });
+      const newEls = elements.map(el => {
+        if (!selectedIds.includes(String(el.id))) return el;
+        const state = initialStates.get(String(el.id));
+        if (!state) return el;
+        const dx = state.x - centroid.x;
+        const dy = state.y - centroid.y;
+        return {
+          ...el,
+          x: centroid.x + dx * cos - dy * sin,
+          y: centroid.y + dx * sin + dy * cos,
+          angle: (state.angle + (value - initialStateFirst.angle)) % 360
+        };
+      });
+      setSeats(newSeats);
+      setElements(newEls);
+      return;
+    }
     const newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, [key]: value } : s);
     const newEls = elements.map(el => selectedIds.includes(String(el.id)) ? { ...el, [key]: value } : el);
-    setSeats(newSeats); setElements(newEls);
+    setSeats(newSeats);
+    setElements(newEls);
   };
 
-  const commitPropertyChange = () => addToHistory(seats, elements);
+  const commitPropertyChange = () => {
+    rotationRef.current = null;
+    addToHistory(seats, elements);
+  };
   const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(String(e.id)));
   const isDark = theme === 'dark';
 
