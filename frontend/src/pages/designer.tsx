@@ -239,30 +239,26 @@ export default function DesignerPage() {
       const aislesPerPhase = Math.max(1, Math.floor(aisleCount / phases.length));
 
       phases.forEach((phase, pIdx) => {
-        const aislesInThisPhase = aislesPerPhase;
-        const availableLen = phase.len - (aislesInThisPhase * aisleWidth);
-        const numSeats = Math.floor(availableLen / seatSpacing);
-        const usedLen = (numSeats - 1) * seatSpacing;
-        const startMargin = (availableLen - usedLen) / 2;
+        // NECTAR PRO ALIGNMENT: Use fixed offsets (seatSpacing/2) for ALL rows
+        // This ensures the first seat of every phase/block is laser-aligned across rows
+        let currentDistInPhase = seatSpacing / 2;
 
-        let currentDistInPhase = startMargin;
-        let seatsPlacedInPhase = 0;
-
-        while (seatsPlacedInPhase < numSeats) {
-          // Aisle Snapping
+        while (currentDistInPhase < phase.len) {
+          // Aisle Snapping with Fixed Post-Aisle Offset
           let inAisle = false;
-          for (let i = 1; i <= aislesInThisPhase; i++) {
-            const aisleCenter = (i / (aislesInThisPhase + 1)) * phase.len;
+          for (let i = 1; i <= aislesPerPhase; i++) {
+            const aisleCenter = (i / (aislesPerPhase + 1)) * phase.len;
             const aisleStart = aisleCenter - aisleWidth / 2;
             const aisleEnd = aisleCenter + aisleWidth / 2;
             
             if (currentDistInPhase >= aisleStart && currentDistInPhase < aisleEnd) {
-              currentDistInPhase = aisleEnd;
+              currentDistInPhase = aisleEnd + (seatSpacing / 2);
               inAisle = true;
               break;
             }
           }
           if (inAisle) continue;
+          if (currentDistInPhase > phase.len - (seatSpacing / 2)) break;
 
           const id = `seat-${crypto.randomUUID()}`;
           let seatPos = { x: 0, y: 0, angle: 0 };
@@ -289,7 +285,6 @@ export default function DesignerPage() {
 
           allNewSeats.push({ id, ...seatPos, row: currentRowLabel, number: seatNumberInRow++, status: 'available', category });
           currentDistInPhase += seatSpacing;
-          seatsPlacedInPhase++;
         }
       });
       currentRowLabel = getNextRowLabel(currentRowLabel);
