@@ -16,3 +16,4 @@ python-dotenv==1.0.*
 qrcode==7.4.*
 python-telegram-bot==20.8.*
 twilio==9.0.*
+psutil==5.9.8

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import Navbar from './Navbar';
+import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 
 interface LayoutProps {
@@ -7,6 +8,26 @@ interface LayoutProps {
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const router = useRouter();
+  
+  // Exclude marketing navbar and footer on auth screens and admin panels
+  const isAuthOrAdmin = 
+    router.pathname.startsWith('/login') || 
+    router.pathname.startsWith('/signup') || 
+    router.pathname.startsWith('/forgot-password') || 
+    router.pathname.startsWith('/reset-password') ||
+    router.pathname.startsWith('/admin');
+
+  if (isAuthOrAdmin) {
+    return (
+      <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative bg-[#030303]">
+        <main className="relative z-10 min-h-screen">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative">
       <Navbar />

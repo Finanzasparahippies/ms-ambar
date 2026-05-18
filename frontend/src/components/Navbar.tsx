@@ -3,10 +3,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ThemeToggle from './ThemeToggle';
+import { LogOut, Shield } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Navbar = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -15,13 +18,37 @@ const Navbar = () => {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
     }
-  }, []);
+
+    // Check user authentication status on mount
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    if (token) {
+      setIsAuthenticated(true);
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          if (user.is_staff) {
+            setIsAdmin(true);
+          }
+        } catch (e) {}
+      }
+    }
+  }, [router.pathname]); // Re-run when navigation changes to catch login/logout events
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setIsAdmin(false);
+    router.push('/login');
   };
 
   const navLinks = [
@@ -43,8 +70,8 @@ const Navbar = () => {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tighter text-glow">MS AMBAR</h1>
         </Link>
-
-        <div className="hidden md:flex gap-8 items-center">
+ 
+        <div className="hidden md:flex gap-6 items-center">
           {navLinks.map((link) => (
             <Link
               key={link.name}
@@ -57,6 +84,36 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="h-6 w-px bg-white/10 mx-2" />
+          
+          {/* Dynamic Authentication Controls */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-4">
+              {isAdmin && (
+                <Link
+                  href="/dashboard"
+                  className="text-[9px] uppercase font-black tracking-widest text-amber-honey bg-amber-honey/10 border border-amber-honey/20 px-3.5 py-1.5 rounded-full hover:bg-amber-honey/25 transition-all flex items-center gap-1.5"
+                >
+                  <Shield size={10} /> Panel Admin
+                </Link>
+              )}
+              <button
+                onClick={handleLogout}
+                className="text-[9px] uppercase font-black tracking-widest opacity-60 hover:opacity-100 hover:text-red-400 transition-colors flex items-center gap-1"
+                title="Cerrar Sesión"
+              >
+                <LogOut size={12} /> Salir
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="text-[9px] uppercase font-black tracking-widest text-amber-honey hover:text-white transition-all bg-white/5 border border-white/10 px-4 py-2 rounded-full hover:bg-white/10"
+            >
+              Login
+            </Link>
+          )}
+
+          <div className="h-6 w-px bg-white/10 mx-1" />
           <ThemeToggle theme={theme} toggle={toggleTheme} />
         </div>
       </div>

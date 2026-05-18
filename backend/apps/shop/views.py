@@ -2,24 +2,38 @@ import stripe
 import json
 from django.conf import settings
 from django.http import HttpResponse
+from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
+from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from apps.tickets.models import Ticket, Event, Seat
-from .models import Category, Product, Order
+from .models import Category, Product, Order, OrderItem
 from .serializers import CategorySerializer, ProductSerializer, OrderSerializer
 
-class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Category.objects.all()
-    serializer_class = CategorySerializer
-    permission_classes = [permissions.AllowAny]
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return bool(request.user and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser))
 
-class ProductViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Product.objects.filter(is_active=True)
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all().order_by('-id')
+    serializer_class = CategorySerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all().order_by('-id')
     serializer_class = ProductSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user and user.is_authenticated and (user.is_staff or user.is_superuser):
+            return Product.objects.all().order_by('-id')
+        return Product.objects.filter(is_active=True).order_by('-id')
 
 @csrf_exempt
 @api_view(['POST'])
@@ -77,3 +91,79 @@ def handle_successful_payment(session):
                 print(f"Error delivering ticket: {e}")
             
             print(f"Payment confirmed and ticket delivered: {ticket.token}")
+
+
+class ShopCheckoutView(APIView):
+    permission_classes = [AllowAny]
+
+    @transaction.atomic
+    def post(self, request):
+        data = request.data
+        email = data.get('email')
+        full_name = data.get('full_name')
+        address = data.get('address')
+        city = data.get('city')
+        country = data.get('country')
+        items_data = data.get('items', [])
+
+        if not all([email, full_name, address, city, country, items_data]):
+            return Response({"error": "Todos los campos de entrega e ítems son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate products and stock
+        total_amount = 0
+        order_items_to_create = []
+        products_to_update = []
+
+        for item in items_data:
+            prod_id = item.get('product_id')
+            qty = int(item.get('quantity', 1))
+
+            try:
+                product = Product.objects.select_for_update().get(id=prod_id)
+            except Product.DoesNotExist:
+                return Response({"error": f"Producto con ID {prod_id} no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+            if product.stock < qty:
+                return Response({"error": f"Stock insuficiente para {product.name}. Disponibles: {product.stock}."}, status=status.HTTP_400_BAD_REQUEST)
+
+            item_price = product.price
+            total_amount += item_price * qty
+
+            # Prepare models
+            products_to_update.append((product, qty))
+            order_items_to_create.append({
+                'product': product,
+                'quantity': qty,
+                'price': item_price
+            })
+
+        # Create Order
+        order = Order.objects.create(
+            user_email=email,
+            status='paid', # Set to paid immediately so it lands on "Pedidos Pendientes"
+            total_amount=total_amount,
+            full_name=full_name,
+            address=address,
+            city=city,
+            country=country
+        )
+
+        # Create OrderItems and decrement stock
+        for item_data in order_items_to_create:
+            OrderItem.objects.create(
+                order=order,
+                product=item_data['product'],
+                quantity=item_data['quantity'],
+                price=item_data['price']
+            )
+
+        for product, qty in products_to_update:
+            product.stock -= qty
+            product.save()
+
+        return Response({
+            "message": "Pedido realizado exitosamente.",
+            "order_id": order.id,
+            "total_amount": float(total_amount),
+            "status": order.status
+        }, status=status.HTTP_201_CREATED)

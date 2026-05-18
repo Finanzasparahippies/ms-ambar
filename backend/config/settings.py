@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     "apps.shop",
     "apps.blog",
     "apps.bookings",
+    "apps.performance",
+    "apps.dashboard",
 ]
 
 MIDDLEWARE = [
@@ -56,6 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.performance.middleware.PerformanceMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -107,9 +110,13 @@ TIME_ZONE = 'America/Mexico_City'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / "staticfiles"
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+STATIC_ROOT = Path(env("STATIC_ROOT", default=str(BASE_DIR / "staticfiles")))
+
+# Media files (User-uploaded files)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = Path(env("MEDIA_ROOT", default=str(BASE_DIR / "media")))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -154,3 +161,13 @@ CORS_ALLOW_METHODS = [
     "POST",
     "PUT",
 ]
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = env("EMAIL_HOST", default="smtp.zoho.com")
+EMAIL_PORT = env.int("EMAIL_PORT", default=465)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=True)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="MS AMBAR <msambar@zohomail.com>")

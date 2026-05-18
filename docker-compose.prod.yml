@@ -1,0 +1,42 @@
+services:
+  backend:
+    container_name: ambar_backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    volumes:
+      - static_volume:/staticfiles:Z
+      - media_volume:/media_files:Z
+    environment:
+      - STATIC_ROOT=/staticfiles
+      - MEDIA_ROOT=/media_files
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - default
+      - prod_network
+
+  frontend:
+    container_name: ambar_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - default
+      - prod_network
+
+volumes:
+  static_volume:
+    name: ambar_static_volume
+  media_volume:
+    name: ambar_media_volume
+
+networks:
+  prod_network:
+    external: true
+  default:
+    name: ms-ambar_default

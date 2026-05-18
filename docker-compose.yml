@@ -1,27 +1,36 @@
 services:
   db:
+    container_name: ambar_dev_db
     image: postgres:16-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - postgres_data:/var/lib/postgresql/data/:Z
     environment:
-      - POSTGRES_DB=msambar
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=${DB_NAME:-msambar}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
     ports:
       - "5433:5432"
 
   backend:
+    container_name: ambar_dev_backend
     build: ./backend
     volumes:
       - ./backend:/app:Z
+      - static_volume:/staticfiles:Z
+      - media_volume:/media_files:Z
+    environment:
+      - STATIC_ROOT=/staticfiles
+      - MEDIA_ROOT=/media_files
     env_file:
       - .env
     depends_on:
       - db
     ports:
       - "8000:8000"
+    restart: on-failure
 
   frontend:
+    container_name: ambar_dev_frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -30,10 +39,32 @@ services:
       - /app/node_modules
       - /app/.next
     ports:
-      - "3000:3000"
+      - "3001:3000"
     env_file:
       - .env
     environment:
-      - NEXT_PUBLIC_API_URL=https://potential-fishstick-ww95q4pq4vrc5q55-8000.app.github.dev/api
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-/api}
+    restart: on-failure
+
+  nginx:
+    container_name: ambar_dev_nginx
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/default.conf.template:Z
+      - static_volume:/app/staticfiles:Z
+      - media_volume:/app/media:Z
+    depends_on:
+      - backend
+      - frontend
+    restart: on-failure
+
 volumes:
   postgres_data:
+  static_volume:
+    name: ambar_dev_static_volume
+  media_volume:
+    name: ambar_dev_media_volume
