@@ -21,6 +21,7 @@ services:
       - ambar_staging_media_volume:/app/ambar_staging_media:ro
     networks:
       - prod_network
+      - tierraviva_network
 
   certbot:
     image: certbot/certbot
@@ -34,6 +35,9 @@ services:
 networks:
   prod_network:
     external: true
+  tierraviva_network:
+    external: true
+    name: tierra-viva_default
 
 volumes:
   tierraviva_static_volume:
