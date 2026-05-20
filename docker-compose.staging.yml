@@ -30,8 +30,6 @@ services:
       - .env.staging
     depends_on:
       - db-staging
-    ports:
-      - "8001:8000"
     restart: always
     networks:
       - default
