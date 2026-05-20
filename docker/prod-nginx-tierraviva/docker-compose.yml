@@ -1,0 +1,47 @@
+services:
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: prod_nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      # Tierra Viva (Producción) Static & Media
+      - tierraviva_static_volume:/app/tierraviva_static:ro
+      - tierraviva_media_volume:/app/tierraviva_media:ro
+      # MS Ambar (Staging) Static & Media
+      - ambar_staging_static_volume:/app/ambar_staging_static:ro
+      - ambar_staging_media_volume:/app/ambar_staging_media:ro
+    networks:
+      - prod_network
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    restart: always
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:rw
+      - /var/www/certbot:/var/www/certbot:rw
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  prod_network:
+    external: true
+
+volumes:
+  tierraviva_static_volume:
+    external: true
+    name: tierraviva_static_volume
+  tierraviva_media_volume:
+    external: true
+    name: tierraviva_media_volume
+  ambar_staging_static_volume:
+    external: true
+    name: ambar_staging_static_volume
+  ambar_staging_media_volume:
+    external: true
+    name: ambar_staging_media_volume
