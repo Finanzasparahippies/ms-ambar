@@ -9,9 +9,14 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+import os
 env = environ.Env()
-# Read .env from the root of the project (one level up from backend)
-environ.Env.read_env(BASE_DIR.parent / ".env")
+# Read environment-specific .env file
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "local")
+if ENVIRONMENT == "staging":
+    environ.Env.read_env(BASE_DIR.parent / ".env.staging")
+else:
+    environ.Env.read_env(BASE_DIR.parent / ".env")
 
 # Quick-start development settings - unsuitable for production
 ENVIRONMENT = env("ENVIRONMENT", default="local")

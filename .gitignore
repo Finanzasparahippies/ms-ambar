@@ -1,3 +1,4 @@
 .env
+.env.staging
 node_modules/
 __pycache__/

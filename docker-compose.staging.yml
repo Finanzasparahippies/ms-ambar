@@ -1,0 +1,104 @@
+services:
+  db-staging:
+    container_name: ambar_staging_db
+    image: postgres:16-alpine
+    volumes:
+      - postgres_data_staging:/var/lib/postgresql/data/:Z
+    environment:
+      - POSTGRES_DB=${DB_NAME:-msambar_staging}
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+    ports:
+      - "5434:5432"
+    networks:
+      - default
+
+  backend-staging:
+    container_name: ambar_staging_backend
+    image: ms-ambar-backend:staging
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    volumes:
+      - static_volume_staging:/staticfiles:Z
+      - media_volume_staging:/media_files:Z
+    environment:
+      - STATIC_ROOT=/staticfiles
+      - MEDIA_ROOT=/media_files
+      - ENVIRONMENT=staging
+    env_file:
+      - .env.staging
+    depends_on:
+      - db-staging
+    ports:
+      - "8001:8000"
+    restart: always
+    networks:
+      - default
+      - prod_network
+
+  frontend-staging:
+    container_name: ambar_staging_frontend
+    image: ms-ambar-frontend:staging
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3080/api}
+    env_file:
+      - .env.staging
+    restart: always
+    networks:
+      - default
+      - prod_network
+
+  nginx-staging:
+    container_name: ambar_staging_nginx
+    image: nginx:alpine
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    ports:
+      - "3080:80"
+    volumes:
+      - ./docker/nginx/staging.conf:/etc/nginx/default.conf.template:Z
+      - static_volume_staging:/app/staticfiles:Z
+      - media_volume_staging:/app/media:Z
+    depends_on:
+      - backend-staging
+      - frontend-staging
+    restart: always
+    networks:
+      - default
+      - prod_network
+
+  auto-stop-staging:
+    container_name: ambar_staging_autostop
+    image: docker:cli
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/app:ro
+    working_dir: /app
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      sh -c "echo 'Staging environment auto-stop timer started. Interval: ${AUTO_STOP_INTERVAL:-24h}...' &&
+      sleep ${AUTO_STOP_INTERVAL:-24h} &&
+      echo 'Time limit reached. Automatically stopping staging environment...' &&
+      docker compose -f docker-compose.staging.yml down"
+    restart: "no"
+    networks:
+      - default
+
+volumes:
+  postgres_data_staging:
+    name: ambar_staging_postgres_data
+  static_volume_staging:
+    name: ambar_staging_static_volume
+  media_volume_staging:
+    name: ambar_staging_media_volume
+
+networks:
+  prod_network:
+    external: true
+  default:
+    name: ms-ambar_staging_default

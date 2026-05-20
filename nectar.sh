@@ -23,6 +23,17 @@ show_help() {
     echo "  shell           - Open backend python shell in dev"
     echo "  frontend        - Run Next.js frontend locally (npm run dev)"
     echo ""
+    echo "Staging Commands:"
+    echo "  up-staging      - Start staging environment (with auto-stop)"
+    echo "  down-staging    - Stop staging environment"
+    echo "  restart-staging - Restart staging environment"
+    echo "  logs-staging    - Show real-time staging logs"
+    echo "  migrate-staging - Run database migrations in staging"
+    echo "  makemigrations-staging - Generate staging database migrations"
+    echo "  createsuperuser-staging - Create admin superuser in staging"
+    echo "  shell-staging   - Open backend python shell in staging"
+    echo "  collectstatic-staging - Compile static assets in staging"
+    echo ""
     echo "Production Commands:"
     echo "  build           - Build production Docker images"
     echo "  up-prod         - Start production environment"
@@ -66,6 +77,41 @@ case $COMMAND in
     frontend)
         cd frontend && npm run dev
         ;;
+    up-staging)
+        echo "Starting MS AMBAR Staging Environment..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build
+        ;;
+    down-staging)
+        echo "Stopping Staging Environment..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml down
+        ;;
+    restart-staging)
+        echo "Restarting Staging Environment..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml restart
+        ;;
+    logs-staging)
+        echo "Showing Staging Logs..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml logs -f
+        ;;
+    migrate-staging)
+        echo "Running Staging Migrations..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py migrate
+        ;;
+    makemigrations-staging)
+        echo "Generating Staging Migrations..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm backend-staging python manage.py makemigrations
+        ;;
+    createsuperuser-staging)
+        echo "Creating Staging Superuser..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py createsuperuser
+        ;;
+    shell-staging)
+        docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py shell
+        ;;
+    collectstatic-staging)
+        echo "Running collectstatic in Staging..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py collectstatic --no-input
+        ;;
     build)
         echo "Building MS AMBAR Production Images..."
         docker compose -f docker-compose.prod.yml build
@@ -95,6 +141,9 @@ case $COMMAND in
         if docker compose ps --format json | grep -q "ambar_dev_backend"; then
             echo "Detected Active Development Environment. Running collectstatic..."
             docker compose exec backend python manage.py collectstatic --no-input
+        elif docker compose --env-file .env.staging -f docker-compose.staging.yml ps --format json | grep -q "ambar_staging_backend"; then
+            echo "Detected Active Staging Environment. Running collectstatic..."
+            docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py collectstatic --no-input
         else
             echo "Detected Active Production Environment. Running collectstatic..."
             docker compose -f docker-compose.prod.yml exec backend python manage.py collectstatic --no-input
