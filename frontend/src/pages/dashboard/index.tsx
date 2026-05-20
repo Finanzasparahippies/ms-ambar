@@ -479,7 +479,7 @@ export default function AdminDashboard() {
   });
 
   const linePath = points.length > 0 
-    ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
+    ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map((p: any) => `L ${p.x} ${p.y}`).join(' ')
     : '';
 
   const areaPath = points.length > 0
