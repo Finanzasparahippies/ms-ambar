@@ -720,7 +720,7 @@ export default function AdminDashboard() {
                       })}
                       
                       {/* X-Axis labels with explicit and styled label for the current day (Hoy) */}
-                      {points.filter((_, idx) => idx % 5 === 0 || idx === points.length - 1).map((p, idx) => {
+                      {points.filter((_: any, idx: number) => idx % 5 === 0 || idx === points.length - 1).map((p: any, idx: number) => {
                         const isLast = p.data.date === points[points.length - 1]?.data?.date;
                         return (
                           <text 
