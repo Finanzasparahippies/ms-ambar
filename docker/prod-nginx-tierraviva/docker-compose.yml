@@ -13,6 +13,9 @@ services:
       # Tierra Viva (Producción) Static & Media
       - tierraviva_static_volume:/app/tierraviva_static:ro
       - tierraviva_media_volume:/app/tierraviva_media:ro
+      # MS Ambar (Producción) Static & Media
+      - ambar_static_volume:/app/ambar_production_static:ro
+      - ambar_media_volume:/app/ambar_production_media:ro
       # MS Ambar (Staging) Static & Media
       - ambar_staging_static_volume:/app/ambar_staging_static:ro
       - ambar_staging_media_volume:/app/ambar_staging_media:ro
@@ -39,6 +42,12 @@ volumes:
   tierraviva_media_volume:
     external: true
     name: tierraviva_media_volume
+  ambar_static_volume:
+    external: true
+    name: ambar_static_volume
+  ambar_media_volume:
+    external: true
+    name: ambar_media_volume
   ambar_staging_static_volume:
     external: true
     name: ambar_staging_static_volume
