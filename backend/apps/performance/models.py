@@ -11,7 +11,7 @@ class PerformanceMetric(models.Model):
         ('INP', 'Interaction to Next Paint'),
     ]
     
-    name = models.CharField(max_length=10, choices=METRIC_TYPES)
+    name = models.CharField(max_length=50)
     value = models.FloatField()
     path = models.CharField(max_length=255)
     user_agent = models.TextField(blank=True, null=True)
