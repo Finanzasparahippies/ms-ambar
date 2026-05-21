@@ -88,7 +88,7 @@ def send_newsletter_email(post):
             logging.error(f"Error sending newsletter email to {sub.email}: {e}")
 
 def send_welcome_email(subscriber):
-    subject = "✨ Bienvenido al círculo de MS AMBAR"
+    subject = "✨ Bienvenido al Newsletter de MS AMBAR"
     
     # Beautiful HTML layout matching ms-ambar aesthetics
     html_content = f"""
