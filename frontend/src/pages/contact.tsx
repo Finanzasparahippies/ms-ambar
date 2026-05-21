@@ -43,7 +43,7 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-white bg-[#06070b]">
+    <div className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-white">
       <Head>
         <title>MS AMBAR | Booking & Contrataciones</title>
       </Head>

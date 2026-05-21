@@ -39,6 +39,10 @@ function decodeJwt(token: string): Record<string, any> | null {
   }
 }
 
+const stripHtml = (html: string) => {
+  return html ? html.replace(/<[^>]*>/g, '') : '';
+};
+
 export default function BlogPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -123,6 +127,20 @@ export default function BlogPage() {
     }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (isEditorOpen || activePost) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('hide-navbar');
+    } else {
+      document.body.style.overflow = '';
+      document.body.classList.remove('hide-navbar');
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.body.classList.remove('hide-navbar');
+    };
+  }, [isEditorOpen, activePost]);
 
   // Update slug when title changes (only if it's a new post or we manually edit)
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -533,10 +551,9 @@ export default function BlogPage() {
                   <h2 className="text-2xl font-extrabold tracking-tight mb-4 group-hover:text-amber-honey transition-colors leading-tight line-clamp-2">
                     {post.title}
                   </h2>
-                  <div 
-                    className="opacity-50 text-sm leading-relaxed mb-8 line-clamp-3 rich-text-content"
-                    dangerouslySetInnerHTML={{ __html: post.content.substring(0, 150) + '...' }}
-                  />
+                  <p className="opacity-60 text-xs leading-relaxed mb-8 line-clamp-3">
+                    {stripHtml(post.content).substring(0, 150) + (stripHtml(post.content).length > 150 ? '...' : '')}
+                  </p>
                 </div>
                 
                 <button 

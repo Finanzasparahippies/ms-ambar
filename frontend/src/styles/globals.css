@@ -44,7 +44,7 @@ body {
     radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0));
   background-repeat: repeat;
   background-size: 200px 200px;
-  opacity: 0.15;
+  opacity: 0.30;
   z-index: -1;
   animation: stars 100s linear infinite;
 }
@@ -72,4 +72,11 @@ body {
   .text-glow {
     text-shadow: 0 0 10px rgba(var(--amber-primary), 0.5);
   }
+}
+
+/* Hide navbar when modal is active */
+body.hide-navbar nav {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }

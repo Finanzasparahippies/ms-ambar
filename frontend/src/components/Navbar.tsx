@@ -66,7 +66,8 @@ const Navbar = () => {
 
   // Public navigation links — Designer is intentionally excluded (admin-only)
   const navLinks = [
-    { name: 'Tour', href: '/' },
+    { name: 'Inicio', href: '/' },
+    { name: 'Tour', href: '/tour' },
     { name: 'Galería', href: '/gallery' },
     { name: 'Música', href: '/music' },
     { name: 'Shop', href: '/merch' },

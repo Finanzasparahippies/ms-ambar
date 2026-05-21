@@ -24,6 +24,7 @@ show_help() {
     echo "  frontend        - Run Next.js frontend locally (npm run dev)"
     echo ""
     echo "Staging Commands:"
+    echo "  build-staging   - Build staging Docker images"
     echo "  up-staging      - Start staging environment (with auto-stop)"
     echo "  down-staging    - Stop staging environment"
     echo "  restart-staging - Restart staging environment"
@@ -76,6 +77,10 @@ case $COMMAND in
         ;;
     frontend)
         cd frontend && npm run dev
+        ;;
+    build-staging)
+        echo "Building MS AMBAR Staging Images..."
+        docker compose --env-file .env.staging -f docker-compose.staging.yml build
         ;;
     up-staging)
         echo "Starting MS AMBAR Staging Environment..."

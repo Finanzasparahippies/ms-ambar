@@ -54,6 +54,8 @@ const Layout = ({ children }: LayoutProps) => {
           <div>
             <h4 className="text-xs font-black uppercase tracking-widest mb-6 text-amber-honey">Navegación</h4>
             <ul className="space-y-4 text-xs font-bold opacity-60">
+              <li><a href="/" className="hover:text-amber-honey">Inicio</a></li>
+              <li><a href="/tour" className="hover:text-amber-honey">Tour</a></li>
               <li><a href="/music" className="hover:text-amber-honey">Música</a></li>
               <li><a href="/gallery" className="hover:text-amber-honey">Galería</a></li>
               <li><a href="/merch" className="hover:text-amber-honey">Shop</a></li>
