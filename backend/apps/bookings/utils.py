@@ -3,7 +3,8 @@ import logging
 from io import BytesIO
 from fpdf import FPDF
 from django.core.files.base import ContentFile
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
 from django.conf import settings
 
 class BookingContractPDF(FPDF):
@@ -133,7 +134,14 @@ def send_booking_contract_emails(contract):
             client_subject = "✨ Propuesta de Contrato de Booking - MS AMBAR"
             sign_url = f"{settings.FRONTEND_URL}/bookings/sign/{contract.id}"
             
-            client_message = (
+            client_context = {
+                'inquiry': inquiry,
+                'contract': contract,
+                'sign_url': sign_url,
+                'frontend_url': settings.FRONTEND_URL,
+            }
+            client_html = render_to_string('bookings/emails/booking_proposal.html', client_context)
+            client_text = (
                 f"Hola {inquiry.name},\n\n"
                 f"Hemos recibido tu solicitud de booking para la fecha {inquiry.date} en un {inquiry.get_venue_type_display()}.\n\n"
                 f"Hemos elaborado una propuesta de contrato artístico digital con los honorarios base de ${contract.fee} MXN.\n"
@@ -143,7 +151,8 @@ def send_booking_contract_emails(contract):
             )
             
             # Send proposal email to client
-            email_client = EmailMessage(client_subject, client_message, settings.DEFAULT_FROM_EMAIL, [inquiry.email])
+            email_client = EmailMultiAlternatives(client_subject, client_text, settings.DEFAULT_FROM_EMAIL, [inquiry.email])
+            email_client.attach_alternative(client_html, "text/html")
             if contract.pdf_file:
                 contract.pdf_file.seek(0)
                 email_client.attach(f"Propuesta_Contrato_Booking_{contract.id}.pdf", contract.pdf_file.read(), 'application/pdf')
@@ -151,7 +160,13 @@ def send_booking_contract_emails(contract):
             
             # Send notification to Manager/Agent
             manager_subject = f"🔔 Nuevo Booking Recibido: {inquiry.name} ({inquiry.date})"
-            manager_message = (
+            manager_context = {
+                'inquiry': inquiry,
+                'contract': contract,
+                'frontend_url': settings.FRONTEND_URL,
+            }
+            manager_html = render_to_string('bookings/emails/booking_notification.html', manager_context)
+            manager_text = (
                 f"Se ha registrado una nueva solicitud de booking en el sitio web:\n\n"
                 f"Organizador: {inquiry.name}\n"
                 f"Email: {inquiry.email} | Teléfono: {inquiry.phone}\n"
@@ -159,13 +174,21 @@ def send_booking_contract_emails(contract):
                 f"Mensaje: {inquiry.message}\n\n"
                 f"Se generó la propuesta #{contract.id} con honorarios de ${contract.fee} MXN. Firma del cliente pendiente."
             )
-            email_manager = EmailMessage(manager_subject, manager_message, settings.DEFAULT_FROM_EMAIL, [settings.DEFAULT_FROM_EMAIL])
+            email_manager = EmailMultiAlternatives(manager_subject, manager_text, settings.DEFAULT_FROM_EMAIL, [settings.DEFAULT_FROM_EMAIL])
+            email_manager.attach_alternative(manager_html, "text/html")
             email_manager.send()
             
         else:
-            # Stage 2: Fully Signed Contract copys sent to client and manager
+            # Stage 2: Fully Signed Contract copies sent to client and manager
             final_subject = f"✅ Contrato de Booking Certificado - {inquiry.name} ({inquiry.date})"
-            final_message = (
+            
+            final_context = {
+                'inquiry': inquiry,
+                'contract': contract,
+                'frontend_url': settings.FRONTEND_URL,
+            }
+            final_html = render_to_string('bookings/emails/booking_certified.html', final_context)
+            final_text = (
                 f"¡Felicidades {inquiry.name}!\n\n"
                 f"El contrato de presentación artística ha sido firmado por ambas partes. Adjunto encontrarás el documento final certificado en formato PDF.\n\n"
                 f"Nos vemos pronto en el escenario.\n\n"
@@ -174,7 +197,8 @@ def send_booking_contract_emails(contract):
             
             recipients = [inquiry.email, settings.DEFAULT_FROM_EMAIL]
             for dest in recipients:
-                email = EmailMessage(final_subject, final_message, settings.DEFAULT_FROM_EMAIL, [dest])
+                email = EmailMultiAlternatives(final_subject, final_text, settings.DEFAULT_FROM_EMAIL, [dest])
+                email.attach_alternative(final_html, "text/html")
                 if contract.pdf_file:
                     contract.pdf_file.seek(0)
                     email.attach(f"Contrato_Booking_Ambar_{contract.id}_FINAL.pdf", contract.pdf_file.read(), 'application/pdf')

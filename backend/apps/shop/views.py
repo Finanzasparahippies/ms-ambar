@@ -4,6 +4,12 @@ from django.conf import settings
 from django.http import HttpResponse
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+import logging
+
+logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.decorators import api_view, permission_classes
@@ -93,6 +99,43 @@ def handle_successful_payment(session):
             print(f"Payment confirmed and ticket delivered: {ticket.token}")
 
 
+def send_order_confirmation_email(order):
+    try:
+        # Precompute subtotal for each order item for rendering
+        items = list(order.items.all())
+        for item in items:
+            item.subtotal = item.price * item.quantity
+
+        context = {
+            'order': order,
+            'items': items,
+            'frontend_url': settings.FRONTEND_URL,
+        }
+        subject = f"🛒 Confirmación de Pedido #{order.id} - MS AMBAR"
+        html_content = render_to_string('shop/emails/order_confirmation.html', context)
+        text_content = (
+            f"¡Gracias por tu compra, {order.full_name}!\n\n"
+            f"Hemos recibido tu pago para el pedido #{order.id}.\n"
+            f"Monto Total: ${order.total_amount} MXN\n\n"
+            f"Dirección de Envío:\n"
+            f"{order.address}\n"
+            f"{order.city}, {order.country}\n\n"
+            f"Atentamente,\nEl equipo de MS AMBAR"
+        )
+        
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            settings.DEFAULT_FROM_EMAIL,
+            [order.user_email]
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send(fail_silently=False)
+        logger.info(f"Order confirmation email sent for order {order.id} to {order.user_email}")
+    except Exception as e:
+        logger.error(f"Error sending order confirmation email for order {order.id}: {e}", exc_info=True)
+
+
 class ShopCheckoutView(APIView):
     permission_classes = [AllowAny]
 
@@ -160,6 +203,9 @@ class ShopCheckoutView(APIView):
         for product, qty in products_to_update:
             product.stock -= qty
             product.save()
+
+        # Send confirmation email on successful transaction commit
+        transaction.on_commit(lambda: send_order_confirmation_email(order))
 
         return Response({
             "message": "Pedido realizado exitosamente.",

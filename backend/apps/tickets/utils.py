@@ -1,8 +1,10 @@
 import qrcode
 import io
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMultiAlternatives
+from django.utils.html import strip_tags
 from django.conf import settings
 from django.template.loader import render_to_string
+from email.mime.image import MIMEImage
 
 def generate_ticket_qr(ticket):
     """
@@ -26,26 +28,56 @@ def generate_ticket_qr(ticket):
 
 def send_ticket_email(ticket):
     """
-    Sends the ticket via email with the QR code attached.
+    Sends the ticket via email with the QR code embedded inline and attached.
     """
-    subject = f"Tu boleto para {ticket.event.title}"
+    subject = f"✨ Tu boleto para {ticket.event.title} - MS AMBAR"
+    
     context = {
         'ticket': ticket,
         'event': ticket.event,
-        'qr_url': f"{settings.FRONTEND_URL}/tickets/{ticket.token}"
+        'seat': ticket.seat,
+        'ga_zone': ticket.ga_zone,
+        'frontend_url': settings.FRONTEND_URL,
     }
-    # For now, a simple text message. In production use HTML templates.
-    message = f"¡Hola! Aquí tienes tu boleto para {ticket.event.title}.\nAsiento: {ticket.seat.row}{ticket.seat.number}\n\nPuedes verlo aquí: {context['qr_url']}"
     
-    email = EmailMessage(
+    html_content = render_to_string('tickets/emails/ticket_delivery.html', context)
+    
+    # Plain text fallback
+    if ticket.seat:
+        seat_str = f"Sección {ticket.seat.section} - Fila {ticket.seat.row}, Asiento {ticket.seat.number}"
+    elif ticket.ga_zone:
+        seat_str = f"Zona General: {ticket.ga_zone.name}"
+    else:
+        seat_str = "Entrada General"
+        
+    text_content = (
+        f"¡Hola!\n\nHemos preparado tu acceso para {ticket.event.title}.\n\n"
+        f"Detalles del Evento:\n"
+        f"• Artista: {ticket.event.artist}\n"
+        f"• Fecha: {ticket.event.date.strftime('%d/%m/%Y %H:%M')} hrs\n"
+        f"• Ubicación: {seat_str}\n"
+        f"• Lugar: {ticket.event.theater.name} ({ticket.event.theater.location})\n\n"
+        f"Puedes ver tu boleto digital en el siguiente enlace:\n"
+        f"{settings.FRONTEND_URL}/tickets/{ticket.token}\n\n"
+        f"Presenta el código QR adjunto en la entrada.\n"
+        f"¡Disfruta del evento!\n\nAtentamente,\nEl equipo de MS AMBAR"
+    )
+    
+    email = EmailMultiAlternatives(
         subject,
-        message,
+        text_content,
         settings.DEFAULT_FROM_EMAIL,
         [ticket.user_email],
     )
+    email.attach_alternative(html_content, "text/html")
     
+    # Generate QR Image and attach as inline MIMEImage
     qr_image = generate_ticket_qr(ticket)
-    email.attach(f"ticket_{ticket.token}.png", qr_image, "image/png")
+    msg_img = MIMEImage(qr_image)
+    msg_img.add_header('Content-ID', '<ticket_qr>')
+    msg_img.add_header('Content-Disposition', 'inline', filename=f"ticket_{ticket.token}.png")
+    email.attach(msg_img)
+    
     email.send()
 
 def send_ticket_whatsapp(ticket):

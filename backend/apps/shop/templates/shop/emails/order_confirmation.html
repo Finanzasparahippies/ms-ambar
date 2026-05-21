@@ -1,0 +1,75 @@
+{% extends "users/emails/base_ambar.html" %}
+
+{% block email_title %}Confirmación de Pedido #{{ order.id }} - MS AMBAR{% endblock %}
+
+{% block subtitle %}Tienda Oficial{% endblock %}
+
+{% block content %}
+<h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">¡Gracias por tu compra!</h2>
+
+<p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
+  Hola <strong>{{ order.full_name }}</strong>,<br><br>
+  Hemos recibido tu pago y tu pedido ya está siendo preparado. A continuación encontrarás el resumen de tu compra y los detalles de envío.
+</p>
+
+<!-- Order Metadata Card -->
+<div style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px; font-size: 14px;">
+  <table style="width: 100%; border-collapse: collapse; color: rgba(255, 255, 255, 0.8);">
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4); width: 35%;">Pedido ID:</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #ffffff;">#{{ order.id }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">Fecha de Compra:</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #ffffff;">{{ order.created_at|date:"d \d\e F \d\e Y" }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">Estado del Pago:</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #10b981; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">✓ Pagado</td>
+    </tr>
+  </table>
+</div>
+
+<!-- Items Table -->
+<h3 style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Artículos</h3>
+<div style="background-color: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    <thead>
+      <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+        <th style="text-align: left; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal;">Producto</th>
+        <th style="text-align: center; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal; width: 15%;">Cant.</th>
+        <th style="text-align: right; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal; width: 25%;">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.03);">
+        <td style="padding: 12px 0; color: #ffffff; font-weight: bold;">
+          {{ item.product.name }}
+          <br>
+          <span style="font-size: 12px; color: rgba(255, 255, 255, 0.4); font-weight: normal;">Precio unitario: ${{ item.price }}</span>
+        </td>
+        <td style="padding: 12px 0; text-align: center; color: rgba(255, 255, 255, 0.8);">{{ item.quantity }}</td>
+        <td style="padding: 12px 0; text-align: right; color: #ffffff; font-weight: bold;">${{ item.subtotal }}</td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td colspan="2" style="padding-top: 15px; text-align: right; color: rgba(255, 255, 255, 0.5); font-size: 13px;">Total del Pedido:</td>
+        <td style="padding-top: 15px; text-align: right; color: #f59e0b; font-size: 18px; font-weight: 900;">${{ order.total_amount }} MXN</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Shipping Address Card -->
+<h3 style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Dirección de Envío</h3>
+<div style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 35px; font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8);">
+  <strong style="color: #ffffff; font-size: 15px; display: block; margin-bottom: 5px;">{{ order.full_name }}</strong>
+  {{ order.address }}<br>
+  {{ order.city }}, {{ order.country }}
+</div>
+
+<div style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+  Te notificaremos vía correo electrónico en cuanto tu paquete sea entregado a la paquetería de envío junto con tu código de rastreo.
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends "users/emails/base_ambar.html" %}
+
+{% block email_title %}Propuesta de Contrato de Booking - MS AMBAR{% endblock %}
+
+{% block subtitle %}Propuesta de Contrato{% endblock %}
+
+{% block content %}
+<h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">Propuesta de Contrato Artístico</h2>
+
+<p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
+  Hola <strong>{{ inquiry.name }}</strong>,<br><br>
+  Gracias por tu interés en booking para la presentación de <strong>MS AMBAR</strong>. Hemos procesado los detalles de tu consulta y redactado una propuesta de contrato digital para tu revisión.
+</p>
+
+<!-- Commitment details -->
+<div style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 30px;">
+  <h3 style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Detalles de la Fecha</h3>
+  
+  <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
+    <tr>
+      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4); width: 35%;">Organizador:</td>
+      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">{{ inquiry.name }} {% if inquiry.company %}({{ inquiry.company }}){% endif %}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Fecha Propuesta:</td>
+      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">{{ inquiry.date|date:"d \d\e F \d\e Y" }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Foro / Venue:</td>
+      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">{{ inquiry.get_venue_type_display }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Honorarios Artísticos:</td>
+      <td style="padding: 8px 0; font-weight: bold; color: #f59e0b; font-size: 16px;">${{ contract.fee }} MXN</td>
+    </tr>
+  </table>
+</div>
+
+<p style="color: rgba(255,255,255,0.7); font-size: 14px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
+  Por favor, haz clic en el botón de abajo para revisar los términos completos del contrato digital y firmar electrónicamente de conformidad.
+</p>
+
+<!-- CTA Button -->
+<div style="text-align: center; margin-bottom: 30px;">
+  <a href="{{ sign_url }}" style="background-color: #f59e0b; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
+    Revisar y Firmar Contrato
+  </a>
+</div>
+
+<div style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+  Una versión provisional del contrato en PDF ha sido adjuntada a este correo. Si tienes dudas respecto a las cláusulas o el rider técnico, ponte en contacto con nosotros respondiendo a este mensaje.
+</div>
+{% endblock %}

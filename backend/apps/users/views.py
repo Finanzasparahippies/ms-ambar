@@ -8,7 +8,9 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -87,13 +89,22 @@ class PasswordResetRequestView(APIView):
             # Try to send real email
             email_sent = False
             try:
-                send_mail(
+                context = {
+                    'username': user.username,
+                    'reset_url': reset_url,
+                    'frontend_url': settings.FRONTEND_URL,
+                }
+                html_content = render_to_string('users/emails/password_reset.html', context)
+                text_content = strip_tags(html_content)
+
+                email_msg = EmailMultiAlternatives(
                     subject="Restablece tu contraseña - MS AMBAR",
-                    message=f"Hola {user.username},\n\nHemos recibido una solicitud para restablecer tu contraseña. Haz clic en el siguiente enlace para hacerlo:\n\n{reset_url}\n\nSi no solicitaste esto, puedes ignorar este correo.\n\nAtentamente,\nEl equipo de MS AMBAR",
+                    body=text_content,
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[email],
-                    fail_silently=False,
+                    to=[email],
                 )
+                email_msg.attach_alternative(html_content, "text/html")
+                email_msg.send(fail_silently=False)
                 email_sent = True
             except Exception as e:
                 logger.error(f"Error al enviar correo electrónico de recuperación: {e}")
