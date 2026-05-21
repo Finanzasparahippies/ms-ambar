@@ -113,9 +113,9 @@ const TourPage = () => {
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-none"
+            className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-tight px-4 md:px-8 py-2 md:py-4"
           >
-            TOUR <span className="text-glow text-gradient bg-gradient-to-r from-amber-400 via-amber-honey to-amber-700 bg-clip-text text-transparent">OFICIAL 2026</span>
+            TOUR <span className="text-glow text-gradient bg-gradient-to-r from-amber-400 via-amber-honey to-amber-700 bg-clip-text text-transparent px-2">OFICIAL 2026</span>
           </motion.h1>
 
           <motion.p
