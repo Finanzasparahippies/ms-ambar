@@ -128,6 +128,27 @@ export default function BlogPage() {
     fetchData();
   }, []);
 
+  // Handle unsubscribe query param from email
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const emailToUnsubscribe = params.get('unsubscribe');
+      if (emailToUnsubscribe) {
+        axios.post(`${API_URL}/blog/subscribers/unsubscribe/`, { email: emailToUnsubscribe })
+          .then(() => {
+            alert('Te has desuscrito con éxito del newsletter de MS AMBAR.');
+            // Clean url params
+            window.history.replaceState({}, document.title, window.location.pathname);
+          })
+          .catch((err) => {
+            console.error('Error desuscribiendo:', err);
+            alert('Hubo un problema al procesar tu desuscripción. El correo podría no estar registrado o ya fue removido.');
+            window.history.replaceState({}, document.title, window.location.pathname);
+          });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (isEditorOpen || activePost) {
       document.body.style.overflow = 'hidden';
