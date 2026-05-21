@@ -782,9 +782,50 @@ const TAROT_CARDS: TarotCard[] = [
 const Home = () => {
   const [isMounted, setIsMounted] = useState(false);
 
-  const getSynergyMessage = (c0: TarotCard, c1: TarotCard, c2: TarotCard) => {
-    return `Tu lectura trina revela una sintonía profunda y de alta vibración para tu viaje. La raíz de tu camino parte de ${c0.name} (${c0.vibe.toLowerCase()}), sembrando una semilla de poder y sabiduría en tu ser. En el presente, ${c1.name} te invita a transitar con la energía de "${c1.song}", recordándote fluir con el compás de las frecuencias del desierto de Sonora. Finalmente, tu destino se proyecta hacia ${c2.name}, abriendo un portal de manifestación donde el universo y la energía terrestre conspiran a tu favor. Camina con confianza, la sintonía del cosmos está en perfecta armonía con tu ser.`;
+  const generateUniqueSynergy = (c0: TarotCard, c1: TarotCard, c2: TarotCard) => {
+    const intros = [
+      "La vibración del desierto de Sonora y las frecuencias cósmicas se entrelazan hoy para revelar tu sintonía trina. ",
+      "Bajo la luz del oráculo y la resonancia acústica de MS Ambar, tu portal energético se ha abierto. ",
+      "Tus tres arcanos del desierto se alinean en una constelación de luz única, manifestando tu lectura trina. ",
+      "El viento cálido de la sierra y la sabiduría de la tierra revelan una frecuencia de viaje sumamente especial. "
+    ];
+    
+    const roots = [
+      `Como punto de partida, ${c0.name} (${c0.vibe.toLowerCase()}) actúa como tu cimiento primordial. Te invita a conectar con la esencia de "${c0.song}", recordándote que la fuerza reside en tus raíces y que tu origen sostiene todo tu ser. `,
+      `Tu energía nace y se ancla con ${c0.name} (${c0.vibe.toLowerCase()}). Esta carta siembra una semilla de poder y resiliencia en tu interior, alineada con la melodía de "${c0.song}" para darte fuerza. `,
+      `La raíz de tu lectura está cimentada en ${c0.name} (${c0.vibe.toLowerCase()}), trayendo la esencia espiritual de "${c0.song}". Esto te recuerda honrar tu camino recorrido para nutrir con sabiduría tu presente. `
+    ];
+
+    const paths = [
+      `En el presente, tu andar es guiado por ${c1.name}. Su sintonía te impulsa a vibrar con "${c1.song}" para fluir con los ritmos y cambios del desierto, despertando tu intuición en cada paso. `,
+      `El camino que transitas ahora se sincroniza con ${c1.name}, recordándote fluir con la melodía de "${c1.song}". Es un llamado activo a expresar tu verdad y mantener una vibración alta en tus decisiones. `,
+      `Actualmente, la frecuencia de ${c1.name} ilumina tu presente con la vibración de "${c1.song}". Aprovecha este flujo energético para expandir tu consciencia creativa y tu conexión con el entorno. `
+    ];
+
+    const cosmos = [
+      `Finalmente, tu destino se proyecta hacia la inmensidad de ${c2.name}. Su luz abre un portal de manifestación donde la música y la tierra conspiran para guiar tu viaje hacia la plenitud. `,
+      `Hacia el porvenir, ${c2.name} dibuja una ruta estelar prometedora. Se alinea con "${c2.song}" para brindarte abundancia, renovación espiritual y una profunda paz interior. `,
+      `Tu energía futura encuentra su resonancia en ${c2.name}, indicando un desenlace lleno de realizaciones. Se proyecta como un portal de abundancia, luz y sintonía cósmica total con el todo. `
+    ];
+
+    const conclusions = [
+      "Camina con confianza; la música del desierto de Sonora y la sintonía del universo están en perfecta armonía con tu ser.",
+      "Confía en la sabiduría del saguaro y en el vuelo de la colmena. Tu viaje terrestre y espiritual está bendecido.",
+      "Mantén tu vibración elevada y permite que esta sintonía trina guíe tus pasos. Abre tu corazón al flujo infinito del amor.",
+      "El cosmos y la tierra se han alíneado para apoyar tus intenciones más puras. Eres parte de esta gran sinergia universal y musical."
+    ];
+
+    const rIntro = intros[Math.floor(Math.random() * intros.length)];
+    const rRoot = roots[Math.floor(Math.random() * roots.length)];
+    const rPath = paths[Math.floor(Math.random() * paths.length)];
+    const rCosmos = cosmos[Math.floor(Math.random() * cosmos.length)];
+    const rConclusion = conclusions[Math.floor(Math.random() * conclusions.length)];
+
+    return `${rIntro}${rRoot}${rPath}${rCosmos}${rConclusion}`;
   };
+
+  const [readingCode, setReadingCode] = useState<string>('');
+  const [synergyMessage, setSynergyMessage] = useState<string>('');
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [newsletterErrorMessage, setNewsletterErrorMessage] = useState('');
@@ -907,10 +948,19 @@ const Home = () => {
 
     const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
 
-    setDrawnCards(prev => ({ ...prev, [slotIndex]: randomCard }));
+    const nextDrawnCards = { ...drawnCards, [slotIndex]: randomCard };
+    setDrawnCards(nextDrawnCards);
     setFlippedSlots(prev => ({ ...prev, [slotIndex]: true }));
     setMorphTarget(randomCard.morphTarget);
     playTarotChord(randomCard);
+
+    // Check if this completes the 3 cards
+    if (nextDrawnCards[0] && nextDrawnCards[1] && nextDrawnCards[2]) {
+      const randomHex = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1).toUpperCase();
+      const code = `AMBAR-${randomHex()}-${randomHex()}`;
+      setReadingCode(code);
+      setSynergyMessage(generateUniqueSynergy(nextDrawnCards[0], nextDrawnCards[1], nextDrawnCards[2]));
+    }
 
     // Reset morph target back to 'none' after 4 seconds
     if (morphTimeoutRef.current) {
@@ -924,15 +974,23 @@ const Home = () => {
   const resetTarot = () => {
     setIsShuffling(true);
     setMorphTarget('none');
+    setFlippedSlots({ 0: false, 1: false, 2: false });
+    
     if (morphTimeoutRef.current) {
       clearTimeout(morphTimeoutRef.current);
     }
-    
+
+    // Clear drawn card contents only after they are fully face-down (800ms transition)
     setTimeout(() => {
-      setFlippedSlots({ 0: false, 1: false, 2: false });
       setDrawnCards({ 0: null, 1: null, 2: null });
+      setReadingCode('');
+      setSynergyMessage('');
+    }, 800);
+
+    // Stop shuffling after 1000ms
+    setTimeout(() => {
       setIsShuffling(false);
-    }, 600);
+    }, 1000);
   };
   useEffect(() => {
     setIsMounted(true);
@@ -1318,6 +1376,7 @@ const Home = () => {
                       onClick={() => drawTarotCard(slotIndex)}
                       className="tarot-perspective w-[260px] h-[390px] cursor-pointer group"
                     >
+                    {/* Outer shaking container */}
                     <motion.div
                       animate={isShuffling ? {
                         x: [0, -15, 15, -10, 10, 0],
@@ -1325,8 +1384,10 @@ const Home = () => {
                         rotate: [0, -2, 2, -1, 1, 0]
                       } : {}}
                       transition={{ duration: 0.6 }}
-                      className={`tarot-card-inner h-full w-full ${isFlipped ? 'tarot-card-flipped' : ''}`}
+                      className="w-full h-full"
                     >
+                      {/* Inner 3D flipping container */}
+                      <div className={`tarot-card-inner h-full w-full ${isFlipped ? 'tarot-card-flipped' : ''}`}>
                       {/* Back Side */}
                       <div className="tarot-card-back bg-[#08090f] border border-amber-honey/20 flex flex-col items-center justify-center p-6 shadow-2xl hover:border-amber-honey/50 transition-colors">
                         <svg className="absolute inset-0 w-full h-full p-2 pointer-events-none opacity-85" viewBox="0 0 240 370" fill="none">
@@ -1417,10 +1478,10 @@ const Home = () => {
                             </span>
                           </div>
                         </div>
-                      </div>
-                    </motion.div>
+                        </div>
+                      </motion.div>
+                    </div>
                   </div>
-                </div>
               );
             })}
           </div>
@@ -1472,19 +1533,26 @@ const Home = () => {
                   </div>
 
                   {/* Synergy Message if all 3 cards are drawn */}
-                  {drawnCards[0] && drawnCards[1] && drawnCards[2] && (
+                  {drawnCards[0] && drawnCards[1] && drawnCards[2] && synergyMessage && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.98 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.2 }}
                       className="mt-6 p-6 rounded-2xl bg-amber-honey/[0.03] border border-amber-honey/20 space-y-3"
                     >
-                      <div className="flex items-center gap-2 text-amber-honey">
-                        <Sparkles size={14} className="animate-pulse" />
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em]">Sintonía de Viaje Sincronizada</h4>
+                      <div className="flex items-center justify-between text-amber-honey border-b border-amber-honey/10 pb-3 mb-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={14} className="animate-pulse" />
+                          <h4 className="text-xs font-black uppercase tracking-[0.2em]">Sintonía de Viaje Sincronizada</h4>
+                        </div>
+                        {readingCode && (
+                          <span className="text-[9px] font-mono font-bold tracking-widest bg-amber-honey/10 px-2 py-0.5 rounded border border-amber-honey/20">
+                            {readingCode}
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] md:text-xs text-white/80 leading-relaxed">
-                        {getSynergyMessage(drawnCards[0], drawnCards[1], drawnCards[2])}
+                        {synergyMessage}
                       </p>
                     </motion.div>
                   )}
