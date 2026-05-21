@@ -502,6 +502,7 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
         parent.removeEventListener('mousemove', handleMouseMove);
         parent.removeEventListener('mouseenter', handleMouseEnter);
         parent.removeEventListener('mouseleave', handleMouseLeave);
+      }
     };
   }, []);
 
