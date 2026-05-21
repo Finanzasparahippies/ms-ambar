@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
+import { useRouter } from 'next/router';
 import SeatingChart from '../components/SeatingChart';
 import {
   Save, Plus, Square, Maximize, MousePointer2,
@@ -10,12 +11,48 @@ import {
   Coffee, Trees, Zap, AlignLeft, AlignCenter,
   AlignRight, AlignVerticalJustifyCenter,
   ChevronUp, ChevronDown as ChevronDownIcon,
-  X, Info, Circle as CircleIcon, Triangle, Hexagon, Octagon
+  X, Info, Circle as CircleIcon, Triangle, Hexagon, Octagon,
+  Shield, Lock
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
+/** Decodes a JWT payload without verifying the signature (client-side only). */
+function decodeJwtPayload(token: string): Record<string, any> | null {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
+
 export default function DesignerPage() {
+  const router = useRouter();
+
+  // ─── Admin Auth Guard ───
+  const [authStatus, setAuthStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.replace('/login?redirect=/designer');
+      return;
+    }
+    const payload = decodeJwtPayload(token);
+    // Check expiry
+    if (!payload || (payload.exp && Date.now() / 1000 > payload.exp)) {
+      localStorage.removeItem('token');
+      router.replace('/login?redirect=/designer');
+      return;
+    }
+    if (payload.is_staff) {
+      setAuthStatus('allowed');
+    } else {
+      setAuthStatus('denied');
+    }
+  }, []);
+
   const [theaters, setTheaters] = useState<any[]>([]);
   const [selectedTheaterId, setSelectedTheaterId] = useState<number | string>('');
   const [seats, setSeats] = useState<any[]>([]);
@@ -46,28 +83,116 @@ export default function DesignerPage() {
   const [clipboard, setClipboard] = useState<{ seats: any[], elements: any[] } | null>(null);
   const rotationRef = useRef<{ centroid: { x: number, y: number }, initialStates: Map<string, any> } | null>(null);
 
+  // ─── Theater Management Modal (Nectar Studio Pro) ───
+  const [theaterModal, setTheaterModal] = useState<{ isOpen: boolean; mode: 'create' | 'edit' }>({ isOpen: false, mode: 'create' });
+  const [theaterForm, setTheaterForm] = useState({ name: '', location: '' });
+  const [theaterModalLoading, setTheaterModalLoading] = useState(false);
+  const [theaterModalError, setTheaterModalError] = useState<string | null>(null);
+  const [generateSeatsStatus, setGenerateSeatsStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ||
     (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
       ? window.location.origin.replace(window.location.port, '8000') + '/api'
       : 'http://localhost:8000/api');
 
+  const fetchTheaters = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/tickets/theaters/`);
+      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      const data = await res.json();
+      setTheaters(data);
+      return data;
+    } catch (error) {
+      console.error("Failed to fetch theaters:", error);
+      return [];
+    }
+  };
+
   useEffect(() => {
-    const fetchTheaters = async () => {
-      try {
-        const res = await fetch(`${apiUrl}/tickets/theaters/`);
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        const data = await res.json();
-        setTheaters(data);
-        if (data.length > 0) {
-          setSelectedTheaterId(data[0].id);
-          loadTheater(data[0]);
-        }
-      } catch (error) {
-        console.error("Failed to fetch theaters:", error);
+    fetchTheaters().then((data) => {
+      if (data.length > 0) {
+        setSelectedTheaterId(data[0].id);
+        loadTheater(data[0]);
       }
-    };
-    fetchTheaters();
+    });
   }, []);
+
+  // ── Create Theater ──
+  const openCreateTheaterModal = () => {
+    setTheaterForm({ name: '', location: '' });
+    setTheaterModalError(null);
+    setTheaterModal({ isOpen: true, mode: 'create' });
+  };
+
+  // ── Edit Theater metadata ──
+  const openEditTheaterModal = () => {
+    const current = theaters.find(t => t.id.toString() === selectedTheaterId.toString());
+    if (!current) return;
+    setTheaterForm({ name: current.name, location: current.location });
+    setTheaterModalError(null);
+    setTheaterModal({ isOpen: true, mode: 'edit' });
+  };
+
+  const handleTheaterFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!theaterForm.name.trim()) { setTheaterModalError('El nombre del teatro es obligatorio.'); return; }
+    setTheaterModalLoading(true);
+    setTheaterModalError(null);
+    try {
+      let response: Response;
+      if (theaterModal.mode === 'create') {
+        response = await fetch(`${apiUrl}/tickets/theaters/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: theaterForm.name, location: theaterForm.location, layout: { seats: [], map_elements: [] } }),
+        });
+      } else {
+        response = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: theaterForm.name, location: theaterForm.location }),
+        });
+      }
+      if (!response.ok) throw new Error(`Error ${response.status}`);
+      const saved = await response.json();
+      const updatedList = await fetchTheaters();
+      setSelectedTheaterId(saved.id);
+      const fresh = updatedList.find((t: any) => t.id === saved.id) || saved;
+      loadTheater(fresh);
+      setTheaterModal({ isOpen: false, mode: 'create' });
+    } catch (err: any) {
+      setTheaterModalError('Error al guardar el teatro. Revisa la conexión con el servidor.');
+    } finally {
+      setTheaterModalLoading(false);
+    }
+  };
+
+  const handleDeleteTheater = async () => {
+    if (!selectedTheaterId) return;
+    const current = theaters.find(t => t.id.toString() === selectedTheaterId.toString());
+    if (!confirm(`¿Eliminar permanentemente "${current?.name}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, { method: 'DELETE' });
+      const updatedList = await fetchTheaters();
+      if (updatedList.length > 0) { setSelectedTheaterId(updatedList[0].id); loadTheater(updatedList[0]); }
+      else { setSelectedTheaterId(''); setSeats([]); setElements([]); }
+    } catch (err) { console.error('Error al eliminar teatro:', err); }
+  };
+
+  // ── Generate seats from saved layout ──
+  const handleGenerateSeats = async () => {
+    if (!selectedTheaterId) return;
+    setGenerateSeatsStatus('loading');
+    try {
+      const res = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/generate_seats/`, { method: 'POST' });
+      if (!res.ok) throw new Error();
+      setGenerateSeatsStatus('success');
+      setTimeout(() => setGenerateSeatsStatus('idle'), 3500);
+    } catch {
+      setGenerateSeatsStatus('error');
+      setTimeout(() => setGenerateSeatsStatus('idle'), 3500);
+    }
+  };
 
   const addToHistory = (s: any[], e: any[]) => {
     const newState = { seats: s, elements: e };
@@ -368,6 +493,61 @@ export default function DesignerPage() {
   const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(String(e.id)));
   const isDark = theme === 'dark';
 
+  // ── Auth Guard screens ──
+  if (authStatus === 'checking') {
+    return (
+      <div className="h-screen w-screen bg-[#06070b] flex flex-col items-center justify-center gap-5">
+        <Head><title>Nectar Studio Pro | Verificando acceso...</title></Head>
+        <div className="w-12 h-12 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+        <div className="text-center">
+          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40">Verificando credenciales...</p>
+          <p className="text-[8px] font-bold uppercase tracking-widest text-white/20 mt-1">Nectar Studio Pro</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStatus === 'denied') {
+    return (
+      <div className="h-screen w-screen bg-[#06070b] flex flex-col items-center justify-center gap-6 p-8">
+        <Head><title>Acceso Restringido | Nectar Studio Pro</title></Head>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="max-w-sm w-full bg-white/[0.03] border border-white/10 rounded-[2rem] p-10 text-center backdrop-blur-3xl shadow-2xl"
+        >
+          <div className="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Lock size={28} className="text-red-400" />
+          </div>
+          <h1 className="text-[13px] font-black uppercase tracking-[0.3em] text-white mb-2">Acceso Restringido</h1>
+          <p className="text-[9px] font-bold uppercase tracking-widest text-white/30 mb-6 leading-relaxed">
+            Nectar Studio Designer es una herramienta exclusiva para administradores del sistema.
+            Tu cuenta no tiene los permisos necesarios.
+          </p>
+          <div className="flex flex-col gap-3">
+            <motion.a
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+              href="/"
+              className="w-full py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-amber-honey text-nature-night text-center"
+            >
+              Volver al Inicio
+            </motion.a>
+            <motion.a
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+              href="/login"
+              className="w-full py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-white/60 hover:text-white text-center transition-all"
+            >
+              Iniciar Sesión como Admin
+            </motion.a>
+          </div>
+        </motion.div>
+        <p className="text-[8px] font-bold uppercase tracking-widest text-white/15">
+          Nectar Studio Pro — Solo para Staff Autorizado
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("h-screen w-screen overflow-hidden flex flex-col font-sans transition-colors duration-500", isDark ? "bg-[#06070b] text-white" : "bg-slate-50 text-slate-900")}>
       <Head><title>Nectar Studio Pro | Venue Architecture</title></Head>
@@ -379,12 +559,33 @@ export default function DesignerPage() {
             <div className="flex flex-col"><span className={cn("text-[11px] font-black uppercase tracking-[0.4em] leading-none", isDark ? "text-white/90" : "text-slate-900")}>Nectar Studio</span><span className="text-[8px] font-bold text-amber-honey/50 uppercase tracking-[0.2em] mt-1">Architecture Pro</span></div>
           </motion.div>
           <div className={cn("h-8 w-px mx-2", isDark ? "bg-white/10" : "bg-slate-200")} />
-          <div className="relative group">
-            <select value={selectedTheaterId} onChange={handleTheaterChange} className={cn("px-5 py-2.5 rounded-xl text-[11px] font-bold outline-none border transition-all appearance-none cursor-pointer pr-10 min-w-[180px]", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-100 border-slate-200 text-slate-900")}>
-              {theaters.map(t => <option key={t.id} value={t.id} className={isDark ? "bg-[#0b0d17]" : "bg-white"}>{t.name}</option>)}
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-amber-honey/50 pointer-events-none" size={14} />
+          {/* Theater Selector + Management */}
+          <div className="flex items-center gap-2">
+            <div className="relative group">
+              <select value={selectedTheaterId} onChange={handleTheaterChange} className={cn("px-4 py-2.5 rounded-xl text-[11px] font-bold outline-none border transition-all appearance-none cursor-pointer pr-8 min-w-[160px]", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-100 border-slate-200 text-slate-900")}>
+                {theaters.length === 0 && <option value="">Sin teatros</option>}
+                {theaters.map(t => <option key={t.id} value={t.id} className={isDark ? "bg-[#0b0d17]" : "bg-white"}>{t.name}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 text-amber-honey/50 pointer-events-none" size={12} />
+            </div>
+            {/* New Theater */}
+            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={openCreateTheaterModal} title="Nuevo Teatro" className={cn("w-9 h-9 rounded-lg border flex items-center justify-center transition-all", isDark ? "bg-amber-honey/10 border-amber-honey/30 text-amber-honey hover:bg-amber-honey hover:text-nature-night" : "bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100")}>
+              <Plus size={15} />
+            </motion.button>
+            {/* Edit Theater */}
+            {selectedTheaterId && (
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={openEditTheaterModal} title="Editar Teatro" className={cn("w-9 h-9 rounded-lg border flex items-center justify-center transition-all", isDark ? "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white" : "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200")}>
+                <Settings2 size={14} />
+              </motion.button>
+            )}
+            {/* Delete Theater */}
+            {selectedTheaterId && (
+              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleDeleteTheater} title="Eliminar Teatro" className="w-9 h-9 rounded-lg border border-red-500/20 bg-red-500/5 text-red-500/50 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all">
+                <Trash2 size={13} />
+              </motion.button>
+            )}
           </div>
+          <div className={cn("h-8 w-px", isDark ? "bg-white/10" : "bg-slate-200")} />
           <div className="flex items-center gap-2">
             <button onClick={undo} disabled={historyIndex <= 0} className={cn("p-2.5 rounded-lg border transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14} className="-scale-x-100" /></button>
             <button onClick={redo} disabled={historyIndex >= history.length - 1} className={cn("p-2.5 rounded-lg border transition-all", isDark ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-slate-100 border-slate-200 hover:bg-slate-200")}><RotateCw size={14} /></button>
@@ -406,7 +607,14 @@ export default function DesignerPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {/* Generate Seats from layout */}
+          {selectedTheaterId && (
+            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }} onClick={handleGenerateSeats} disabled={generateSeatsStatus === 'loading'} title="Sincronizar asientos desde el layout actual" className={cn("h-10 px-4 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-2 border", generateSeatsStatus === 'success' ? "bg-green-500/10 border-green-500/30 text-green-400" : generateSeatsStatus === 'error' ? "bg-red-500/10 border-red-500/30 text-red-400" : isDark ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10" : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200")}>
+              {generateSeatsStatus === 'loading' ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> : generateSeatsStatus === 'success' ? <CheckCircle2 size={13} /> : generateSeatsStatus === 'error' ? <AlertCircle size={13} /> : <Layers size={13} />}
+              {generateSeatsStatus === 'success' ? 'Sincronizado' : generateSeatsStatus === 'error' ? 'Error' : generateSeatsStatus === 'loading' ? 'Sync...' : 'Sync Seats'}
+            </motion.button>
+          )}
           <motion.button whileTap={{ scale: 0.9 }} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className={cn("w-11 h-11 flex items-center justify-center rounded-xl border transition-all", isDark ? "bg-white/5 border-white/10 text-white/60" : "bg-slate-100 border-slate-200 text-slate-500")}>
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </motion.button>
@@ -506,6 +714,135 @@ export default function DesignerPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ══════ THEATER MANAGEMENT MODAL (Nectar Studio Pro) ══════ */}
+      <AnimatePresence>
+        {theaterModal.isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
+            onClick={(e) => { if (e.target === e.currentTarget) setTheaterModal({ ...theaterModal, isOpen: false }); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 24 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className={cn(
+                "w-full max-w-md rounded-[2rem] border p-8 shadow-2xl backdrop-blur-3xl",
+                isDark ? "bg-[#0b0d17]/90 border-white/10" : "bg-white/95 border-slate-200"
+              )}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-honey/15 rounded-2xl flex items-center justify-center border border-amber-honey/25">
+                    <LayoutIcon size={22} className="text-amber-honey" />
+                  </div>
+                  <div>
+                    <h2 className={cn("text-[13px] font-black uppercase tracking-[0.25em]", isDark ? "text-white" : "text-slate-900")}>
+                      {theaterModal.mode === 'create' ? 'Nuevo Teatro' : 'Editar Teatro'}
+                    </h2>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey/60 mt-0.5">
+                      Nectar Studio — Venue Management
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setTheaterModal({ ...theaterModal, isOpen: false })}
+                  className={cn("w-9 h-9 rounded-xl flex items-center justify-center transition-all", isDark ? "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white" : "bg-slate-100 text-slate-400 hover:bg-slate-200")}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleTheaterFormSubmit} className="space-y-5">
+                {/* Name */}
+                <div className="space-y-2">
+                  <label className={cn("text-[9px] font-black uppercase tracking-[0.2em] block", isDark ? "text-white/40" : "text-slate-500")}>
+                    Nombre del Recinto *
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={theaterForm.name}
+                    onChange={(e) => setTheaterForm({ ...theaterForm, name: e.target.value })}
+                    placeholder="Ej: Teatro Metropólitan CDMX"
+                    className={cn(
+                      "w-full px-4 py-3.5 rounded-xl border text-sm font-semibold outline-none transition-all",
+                      isDark
+                        ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-amber-honey/50 focus:bg-white/8"
+                        : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-amber-400"
+                    )}
+                  />
+                </div>
+
+                {/* Location */}
+                <div className="space-y-2">
+                  <label className={cn("text-[9px] font-black uppercase tracking-[0.2em] block", isDark ? "text-white/40" : "text-slate-500")}>
+                    Ubicación / Ciudad
+                  </label>
+                  <input
+                    type="text"
+                    value={theaterForm.location}
+                    onChange={(e) => setTheaterForm({ ...theaterForm, location: e.target.value })}
+                    placeholder="Ej: Ciudad de México, CDMX"
+                    className={cn(
+                      "w-full px-4 py-3.5 rounded-xl border text-sm font-semibold outline-none transition-all",
+                      isDark
+                        ? "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-amber-honey/50"
+                        : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:border-amber-400"
+                    )}
+                  />
+                </div>
+
+                {/* Info note */}
+                <div className={cn("flex items-start gap-3 p-4 rounded-xl border", isDark ? "bg-amber-honey/5 border-amber-honey/15" : "bg-amber-50 border-amber-200")}>
+                  <Info size={14} className="text-amber-honey mt-0.5 shrink-0" />
+                  <p className={cn("text-[9px] font-bold uppercase tracking-wider leading-relaxed", isDark ? "text-white/40" : "text-amber-700")}>
+                    {theaterModal.mode === 'create'
+                      ? 'El teatro se creará con un canvas vacío. Usa las herramientas del diseñador para agregar butacas, escenario y zonas.'
+                      : 'Solo se actualizan nombre y ubicación. El layout y los asientos permanecen intactos.'
+                    }
+                  </p>
+                </div>
+
+                {/* Error */}
+                {theaterModalError && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                    <AlertCircle size={13} className="text-red-400 shrink-0" />
+                    <p className="text-[10px] font-bold text-red-400">{theaterModalError}</p>
+                  </motion.div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setTheaterModal({ ...theaterModal, isOpen: false })}
+                    className={cn("flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] transition-all border", isDark ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10" : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200")}
+                  >
+                    Cancelar
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    type="submit"
+                    disabled={theaterModalLoading}
+                    className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-amber-honey text-nature-night transition-all shadow-glow flex items-center justify-center gap-2 disabled:opacity-60"
+                  >
+                    {theaterModalLoading
+                      ? <><div className="w-3.5 h-3.5 border-2 border-nature-night/30 border-t-nature-night rounded-full animate-spin" /> Guardando...</>
+                      : <><Save size={13} /> {theaterModal.mode === 'create' ? 'Crear Teatro' : 'Guardar Cambios'}</>
+                    }
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style dangerouslySetInnerHTML={{
         __html: `

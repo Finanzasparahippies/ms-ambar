@@ -51,7 +51,8 @@ export default function AdminDashboard() {
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
   
   // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts'>('summary');
+  const [contracts, setContracts] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
 
   // Shipment Simulator State
@@ -98,6 +99,17 @@ export default function AdminDashboard() {
   const [catalogSuccessMsg, setCatalogSuccessMsg] = useState<string | null>(null);
   const [catalogErrorMsg, setCatalogErrorMsg] = useState<string | null>(null);
 
+  // ─── Theaters State (Nectar Pro) ───
+  const [theaters, setTheaters] = useState<any[]>([]);
+  const [isTheaterModalOpen, setIsTheaterModalOpen] = useState(false);
+  const [editingTheater, setEditingTheater] = useState<any | null>(null);
+  const [theaterName, setTheaterName] = useState('');
+  const [theaterLocation, setTheaterLocation] = useState('');
+  const [theaterLoading, setTheaterLoading] = useState(false);
+  const [theaterSuccessMsg, setTheaterSuccessMsg] = useState<string | null>(null);
+  const [theaterErrorMsg, setTheaterErrorMsg] = useState<string | null>(null);
+  const [theaterSyncStatus, setTheaterSyncStatus] = useState<Record<number, 'idle' | 'loading' | 'success' | 'error'>>({});
+
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -108,8 +120,8 @@ export default function AdminDashboard() {
     try {
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch analytics, system metrics, orders, expenses, products, and categories in parallel
-      const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes] = await Promise.all([
+      // Fetch analytics, system metrics, orders, expenses, products, categories, theaters, and booking contracts in parallel
+      const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes] = await Promise.all([
         axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
         axios.get(`${API_URL}/dashboard/system/`, { headers }).catch(err => {
           console.error("System metrics fetch failed, using fallback", err);
@@ -118,7 +130,9 @@ export default function AdminDashboard() {
         axios.get(`${API_URL}/dashboard/orders/`, { headers }),
         axios.get(`${API_URL}/dashboard/expenses/`, { headers }),
         axios.get(`${API_URL}/shop/products/`, { headers }),
-        axios.get(`${API_URL}/shop/categories/`, { headers })
+        axios.get(`${API_URL}/shop/categories/`, { headers }),
+        axios.get(`${API_URL}/tickets/theaters/`).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/bookings/contracts/`, { headers }).catch(() => ({ data: [] }))
       ]);
 
       setStats(analyticsRes.data);
@@ -126,6 +140,8 @@ export default function AdminDashboard() {
       setExpenses(expensesRes.data);
       setProducts(productsRes.data);
       setCategories(categoriesRes.data);
+      setTheaters(Array.isArray(theatersRes.data) ? theatersRes.data : []);
+      setContracts(Array.isArray(contractsRes.data) ? contractsRes.data : []);
       if (systemRes.data) {
         setSysMetrics(systemRes.data);
       }
@@ -161,6 +177,68 @@ export default function AdminDashboard() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // ════ Theater CRUD Handlers (Nectar Pro) ════
+  const openTheaterCreateModal = () => {
+    setEditingTheater(null);
+    setTheaterName('');
+    setTheaterLocation('');
+    setTheaterErrorMsg(null);
+    setTheaterSuccessMsg(null);
+    setIsTheaterModalOpen(true);
+  };
+
+  const openTheaterEditModal = (theater: any) => {
+    setEditingTheater(theater);
+    setTheaterName(theater.name);
+    setTheaterLocation(theater.location || '');
+    setTheaterErrorMsg(null);
+    setTheaterSuccessMsg(null);
+    setIsTheaterModalOpen(true);
+  };
+
+  const handleTheaterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!theaterName.trim()) { setTheaterErrorMsg('El nombre del teatro es obligatorio.'); return; }
+    setTheaterLoading(true);
+    setTheaterErrorMsg(null);
+    try {
+      if (editingTheater) {
+        await axios.patch(`${API_URL}/tickets/theaters/${editingTheater.id}/`, { name: theaterName, location: theaterLocation });
+        setTheaterSuccessMsg('¡Teatro actualizado con éxito!');
+      } else {
+        await axios.post(`${API_URL}/tickets/theaters/`, { name: theaterName, location: theaterLocation, layout: { seats: [], map_elements: [] } });
+        setTheaterSuccessMsg('¡Teatro creado! Ábrelo en Nectar Studio para diseñar su planta.');
+      }
+      setIsTheaterModalOpen(false);
+      fetchDashboardData();
+    } catch (err: any) {
+      setTheaterErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar el teatro.');
+    } finally {
+      setTheaterLoading(false);
+    }
+  };
+
+  const handleTheaterDelete = async (id: number, name: string) => {
+    if (!confirm(`¿Eliminar permanentemente "${name}"? Se borrarán todos los asientos y eventos asociados.`)) return;
+    try {
+      await axios.delete(`${API_URL}/tickets/theaters/${id}/`);
+      fetchDashboardData();
+    } catch (err) { console.error('Error eliminando teatro:', err); }
+  };
+
+  const handleTheaterSync = async (id: number) => {
+    setTheaterSyncStatus(prev => ({ ...prev, [id]: 'loading' }));
+    try {
+      await axios.post(`${API_URL}/tickets/theaters/${id}/generate_seats/`);
+      setTheaterSyncStatus(prev => ({ ...prev, [id]: 'success' }));
+      setTimeout(() => setTheaterSyncStatus(prev => ({ ...prev, [id]: 'idle' })), 3500);
+    } catch {
+      setTheaterSyncStatus(prev => ({ ...prev, [id]: 'error' }));
+      setTimeout(() => setTheaterSyncStatus(prev => ({ ...prev, [id]: 'idle' })), 3500);
+    }
+  };
+
 
   const handleUpdateOrderStatus = async (orderId: number, nextStatus: 'shipped' | 'delivered') => {
     const token = localStorage.getItem('token');
@@ -607,6 +685,31 @@ export default function AdminDashboard() {
         >
           🛍️ Catálogo de Tienda
         </button>
+        <button
+          onClick={() => setActiveTab('theaters')}
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            activeTab === 'theaters'
+              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          🎭 Teatros
+        </button>
+        <button
+          onClick={() => setActiveTab('contracts')}
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+            activeTab === 'contracts'
+              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          ✍️ Contratos
+          {contracts.filter(c => !c.is_fully_signed).length > 0 && (
+            <span className="w-5 h-5 bg-white border border-nature-night text-nature-night rounded-full text-[9px] font-black flex items-center justify-center animate-pulse">
+              {contracts.filter(c => !c.is_fully_signed).length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Main Administrative Views Context */}
@@ -800,6 +903,22 @@ export default function AdminDashboard() {
                   <QuickActionBtn href="/dashboard/performance" title="Monitor Core Web Vitals" desc="Tiempos del Servidor y Logs" icon={<Activity size={18} />} />
                   <QuickActionBtn href="/admin/shop/product/" title="Catálogo de Productos" desc="Editar Stock de Mercancía" icon={<ShoppingBag size={18} />} external />
                   <QuickActionBtn href="/admin/tickets/event/" title="Fechas & Conciertos" desc="Programar nuevos eventos" icon={<Ticket size={18} />} external />
+                  <div
+                    onClick={() => setActiveTab('theaters')}
+                    className="p-4 bg-white/[0.02] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/[0.02] rounded-2xl transition-all group flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-amber-500/10 group-hover:scale-105 transition-all text-white/60 group-hover:text-amber-400">
+                        <MapPin size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-white group-hover:text-amber-300 transition-colors">Gestión de Teatros</h4>
+                        <p className="text-[9px] uppercase tracking-widest opacity-30 group-hover:opacity-40 mt-0.5">Crear y administrar recintos</p>
+                      </div>
+                    </div>
+                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-400" />
+                  </div>
+
                 </div>
               </div>
 
@@ -1645,6 +1764,410 @@ export default function AdminDashboard() {
           )}
 
         </AnimatePresence>
+
+        {/* ══════ TAB 5: THEATERS MANAGEMENT ══════ */}
+        <AnimatePresence>
+          {activeTab === 'theaters' && (
+            <motion.div
+              key="theaters-tab"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2">
+                    <MapPin size={20} className="text-amber-500" /> Gestión de Recintos
+                  </h2>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold mt-1">
+                    Crea y administra teatros — abre cada uno en Nectar Studio para diseñar su planta
+                  </p>
+                </div>
+                <button
+                  onClick={openTheaterCreateModal}
+                  className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
+                >
+                  <Plus size={15} /> Nuevo Teatro
+                </button>
+              </div>
+
+              {/* Success / Error messages */}
+              {theaterSuccessMsg && (
+                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl">
+                  <Check size={14} className="text-green-400 shrink-0" />
+                  <p className="text-xs font-bold text-green-400">{theaterSuccessMsg}</p>
+                </motion.div>
+              )}
+              {theaterErrorMsg && (
+                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                  <AlertTriangle size={14} className="text-red-400 shrink-0" />
+                  <p className="text-xs font-bold text-red-400">{theaterErrorMsg}</p>
+                </motion.div>
+              )}
+
+              {/* Theaters Grid */}
+              {theaters.length === 0 ? (
+                <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-16 flex flex-col items-center gap-4 text-center">
+                  <MapPin size={48} className="text-white/10" />
+                  <p className="text-white/30 text-xs uppercase tracking-widest font-black">Sin teatros registrados</p>
+                  <p className="text-white/20 text-[10px] font-bold">Crea tu primer recinto para comenzar a vender boletos</p>
+                  <button onClick={openTheaterCreateModal} className="mt-4 px-6 py-3 bg-amber-honey text-nature-night text-xs font-black uppercase tracking-widest rounded-xl">
+                    Crear primer Teatro
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {theaters.map((theater: any) => {
+                    const seatCount = theater.seats?.length ?? 0;
+                    const syncSt = theaterSyncStatus[theater.id] || 'idle';
+                    return (
+                      <motion.div
+                        key={theater.id}
+                        whileHover={{ y: -4 }}
+                        className="bg-white/[0.02] border border-white/5 hover:border-amber-500/20 rounded-[2rem] p-6 flex flex-col gap-5 transition-all backdrop-blur-xl"
+                      >
+                        {/* Card Header */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-11 h-11 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 flex items-center justify-center shrink-0">
+                              <MapPin size={18} className="text-amber-honey" />
+                            </div>
+                            <div>
+                              <h3 className="text-sm font-black text-white/90 leading-tight">{theater.name}</h3>
+                              <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold mt-0.5">{theater.location || 'Sin ubicación'}</p>
+                            </div>
+                          </div>
+                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/40">
+                            ID #{theater.id}
+                          </span>
+                        </div>
+
+                        {/* Stats row */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                            <p className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Asientos</p>
+                            <p className="text-lg font-black text-white mt-1">{seatCount}</p>
+                          </div>
+                          <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
+                            <p className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Zonas GA</p>
+                            <p className="text-lg font-black text-white mt-1">{theater.ga_zones?.length ?? 0}</p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex flex-col gap-2">
+                          {/* Sync seats button */}
+                          <button
+                            onClick={() => handleTheaterSync(theater.id)}
+                            disabled={syncSt === 'loading'}
+                            className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${
+                              syncSt === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+                              syncSt === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                              'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
+                            }`}
+                          >
+                            {syncSt === 'loading' ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> :
+                             syncSt === 'success' ? <Check size={12} /> :
+                             syncSt === 'error' ? <AlertTriangle size={12} /> :
+                             <Layers size={12} />}
+                            {syncSt === 'success' ? 'Asientos Sincronizados' : syncSt === 'error' ? 'Error al Sincronizar' : 'Sincronizar Asientos'}
+                          </button>
+
+                          {/* Secondary actions */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <Link
+                              href="/designer"
+                              onClick={() => {}}
+                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider text-center bg-amber-honey/10 border border-amber-honey/20 text-amber-honey hover:bg-amber-honey hover:text-nature-night transition-all flex items-center justify-center gap-1"
+                            >
+                              <Layers size={11} /> Diseñar
+                            </Link>
+                            <button
+                              onClick={() => openTheaterEditModal(theater)}
+                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-1"
+                            >
+                              <Edit2 size={11} /> Editar
+                            </button>
+                            <button
+                              onClick={() => handleTheaterDelete(theater.id, theater.name)}
+                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-red-500/5 border border-red-500/15 text-red-500/50 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1"
+                            >
+                              <Trash2 size={11} /> Borrar
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ══════ THEATER MODAL (Dashboard) ══════ */}
+        <AnimatePresence>
+          {isTheaterModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
+              onClick={(e) => { if (e.target === e.currentTarget) setIsTheaterModalOpen(false); }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.93, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93, y: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                className="w-full max-w-md bg-[#0b0d17]/95 border border-white/10 rounded-[2rem] p-8 shadow-2xl backdrop-blur-3xl"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-amber-honey/10 border border-amber-honey/20 rounded-2xl flex items-center justify-center">
+                      <MapPin size={20} className="text-amber-honey" />
+                    </div>
+                    <div>
+                      <h2 className="text-[13px] font-black uppercase tracking-[0.25em] text-white">
+                        {editingTheater ? 'Editar Teatro' : 'Nuevo Teatro'}
+                      </h2>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey/60 mt-0.5">Nectar Studio — Venue Management</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsTheaterModalOpen(false)} className="w-9 h-9 rounded-xl bg-white/5 text-white/40 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all">
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <form onSubmit={handleTheaterSubmit} className="space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">Nombre del Recinto *</label>
+                    <input
+                      type="text" autoFocus value={theaterName} onChange={(e) => setTheaterName(e.target.value)}
+                      placeholder="Ej: Teatro Metropólitan CDMX"
+                      className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-500/50 transition-all placeholder:text-white/20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">Ubicación / Ciudad</label>
+                    <input
+                      type="text" value={theaterLocation} onChange={(e) => setTheaterLocation(e.target.value)}
+                      placeholder="Ej: Ciudad de México, CDMX"
+                      className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-500/50 transition-all placeholder:text-white/20"
+                    />
+                  </div>
+                  {!editingTheater && (
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-honey/5 border border-amber-honey/15">
+                      <Calendar size={14} className="text-amber-honey mt-0.5 shrink-0" />
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 leading-relaxed">
+                        Después de crear el teatro, ábrelo en Nectar Studio Designer para diseñar la planta y agregar butacas.
+                      </p>
+                    </div>
+                  )}
+                  {theaterErrorMsg && (
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                      <AlertTriangle size={13} className="text-red-400 shrink-0" />
+                      <p className="text-[10px] font-bold text-red-400">{theaterErrorMsg}</p>
+                    </div>
+                  )}
+                  <div className="flex gap-3 pt-2">
+                    <button type="button" onClick={() => setIsTheaterModalOpen(false)} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all">
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={theaterLoading} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-amber-500 to-amber-600 text-black flex items-center justify-center gap-2 shadow-[0_2px_15px_rgba(245,158,11,0.2)] disabled:opacity-50">
+                      {theaterLoading
+                        ? <><div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> Guardando...</>
+                        : <><Check size={13} /> {editingTheater ? 'Guardar Cambios' : 'Crear Teatro'}</>
+                      }
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ══════ TAB 6: CONTRACTS PIPELINE ══════ */}
+        <AnimatePresence>
+          {activeTab === 'contracts' && (
+            <motion.div
+              key="contracts-tab"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div>
+                  <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2 text-white">
+                    ✍️ Pipeline de Contratos Artísticos
+                  </h2>
+                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold mt-1">
+                    Monitorea, comparte enlaces y contrafirma acuerdos digitales de MS Ambar
+                  </p>
+                </div>
+              </div>
+
+              {/* Pipeline Kanban Columns */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                
+                {/* Column 1: Generated/Pending Client Signature */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-honey flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-pulse" /> Propuestas (Cliente Pendiente)
+                    </span>
+                    <span className="text-[10px] font-black text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
+                      {contracts.filter(c => !c.signature_base64).length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                    {contracts.filter(c => !c.signature_base64).length === 0 ? (
+                      <div className="p-8 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                        No hay propuestas pendientes
+                      </div>
+                    ) : (
+                      contracts.filter(c => !c.signature_base64).map((c: any) => (
+                        <div key={c.id} className="p-6 rounded-3xl border border-white/5 bg-white/[0.02] space-y-4 hover:border-white/10 transition-all">
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-black text-white">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">
+                              {c.inquiry_detail?.company || 'Particular'}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                            <div>
+                              <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
+                              <p className="font-bold text-white/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                            </div>
+                            <div>
+                              <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
+                              <p className="font-bold text-amber-honey">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const link = `${window.location.origin}/bookings/sign/${c.id}`;
+                              navigator.clipboard.writeText(link);
+                              alert('Enlace de firma copiado al portapapeles!');
+                            }}
+                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-white/80 transition-all text-center block"
+                          >
+                            🔗 Copiar Enlace de Firma
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Column 2: Waiting for Manager Countersign */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" /> Esperando Contrafirma
+                    </span>
+                    <span className="text-[10px] font-black text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
+                      {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                    {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length === 0 ? (
+                      <div className="p-8 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                        Ningún acuerdo pendiente de firma de management
+                      </div>
+                    ) : (
+                      contracts.filter(c => c.signature_base64 && !c.is_fully_signed).map((c: any) => (
+                        <div key={c.id} className="p-6 rounded-3xl border border-yellow-500/10 bg-yellow-500/[0.02] space-y-4 hover:border-yellow-500/20 transition-all">
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-black text-white">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">
+                              {c.inquiry_detail?.company || 'Particular'}
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                            <div>
+                              <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
+                              <p className="font-bold text-white/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                            </div>
+                            <div>
+                              <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
+                              <p className="font-bold text-amber-honey">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
+                            </div>
+                          </div>
+                          <Link
+                            href={`/bookings/sign/${c.id}`}
+                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-yellow-400 hover:bg-yellow-500 text-black font-black transition-all text-center block"
+                          >
+                            ✍️ Firmar como Manager
+                          </Link>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Column 3: Fully Signed and Certified */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Cerrados y Certificados
+                    </span>
+                    <span className="text-[10px] font-black text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
+                      {contracts.filter(c => c.is_fully_signed).length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                    {contracts.filter(c => c.is_fully_signed).length === 0 ? (
+                      <div className="p-8 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                        No hay contratos cerrados todavía
+                      </div>
+                    ) : (
+                      contracts.filter(c => c.is_fully_signed).map((c: any) => {
+                        const pdfUrl = c.pdf_file ? (c.pdf_file.startsWith('http') ? c.pdf_file : `${API_URL.replace('/api', '')}${c.pdf_file}`) : '#';
+                        return (
+                          <div key={c.id} className="p-6 rounded-3xl border border-emerald-500/10 bg-emerald-500/[0.02] space-y-4 hover:border-emerald-500/20 transition-all">
+                            <div className="space-y-1">
+                              <h4 className="text-sm font-black text-white">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">
+                                {c.inquiry_detail?.company || 'Particular'}
+                              </p>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                              <div>
+                                <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
+                                <p className="font-bold text-white/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                              </div>
+                              <div>
+                                <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
+                                <p className="font-bold text-emerald-400">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
+                              </div>
+                            </div>
+                            <a
+                              href={pdfUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all text-center block border border-emerald-500/20"
+                            >
+                              📄 Descargar Contrato PDF
+                            </a>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </div>
   );

@@ -40,7 +40,35 @@ class EventViewSet(viewsets.ModelViewSet):
 class TheaterViewSet(viewsets.ModelViewSet):
     queryset = Theater.objects.all()
     serializer_class = TheaterSerializer
-    permission_classes = [permissions.AllowAny] # Changed to AllowAny for Nectar Designer integration
+    permission_classes = [permissions.AllowAny]  # Open for Nectar Designer integration
+
+    @action(detail=True, methods=['post'], url_path='generate_seats')
+    def generate_seats(self, request, pk=None):
+        """
+        Triggers seat generation from the stored layout JSON.
+        Called automatically by the Nectar Studio Designer after saving a layout.
+        Nectar Pro: Eliminates the need for Django Admin to sync seats.
+        """
+        theater = self.get_object()
+        if not theater.layout:
+            return Response(
+                {'error': 'Este teatro no tiene un layout guardado. Diseña el venue primero en Nectar Studio.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            count = theater.generate_seats()
+            return Response({
+                'status': 'success',
+                'message': f'Se sincronizaron {count} asientos para {theater.name}.',
+                'seats_generated': count,
+                'theater_id': theater.id,
+                'theater_name': theater.name,
+            })
+        except Exception as e:
+            return Response(
+                {'error': f'Error al generar asientos: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Post
+from .models import Category, Post, NewsletterSubscriber
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -12,3 +12,10 @@ class PostAdmin(admin.ModelAdmin):
     list_filter = ('category', 'is_published')
     prepopulated_fields = {'slug': ('title',)}
     search_fields = ('title', 'content')
+
+@admin.register(NewsletterSubscriber)
+class NewsletterSubscriberAdmin(admin.ModelAdmin):
+    list_display = ('email', 'created_at', 'is_active')
+    search_fields = ('email',)
+    list_filter = ('created_at', 'is_active')
+

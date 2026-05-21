@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BookingInquiry
+from .models import BookingInquiry, BookingContract
 
 @admin.register(BookingInquiry)
 class BookingInquiryAdmin(admin.ModelAdmin):
@@ -7,3 +7,10 @@ class BookingInquiryAdmin(admin.ModelAdmin):
     list_filter = ('venue_type', 'is_reviewed', 'created_at')
     search_fields = ('name', 'email', 'message')
     list_editable = ('is_reviewed',)
+
+@admin.register(BookingContract)
+class BookingContractAdmin(admin.ModelAdmin):
+    list_display = ('inquiry', 'fee', 'is_fully_signed', 'signed_at', 'manager_signed_at', 'created_at')
+    list_filter = ('is_fully_signed', 'created_at')
+    search_fields = ('inquiry__name', 'inquiry__email')
+

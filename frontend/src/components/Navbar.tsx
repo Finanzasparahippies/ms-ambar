@@ -3,8 +3,17 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ThemeToggle from './ThemeToggle';
-import { LogOut, Shield } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { LogOut, Shield, Layers } from 'lucide-react';
+
+/** Decodes a JWT payload client-side (no signature verification). */
+function decodeJwt(token: string): Record<string, any> | null {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
 
 const Navbar = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -19,21 +28,25 @@ const Navbar = () => {
       document.documentElement.setAttribute('data-theme', savedTheme);
     }
 
-    // Check user authentication status on mount
+    // Read auth status directly from the JWT payload — no localStorage.user needed
     const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
     if (token) {
-      setIsAuthenticated(true);
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          if (user.is_staff) {
-            setIsAdmin(true);
-          }
-        } catch (e) {}
+      const payload = decodeJwt(token);
+      // Treat token as expired / invalid if exp is in the past
+      if (payload && !(payload.exp && Date.now() / 1000 > payload.exp)) {
+        setIsAuthenticated(true);
+        setIsAdmin(!!payload.is_staff);
+      } else {
+        // Token expired — clean up silently
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('user');
       }
+    } else {
+      setIsAuthenticated(false);
+      setIsAdmin(false);
     }
-  }, [router.pathname]); // Re-run when navigation changes to catch login/logout events
+  }, [router.pathname]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -51,9 +64,9 @@ const Navbar = () => {
     router.push('/login');
   };
 
+  // Public navigation links — Designer is intentionally excluded (admin-only)
   const navLinks = [
     { name: 'Tour', href: '/' },
-    { name: 'Designer', href: '/designer' },
     { name: 'Galería', href: '/gallery' },
     { name: 'Música', href: '/music' },
     { name: 'Shop', href: '/merch' },
@@ -70,7 +83,7 @@ const Navbar = () => {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tighter text-glow">MS AMBAR</h1>
         </Link>
- 
+
         <div className="hidden md:flex gap-6 items-center">
           {navLinks.map((link) => (
             <Link
@@ -84,17 +97,36 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="h-6 w-px bg-white/10 mx-2" />
-          
+
           {/* Dynamic Authentication Controls */}
           {isAuthenticated ? (
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               {isAdmin && (
-                <Link
-                  href="/dashboard"
-                  className="text-[9px] uppercase font-black tracking-widest text-amber-honey bg-amber-honey/10 border border-amber-honey/20 px-3.5 py-1.5 rounded-full hover:bg-amber-honey/25 transition-all flex items-center gap-1.5"
-                >
-                  <Shield size={10} /> Panel Admin
-                </Link>
+                <>
+                  {/* Nectar Studio Designer — admins only */}
+                  <Link
+                    href="/designer"
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                      router.pathname === '/designer'
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                    }`}
+                    title="Nectar Studio Designer — Solo Admins"
+                  >
+                    <Layers size={10} /> Studio
+                  </Link>
+                  {/* Admin Dashboard */}
+                  <Link
+                    href="/dashboard"
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                      router.pathname.startsWith('/dashboard')
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                    }`}
+                  >
+                    <Shield size={10} /> Admin
+                  </Link>
+                </>
               )}
               <button
                 onClick={handleLogout}

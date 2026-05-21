@@ -4,7 +4,7 @@ import uuid
 class Theater(models.Model):
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255)
-    layout = models.JSONField(help_text="JSON representation of sections and rows")
+    layout = models.JSONField(help_text="JSON representation of sections and rows", null=True, blank=True, default=dict)
 
     def __str__(self):
         return self.name
