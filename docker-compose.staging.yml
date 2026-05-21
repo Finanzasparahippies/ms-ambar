@@ -1,18 +1,4 @@
 services:
-  db-staging:
-    container_name: ambar_staging_db
-    image: postgres:16-alpine
-    volumes:
-      - postgres_data_staging:/var/lib/postgresql/data/:Z
-    environment:
-      - POSTGRES_DB=${DB_NAME:-msambar_staging}
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
-    ports:
-      - "5434:5432"
-    networks:
-      - default
-
   backend-staging:
     container_name: ambar_staging_backend
     image: ms-ambar-backend:staging
@@ -28,8 +14,6 @@ services:
       - ENVIRONMENT=staging
     env_file:
       - .env.staging
-    depends_on:
-      - db-staging
     restart: always
     networks:
       - default
@@ -88,8 +72,6 @@ services:
       - default
 
 volumes:
-  postgres_data_staging:
-    name: ambar_staging_postgres_data
   static_volume_staging:
     name: ambar_staging_static_volume
   media_volume_staging:
