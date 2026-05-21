@@ -1478,10 +1478,11 @@ const Home = () => {
                             </span>
                           </div>
                         </div>
-                        </div>
-                      </motion.div>
+                      </div>
                     </div>
-                  </div>
+                  </motion.div>
+                </div>
+              </div>
               );
             })}
           </div>
