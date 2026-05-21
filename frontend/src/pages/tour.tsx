@@ -164,13 +164,13 @@ const TourPage = () => {
             </header>
 
             {isLoading ? (
-              <div className="h-[700px] flex items-center justify-center border border-white/5 bg-white/[0.01] rounded-[3.5rem]">
+              <div className="h-[450px] md:h-[700px] flex items-center justify-center border border-white/5 bg-white/[0.01] rounded-[3.5rem]">
                 <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em]">Tejiendo la Planta...</div>
               </div>
             ) : (
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <div className="h-[700px] rounded-[3.5rem] overflow-hidden border border-white/5">
+                <div className="h-[450px] md:h-[700px] rounded-[3.5rem] overflow-hidden border border-white/5">
                   <SeatingChart 
                     seats={seats} 
                     onSelect={handleSelectionChange} 

@@ -76,6 +76,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
   const [isPanning, setIsPanning] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
+  const lastTouchDistRef = useRef<number | null>(null);
 
   useEffect(() => { setSeats(initialSeats); }, [initialSeats]);
   useEffect(() => { setElements(initialElements); }, [initialElements]);
@@ -242,6 +243,113 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     return { x: (e.clientX - rect.left - transform.x) / transform.scale, y: (e.clientY - rect.top - transform.y) / transform.scale };
   };
 
+  const getTouchCoords = (e: React.TouchEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || e.touches.length === 0) return { x: 0, y: 0 };
+    const touch = e.touches[0];
+    return {
+      x: (touch.clientX - rect.left - transform.x) / transform.scale,
+      y: (touch.clientY - rect.top - transform.y) / transform.scale
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const { x, y } = getTouchCoords(e);
+      setLastMousePos({ x: touch.clientX, y: touch.clientY });
+
+      const hitSlop = 20 / transform.scale;
+      const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < hitSlop && Math.abs(s.y - y) < hitSlop);
+
+      if (isDesignMode) {
+        if (activeTool !== 'select') { onChartClick?.(x, y); return; }
+        const hitEl = [...elements].reverse().find(el => {
+          const w = el.w || 100, h = el.h || 100;
+          return x >= el.x - w / 2 - hitSlop && x <= el.x + w / 2 + hitSlop &&
+            y >= el.y - h / 2 - hitSlop && y <= el.y + h / 2 + hitSlop;
+        });
+        const hit = hitSeat || hitEl;
+        if (hit) {
+          const id = String(hit.id); let newSelection = selectedIds;
+          if (!selectedIds.includes(id)) { newSelection = [id]; setSelectedIds(newSelection); onSelect?.(newSelection); }
+          const snapshot = new Map();
+          newSelection.forEach(sid => {
+            const s = seats.find(st => String(st.id) === sid), el = elements.find(elObj => String(elObj.id) === sid);
+            if (s) snapshot.set(sid, { x: s.x, y: s.y }); else if (el) snapshot.set(sid, { x: el.x, y: el.y });
+          });
+          setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, handle: (hitEl && Math.abs(hitEl.x + hitEl.w! / 2 - x) < hitSlop && Math.abs(hitEl.y + hitEl.h! / 2 - y) < hitSlop) ? 'br' : undefined, groupSnapshot: snapshot });
+          return;
+        }
+        setIsPanning(true);
+      } else {
+        if (hitSeat && hitSeat.status === 'available') {
+          const id = String(hitSeat.id);
+          const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
+          setSelectedIds(newSelection); onSelect?.(newSelection);
+        } else {
+          setIsPanning(true);
+        }
+      }
+    } else if (e.touches.length === 2) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      lastTouchDistRef.current = dist;
+      setIsPanning(false);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const { x, y } = getTouchCoords(e);
+      setMousePos({ x, y });
+
+      if (draggedItem) {
+        if (draggedItem.handle === 'br') {
+          setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, w: Math.max(20, (x - el.x) * 2), h: Math.max(20, (y - el.y) * 2) } : el));
+        } else if (draggedItem.groupSnapshot) {
+          const snap = draggedItem.groupSnapshot.get(draggedItem.id);
+          if (snap) {
+            const dx = x - (snap.x - draggedItem.offsetX);
+            const dy = y - (snap.y - draggedItem.offsetY);
+            const updatedSeats = seats.map(s => {
+              const sSnap = draggedItem.groupSnapshot!.get(String(s.id));
+              return sSnap ? { ...s, x: sSnap.x + dx, y: sSnap.y + dy } : s;
+            });
+            const updatedEls = elements.map(el => {
+              const eSnap = draggedItem.groupSnapshot!.get(el.id);
+              return eSnap ? { ...el, x: eSnap.x + dx, y: eSnap.y + dy } : el;
+            });
+            setSeats(updatedSeats); setElements(updatedEls);
+          }
+        }
+        return;
+      }
+      if (isPanning) {
+        setTransform(prev => ({ ...prev, x: prev.x + (touch.clientX - lastMousePos.x), y: prev.y + (touch.clientY - lastMousePos.y) }));
+        setLastMousePos({ x: touch.clientX, y: touch.clientY });
+      }
+    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      const factor = dist / lastTouchDistRef.current;
+      if (factor > 0.5 && factor < 2.0) {
+        setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * factor, 5)) }));
+      }
+      lastTouchDistRef.current = dist;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setIsPanning(false);
+    if (draggedItem && onUpdate) onUpdate(seats, elements);
+    setDraggedItem(null);
+    lastTouchDistRef.current = null;
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     const { x, y } = getMouseCoords(e);
     if (e.button === 1 || e.button === 2) { setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY }); return; }
@@ -336,9 +444,21 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
   return (
     <div ref={containerRef} className={cn("w-full h-full relative overflow-hidden transition-colors duration-500", theme === 'dark' ? "bg-[#0b0d17]" : "bg-white", cursorClass)} onContextMenu={(e) => e.preventDefault()}>
-      <canvas ref={canvasRef} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onWheel={(e) => setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5)) }))} className="w-full h-full block outline-none" tabIndex={0} />
+      <canvas
+        ref={canvasRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onWheel={(e) => setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5)) }))}
+        className="w-full h-full block outline-none touch-none"
+        style={{ touchAction: 'none' }}
+        tabIndex={0}
+      />
       <div className="absolute bottom-6 left-6 flex gap-2">
-        <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50">Del: Borrar | Shift+Drag: Multi | Arrows: Precision</div>
+        <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50 hidden sm:block">Del: Borrar | Shift+Drag: Multi | Arrows: Precision</div>
       </div>
       <div className="absolute bottom-6 right-6 px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-[10px] font-black opacity-50 uppercase tracking-widest">Zoom: {Math.round(transform.scale * 100)}%</div>
     </div>

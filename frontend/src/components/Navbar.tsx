@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ThemeToggle from './ThemeToggle';
-import { LogOut, Shield, Layers } from 'lucide-react';
+import { LogOut, Shield, Layers, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /** Decodes a JWT payload client-side (no signature verification). */
 function decodeJwt(token: string): Record<string, any> | null {
@@ -19,6 +20,7 @@ const Navbar = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -46,6 +48,7 @@ const Navbar = () => {
       setIsAuthenticated(false);
       setIsAdmin(false);
     }
+    setIsMobileMenuOpen(false);
   }, [router.pathname]);
 
   const toggleTheme = () => {
@@ -85,6 +88,7 @@ const Navbar = () => {
           <h1 className="text-2xl font-extrabold tracking-tighter text-glow">MS AMBAR</h1>
         </Link>
 
+        {/* Desktop Menu */}
         <div className="hidden md:flex gap-6 items-center">
           {navLinks.map((link) => (
             <Link
@@ -149,7 +153,89 @@ const Navbar = () => {
           <div className="h-6 w-px bg-white/10 mx-1" />
           <ThemeToggle theme={theme} toggle={toggleTheme} />
         </div>
+
+        {/* Mobile controls */}
+        <div className="flex md:hidden items-center gap-4">
+          <ThemeToggle theme={theme} toggle={toggleTheme} />
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="text-white hover:text-amber-honey p-1 transition-colors outline-none"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Drawer */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+            className="amber-glass mt-2 p-6 rounded-[2rem] flex flex-col gap-4 md:hidden border border-white/5 shadow-2xl"
+          >
+            <div className="flex flex-col gap-3">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className={`text-[11px] uppercase font-bold tracking-[0.25em] transition-all hover:text-amber-honey py-2 border-b border-white/[0.03] ${
+                    router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              ))}
+            </div>
+
+            {/* Authentication state in mobile menu */}
+            {isAuthenticated ? (
+              <div className="flex flex-col gap-3 pt-3 border-t border-white/10">
+                {isAdmin && (
+                  <div className="flex gap-3">
+                    <Link
+                      href="/designer"
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
+                        router.pathname === '/designer'
+                          ? 'bg-amber-honey text-nature-night border-amber-honey'
+                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      }`}
+                    >
+                      <Layers size={12} /> Studio
+                    </Link>
+                    <Link
+                      href="/dashboard"
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
+                        router.pathname.startsWith('/dashboard')
+                          ? 'bg-amber-honey text-nature-night border-amber-honey'
+                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      }`}
+                    >
+                      <Shield size={12} /> Admin
+                    </Link>
+                  </div>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="text-[10px] uppercase font-black tracking-widest text-red-400 hover:text-red-300 transition-colors flex items-center justify-center gap-1.5 py-3 bg-red-500/10 border border-red-500/20 rounded-2xl w-full"
+                >
+                  <LogOut size={14} /> Salir
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="text-[10px] uppercase font-black tracking-widest text-amber-honey hover:text-white text-center transition-all bg-white/5 border border-white/10 py-3 rounded-2xl hover:bg-white/10 mt-2"
+              >
+                Login
+              </Link>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 };
