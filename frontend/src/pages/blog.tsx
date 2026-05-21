@@ -48,6 +48,21 @@ export default function BlogPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  interface Toast {
+    id: number;
+    message: string;
+    type: 'success' | 'error';
+  }
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 6000);
+  };
   
   // Auth states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -87,9 +102,11 @@ export default function BlogPage() {
       setNewsletterSuccess(true);
       setNewsletterEmail('');
       setTimeout(() => setNewsletterSuccess(false), 5000);
+      showToast('Te has suscrito con éxito al círculo de MS AMBAR.', 'success');
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.email?.[0] || 'Error al suscribirse. Inténtalo de nuevo.');
+      const msg = err.response?.data?.email?.[0] || 'Error al suscribirse. Inténtalo de nuevo.';
+      showToast(msg, 'error');
     } finally {
       setNewsletterSubmitting(false);
     }
@@ -136,13 +153,13 @@ export default function BlogPage() {
       if (emailToUnsubscribe) {
         axios.post(`${API_URL}/blog/subscribers/unsubscribe/`, { email: emailToUnsubscribe })
           .then(() => {
-            alert('Te has desuscrito con éxito del newsletter de MS AMBAR.');
+            showToast('Te has desuscrito con éxito del newsletter de MS AMBAR.', 'success');
             // Clean url params
             window.history.replaceState({}, document.title, window.location.pathname);
           })
           .catch((err) => {
             console.error('Error desuscribiendo:', err);
-            alert('Hubo un problema al procesar tu desuscripción. El correo podría no estar registrado o ya fue removido.');
+            showToast('Hubo un problema al procesar tu desuscripción. El correo podría no estar registrado o ya fue removido.', 'error');
             window.history.replaceState({}, document.title, window.location.pathname);
           });
       }
@@ -239,13 +256,13 @@ export default function BlogPage() {
   // Save Post (Create or Update)
   const handleSavePost = async () => {
     if (!editorTitle.trim()) {
-      alert('Por favor, ingresa un título.');
+      showToast('Por favor, ingresa un título.', 'error');
       return;
     }
     
     const editorContent = editorRef.current?.innerHTML || '';
     if (!editorContent.trim() || editorContent === '<br>') {
-      alert('Por favor, redacta el contenido del post.');
+      showToast('Por favor, redacta el contenido del post.', 'error');
       return;
     }
 
@@ -280,9 +297,10 @@ export default function BlogPage() {
 
       setIsEditorOpen(false);
       fetchData();
+      showToast('Crónica guardada y sintonizada correctamente.', 'success');
     } catch (err) {
       console.error('Failed to save post:', err);
-      alert('Error al guardar la entrada del blog.');
+      showToast('Error al guardar la entrada del blog.', 'error');
     } finally {
       setEditorSaving(false);
     }
@@ -1086,6 +1104,41 @@ export default function BlogPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Toast Notifications Container */}
+      <div className="fixed bottom-6 right-6 z-[300] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              className={`pointer-events-auto p-4 rounded-2xl border flex items-start gap-3 shadow-2xl backdrop-blur-xl ${
+                toast.type === 'success'
+                  ? 'bg-amber-950/40 border-amber-honey/40 text-amber-100'
+                  : 'bg-red-950/40 border-red-500/30 text-red-100'
+              } amber-glass`}
+            >
+              <div className={`p-1.5 rounded-lg ${toast.type === 'success' ? 'bg-amber-honey/20 text-amber-honey animate-pulse' : 'bg-red-500/20 text-red-400'}`}>
+                {toast.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
+              </div>
+              <div className="flex-1 space-y-1">
+                <h4 className="text-[10px] font-black uppercase tracking-widest">
+                  {toast.type === 'success' ? 'SINTONIZACIÓN' : 'FRECUENCIA INCOMPATIBLE'}
+                </h4>
+                <p className="text-[11px] font-medium leading-relaxed opacity-90">{toast.message}</p>
+              </div>
+              <button
+                onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
+                className="text-white/30 hover:text-white transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
     </div>
   );

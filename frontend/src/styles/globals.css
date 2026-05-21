@@ -80,3 +80,42 @@ body.hide-navbar nav {
   pointer-events: none;
   transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* 3D Tarot Card Flip CSS */
+.tarot-perspective {
+  perspective: 1200px;
+}
+.tarot-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.tarot-card-flipped {
+  transform: rotateY(180deg);
+}
+.tarot-card-front, .tarot-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 2rem;
+  overflow: hidden;
+}
+.tarot-card-front {
+  transform: rotateY(180deg);
+}
+.tarot-glow-effect {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.15;
+  pointer-events: none;
+}
+

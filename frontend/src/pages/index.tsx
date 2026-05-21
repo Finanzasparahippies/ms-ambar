@@ -11,8 +11,14 @@ import axios from 'axios';
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // ─── PARTICLE BACKGROUND COMPONENT ───
-const CanvasParticles = () => {
+// ─── PARTICLE BACKGROUND COMPONENT (WITH MORPHING) ───
+const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const morphTargetRef = useRef(morphTarget);
+
+  useEffect(() => {
+    morphTargetRef.current = morphTarget;
+  }, [morphTarget]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -44,6 +50,139 @@ const CanvasParticles = () => {
       });
     }
 
+    let shapes: Record<string, Array<{ x: number; y: number }>> = {};
+
+    const calculateShapes = () => {
+      shapes = {
+        circle: [],
+        moon: [],
+        cactus: [],
+        star: [],
+        infinity: [],
+        hexagon: []
+      };
+
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = Math.min(width, height) * 0.22;
+
+      // 1. Circle (Sol)
+      for (let i = 0; i < numParticles; i++) {
+        const angle = (i / numParticles) * Math.PI * 2;
+        shapes.circle.push({
+          x: cx + Math.cos(angle) * radius,
+          y: cy + Math.sin(angle) * radius
+        });
+      }
+
+      // 2. Moon (Sacerdotisa)
+      for (let i = 0; i < numParticles; i++) {
+        const angle = -Math.PI / 2 + (i / numParticles) * Math.PI;
+        if (i < numParticles * 0.6) {
+          shapes.moon.push({
+            x: cx + Math.cos(angle) * radius,
+            y: cy + Math.sin(angle) * radius
+          });
+        } else {
+          const pct = (i - numParticles * 0.6) / (numParticles * 0.4);
+          const innerAngle = -Math.PI / 2 + pct * Math.PI;
+          shapes.moon.push({
+            x: cx + Math.cos(innerAngle) * (radius * 0.75) + (radius * 0.25),
+            y: cy + Math.sin(innerAngle) * (radius * 0.75)
+          });
+        }
+      }
+
+      // 3. Cactus (Ermitaño)
+      const trunkH = Math.min(width, height) * 0.28;
+      const numTrunk = 35;
+      for (let i = 0; i < numTrunk; i++) {
+        const pct = i / (numTrunk - 1);
+        shapes.cactus.push({
+          x: cx,
+          y: cy + trunkH * 0.5 - pct * trunkH
+        });
+      }
+      const numLeft = 20;
+      for (let i = 0; i < numLeft; i++) {
+        const pct = i / (numLeft - 1);
+        let ax = cx;
+        let ay = cy + trunkH * 0.1;
+        if (pct < 0.4) {
+          ax = cx - (pct / 0.4) * (trunkH * 0.3);
+        } else {
+          ax = cx - trunkH * 0.3;
+          ay = cy + trunkH * 0.1 - ((pct - 0.4) / 0.6) * (trunkH * 0.45);
+        }
+        shapes.cactus.push({ x: ax, y: ay });
+      }
+      const numRight = 20;
+      for (let i = 0; i < numRight; i++) {
+        const pct = i / (numRight - 1);
+        let ax = cx;
+        let ay = cy - trunkH * 0.1;
+        if (pct < 0.4) {
+          ax = cx + (pct / 0.4) * (trunkH * 0.3);
+        } else {
+          ax = cx + trunkH * 0.3;
+          ay = cy - trunkH * 0.1 - ((pct - 0.4) / 0.6) * (trunkH * 0.5);
+        }
+        shapes.cactus.push({ x: ax, y: ay });
+      }
+
+      // 4. Star (Estrella)
+      const ptsStar: Array<{ x: number; y: number }> = [];
+      for (let k = 0; k < 10; k++) {
+        const angle = (k * Math.PI) / 5 - Math.PI / 2;
+        const r = k % 2 === 0 ? radius * 1.15 : radius * 0.45;
+        ptsStar.push({
+          x: cx + Math.cos(angle) * r,
+          y: cy + Math.sin(angle) * r
+        });
+      }
+      for (let i = 0; i < numParticles; i++) {
+        const seg = Math.floor((i / numParticles) * 10) % 10;
+        const nextSeg = (seg + 1) % 10;
+        const pct = ((i / numParticles) * 10) % 1;
+        shapes.star.push({
+          x: ptsStar[seg].x + (ptsStar[nextSeg].x - ptsStar[seg].x) * pct,
+          y: ptsStar[seg].y + (ptsStar[nextSeg].y - ptsStar[seg].y) * pct
+        });
+      }
+
+      // 5. Infinity (Rueda)
+      const infRadius = radius * 1.35;
+      for (let i = 0; i < numParticles; i++) {
+        const t = (i / numParticles) * Math.PI * 2;
+        const denom = 1 + Math.sin(t) * Math.sin(t);
+        shapes.infinity.push({
+          x: cx + (infRadius * Math.cos(t)) / denom,
+          y: cy + (infRadius * Math.sin(t) * Math.cos(t)) / denom
+        });
+      }
+
+      // 6. Hexagon (Colmena / Panal)
+      const ptsHex: Array<{ x: number; y: number }> = [];
+      for (let k = 0; k < 6; k++) {
+        const angle = (k * Math.PI) / 3;
+        ptsHex.push({
+          x: cx + Math.cos(angle) * radius,
+          y: cy + Math.sin(angle) * radius
+        });
+      }
+      for (let i = 0; i < numParticles; i++) {
+        const side = Math.floor((i / numParticles) * 6) % 6;
+        const nextSide = (side + 1) % 6;
+        const pct = ((i / numParticles) * 6) % 1;
+        shapes.hexagon.push({
+          x: ptsHex[side].x + (ptsHex[nextSide].x - ptsHex[side].x) * pct,
+          y: ptsHex[side].y + (ptsHex[nextSide].y - ptsHex[side].y) * pct
+        });
+      }
+    };
+
+    calculateShapes();
+
     const mouse = { x: -1000, y: -1000, active: false };
 
     const handleMouseMove = (e: MouseEvent) => {
@@ -73,35 +212,48 @@ const CanvasParticles = () => {
       if (!canvas) return;
       width = canvas.width = canvas.offsetWidth;
       height = canvas.height = canvas.offsetHeight;
+      calculateShapes();
     };
     window.addEventListener('resize', handleResize);
 
     const draw = () => {
       ctx.clearRect(0, 0, width, height);
 
+      const targetMode = morphTargetRef.current;
+      const targetShape = targetMode && targetMode !== 'none' ? shapes[targetMode] : null;
+
       // Draw lines & particles
       for (let i = 0; i < particles.length; i++) {
         const p1 = particles[i];
 
-        p1.x += p1.vx;
-        p1.y += p1.vy;
+        if (targetShape && targetShape[i]) {
+          const target = targetShape[i];
+          // Easing transition towards the target coordinates
+          // If it's a beehive, add a slight jitter for organic buzzing
+          const jitter = targetMode === 'hexagon' ? (Math.random() - 0.5) * 1.5 : 0;
+          p1.x += (target.x + jitter - p1.x) * 0.08;
+          p1.y += (target.y + jitter - p1.y) * 0.08;
+        } else {
+          p1.x += p1.vx;
+          p1.y += p1.vy;
 
-        if (p1.x < 0 || p1.x > width) p1.vx *= -1;
-        if (p1.y < 0 || p1.y > height) p1.vy *= -1;
+          if (p1.x < 0 || p1.x > width) p1.vx *= -1;
+          if (p1.y < 0 || p1.y > height) p1.vy *= -1;
 
-        if (mouse.active) {
-          const dx = mouse.x - p1.x;
-          const dy = mouse.y - p1.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 180) {
-            p1.x += (dx / dist) * 0.35;
-            p1.y += (dy / dist) * 0.35;
+          if (mouse.active) {
+            const dx = mouse.x - p1.x;
+            const dy = mouse.y - p1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 180) {
+              p1.x += (dx / dist) * 0.35;
+              p1.y += (dy / dist) * 0.35;
+            }
           }
         }
 
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, p1.size, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 191, 0, 0.45)'; // Amber
+        ctx.fillStyle = targetShape ? 'rgba(255, 191, 0, 0.75)' : 'rgba(255, 191, 0, 0.45)'; // Amber
         ctx.fill();
 
         for (let j = i + 1; j < particles.length; j++) {
@@ -114,9 +266,11 @@ const CanvasParticles = () => {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
-            const alpha = (1 - dist / 120) * 0.15;
+            // Highlight connections if morphing is active
+            const baseAlpha = targetShape ? 0.35 : 0.15;
+            const alpha = (1 - dist / 120) * baseAlpha;
             ctx.strokeStyle = `rgba(255, 191, 0, ${alpha})`;
-            ctx.lineWidth = 0.7;
+            ctx.lineWidth = targetShape ? 1.1 : 0.7;
             ctx.stroke();
           }
         }
@@ -139,7 +293,79 @@ const CanvasParticles = () => {
   }, []);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none" />;
-};
+};interface TarotCard {
+  id: string;
+  name: string;
+  vibe: string;
+  song: string;
+  description: string;
+  morphTarget: 'circle' | 'moon' | 'cactus' | 'star' | 'infinity' | 'hexagon';
+  color: string;
+  icon: string;
+}
+
+const TAROT_CARDS: TarotCard[] = [
+  {
+    id: 'sol',
+    name: 'El Sol de Sonora',
+    vibe: 'Fuerza, Vitalidad y Calor del Desierto',
+    song: 'Desierto de Cristal',
+    description: 'La energía radiante del desierto que impulsa la creación y disipa las sombras. Te invita a brillar con luz propia.',
+    morphTarget: 'circle',
+    color: '#FFBF00', // Amber honey
+    icon: '☀️'
+  },
+  {
+    id: 'sacerdotisa',
+    name: 'La Sacerdotisa del Saguaro',
+    vibe: 'Intuición, Silencio y Misterio Nocturno',
+    song: 'Eclipse',
+    description: 'El saber oculto bajo el manto de la noche sonorense. Escucha los susurros del viento y confía en tu sabiduría interior.',
+    morphTarget: 'moon',
+    color: '#22A6B3', // Nature sky
+    icon: '🌙'
+  },
+  {
+    id: 'ermitano',
+    name: 'El Ermitaño de los Cerros',
+    vibe: 'Introspección y la Nostalgia del Blues',
+    song: 'Ámbar Vision',
+    description: 'La búsqueda de la verdad en la soledad de la sierra. El blues profundo te enseña a encontrar la luz en tu propio camino.',
+    morphTarget: 'cactus',
+    color: '#8B4513', // Nature earth/brown
+    icon: '🌵'
+  },
+  {
+    id: 'estrella',
+    name: 'La Estrella Cósmica',
+    vibe: 'Esperanza, Guía y Conexión Universal',
+    song: 'Camino Estelar',
+    description: 'La alineación de tu ser con las vibras del cosmos. Un recordatorio de que somos polvo de estrellas fluyendo en armonía.',
+    morphTarget: 'star',
+    color: '#F5F6FA', // White star
+    icon: '⭐'
+  },
+  {
+    id: 'rueda',
+    name: 'La Rueda de la Arena',
+    vibe: 'Ciclos de la Vida y Ritmos Ancestrales',
+    song: 'Ritmos Ancestrales',
+    description: 'El movimiento eterno del viento que redefine las dunas. Acepta el cambio y fluye con el compás de los ciclos del universo.',
+    morphTarget: 'infinity',
+    color: '#9F2B00', // Amber cognac
+    icon: '♾️'
+  },
+  {
+    id: 'colmena',
+    name: 'La Colmena Sagrada',
+    vibe: 'Colectividad, Dulzura y Polinización Terrestre',
+    song: 'Tierra Viva',
+    description: 'La magia de la colmena trabajando en armonía. Representa la labor de rescate de abejas con Tierra Viva, sanando la Madre Tierra.',
+    morphTarget: 'hexagon',
+    color: '#F4D03F', // Amber butterscotch
+    icon: '🐝'
+  }
+];
 
 const Home = () => {
   const [isMounted, setIsMounted] = useState(false);
@@ -159,6 +385,12 @@ const Home = () => {
   // Decibel fluctuating HUD state
   const [hudDecibels, setHudDecibels] = useState(-12.4);
 
+  // Tarot and Constellation states
+  const [morphTarget, setMorphTarget] = useState<string>('none');
+  const [drawnCards, setDrawnCards] = useState<Record<number, TarotCard | null>>({ 0: null, 1: null, 2: null });
+  const [flippedSlots, setFlippedSlots] = useState<Record<number, boolean>>({ 0: false, 1: false, 2: false });
+  const [isShuffling, setIsShuffling] = useState(false);
+
   // Refs for Web Audio API
   const audioCtxRef = useRef<AudioContext | null>(null);
   const oscillatorRef = useRef<OscillatorNode | null>(null);
@@ -169,6 +401,148 @@ const Home = () => {
   const acousticSliderRef = useRef<HTMLInputElement>(null);
   const lightSliderRef = useRef<HTMLInputElement>(null);
 
+  // Ref to track morphing constellation timeout
+  const morphTimeoutRef = useRef<any>(null);
+
+  const playTarotChord = (cardId: string) => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContextClass();
+      
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0, ctx.currentTime);
+      masterGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.1);
+      masterGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 2.5);
+      masterGain.connect(ctx.destination);
+
+      let freqs: number[] = [];
+      let waveType: OscillatorType = 'sine';
+      let useTremolo = false;
+
+      if (cardId === 'sol') {
+        freqs = [261.63, 329.63, 392.00, 493.88];
+        waveType = 'triangle';
+      } else if (cardId === 'sacerdotisa') {
+        freqs = [220.00, 261.63, 329.63, 392.00, 493.88];
+        waveType = 'sine';
+      } else if (cardId === 'ermitano') {
+        freqs = [164.81, 207.65, 293.66, 392.00];
+        waveType = 'triangle';
+      } else if (cardId === 'estrella') {
+        freqs = [523.25, 659.25, 783.99, 987.77, 1046.50];
+        waveType = 'sine';
+      } else if (cardId === 'rueda') {
+        freqs = [130.81, 196.00, 261.63];
+        waveType = 'sawtooth';
+      } else if (cardId === 'colmena') {
+        freqs = [220.00, 330.00, 440.00];
+        waveType = 'triangle';
+        useTremolo = true;
+      }
+
+      const oscs = freqs.map((freq, index) => {
+        const osc = ctx.createOscillator();
+        osc.type = waveType;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+        if (cardId === 'rueda') {
+          osc.frequency.exponentialRampToValueAtTime(freq * 3, ctx.currentTime + 1.8);
+        }
+
+        if (cardId === 'estrella') {
+          const noteGain = ctx.createGain();
+          noteGain.gain.setValueAtTime(0, ctx.currentTime);
+          noteGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + index * 0.15 + 0.05);
+          noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + index * 0.15 + 1.2);
+          
+          osc.connect(noteGain);
+          noteGain.connect(masterGain);
+          
+          osc.start(ctx.currentTime + index * 0.15);
+          osc.stop(ctx.currentTime + 2.5);
+          return osc;
+        }
+
+        if (useTremolo) {
+          const lfo = ctx.createOscillator();
+          lfo.frequency.value = 14;
+          const lfoGain = ctx.createGain();
+          lfoGain.gain.value = 0.45;
+
+          const tremoloGain = ctx.createGain();
+          tremoloGain.gain.value = 0.55;
+
+          lfo.connect(lfoGain);
+          lfoGain.connect(tremoloGain.gain);
+
+          osc.connect(tremoloGain);
+          tremoloGain.connect(masterGain);
+          
+          lfo.start();
+          osc.start();
+          
+          lfo.stop(ctx.currentTime + 2.5);
+          osc.stop(ctx.currentTime + 2.5);
+        } else {
+          osc.connect(masterGain);
+          osc.start();
+          osc.stop(ctx.currentTime + 2.5);
+        }
+        return osc;
+      });
+
+      setTimeout(() => {
+        try {
+          ctx.close();
+        } catch (e) {}
+      }, 2800);
+      
+    } catch (err) {
+      console.error('Local AudioContext chord play failed:', err);
+    }
+  };
+
+  const drawTarotCard = (slotIndex: number) => {
+    if (flippedSlots[slotIndex] || isShuffling) return;
+
+    // Get list of currently drawn card ids
+    const drawnIds = Object.values(drawnCards)
+      .filter((c): c is TarotCard => c !== null)
+      .map(c => c.id);
+
+    // Filter available cards
+    const availableCards = TAROT_CARDS.filter(c => !drawnIds.includes(c.id));
+    if (availableCards.length === 0) return;
+
+    const randomCard = availableCards[Math.floor(Math.random() * availableCards.length)];
+
+    setDrawnCards(prev => ({ ...prev, [slotIndex]: randomCard }));
+    setFlippedSlots(prev => ({ ...prev, [slotIndex]: true }));
+    setMorphTarget(randomCard.morphTarget);
+    playTarotChord(randomCard.id);
+
+    // Reset morph target back to 'none' after 4 seconds
+    if (morphTimeoutRef.current) {
+      clearTimeout(morphTimeoutRef.current);
+    }
+    morphTimeoutRef.current = setTimeout(() => {
+      setMorphTarget('none');
+    }, 4000);
+  };
+
+  const resetTarot = () => {
+    setIsShuffling(true);
+    setMorphTarget('none');
+    if (morphTimeoutRef.current) {
+      clearTimeout(morphTimeoutRef.current);
+    }
+    
+    setTimeout(() => {
+      setFlippedSlots({ 0: false, 1: false, 2: false });
+      setDrawnCards({ 0: null, 1: null, 2: null });
+      setIsShuffling(false);
+    }, 600);
+  };
   useEffect(() => {
     setIsMounted(true);
     
@@ -281,6 +655,9 @@ const Home = () => {
           oscillatorRef.current?.stop();
           audioCtxRef.current.close();
         } catch (e) {}
+      }
+      if (morphTimeoutRef.current) {
+        clearTimeout(morphTimeoutRef.current);
       }
     };
   }, []);
@@ -441,7 +818,7 @@ const Home = () => {
       {/* ─── HERO SECTION (NECTAR LABS STYLE) ─── */}
       <section className="relative min-h-[95vh] flex flex-col justify-center items-center px-6 overflow-hidden">
         {/* Interactive canvas background */}
-        <CanvasParticles />
+        <CanvasParticles morphTarget={morphTarget} />
 
         {/* Glow Spheres */}
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-amber-honey/10 rounded-full blur-[140px] pointer-events-none animate-pulse" />
@@ -474,9 +851,9 @@ const Home = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-white/60 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
+            className="text-white/60 text-xs md:text-sm uppercase tracking-[0.2em] max-w-3xl mx-auto leading-relaxed"
           >
-            La fusión vanguardista de arte lumínico, diseño acústico premium y expresión escénica digital.
+            La alquimia sonora del desierto de Sonora. Frecuencias cósmicas, blues hipnótico, líricas del cosmos y activismo terrestre junto a Tierra Viva.
           </motion.p>
 
           <motion.div
@@ -516,20 +893,20 @@ const Home = () => {
             {[
               {
                 icon: <Volume2 className="text-amber-honey" size={24} />,
-                title: "Diseño Acústico Premium",
-                desc: "Sistemas de audio multicanal afinados para proyectar sonido tridimensional de alta resolución en cualquier espacio.",
+                title: "Blues & Hip-Hop del Desierto",
+                desc: "La crudeza acústica del blues del desierto fusionada con beatmaking y líricas hip-hop de la calle y el cosmos.",
                 key: "acoustic" as const
               },
               {
                 icon: <Sliders className="text-amber-honey" size={24} />,
-                title: "Arte Lumínico Reactivo",
-                desc: "Arreglos de luces analógicas y digitales programadas para sincronizarse en tiempo real con las frecuencias armónicas de la música.",
+                title: "Alineación Cósmica",
+                desc: "Sintonía visual donde las constelaciones se entrelazan con la música, proyectando frecuencias estelares reactivas a la audiencia.",
                 key: "light" as const
               },
               {
                 icon: <Layers className="text-amber-honey" size={24} />,
-                title: "Escenografía Modular",
-                desc: "Estructuras traslúcidas de LED que crean profundidad espacial y proyecciones holográficas vanguardistas.",
+                title: "Altar Terrestre y Polinización",
+                desc: "Activismo vivo para rescatar abejas con Tierra Viva, integrado en escenografías construidas con materiales orgánicos y geometría hexagonal.",
                 key: "led" as const
               }
             ].map((concept, i) => (
@@ -551,6 +928,176 @@ const Home = () => {
                 </div>
               </button>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── TAROT VIBE READER SECTION (NECTAR LABS STYLE) ─── */}
+      <section className="py-32 relative border-t border-white/5 bg-black/5 overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-honey/5 rounded-full blur-[160px] pointer-events-none" />
+        <div className="absolute top-10 left-10 text-[8px] font-mono text-white/20 uppercase tracking-[0.2em]">
+          SYSTEM: TAROT ALIGNMENT READER v3.02
+        </div>
+
+        <div className="max-w-[1600px] mx-auto px-6 md:px-10 relative z-10">
+          <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Sintonización Diaria</span>
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight">LECTOR DE ARCANOS DEL DESIERTO</h2>
+            <p className="text-white/40 text-xs md:text-sm">
+              MS Ámbar entrelaza el misticismo del tarot con las frecuencias de la tierra y el cosmos. Selecciona tres cartas para revelar tu alineación sensorial y activar las constelaciones en el firmamento.
+            </p>
+          </div>
+
+          {/* Cards Table */}
+          <div className="flex flex-col items-center justify-center gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl justify-items-center">
+              {[0, 1, 2].map((slotIndex) => {
+                const card = drawnCards[slotIndex];
+                const isFlipped = flippedSlots[slotIndex];
+                
+                return (
+                  <div
+                    key={slotIndex}
+                    onClick={() => drawTarotCard(slotIndex)}
+                    className="tarot-perspective w-[260px] h-[390px] cursor-pointer group"
+                  >
+                    <motion.div
+                      animate={isShuffling ? {
+                        x: [0, -15, 15, -10, 10, 0],
+                        y: [0, 5, -5, 3, -3, 0],
+                        rotate: [0, -2, 2, -1, 1, 0]
+                      } : {}}
+                      transition={{ duration: 0.6 }}
+                      className={`tarot-card-inner h-full w-full ${isFlipped ? 'tarot-card-flipped' : ''}`}
+                    >
+                      {/* Back Side */}
+                      <div className="tarot-card-back bg-[#08090f] border border-amber-honey/20 flex flex-col items-center justify-center p-6 shadow-2xl hover:border-amber-honey/50 transition-colors">
+                        {/* Golden Mystical SVG */}
+                        <svg className="absolute inset-0 w-full h-full p-2 pointer-events-none opacity-85" viewBox="0 0 240 370" fill="none">
+                          {/* Card Borders */}
+                          <rect x="6" y="6" width="228" height="358" rx="24" stroke="#FFBF00" strokeWidth="1.5" strokeDasharray="3 3" />
+                          <rect x="12" y="12" width="216" height="346" rx="18" stroke="#FFBF00" strokeWidth="0.75" />
+                          
+                          {/* Corner Decorators */}
+                          <path d="M12 28 L28 12 M228 28 L212 12 M12 342 L28 358 M228 342 L212 358" stroke="#FFBF00" strokeWidth="1" />
+                          <circle cx="28" cy="28" r="2" fill="#FFBF00" />
+                          <circle cx="212" cy="28" r="2" fill="#FFBF00" />
+                          <circle cx="28" cy="342" r="2" fill="#FFBF00" />
+                          <circle cx="212" cy="342" r="2" fill="#FFBF00" />
+
+                          {/* Center Hexagonal Hive Geometry */}
+                          <path d="M120 135 L150 152 L150 188 L120 205 L90 188 L90 152 Z" stroke="#FFBF00" strokeWidth="1" strokeOpacity="0.5" />
+                          <path d="M120 142 L143 155 L143 182 L120 195 L97 182 L97 155 Z" stroke="#FFBF00" strokeWidth="0.75" strokeOpacity="0.3" />
+                          
+                          {/* Double-layered hexagon grids around center */}
+                          <path d="M150 152 L180 135 L180 99 L150 82 L120 99 L120 135" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
+                          <path d="M90 152 L60 135 L60 99 L90 82 L120 99 L120 135" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
+                          <path d="M150 188 L180 205 L180 241 L150 258 L120 241 L120 188" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
+                          <path d="M90 188 L60 205 L60 241 L90 258 L120 241 L120 188" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
+                          
+                          {/* Saguaro Cactus Silhouette in Center */}
+                          <path d="M120 215 L120 148 M120 185 Q135 185 135 170 L135 158 M120 195 Q105 195 105 180 L105 168" stroke="#FFBF00" strokeWidth="1.5" className="filter drop-shadow-[0_0_4px_rgba(255,191,0,0.6)]" />
+                          
+                          {/* Stars and Constellation dots */}
+                          <circle cx="120" cy="50" r="1.5" fill="#FFBF00" />
+                          <circle cx="65" cy="65" r="1.5" fill="#FFBF00" />
+                          <circle cx="175" cy="65" r="1.5" fill="#FFBF00" />
+                          <circle cx="50" cy="300" r="1.5" fill="#FFBF00" />
+                          <circle cx="190" cy="300" r="1.5" fill="#FFBF00" />
+                          <circle cx="120" cy="320" r="2.5" fill="#FFBF00" className="animate-ping" style={{ animationDuration: '3s' }} />
+                          <circle cx="120" cy="320" r="1.5" fill="#FFBF00" />
+
+                          {/* Linking lines */}
+                          <line x1="120" y1="50" x2="65" y2="65" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.2" />
+                          <line x1="120" y1="50" x2="175" y2="65" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.2" />
+                          <line x1="65" y1="65" x2="60" y2="99" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.15" />
+                          <line x1="175" y1="65" x2="180" y2="99" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.15" />
+                        </svg>
+
+                        {/* Mysterious Back Art */}
+                        <div className="z-10 text-center space-y-4 select-none">
+                          <div className="w-16 h-16 rounded-full border border-amber-honey/20 bg-amber-honey/5 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-500 group-hover:border-amber-honey/40">
+                            <Sparkles className="text-amber-honey/60 group-hover:text-amber-honey transition-colors" size={24} />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey/60 group-hover:text-amber-honey transition-colors">Revelar</h4>
+                            <p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">Arcano {slotIndex + 1}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Front Side */}
+                      <div className="tarot-card-front bg-gradient-to-b from-[#0b0d17] to-[#040509] border border-amber-honey/30 p-6 flex flex-col justify-between shadow-2xl relative overflow-hidden">
+                        {/* Glow effect matching card color */}
+                        <div
+                          className="absolute w-[150px] h-[150px] rounded-full blur-[60px] opacity-25 pointer-events-none -top-10 -right-10"
+                          style={{ backgroundColor: card?.color || '#FFBF00' }}
+                        />
+                        
+                        <div className="space-y-4 z-10">
+                          {/* Card Header */}
+                          <div className="flex justify-between items-center border-b border-white/5 pb-3">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-amber-honey/80">Arcano Revelado</span>
+                            <span className="text-sm filter drop-shadow-[0_0_4px_rgba(255,191,0,0.6)]">{card?.icon}</span>
+                          </div>
+
+                          {/* Card Illustration */}
+                          <div className="h-32 w-full rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col items-center justify-center relative overflow-hidden my-2 group-hover:bg-white/[0.04] transition-colors">
+                            {/* Mystical geometric aura in card illustration */}
+                            <div className="absolute w-24 h-24 rounded-full border border-white/5 animate-spin" style={{ animationDuration: '20s' }} />
+                            <div className="absolute w-20 h-20 rounded-full border border-amber-honey/10 animate-spin" style={{ animationDuration: '15s', animationDirection: 'reverse' }} />
+                            <span className="text-4xl filter drop-shadow-[0_0_12px_rgba(255,191,0,0.5)] z-10 transition-transform duration-500 group-hover:scale-110">
+                              {card?.icon}
+                            </span>
+                          </div>
+
+                          {/* Title & Vibe */}
+                          <div className="space-y-1.5 text-center">
+                            <h3 className="text-sm font-black uppercase tracking-wider text-white group-hover:text-amber-honey transition-colors">
+                              {card?.name}
+                            </h3>
+                            <p className="text-[9px] font-bold uppercase tracking-wider text-amber-honey/80 font-mono leading-none">
+                              {card?.vibe}
+                            </p>
+                          </div>
+
+                          {/* Description */}
+                          <p className="text-[10px] text-white/50 leading-relaxed text-center italic px-1 line-clamp-3">
+                            "{card?.description}"
+                          </p>
+                        </div>
+
+                        {/* Song reference & button */}
+                        <div className="z-10 pt-4 border-t border-white/5 flex flex-col items-center gap-2">
+                          <div className="flex items-center gap-1.5 bg-amber-honey/10 border border-amber-honey/20 px-3 py-1.5 rounded-full w-full justify-center">
+                            <Volume2 size={10} className="text-amber-honey animate-pulse" />
+                            <span className="text-[8px] font-bold uppercase tracking-wider text-amber-honey">
+                              {card?.song}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Reset / Shuffle Button */}
+            <div className="flex flex-col items-center gap-3">
+              <button
+                onClick={resetTarot}
+                disabled={isShuffling}
+                className="px-8 py-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.25em] bg-white/[0.02] border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all text-white/80 hover:text-white flex items-center gap-2 disabled:opacity-40"
+              >
+                <Sparkles size={12} className={isShuffling ? 'animate-spin' : ''} />
+                {isShuffling ? 'Mezclando...' : 'Mezclar & Reiniciar'}
+              </button>
+              <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">
+                Cada carta activa una constelación y resuena en un acorde analógico
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -647,9 +1194,9 @@ const Home = () => {
                 <label className="text-[10px] uppercase font-bold tracking-widest text-white/60 block">Escenografía Virtual (LED)</label>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { id: 'sine', label: 'Ondas Sine' },
-                    { id: 'matrix', label: 'Matriz LED' },
-                    { id: 'orbital', label: 'Órbitas' }
+                    { id: 'sine', label: 'Vientos del Desierto' },
+                    { id: 'matrix', label: 'Cúmulos Estelares' },
+                    { id: 'orbital', label: 'Alineación de Arcanos' }
                   ].map(p => (
                     <button
                       key={p.id}
@@ -677,25 +1224,25 @@ const Home = () => {
 
                 {/* Cyber HUD Overlay */}
                 <div className="absolute top-6 left-6 text-[8px] font-mono uppercase tracking-[0.2em] text-white/30 space-y-1">
-                  <div>SIM: SPECTRUM ANALYZER v1.02</div>
+                  <div>SIM: FRECUENCIAS DEL DESIERTO v1.02</div>
                   <div className="flex items-center gap-1.5 text-amber-honey">
-                    <Activity size={10} className="animate-pulse" /> WAVEFORM PREVIEW
+                    <Activity size={10} className="animate-pulse" /> MONITOREO VIBRACIONAL
                   </div>
                 </div>
                 
                 <div className="absolute top-6 right-6 text-[8px] font-mono text-white/30 text-right space-y-1">
-                  <div>FREQ: <span className="text-amber-honey font-bold">{acousticHz} Hz</span></div>
-                  <div>GAIN: <span className="text-white/60">{(lightLumen / 100 * 0.1).toFixed(3)}</span></div>
+                  <div>VIBE: <span className="text-amber-honey font-bold">{acousticHz} Hz</span></div>
+                  <div>BRILLO: <span className="text-white/60">{(lightLumen / 100 * 0.1).toFixed(3)}</span></div>
                 </div>
 
                 <div className="absolute bottom-6 left-6 text-[8px] font-mono text-white/30 space-y-1">
-                  <div>DB: <span className={`${hudDecibels > -10 ? 'text-amber-500' : 'text-amber-honey'} font-bold`}>{hudDecibels} dB</span></div>
-                  <div>PATTERN: <span className="text-white/60 uppercase">{ledPattern}</span></div>
+                  <div>PRESENCIA: <span className={`${hudDecibels > -10 ? 'text-amber-500' : 'text-amber-honey'} font-bold`}>{hudDecibels} dB</span></div>
+                  <div>ELEMENTO: <span className="text-white/60 uppercase">{ledPattern === 'sine' ? 'VIENTOS DEL DESIERTO' : ledPattern === 'matrix' ? 'CÚMULOS ESTELARES' : 'ALINEACIÓN DE ARCANOS'}</span></div>
                 </div>
 
                 <div className="absolute bottom-6 right-6 text-[8px] font-mono text-white/30 text-right space-y-1">
-                  <div>STATUS: <span className="text-green-400 font-bold">ONLINE</span></div>
-                  <div>SYNC: <span className="text-white/60">AUTOLOCK</span></div>
+                  <div>SINTONÍA: <span className="text-green-400 font-bold">ACTIVA</span></div>
+                  <div>FUSIÓN: <span className="text-white/60">SINCRONIZADA</span></div>
                 </div>
 
                 {/* SVG Visualizer Rendering */}
