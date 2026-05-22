@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Calendar, User, ArrowUpRight, Plus, Edit2, Trash2, Save, X, 
-  Bold, Italic, Underline, Heading2, Heading3, Quote, List, 
-  ListOrdered, Link2, Image as ImageIcon, Eye, Settings, Upload, 
+import {
+  Calendar, User, ArrowUpRight, Plus, Edit2, Trash2, Save, X,
+  Bold, Italic, Underline, Heading2, Heading3, Quote, List,
+  ListOrdered, Link2, Image as ImageIcon, Eye, Settings, Upload,
   FolderPlus, Globe, FileText, Check, ChevronRight, AlertCircle, Sparkles
 } from 'lucide-react';
 import axios from 'axios';
@@ -63,7 +63,7 @@ export default function BlogPage() {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 6000);
   };
-  
+
   // Auth states
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -73,14 +73,14 @@ export default function BlogPage() {
   // Editor states
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
-  
+
   const [editorTitle, setEditorTitle] = useState('');
   const [editorSlug, setEditorSlug] = useState('');
   const [editorCategory, setEditorCategory] = useState<string>('');
   const [editorImageFile, setEditorImageFile] = useState<File | null>(null);
   const [editorImagePreview, setEditorImagePreview] = useState<string | null>(null);
   const [editorIsPublished, setEditorIsPublished] = useState(true);
-  
+
   const [editorSaving, setEditorSaving] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [showNewCatInput, setShowNewCatInput] = useState(false);
@@ -102,7 +102,7 @@ export default function BlogPage() {
       setNewsletterSuccess(true);
       setNewsletterEmail('');
       setTimeout(() => setNewsletterSuccess(false), 5000);
-      showToast('Te has suscrito con éxito al círculo de MS AMBAR.', 'success');
+      showToast('Te has suscrito con éxito al Newsletter de MS AMBAR.', 'success');
     } catch (err: any) {
       console.error(err);
       const msg = err.response?.data?.email?.[0] || 'Error al suscribirse. Inténtalo de nuevo.';
@@ -118,12 +118,12 @@ export default function BlogPage() {
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
+
       const [postsRes, catsRes] = await Promise.all([
         axios.get(`${API_URL}/blog/posts/`, { headers }),
         axios.get(`${API_URL}/blog/categories/`, { headers }),
       ]);
-      
+
       setPosts(postsRes.data);
       setCategories(catsRes.data);
     } catch (err) {
@@ -242,7 +242,7 @@ export default function BlogPage() {
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      
+
       const res = await axios.post(`${API_URL}/blog/categories/`, { name: newCatName }, { headers });
       setCategories([...categories, res.data]);
       setEditorCategory(String(res.data.id));
@@ -259,7 +259,7 @@ export default function BlogPage() {
       showToast('Por favor, ingresa un título.', 'error');
       return;
     }
-    
+
     const editorContent = editorRef.current?.innerHTML || '';
     if (!editorContent.trim() || editorContent === '<br>') {
       showToast('Por favor, redacta el contenido del post.', 'error');
@@ -269,10 +269,10 @@ export default function BlogPage() {
     setEditorSaving(true);
     try {
       const token = localStorage.getItem('token');
-      const headers = token ? { 
+      const headers = token ? {
         Authorization: `Bearer ${token}`,
       } : {};
-      
+
       const formData = new FormData();
       formData.append('title', editorTitle);
       formData.append('slug', editorSlug);
@@ -309,7 +309,7 @@ export default function BlogPage() {
   // Delete Post
   const handleDeletePost = async (id: number) => {
     if (!confirm('¿Estás seguro de que deseas eliminar este post? Esta acción es irreversible.')) return;
-    
+
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
@@ -342,8 +342,8 @@ export default function BlogPage() {
     }
   };
 
-  const filteredPosts = selectedCategory === 'all' 
-    ? posts 
+  const filteredPosts = selectedCategory === 'all'
+    ? posts
     : posts.filter(p => p.category_name === selectedCategory || (p.category && String(p.category) === selectedCategory));
 
   return (
@@ -437,12 +437,12 @@ export default function BlogPage() {
       </Head>
 
       <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20 pt-32">
-        
+
         {/* Header section */}
         <header className="mb-20 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
           <div>
             <div className="flex items-center gap-4">
-              <motion.h1 
+              <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="text-7xl md:text-9xl font-black tracking-tighter"
@@ -467,30 +467,28 @@ export default function BlogPage() {
               Bitácora de Luz & Sonido
             </p>
           </div>
-          
+
           {/* Categories bar */}
           <div className="amber-glass px-8 py-4 rounded-2xl border border-white/5">
             <p className="text-[9px] font-black uppercase tracking-[0.4em] text-amber-honey mb-4">Filtrar Historias</p>
             <div className="flex flex-wrap gap-6 text-[10px] uppercase font-bold opacity-70">
-              <span 
+              <span
                 onClick={() => setSelectedCategory('all')}
-                className={`cursor-pointer transition-all ${
-                  selectedCategory === 'all' 
-                    ? 'text-amber-honey underline decoration-2 underline-offset-8' 
-                    : 'hover:text-amber-honey'
-                }`}
+                className={`cursor-pointer transition-all ${selectedCategory === 'all'
+                  ? 'text-amber-honey underline decoration-2 underline-offset-8'
+                  : 'hover:text-amber-honey'
+                  }`}
               >
                 Todos
               </span>
               {categories.map((cat) => (
-                <span 
+                <span
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.name)}
-                  className={`cursor-pointer transition-all ${
-                    selectedCategory === cat.name 
-                      ? 'text-amber-honey underline decoration-2 underline-offset-8' 
-                      : 'hover:text-amber-honey'
-                  }`}
+                  className={`cursor-pointer transition-all ${selectedCategory === cat.name
+                    ? 'text-amber-honey underline decoration-2 underline-offset-8'
+                    : 'hover:text-amber-honey'
+                    }`}
                 >
                   {cat.name}
                 </span>
@@ -510,7 +508,7 @@ export default function BlogPage() {
             <AlertCircle size={32} className="mx-auto text-amber-honey/40 mb-4" />
             <p className="text-sm uppercase tracking-widest text-white/40 font-black">No hay crónicas disponibles</p>
             {isAdmin && (
-              <button 
+              <button
                 onClick={() => setIsEditorOpen(true)}
                 className="mt-6 text-[10px] font-black text-amber-honey uppercase tracking-wider underline hover:text-white"
               >
@@ -522,7 +520,7 @@ export default function BlogPage() {
           /* Post Grid */
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
             {filteredPosts.map((post, i) => (
-              <motion.article 
+              <motion.article
                 key={post.id}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -532,17 +530,17 @@ export default function BlogPage() {
               >
                 <div>
                   <div className="aspect-[16/11] rounded-[2rem] overflow-hidden mb-8 relative">
-                    <img 
-                      src={post.image || 'https://images.unsplash.com/photo-1514525253361-bee8a48790c3?w=800&q=80'} 
-                      alt={post.title} 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100" 
+                    <img
+                      src={post.image || 'https://images.unsplash.com/photo-1514525253361-bee8a48790c3?w=800&q=80'}
+                      alt={post.title}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
                     />
-                    
+
                     <div className="absolute top-6 left-6 flex justify-between w-[85%] items-start">
                       <span className="bg-amber-honey text-nature-night px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20">
                         {post.category_name || 'Sin Categoría'}
                       </span>
-                      
+
                       {!post.is_published && (
                         <span className="bg-white/10 text-white border border-white/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest backdrop-blur-md">
                           Borrador
@@ -577,7 +575,7 @@ export default function BlogPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-6 mb-6 text-[9px] font-black uppercase tracking-[0.2em] opacity-40">
                     <div className="flex items-center gap-2">
                       <Calendar size={12} className="text-amber-honey" /> {new Date(post.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -594,8 +592,8 @@ export default function BlogPage() {
                     {stripHtml(post.content).substring(0, 150) + (stripHtml(post.content).length > 150 ? '...' : '')}
                   </p>
                 </div>
-                
-                <button 
+
+                <button
                   onClick={() => setActivePost(post)}
                   className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-amber-honey group-hover:text-glow transition-all mt-auto"
                 >
@@ -611,9 +609,9 @@ export default function BlogPage() {
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
           <h3 className="text-4xl md:text-6xl font-black mb-6 tracking-tighter">Únete al <span className="text-amber-honey text-glow">Círculo</span></h3>
           <p className="opacity-50 mb-12 max-w-lg mx-auto text-sm italic">Recibe contenido exclusivo, preventas y crónicas antes que nadie.</p>
-          
+
           {newsletterSuccess ? (
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="max-w-md mx-auto p-6 rounded-3xl bg-amber-honey/10 border border-amber-honey/20 text-amber-honey text-xs font-black uppercase tracking-wider flex items-center justify-center gap-3"
@@ -622,15 +620,15 @@ export default function BlogPage() {
             </motion.div>
           ) : (
             <form className="max-w-md mx-auto flex flex-col md:flex-row gap-4" onSubmit={handleSubscribe}>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 required
                 value={newsletterEmail}
                 onChange={e => setNewsletterEmail(e.target.value)}
-                placeholder="TU CORREO ELECTRÓNICO" 
+                placeholder="TU CORREO ELECTRÓNICO"
                 className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-8 py-5 text-xs font-bold focus:outline-none focus:border-amber-honey/50 transition-colors placeholder:text-white/20 text-white"
               />
-              <button 
+              <button
                 type="submit"
                 disabled={newsletterSubmitting}
                 className="bg-amber-honey text-nature-night px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/15 hover:scale-105 transition-all disabled:opacity-50"
@@ -645,7 +643,7 @@ export default function BlogPage() {
       {/* ─── BEEHIIV STYLE POST EDITOR OVERLAY (Admins Only) ─── */}
       <AnimatePresence>
         {isEditorOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -681,17 +679,15 @@ export default function BlogPage() {
                 <div className="bg-white/5 border border-white/10 p-1 rounded-xl flex gap-1">
                   <button
                     onClick={() => setEditorMode('write')}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                      editorMode === 'write' ? 'bg-amber-honey text-nature-night' : 'opacity-60 hover:opacity-100'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${editorMode === 'write' ? 'bg-amber-honey text-nature-night' : 'opacity-60 hover:opacity-100'
+                      }`}
                   >
                     <FileText size={10} /> Redactar
                   </button>
                   <button
                     onClick={() => setEditorMode('preview')}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${
-                      editorMode === 'preview' ? 'bg-amber-honey text-nature-night' : 'opacity-60 hover:opacity-100'
-                    }`}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all ${editorMode === 'preview' ? 'bg-amber-honey text-nature-night' : 'opacity-60 hover:opacity-100'
+                      }`}
                   >
                     <Eye size={10} /> Vista Previa
                   </button>
@@ -701,9 +697,8 @@ export default function BlogPage() {
 
                 <button
                   onClick={() => setShowSettingsSidebar(!showSettingsSidebar)}
-                  className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${
-                    showSettingsSidebar ? 'border-amber-honey text-amber-honey bg-amber-honey/10' : 'border-white/10 text-white/60 hover:text-white'
-                  }`}
+                  className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${showSettingsSidebar ? 'border-amber-honey text-amber-honey bg-amber-honey/10' : 'border-white/10 text-white/60 hover:text-white'
+                    }`}
                   title="Configuración de Entrada"
                 >
                   <Settings size={14} />
@@ -734,11 +729,11 @@ export default function BlogPage() {
 
             {/* Editor Workspace */}
             <div className="flex-1 flex overflow-hidden">
-              
+
               {/* Main Writing Canvas (Beehiiv minimal layout) */}
               <div className="flex-1 overflow-y-auto px-6 py-12 custom-scroll flex justify-center bg-[#07080d]">
                 <div className="max-w-[720px] w-full flex flex-col h-full">
-                  
+
                   {editorMode === 'write' ? (
                     <>
                       {/* Editor Canvas Toolbar */}
@@ -902,7 +897,7 @@ export default function BlogPage() {
                         </span>
                       </div>
                       <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-8 leading-none">{editorTitle || 'Entrada sin Título'}</h1>
-                      <div 
+                      <div
                         className="rich-text-content"
                         dangerouslySetInnerHTML={{ __html: editorRef.current?.innerHTML || '<p className="italic text-white/20">Contenido vacío...</p>' }}
                       />
@@ -915,7 +910,7 @@ export default function BlogPage() {
               {/* Editor Right Sidebar (Settings) */}
               <AnimatePresence>
                 {showSettingsSidebar && (
-                  <motion.aside 
+                  <motion.aside
                     initial={{ width: 0, opacity: 0 }}
                     animate={{ width: 340, opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
@@ -945,13 +940,11 @@ export default function BlogPage() {
                           </span>
                           <button
                             onClick={() => setEditorIsPublished(!editorIsPublished)}
-                            className={`w-12 h-6 rounded-full p-1 transition-all ${
-                              editorIsPublished ? 'bg-amber-honey' : 'bg-white/10'
-                            }`}
+                            className={`w-12 h-6 rounded-full p-1 transition-all ${editorIsPublished ? 'bg-amber-honey' : 'bg-white/10'
+                              }`}
                           >
-                            <div className={`w-4 h-4 rounded-full bg-nature-night transition-all ${
-                              editorIsPublished ? 'translate-x-6' : 'translate-x-0'
-                            }`} />
+                            <div className={`w-4 h-4 rounded-full bg-nature-night transition-all ${editorIsPublished ? 'translate-x-6' : 'translate-x-0'
+                              }`} />
                           </button>
                         </div>
                       </div>
@@ -1004,7 +997,7 @@ export default function BlogPage() {
                       {/* Cover Image Upload Dropzone */}
                       <div className="space-y-3">
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Imagen de Portada</label>
-                        
+
                         <div className="border border-dashed border-white/10 bg-white/[0.01] hover:bg-white/[0.03] rounded-2.5rem p-6 text-center cursor-pointer transition-colors relative group">
                           <input
                             type="file"
@@ -1046,7 +1039,7 @@ export default function BlogPage() {
             className="fixed inset-0 bg-[#05060a]/95 z-[210] overflow-y-auto custom-scroll flex justify-center py-20 px-6 backdrop-blur-xl"
           >
             <div className="max-w-[800px] w-full relative">
-              
+
               {/* Floating Close Button */}
               <button
                 onClick={() => setActivePost(null)}
@@ -1056,10 +1049,10 @@ export default function BlogPage() {
               </button>
 
               <article className="w-full">
-                
+
                 {/* Cover Image */}
                 {activePost.image && (
-                  <motion.div 
+                  <motion.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.6 }}
@@ -1074,12 +1067,12 @@ export default function BlogPage() {
                   <span className="bg-amber-honey text-nature-night px-4.5 py-2 rounded-full shadow-lg shadow-amber-honey/20">
                     {activePost.category_name || 'Crónica'}
                   </span>
-                  
+
                   <div className="flex items-center gap-2 text-white/40">
-                    <Calendar size={12} className="text-amber-honey" /> 
+                    <Calendar size={12} className="text-amber-honey" />
                     {new Date(activePost.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </div>
-                  
+
                   <div className="flex items-center gap-2 text-white/40">
                     <User size={12} className="text-amber-honey" /> MS Ambar
                   </div>
@@ -1094,7 +1087,7 @@ export default function BlogPage() {
                 <div className="h-px bg-gradient-to-r from-amber-honey/20 via-transparent to-transparent mb-12" />
 
                 {/* HTML content rendered dynamically */}
-                <div 
+                <div
                   className="rich-text-content pb-20 select-text"
                   dangerouslySetInnerHTML={{ __html: activePost.content }}
                 />
@@ -1114,11 +1107,10 @@ export default function BlogPage() {
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
-              className={`pointer-events-auto p-4 rounded-2xl border flex items-start gap-3 shadow-2xl backdrop-blur-xl ${
-                toast.type === 'success'
-                  ? 'bg-amber-950/40 border-amber-honey/40 text-amber-100'
-                  : 'bg-red-950/40 border-red-500/30 text-red-100'
-              } amber-glass`}
+              className={`pointer-events-auto p-4 rounded-2xl border flex items-start gap-3 shadow-2xl backdrop-blur-xl ${toast.type === 'success'
+                ? 'bg-amber-950/40 border-amber-honey/40 text-amber-100'
+                : 'bg-red-950/40 border-red-500/30 text-red-100'
+                } amber-glass`}
             >
               <div className={`p-1.5 rounded-lg ${toast.type === 'success' ? 'bg-amber-honey/20 text-amber-honey animate-pulse' : 'bg-red-500/20 text-red-400'}`}>
                 {toast.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
