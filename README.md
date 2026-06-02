@@ -25,7 +25,7 @@ El proyecto está diseñado bajo una arquitectura desacoplada utilizando contene
 ### ⚙️ Backend (Django REST Framework)
 - **Framework**: Django 5 + Django REST Framework.
 - **Base de Datos**: PostgreSQL 16 (Alpine).
-- **Envío de Correos**: Integración con Zoho Mail SMTP (`msambar@zohomail.com`) para notificaciones de compra, contratos de booking y boletines oficiales.
+- **Envío de Correos**: Sistema de envío con failover automatizado (Brevo SMTP -> Amazon SES SMTP -> Zoho Mail) para notificaciones de compra, contratos de booking y boletines oficiales.
 - **Pagos**: Pasarela e integración de Webhooks con **Stripe API** (Modos Live y Test).
 - **Ubicación**: [/backend](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/backend)
 
@@ -99,9 +99,9 @@ La sección Hero de la página de inicio incluye una red de nodos y constelacion
 
 ---
 
-## 📧 Motor de Newsletter & Zoho Mail
+## 📧 Motor de Newsletter & Failover SMTP
 
 El sistema de boletines y newsletter está completamente automatizado a nivel backend:
 - Al registrarse un correo en [index.tsx](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/frontend/src/pages/index.tsx), la API almacena el correo en el modelo `NewsletterSubscriber` y dispara automáticamente un correo de bienvenida estilizado en HTML.
-- **Configuración SMTP**: Zoho Mail integrado en puerto 587 con cifrado TLS activo.
+- **Configuración SMTP con Failover**: Enrutamiento automático que intenta enviar primero mediante Brevo (hasta agotar el límite diario de 300 correos), luego mediante Amazon SES (con el remitente verificado `hola@msambar.com`), y finalmente recurre a Zoho Mail como último recurso de failover.
 - **Desuscripción Segura**: Cada correo enviado incluye un enlace de desuscripción directo en el pie de página. Al hacer clic, redirige al usuario a la página del Blog, lee el parámetro `?unsubscribe=correo@email.com` y ejecuta una petición `POST` al endpoint de desuscripción de la API para desactivar la suscripción de forma transparente.
