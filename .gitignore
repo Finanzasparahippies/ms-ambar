@@ -1,4 +1,5 @@
 .env
-.env.staging
+.env.*
+!.env.staging.example
 node_modules/
 __pycache__/

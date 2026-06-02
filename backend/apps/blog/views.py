@@ -8,6 +8,7 @@ from .serializers import CategorySerializer, PostSerializer, NewsletterSubscribe
 from .utils import send_failover_email
 import logging
 import requests
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -147,14 +148,14 @@ class PostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         post = serializer.save()
         if post.is_published and not post.is_notified:
-            send_newsletter_email(post)
+            threading.Thread(target=send_newsletter_email, args=(post,), daemon=True).start()
             post.is_notified = True
             post.save()
 
     def perform_update(self, serializer):
         post = serializer.save()
         if post.is_published and not post.is_notified:
-            send_newsletter_email(post)
+            threading.Thread(target=send_newsletter_email, args=(post,), daemon=True).start()
             post.is_notified = True
             post.save()
 
@@ -170,7 +171,7 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         subscriber = serializer.save()
-        send_welcome_email(subscriber)
+        threading.Thread(target=send_welcome_email, args=(subscriber,), daemon=True).start()
 
     @action(detail=False, methods=['post'], permission_classes=[permissions.AllowAny])
     def unsubscribe(self, request):
