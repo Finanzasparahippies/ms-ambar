@@ -48,8 +48,10 @@ def send_failover_email(subject, html_content, text_content, recipient_list, rep
                 active_conn = None
                 sender = settings.DEFAULT_FROM_EMAIL
             else:
+                # Use locmem backend during tests to avoid real SMTP network requests
+                backend_class = 'django.core.mail.backends.locmem.EmailBackend' if getattr(settings, 'TESTING', False) else 'django.core.mail.backends.smtp.EmailBackend'
                 active_conn = get_connection(
-                    backend='django.core.mail.backends.smtp.EmailBackend',
+                    backend=backend_class,
                     host=config['host'],
                     port=config['port'],
                     username=config['username'],

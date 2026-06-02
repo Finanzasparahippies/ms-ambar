@@ -68,8 +68,10 @@ class FailoverEmailBackend(BaseEmailBackend):
                 logger.info(f"FailoverEmailBackend: Attempting to send {len(email_messages)} messages via {name}")
                 
                 # Explicitly use standard SMTP backend to avoid recursive backend lookup
+                # Fallback to locmem backend during tests to prevent real SMTP connections
+                backend_class = 'django.core.mail.backends.locmem.EmailBackend' if getattr(settings, 'TESTING', False) else 'django.core.mail.backends.smtp.EmailBackend'
                 connection = get_connection(
-                    backend='django.core.mail.backends.smtp.EmailBackend',
+                    backend=backend_class,
                     host=config['host'],
                     port=config['port'],
                     username=config['username'],

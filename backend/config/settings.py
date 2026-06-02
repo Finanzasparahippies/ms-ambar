@@ -213,3 +213,7 @@ SES_EMAIL_USE_TLS = env.bool("SES_EMAIL_USE_TLS", default=True)
 SES_EMAIL_HOST_USER = env("SES_EMAIL_HOST_USER", default="")
 SES_EMAIL_HOST_PASSWORD = env("SES_EMAIL_HOST_PASSWORD", default="")
 SES_DEFAULT_FROM_EMAIL = env("SES_DEFAULT_FROM_EMAIL", default="MS AMBAR <hola@msambar.com>")
+
+# Override email backend during tests to prevent standard mail functions from accessing real SMTP
+if TESTING:
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
