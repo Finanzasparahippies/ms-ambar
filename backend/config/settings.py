@@ -196,7 +196,7 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="MS AMBAR <msambar@zohomail.com>")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="MS AMBAR <hola@msambar.com>")
 
 # SMTP Brevo (Plan Gratuito)
 BREVO_EMAIL_HOST = env("BREVO_EMAIL_HOST", default="smtp-relay.brevo.com")
@@ -213,6 +213,41 @@ SES_EMAIL_USE_TLS = env.bool("SES_EMAIL_USE_TLS", default=True)
 SES_EMAIL_HOST_USER = env("SES_EMAIL_HOST_USER", default="")
 SES_EMAIL_HOST_PASSWORD = env("SES_EMAIL_HOST_PASSWORD", default="")
 SES_DEFAULT_FROM_EMAIL = env("SES_DEFAULT_FROM_EMAIL", default="MS AMBAR <hola@msambar.com>")
+
+# Logging configuration to display logs in console with Nectar Labs styling
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '[\033[94m%(asctime)s\033[0m] %(levelname)s [%(name)s] %(message)s',
+            'datefmt': '%H:%M:%S'
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'apps': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'config': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'tests': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 
 # Override email backend during tests to prevent standard mail functions from accessing real SMTP
 if TESTING:
