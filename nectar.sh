@@ -174,12 +174,12 @@ case $COMMAND in
         run_django_cmd_staging test "$@"
         ;;
     typecheck-staging)
-        echo "Running TypeScript type-check in Staging frontend..."
-        docker compose --env-file .env.staging -f docker-compose.staging.yml exec frontend-staging npx tsc --noEmit "$@"
+        echo "Running TypeScript type-check for Staging frontend..."
+        docker compose run --rm frontend npx tsc --noEmit "$@"
         ;;
     buildcheck-staging)
-        echo "Running Next.js build-check in Staging frontend..."
-        docker compose --env-file .env.staging -f docker-compose.staging.yml exec frontend-staging npm run build "$@"
+        echo "Running Next.js build-check for Staging frontend..."
+        docker compose run --rm frontend npm run build "$@"
         ;;
     build)
         echo "Building MS AMBAR Production Images..."

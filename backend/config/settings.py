@@ -98,6 +98,27 @@ DATABASES = {
     }
 }
 
+# Force using SQLite when running tests to avoid Supabase connection pooler conflicts
+import sys
+TESTING = False
+if 'test' in sys.argv:
+    TESTING = True
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+    # Override storage during tests to avoid Cloudinary HTTP requests
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
 # Authentication
 AUTH_USER_MODEL = "users.User"
 
