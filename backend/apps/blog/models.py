@@ -43,3 +43,32 @@ class NewsletterSubscriber(models.Model):
     def __str__(self):
         return self.email
 
+class SESIdentityVerification(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending DNS Setup'),
+        ('verified', 'Verified / Active'),
+        ('failed', 'Verification Failed'),
+    ]
+
+    domain = models.CharField(max_length=255, default="msambar.com", unique=True)
+    verification_status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
+    
+    # Easy DKIM tokens generated from AWS SES
+    dkim_token_1 = models.CharField(max_length=255, blank=True, help_text="CNAME Token 1 Name/Value")
+    dkim_token_2 = models.CharField(max_length=255, blank=True, help_text="CNAME Token 2 Name/Value")
+    dkim_token_3 = models.CharField(max_length=255, blank=True, help_text="CNAME Token 3 Name/Value")
+    
+    # SPF/MX custom MAIL FROM configuration
+    mail_from_domain = models.CharField(max_length=255, default="mail.msambar.com")
+    mail_from_mx_target = models.CharField(max_length=255, default="feedback-smtp.us-east-1.amazonses.com")
+    spf_record_value = models.CharField(max_length=255, default="v=spf1 include:amazonses.com ~all")
+    
+    # DMARC Alignment configuration
+    dmarc_record_value = models.CharField(max_length=255, default="v=DMARC1; p=none; rua=mailto:dmarc-reports@msambar.com")
+    
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.domain} ({self.get_verification_status_display()})"
+
+

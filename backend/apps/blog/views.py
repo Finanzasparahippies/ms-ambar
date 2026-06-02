@@ -1,11 +1,15 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
 from django.conf import settings
-from .models import Category, Post, NewsletterSubscriber
-from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer
+from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification
+from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer
+from .utils import send_failover_email
+import logging
+import requests
+
+logger = logging.getLogger(__name__)
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -31,61 +35,51 @@ def send_newsletter_email(post):
             image_url = f"{api_url}{image_url}"
 
     # Beautiful HTML layout matching ms-ambar aesthetics
-    html_content = f"""
-    <html>
-      <body style="background-color: #06070b; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px 20px; margin: 0;">
-        <div style="max-width: 600px; margin: 0 auto; background: #0c0d13; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
-          
-          <!-- Header/Logo -->
-          <div style="text-align: center; margin-bottom: 40px;">
-            <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
-            <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">MS AMBAR</h1>
-            <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Journal - Bitácora de Luz & Sonido</p>
-          </div>
-          
-          <!-- Post cover image if exists -->
-          {f"<div style='border-radius: 20px; overflow: hidden; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);'><img src='{image_url}' style='width: 100%; height: auto; display: block;' /></div>" if image_url else ""}
-          
-          <!-- Content -->
-          <h2 style="color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">{post.title}</h2>
-          
-          <div style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px;">
-            {post.content}
-          </div>
-          
-          <!-- Button link -->
-          <div style="text-align: center; margin-bottom: 40px;">
-            <a href="{settings.FRONTEND_URL}/blog" style="background-color: #f59e0b; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
-              Leer Entrada Completa
-            </a>
-          </div>
-          
-          <!-- Footer -->
-          <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-            <p style="margin: 0 0 10px 0;">Recibiste este correo porque estás suscrito al círculo de MS AMBAR.</p>
-            <p style="margin: 0;"><a href="{settings.FRONTEND_URL}/blog?unsubscribe={sub.email}" style="color: #f59e0b; text-decoration: underline;">Desuscribirse</a></p>
-          </div>
-          
-        </div>
-      </body>
-    </html>
-    """
-    
-    text_content = strip_tags(html_content)
-    
     for sub in subscribers:
+        html_content = f"""
+        <html>
+          <body style="background-color: #06070b; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px 20px; margin: 0;">
+            <div style="max-width: 600px; margin: 0 auto; background: #0c0d13; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+              
+              <!-- Header/Logo -->
+              <div style="text-align: center; margin-bottom: 40px;">
+                <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
+                <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">MS AMBAR</h1>
+                <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Journal - Bitácora de Luz & Sonido</p>
+              </div>
+              
+              <!-- Post cover image if exists -->
+              {f"<div style='border-radius: 20px; overflow: hidden; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);'><img src='{image_url}' style='width: 100%; height: auto; display: block;' /></div>" if image_url else ""}
+              
+              <!-- Content -->
+              <h2 style="color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">{post.title}</h2>
+              
+              <div style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px;">
+                {post.content}
+              </div>
+              
+              <!-- Button link -->
+              <div style="text-align: center; margin-bottom: 40px;">
+                <a href="{settings.FRONTEND_URL}/blog" style="background-color: #f59e0b; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
+                  Leer Entrada Completa
+                </a>
+              </div>
+              
+              <!-- Footer -->
+              <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
+                <p style="margin: 0 0 10px 0;">Recibiste este correo porque estás suscrito al círculo de MS AMBAR.</p>
+                <p style="margin: 0;"><a href="{settings.FRONTEND_URL}/blog?unsubscribe={sub.email}" style="color: #f59e0b; text-decoration: underline;">Desuscribirse</a></p>
+              </div>
+              
+            </div>
+          </body>
+        </html>
+        """
+        text_content = strip_tags(html_content)
         try:
-            email = EmailMultiAlternatives(
-                subject,
-                text_content,
-                settings.DEFAULT_FROM_EMAIL,
-                [sub.email]
-            )
-            email.attach_alternative(html_content, "text/html")
-            email.send()
+            send_failover_email(subject, html_content, text_content, [sub.email])
         except Exception as e:
-            import logging
-            logging.error(f"Error sending newsletter email to {sub.email}: {e}")
+            logger.error(f"Error sending newsletter email to {sub.email} via all failover providers: {e}")
 
 def send_welcome_email(subscriber):
     subject = "✨ Bienvenido al Newsletter de MS AMBAR"
@@ -129,19 +123,10 @@ def send_welcome_email(subscriber):
     """
     
     text_content = strip_tags(html_content)
-    
     try:
-        email = EmailMultiAlternatives(
-            subject,
-            text_content,
-            settings.DEFAULT_FROM_EMAIL,
-            [subscriber.email]
-        )
-        email.attach_alternative(html_content, "text/html")
-        email.send()
+        send_failover_email(subject, html_content, text_content, [subscriber.email])
     except Exception as e:
-        import logging
-        logging.error(f"Error sending welcome newsletter email to {subscriber.email}: {e}")
+        logger.error(f"Error sending welcome newsletter email to {subscriber.email} via all failover providers: {e}")
 
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
@@ -199,5 +184,77 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
             return Response({"message": "Te has desuscrito con éxito del newsletter de MS AMBAR."}, status=status.HTTP_200_OK)
         except NewsletterSubscriber.DoesNotExist:
             return Response({"error": "Este correo no se encuentra registrado."}, status=status.HTTP_404_NOT_FOUND)
+
+class SESIdentityVerificationViewSet(viewsets.ModelViewSet):
+    queryset = SESIdentityVerification.objects.all()
+    serializer_class = SESIdentityVerificationSerializer
+    
+    def get_permissions(self):
+        if self.action == 'webhook':
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+    @action(detail=False, methods=['post'], url_path='webhook')
+    def webhook(self, request):
+        """
+        Webhook Endpoint to process notifications of AWS SNS about Bounces and Complaints
+        from Amazon SES.
+        """
+        import json
+        
+        # AWS SNS sends payload as raw body content
+        try:
+            data = json.loads(request.body)
+        except ValueError:
+            return Response("Invalid JSON", status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Process AWS SNS subscription confirmation
+        message_type = request.headers.get('x-amz-sns-message-type')
+        if message_type == 'SubscriptionConfirmation':
+            subscribe_url = data.get('SubscribeURL')
+            if subscribe_url:
+                requests.get(subscribe_url)
+                logger.info("SNS Subscription confirmed successfully.")
+                return Response("Subscribed", status=status.HTTP_200_OK)
+
+        # 2. Process delivery notification
+        if message_type == 'Notification':
+            message = json.loads(data.get('Message', '{}'))
+            notification_type = message.get('notificationType')
+
+            # Bounces
+            if notification_type == 'Bounce':
+                bounce = message.get('bounce', {})
+                bounce_type = bounce.get('bounceType')
+                
+                if bounce_type == 'Permanent':
+                    bounced_recipients = bounce.get('bouncedRecipients', [])
+                    for recipient in bounced_recipients:
+                        email = recipient.get('emailAddress')
+                        try:
+                            sub = NewsletterSubscriber.objects.get(email=email)
+                            sub.is_active = False
+                            sub.save()
+                            logger.info(f"Subscriber {email} deactivated due to Hard Bounce.")
+                        except NewsletterSubscriber.DoesNotExist:
+                            pass
+
+            # Complaints
+            elif notification_type == 'Complaint':
+                complaint = message.get('complaint', {})
+                complained_recipients = complaint.get('complainedRecipients', [])
+                for recipient in complained_recipients:
+                    email = recipient.get('emailAddress')
+                    try:
+                        sub = NewsletterSubscriber.objects.get(email=email)
+                        sub.is_active = False
+                        sub.save()
+                        logger.info(f"Subscriber {email} deactivated due to Complaint/Spam report.")
+                    except NewsletterSubscriber.DoesNotExist:
+                        pass
+
+        return Response("OK", status=status.HTTP_200_OK)
+
+
 
 

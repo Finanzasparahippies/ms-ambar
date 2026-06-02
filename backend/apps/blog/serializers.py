@@ -17,3 +17,11 @@ class NewsletterSubscriberSerializer(serializers.ModelSerializer):
         model = NewsletterSubscriber
         fields = '__all__'
 
+from .models import SESIdentityVerification
+
+class SESIdentityVerificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SESIdentityVerification
+        fields = '__all__'
+
+
