@@ -482,9 +482,9 @@ export default function MerchPage() {
                 </div>
               )}
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
