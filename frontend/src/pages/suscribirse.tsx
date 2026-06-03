@@ -73,7 +73,7 @@ export default function Suscribirse() {
   };
 
   return (
-    <div className="min-h-screen text-[#F4F6F0] flex items-center justify-center px-6 py-20 relative overflow-hidden font-sans selection:bg-amber-honey/30">
+    <div className="min-h-[70vh] text-[#F4F6F0] flex items-center justify-center px-6 py-12 relative overflow-hidden font-sans selection:bg-amber-honey/30">
       <Head>
         <title>Solo para reales | Ms Ambar</title>
         <meta name="description" content="Deja tu correo aquí y recibe el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas" />
@@ -208,6 +208,4 @@ export default function Suscribirse() {
     </div>
   );
 }
-Suscribirse.getLayout = function getLayout(page: React.ReactNode) {
-  return page;
-};
+

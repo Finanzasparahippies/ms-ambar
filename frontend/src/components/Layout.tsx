@@ -17,8 +17,7 @@ const Layout = ({ children }: LayoutProps) => {
     router.pathname.startsWith('/forgot-password') ||
     router.pathname.startsWith('/reset-password') ||
     router.pathname.startsWith('/admin') ||
-    router.pathname.startsWith('/dashboard') ||
-    router.pathname.startsWith('/suscribirse');
+    router.pathname.startsWith('/dashboard');
 
   if (isAuthOrAdmin) {
     return (
