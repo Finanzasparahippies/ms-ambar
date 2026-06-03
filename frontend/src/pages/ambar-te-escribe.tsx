@@ -456,7 +456,7 @@ export default function AmbarTeEscribePage() {
           }
           .rich-text-content[contenteditable]:empty::before {
             content: attr(data-placeholder);
-            color: rgba(11, 15, 13, 0.3);
+            color: rgba(255, 255, 255, 0.25);
             pointer-events: none;
             display: block;
           }
@@ -565,7 +565,8 @@ export default function AmbarTeEscribePage() {
                 <p className="opacity-40 mt-4 text-sm font-bold uppercase tracking-[0.4em] text-glow text-amber-honey">
                   Cartas desde el escenario
                 </p>
-                      {/* Categories bar */}
+              </div>
+              {/* Categories bar */}
               <div className="amber-glass px-8 py-4 rounded-2xl border border-white/5">
                 <p className="text-[9px] font-black uppercase tracking-[0.4em] text-amber-honey mb-4">Filtrar Historias</p>
                 <div className="flex flex-wrap gap-6 text-[10px] uppercase font-bold text-[#F4F6F0]/70">
@@ -598,18 +599,18 @@ export default function AmbarTeEscribePage() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-40 gap-4">
                 <div className="w-10 h-10 border-4 border-amber-honey/20 border-t-amber-honey rounded-full animate-spin" />
-                <p className="text-xs uppercase tracking-widest text-[#F4F6F0]/40 font-bold">Cargando crónicas...</p>
+                <p className="text-xs uppercase tracking-widest text-[#F4F6F0]/40 font-bold">Cargando Feed...</p>
               </div>
             ) : filteredPosts.length === 0 ? (
               <div className="text-center py-40 border border-white/10 bg-white/[0.01] rounded-[3rem] p-10">
                 <AlertCircle size={32} className="mx-auto text-amber-honey/40 mb-4" />
-                <p className="text-sm uppercase tracking-widest text-[#F4F6F0]/45 font-black">No hay crónicas disponibles</p>
+                <p className="text-sm uppercase tracking-widest text-[#F4F6F0]/45 font-black">No hay feed disponibles</p>
                 {isAdmin && (
                   <button
                     onClick={() => setIsEditorOpen(true)}
                     className="mt-6 text-[10px] font-black text-amber-honey uppercase tracking-wider underline hover:text-white"
-                  >               >
-                    Redacta la primera crónica ahora
+                  >
+                    Redactar ahora
                   </button>
                 )}
               </div>
@@ -636,7 +637,8 @@ export default function AmbarTeEscribePage() {
                         <div className="absolute top-6 left-6 flex justify-between w-[85%] items-start">
                           <span className="bg-amber-honey text-nature-night px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20">
                             {post.category_name || 'Sin Categoría'}
-                                            {!post.is_published && (
+                          </span>
+                          {!post.is_published && (
                             <span className="bg-white/10 text-white border border-white/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest backdrop-blur-md">
                               Borrador
                             </span>
@@ -680,7 +682,7 @@ export default function AmbarTeEscribePage() {
                         </div>
                       </div>
 
-                      <h2 className="text-2xl font-extrabold tracking-tight mb-4 group-hover:text-amber-honey transition-colors leading-tight line-clamp-2">ght line-clamp-2">
+                      <h2 className="text-2xl font-extrabold tracking-tight mb-4 group-hover:text-amber-honey transition-colors leading-tight line-clamp-2">
                         {post.title}
                       </h2>
                       <p className="opacity-60 text-xs leading-relaxed mb-8 line-clamp-3">
@@ -1042,9 +1044,9 @@ export default function AmbarTeEscribePage() {
                             onChange={(e) => setEditorCategory(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-amber-honey/50 outline-none text-white/80"
                           >
-                            <option value="" className="bg-[#121915]">Seleccionar Categoría</option>
+                            <option value="" className="bg-[#121915] text-[#F4F6F0]">Seleccionar Categoría</option>
                             {categories.map((cat) => (
-                              <option key={cat.id} value={cat.id} className="bg-[#121915]">
+                              <option key={cat.id} value={cat.id} className="bg-[#121915] text-[#F4F6F0]">
                                 {cat.name}
                               </option>
                             ))}

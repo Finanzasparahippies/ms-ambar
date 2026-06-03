@@ -132,7 +132,7 @@ const TourPage = () => {
   };
 
   return (
-    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night min-h-screen">
+    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen">
       <Head>
         <title>Ms Ambar | Accesos Oficiales 2026</title>
         <meta name="description" content="MS Ambar Accesos Oficiales 2026. Reserva tus entradas y vive la experiencia acústico-visual de vanguardia." />
@@ -162,7 +162,7 @@ const TourPage = () => {
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-nature-night/70 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
+            className="text-nature-night/70 dark:text-[#F4F6F0]/70 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
           >
             Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.
           </motion.p>
@@ -196,11 +196,11 @@ const TourPage = () => {
                 {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
               </motion.h2>
               <div className="flex flex-wrap gap-6 text-xs uppercase tracking-widest font-black">
-                <div className="flex items-center gap-3 bg-nature-night/[0.02] border border-nature-night/10 px-6 py-3 rounded-full backdrop-blur-md">
+                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md">
                   <MapPin size={14} className="text-amber-honey" />
                   <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Plataforma Digital' : 'Cargando Recinto...'}</span>
                 </div>
-                <div className="flex items-center gap-3 bg-nature-night/[0.02] border border-nature-night/10 px-6 py-3 rounded-full backdrop-blur-md">
+                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md">
                   <Calendar size={14} className="text-amber-honey" />
                   <span>{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
                 </div>
@@ -208,11 +208,11 @@ const TourPage = () => {
             </header>
 
             {isLoading ? (
-              <div className="h-[450px] md:h-[700px] flex items-center justify-center border border-nature-night/10 bg-nature-night/[0.01] rounded-[3.5rem]">
+              <div className="h-[450px] md:h-[700px] flex items-center justify-center border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.01] dark:bg-white/[0.01] rounded-[3.5rem]">
                 <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em]">Tejiendo la Planta...</div>
               </div>
             ) : isMeetGreet ? (
-              <div className="flex flex-col items-center justify-center h-[450px] md:h-[700px] border border-nature-night/15 bg-forest-green rounded-[3.5rem] p-8 text-center space-y-6 backdrop-blur-sm relative overflow-hidden group">
+              <div className="flex flex-col items-center justify-center h-[450px] md:h-[700px] border border-nature-night/15 dark:border-white/10 bg-forest-green rounded-[3.5rem] p-8 text-center space-y-6 backdrop-blur-sm relative overflow-hidden group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
                 <div className="w-20 h-20 rounded-full bg-amber-honey/10 border border-amber-honey/20 flex items-center justify-center text-amber-honey animate-pulse z-10">
                   <Star size={36} className="fill-current" />
@@ -248,7 +248,7 @@ const TourPage = () => {
             ) : (
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <div className="h-[450px] md:h-[700px] rounded-[3.5rem] overflow-hidden border border-nature-night/10">
+                <div className="h-[450px] md:h-[700px] rounded-[3.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10">
                   <SeatingChart
                     seats={seats}
                     onSelect={handleSelectionChange}
@@ -262,7 +262,7 @@ const TourPage = () => {
           </div>
 
           <div className="lg:col-span-4">
-            <motion.div layout className="border border-nature-night/15 bg-white shadow-xl shadow-nature-night/5 p-8 rounded-[3rem] sticky top-8">
+            <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-xl shadow-nature-night/5 p-8 rounded-[3rem] sticky top-8">
               <div className="text-center mb-8 border-b border-nature-night/10 pb-6">
                 <h3 className="text-2xl font-black uppercase tracking-wider mb-2">Reserva Digital</h3>
                 <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
