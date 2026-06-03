@@ -365,6 +365,7 @@ class SESIdentityVerificationViewSet(viewsets.ModelViewSet):
                     try:
                         sub = NewsletterSubscriber.objects.get(email=email)
                         sub.is_active = False
+                        sub.save()
                         logger.info(f"Subscriber {email} deactivated due to Complaint/Spam report.")
                     except NewsletterSubscriber.DoesNotExist:
                         pass
