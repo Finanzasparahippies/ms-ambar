@@ -1934,1244 +1934,1244 @@ export default function AdminDashboard() {
                           disabled={catalogLoading}
                           className="w-1/2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] py-4 rounded-xl flex items-center justify-center gap-1.5 shadow-[0_2px_15px_rgba(245,158,11,0.15)] disabled:opacity-50"
                         >
-                        {/* ══════ TAB 5: THEATERS MANAGEMENT ══════ */}
-        <AnimatePresence>
-          {activeTab === 'theaters' && (
-            <motion.div
-              key="theaters-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
-            >
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2">
-                    <MapPin size={20} className="text-amber-500" /> Gestión de Recintos
-                  </h2>
-                  <p className="text-[#F4F6F0]/50 text-[10px] uppercase tracking-widest font-bold mt-1">
-                    Crea y administra teatros — abre cada uno en Nectar Studio para diseñar su planta
-                  </p>
-                </div>
-                <button
-                  onClick={openTheaterCreateModal}
-                  className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
-                >
-                  <Plus size={15} /> Nuevo Teatro
-                </button>
-              </div>
-
-              {/* Success / Error messages */}
-              {theaterSuccessMsg && (
-                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl">
-                  <Check size={14} className="text-green-600 shrink-0" />
-                  <p className="text-xs font-bold text-green-600">{theaterSuccessMsg}</p>
-                </motion.div>
-              )}
-              {theaterErrorMsg && (
-                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
-                  <AlertTriangle size={14} className="text-red-600 shrink-0" />
-                  <p className="text-xs font-bold text-red-600">{theaterErrorMsg}</p>
-                </motion.div>
-              )}
-
-              {/* Theaters Grid */}
-              {theaters.length === 0 ? (
-                <div className="bg-white/5 border border-white/10 rounded-[2rem] p-16 flex flex-col items-center gap-4 text-center shadow-lg shadow-black/20">
-                  <MapPin size={48} className="text-[#F4F6F0]/20" />
-                  <p className="text-[#F4F6F0]/40 text-xs uppercase tracking-widest font-black">Sin teatros registrados</p>
-                  <p className="text-[#F4F6F0]/30 text-[10px] font-bold">Crea tu primer recinto para comenzar a vender boletos</p>
-                  <button onClick={openTheaterCreateModal} className="mt-4 px-6 py-3 bg-amber-honey text-black font-black uppercase tracking-widest rounded-xl hover:bg-amber-gold transition-all">
-                    Crear primer Teatro
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {theaters.map((theater: any) => {
-                    const seatCount = theater.seats?.length ?? 0;
-                    const syncSt = theaterSyncStatus[theater.id] || 'idle';
-                    return (
-                      <motion.div
-                        key={theater.id}
-                        whileHover={{ y: -4 }}
-                        className="bg-white/5 border border-white/10 hover:border-amber-honey/40 rounded-[2rem] p-6 flex flex-col gap-5 transition-all shadow-lg shadow-black/20"
-                      >
-                        {/* Card Header */}
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-11 h-11 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 flex items-center justify-center shrink-0">
-                              <MapPin size={18} className="text-amber-honey" />
-                            </div>
-                            <div>
-                              <h3 className="text-sm font-black text-[#F4F6F0] leading-tight">{theater.name}</h3>
-                              <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-0.5">{theater.location || 'Sin ubicación'}</p>
-                            </div>
-                          </div>
-                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[#F4F6F0]/60">
-                            ID #{theater.id}
-                          </span>
-                        </div>
-
-                        {/* Stats row */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
-                            <p className="text-[8px] uppercase tracking-widest text-[#F4F6F0]/50 font-bold">Asientos</p>
-                            <p className="text-lg font-black text-[#F4F6F0] mt-1">{seatCount}</p>
-                          </div>
-                          <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
-                            <p className="text-[8px] uppercase tracking-widest text-[#F4F6F0]/50 font-bold">Zonas GA</p>
-                            <p className="text-lg font-black text-[#F4F6F0] mt-1">{theater.ga_zones?.length ?? 0}</p>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-col gap-2">
-                          {/* Sync seats button */}
-                          <button
-                            onClick={() => handleTheaterSync(theater.id)}
-                            disabled={syncSt === 'loading'}
-                            className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${syncSt === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-                              syncSt === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                                'bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 hover:text-white'
-                              }`}
-                          >
-                            {syncSt === 'loading' ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> :
-                              syncSt === 'success' ? <Check size={12} /> :
-                                syncSt === 'error' ? <AlertTriangle size={12} /> :
-                                  <Layers size={12} />}
-                            {syncSt === 'success' ? 'Asientos Sincronizados' : syncSt === 'error' ? 'Error al Sincronizar' : 'Sincronizar Asientos'}
-                          </button>
-
-                          {/* Secondary actions */}
-                          <div className="grid grid-cols-3 gap-2">
-                            <Link
-                              href="/designer"
-                              onClick={() => { }}
-                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider text-center bg-amber-honey/10 border border-amber-honey/20 text-amber-honey hover:bg-amber-honey hover:text-black hover:font-bold transition-all flex items-center justify-center gap-1"
-                            >
-                              <Layers size={11} /> Diseñar
-                            </Link>
-                            <button
-                              onClick={() => openTheaterEditModal(theater)}
-                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-1"
-                            >
-                              <Edit2 size={11} /> Editar
-                            </button>
-                            <button
-                              onClick={() => handleTheaterDelete(theater.id, theater.name)}
-                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1"
-                            >
-                              <Trash2 size={11} /> Borrar
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ══════ THEATER MODAL (Dashboard) ══════ */}
-        <AnimatePresence>
-          {isTheaterModalOpen && (
-            <div
-              className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#0B0F0D]/60 backdrop-blur-md"
-              onClick={(e) => { if (e.target === e.currentTarget) setIsTheaterModalOpen(false); }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.93, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93, y: 20 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-                className="w-full max-w-md bg-[#0B0F0D] border border-white/10 rounded-[2rem] p-8 shadow-2xl shadow-black/40"
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-amber-honey/10 border border-amber-honey/20 rounded-2xl flex items-center justify-center">
-                      <MapPin size={20} className="text-amber-honey" />
-                    </div>
-                    <div>
-                      <h2 className="text-[13px] font-black uppercase tracking-[0.25em] text-[#F4F6F0]">
-                        {editingTheater ? 'Editar Teatro' : 'Nuevo Teatro'}
-                      </h2>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey mt-0.5">Nectar Studio — Venue Management</p>
-                    </div>
-                  </div>
-                  <button onClick={() => setIsTheaterModalOpen(false)} className="w-9 h-9 rounded-xl bg-white/5 text-[#F4F6F0]/40 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all">
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <form onSubmit={handleTheaterSubmit} className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Nombre del Recinto *</label>
-                    <input
-                      type="text" autoFocus value={theaterName} onChange={(e) => setTheaterName(e.target.value)}
-                      placeholder="Ej: Teatro Metropólitan CDMX"
-                      className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-honey transition-all placeholder:text-white/30"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Ubicación / Ciudad</label>
-                    <input
-                      type="text" value={theaterLocation} onChange={(e) => setTheaterLocation(e.target.value)}
-                      placeholder="Ej: Ciudad de México, CDMX"
-                      className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-honey transition-all placeholder:text-white/30"
-                    />
-                  </div>
-                  {!editingTheater && (
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-honey/10 border border-amber-honey/20">
-                      <Calendar size={14} className="text-amber-honey mt-0.5 shrink-0" />
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-[#F4F6F0]/70 leading-relaxed">
-                        Después de crear el teatro, ábrelo en Nectar Studio Designer para diseñar la planta y agregar butacas.
-                      </p>
-                    </div>
-                  )}
-                  {theaterErrorMsg && (
-                    <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                      <AlertTriangle size={13} className="text-red-400 shrink-0" />
-                      <p className="text-[10px] font-bold text-red-400">{theaterErrorMsg}</p>
-                    </div>
-                  )}
-                  <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setIsTheaterModalOpen(false)} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 transition-all">
-                      Cancelar
-                    </button>
-                    <button type="submit" disabled={theaterLoading} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-amber-500 to-amber-600 text-black flex items-center justify-center gap-2 shadow-[0_2px_15px_rgba(245,158,11,0.2)] disabled:opacity-50">
-                      {theaterLoading
-                        ? <><div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> Guardando...</>
-                        : <><Check size={13} /> {editingTheater ? 'Guardar Cambios' : 'Crear Teatro'}</>
-                      }
-                    </button>
-                  </div>
-                </form>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {/* ══════ TAB 6: CONTRACTS PIPELINE ══════ */}
-        <AnimatePresence>
-          {activeTab === 'contracts' && (
-            <motion.div
-              key="contracts-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
-            >
-              {/* Header */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div>
-                  <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2 text-[#F4F6F0]">
-                    ✍️ Pipeline de Contratos Artísticos
-                  </h2>
-                  <p className="text-[#F4F6F0]/50 text-[10px] uppercase tracking-widest font-bold mt-1">
-                    Monitorea, comparte enlaces y contrafirma acuerdos digitales de MS Ambar
-                  </p>
-                </div>
-              </div>
-
-              {/* Pipeline Kanban Columns */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-
-                {/* Column 1: Generated/Pending Client Signature */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/10">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-honey flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-pulse" /> Propuestas (Cliente Pendiente)
-                    </span>
-                    <span className="text-[10px] font-black text-[#F4F6F0]/60 bg-white/5 px-2 py-0.5 rounded-full">
-                      {contracts.filter(c => !c.signature_base64).length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-                    {contracts.filter(c => !c.signature_base64).length === 0 ? (
-                      <div className="p-8 text-center rounded-[2rem] border border-white/10 bg-white/5 text-xs text-[#F4F6F0]/40 italic">
-                        No hay propuestas pendientes
-                      </div>
-                    ) : (
-                      contracts.filter(c => !c.signature_base64).map((c: any) => (
-                        <div key={c.id} className="p-6 rounded-3xl border border-white/10 bg-white/5 space-y-4 hover:border-amber-honey/30 transition-all shadow-lg shadow-black/20">
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-black text-[#F4F6F0]">{c.inquiry_detail?.name || 'Promotor'}</h4>
-                            <p className="text-[8px] font-bold text-[#F4F6F0]/50 uppercase tracking-widest">
-                              {c.inquiry_detail?.company || 'Particular'}
-                            </p>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
-                            <div>
-                              <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
-                              <p className="font-bold text-[#F4F6F0]/80">{c.inquiry_detail?.date || 'Definir'}</p>
-                            </div>
-                            <div>
-                              <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
-                              <p className="font-bold text-amber-honey">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => {
-                              const link = `${window.location.origin}/bookings/sign/${c.id}`;
-                              navigator.clipboard.writeText(link);
-                              alert('Enlace de firma copiado al portapapeles!');
-                            }}
-                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-[#F4F6F0]/70 transition-all text-center block"
-                          >
-                            🔗 Copiar Enlace de Firma
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Column 2: Waiting for Manager Countersign */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/10">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-600 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-ping" /> Esperando Contrafirma
-                    </span>
-                    <span className="text-[10px] font-black text-[#F4F6F0]/60 bg-white/5 px-2 py-0.5 rounded-full">
-                      {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-                    {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length === 0 ? (
-                      <div className="p-8 text-center rounded-[2rem] border border-white/10 bg-white/5 text-xs text-[#F4F6F0]/40 italic">
-                        Ningún acuerdo pendiente de firma de management
-                      </div>
-                    ) : (
-                      contracts.filter(c => c.signature_base64 && !c.is_fully_signed).map((c: any) => (
-                        <div key={c.id} className="p-6 rounded-3xl border border-yellow-500/20 bg-white/5 space-y-4 hover:border-yellow-500/40 transition-all shadow-lg shadow-black/20">
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-black text-[#F4F6F0]">{c.inquiry_detail?.name || 'Promotor'}</h4>
-                            <p className="text-[8px] font-bold text-[#F4F6F0]/50 uppercase tracking-widest">
-                              {c.inquiry_detail?.company || 'Particular'}
-                            </p>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
-                            <div>
-                              <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
-                              <p className="font-bold text-[#F4F6F0]/80">{c.inquiry_detail?.date || 'Definir'}</p>
-                            </div>
-                            <div>
-                              <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
-                              <p className="font-bold text-amber-honey">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
-                            </div>
-                          </div>
-                          <Link
-                            href={`/bookings/sign/${c.id}`}
-                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-yellow-500 hover:bg-yellow-600 text-black font-black transition-all text-center block"
-                          >
-                            ✍️ Firmar como Manager
-                          </Link>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                {/* Column 3: Fully Signed and Certified */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/10">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Cerrados y Certificados
-                    </span>
-                    <span className="text-[10px] font-black text-[#F4F6F0]/60 bg-white/5 px-2 py-0.5 rounded-full">
-                      {contracts.filter(c => c.is_fully_signed).length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
-                    {contracts.filter(c => c.is_fully_signed).length === 0 ? (
-                      <div className="p-8 text-center rounded-[2rem] border border-white/10 bg-white/5 text-xs text-[#F4F6F0]/40 italic">
-                        No hay contratos cerrados todavía
-                      </div>
-                    ) : (
-                      contracts.filter(c => c.is_fully_signed).map((c: any) => {
-                        const pdfUrl = c.pdf_file ? (c.pdf_file.startsWith('http') ? c.pdf_file : `${API_URL.replace('/api', '')}${c.pdf_file}`) : '#';
-                        return (
-                          <div key={c.id} className="p-6 rounded-3xl border border-emerald-500/20 bg-white/5 space-y-4 hover:border-emerald-500/40 transition-all shadow-lg shadow-black/20">
-                            <div className="space-y-1">
-                              <h4 className="text-sm font-black text-[#F4F6F0]">{c.inquiry_detail?.name || 'Promotor'}</h4>
-                              <p className="text-[8px] font-bold text-[#F4F6F0]/50 uppercase tracking-widest">
-                                {c.inquiry_detail?.company || 'Particular'}
-                              </p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
-                              <div>
-                                <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
-                                <p className="font-bold text-[#F4F6F0]/80">{c.inquiry_detail?.date || 'Definir'}</p>
-                              </div>
-                              <div>
-                                <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
-                                <p className="font-bold text-emerald-400">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
-                              </div>
-                            </div>
-                            <a
-                              href={pdfUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all text-center block border border-emerald-500/20"
-                            >
-                              📄 Descargar Contrato PDF
-                            </a>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </div>
-
-              </div>
-
-            </motion.div>
-          )}
-
-          {/* TAB 7: EMAIL CAMPAIGNS */}
-          {activeTab === 'campaigns' && (
-            <motion.div
-              key="campaigns-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-8"
-            >
-              {/* Campaigns Sub-Tab Navigation Bar */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-nature-night/5 border border-nature-night/10 p-4 rounded-[2rem]">
-                <div className="flex gap-2 bg-nature-night/5 border border-nature-night/10 p-1 rounded-xl">
-                  <button
-                    onClick={() => setCampaignSubTab('campaigns')}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'campaigns'
-                      ? 'bg-white text-nature-night border border-nature-night/10 shadow-sm'
-                      : 'text-nature-night/50 hover:text-nature-night hover:bg-white'
-                      }`}
-                  >
-                    📧 Campañas de Poemas ({campaigns.length})
-                  </button>
-                  <button
-                    onClick={() => setCampaignSubTab('subscribers')}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'subscribers'
-                      ? 'bg-white text-nature-night border border-nature-night/10 shadow-sm'
-                      : 'text-nature-night/50 hover:text-nature-night hover:bg-white'
-                      }`}
-                  >
-                    👥 Lista de Suscriptores ({subscribers.length})
-                  </button>
-                </div>
-
-                {campaignSubTab === 'campaigns' ? (
-                  <button
-                    onClick={openCampaignCreateModal}
-                    className="bg-amber-honey text-black px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-gold transition-all flex items-center gap-2"
-                  >
-                    <Plus size={14} /> Nueva Campaña
-                  </button>
-                ) : (
-                  <span className="text-[10px] text-nature-night/50 uppercase tracking-widest font-black pr-4">
-                    Importación y Gestión de Contactos
-                  </span>
-                )}
-              </div>
-
-              {campaignSubTab === 'campaigns' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {campaigns.length === 0 ? (
-                    <div className="col-span-full p-12 text-center rounded-[2rem] border border-nature-night/10 bg-nature-night/5 text-xs text-nature-night/40 italic">
-                      No has creado ninguna campaña de poemas todavía.
-                    </div>
-                  ) : (
-                    campaigns.map((c: any) => (
-                      <div key={c.id} className="p-6 rounded-[2rem] border border-nature-night/10 bg-white space-y-4 hover:border-amber-honey/40 transition-all flex flex-col justify-between shadow-md shadow-nature-night/5">
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-start">
-                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${c.template_type === 'moss' ? 'bg-green-950 text-green-300 border border-green-800' :
-                              c.template_type === 'cosmic' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                                c.template_type === 'glow' ? 'bg-yellow-950 text-yellow-300 border border-yellow-800' :
-                                  c.template_type === 'mist' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' :
-                                    'bg-neutral-900 text-neutral-300 border border-neutral-700'
-                              }`}>
-                              {c.template_type === 'minimalist' ? 'Minimalist Carbon' :
-                                c.template_type === 'moss' ? 'Moss Green' :
-                                  c.template_type === 'cosmic' ? 'Cosmic Night' :
-                                    c.template_type === 'glow' ? 'Amber Glow' :
-                                      c.template_type === 'mist' ? 'Mystic Mist' : c.template_type}
-                            </span>
-
-                            {c.is_sent ? (
-                              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
-                                Enviada
-                              </span>
-                            ) : (
-                              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
-                                Borrador
-                              </span>
-                            )}
-                          </div>
-
-                          <div>
-                            <h4 className="text-base font-black text-nature-night leading-snug line-clamp-2">{c.subject}</h4>
-                            <p className="text-[9px] text-nature-night/50 font-bold uppercase tracking-widest mt-1">
-                              Creado: {new Date(c.created_at).toLocaleDateString('es-MX')}
-                            </p>
-                            {c.is_sent && c.sent_at && (
-                              <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest font-mono">
-                                Enviado: {new Date(c.sent_at).toLocaleDateString('es-MX')}
-                              </p>
-                            )}
-                          </div>
-
-                          <p className="text-xs text-nature-night/70 line-clamp-4 italic bg-nature-night/5 p-4 rounded-2xl border border-nature-night/10 whitespace-pre-line">
-                            {c.poem_text.substring(0, 180)}{c.poem_text.length > 180 ? '...' : ''}
-                          </p>
-                        </div>
-
-                        <div className="flex gap-2 pt-4 border-t border-nature-night/10">
-                          <button
-                            onClick={() => setPreviewCampaign(c)}
-                            className="flex-1 py-2 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 text-nature-night/70"
-                          >
-                            <Eye size={12} /> Previsualizar
-                          </button>
-
-                          {!c.is_sent && (
-                            <>
-                              <button
-                                onClick={() => openCampaignEditModal(c)}
-                                className="w-10 h-10 bg-nature-night/5 hover:bg-amber-honey/10 border border-nature-night/10 hover:border-amber-honey/30 rounded-xl flex items-center justify-center text-nature-night/60 hover:text-amber-honey transition-all"
-                                title="Editar"
+                          {/* ══════ TAB 5: THEATERS MANAGEMENT ══════ */}
+                          <AnimatePresence>
+                            {activeTab === 'theaters' && (
+                              <motion.div
+                                key="theaters-tab"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
+                                transition={{ duration: 0.3 }}
+                                className="space-y-6"
                               >
-                                <Edit2 size={12} />
-                              </button>
-                              <button
-                                onClick={() => handleCampaignSend(c.id)}
-                                disabled={sendingCampaignId === c.id}
-                                className="flex-1 py-2 bg-amber-honey hover:bg-amber-gold text-black rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 font-bold shadow-lg shadow-amber-honey/15"
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                                  <div>
+                                    <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2">
+                                      <MapPin size={20} className="text-amber-500" /> Gestión de Recintos
+                                    </h2>
+                                    <p className="text-[#F4F6F0]/50 text-[10px] uppercase tracking-widest font-bold mt-1">
+                                      Crea y administra teatros — abre cada uno en Nectar Studio para diseñar su planta
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={openTheaterCreateModal}
+                                    className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
+                                  >
+                                    <Plus size={15} /> Nuevo Teatro
+                                  </button>
+                                </div>
+
+                                {/* Success / Error messages */}
+                                {theaterSuccessMsg && (
+                                  <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl">
+                                    <Check size={14} className="text-green-600 shrink-0" />
+                                    <p className="text-xs font-bold text-green-600">{theaterSuccessMsg}</p>
+                                  </motion.div>
+                                )}
+                                {theaterErrorMsg && (
+                                  <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                                    <AlertTriangle size={14} className="text-red-600 shrink-0" />
+                                    <p className="text-xs font-bold text-red-600">{theaterErrorMsg}</p>
+                                  </motion.div>
+                                )}
+
+                                {/* Theaters Grid */}
+                                {theaters.length === 0 ? (
+                                  <div className="bg-white/5 border border-white/10 rounded-[2rem] p-16 flex flex-col items-center gap-4 text-center shadow-lg shadow-black/20">
+                                    <MapPin size={48} className="text-[#F4F6F0]/20" />
+                                    <p className="text-[#F4F6F0]/40 text-xs uppercase tracking-widest font-black">Sin teatros registrados</p>
+                                    <p className="text-[#F4F6F0]/30 text-[10px] font-bold">Crea tu primer recinto para comenzar a vender boletos</p>
+                                    <button onClick={openTheaterCreateModal} className="mt-4 px-6 py-3 bg-amber-honey text-black font-black uppercase tracking-widest rounded-xl hover:bg-amber-gold transition-all">
+                                      Crear primer Teatro
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {theaters.map((theater: any) => {
+                                      const seatCount = theater.seats?.length ?? 0;
+                                      const syncSt = theaterSyncStatus[theater.id] || 'idle';
+                                      return (
+                                        <motion.div
+                                          key={theater.id}
+                                          whileHover={{ y: -4 }}
+                                          className="bg-white/5 border border-white/10 hover:border-amber-honey/40 rounded-[2rem] p-6 flex flex-col gap-5 transition-all shadow-lg shadow-black/20"
+                                        >
+                                          {/* Card Header */}
+                                          <div className="flex items-start justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                              <div className="w-11 h-11 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 flex items-center justify-center shrink-0">
+                                                <MapPin size={18} className="text-amber-honey" />
+                                              </div>
+                                              <div>
+                                                <h3 className="text-sm font-black text-[#F4F6F0] leading-tight">{theater.name}</h3>
+                                                <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-0.5">{theater.location || 'Sin ubicación'}</p>
+                                              </div>
+                                            </div>
+                                            <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-[#F4F6F0]/60">
+                                              ID #{theater.id}
+                                            </span>
+                                          </div>
+
+                                          {/* Stats row */}
+                                          <div className="grid grid-cols-2 gap-3">
+                                            <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
+                                              <p className="text-[8px] uppercase tracking-widest text-[#F4F6F0]/50 font-bold">Asientos</p>
+                                              <p className="text-lg font-black text-[#F4F6F0] mt-1">{seatCount}</p>
+                                            </div>
+                                            <div className="p-3 bg-white/5 border border-white/10 rounded-xl">
+                                              <p className="text-[8px] uppercase tracking-widest text-[#F4F6F0]/50 font-bold">Zonas GA</p>
+                                              <p className="text-lg font-black text-[#F4F6F0] mt-1">{theater.ga_zones?.length ?? 0}</p>
+                                            </div>
+                                          </div>
+
+                                          {/* Actions */}
+                                          <div className="flex flex-col gap-2">
+                                            {/* Sync seats button */}
+                                            <button
+                                              onClick={() => handleTheaterSync(theater.id)}
+                                              disabled={syncSt === 'loading'}
+                                              className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${syncSt === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+                                                syncSt === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                                  'bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 hover:text-white'
+                                                }`}
+                                            >
+                                              {syncSt === 'loading' ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> :
+                                                syncSt === 'success' ? <Check size={12} /> :
+                                                  syncSt === 'error' ? <AlertTriangle size={12} /> :
+                                                    <Layers size={12} />}
+                                              {syncSt === 'success' ? 'Asientos Sincronizados' : syncSt === 'error' ? 'Error al Sincronizar' : 'Sincronizar Asientos'}
+                                            </button>
+
+                                            {/* Secondary actions */}
+                                            <div className="grid grid-cols-3 gap-2">
+                                              <Link
+                                                href="/designer"
+                                                onClick={() => { }}
+                                                className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider text-center bg-amber-honey/10 border border-amber-honey/20 text-amber-honey hover:bg-amber-honey hover:text-black hover:font-bold transition-all flex items-center justify-center gap-1"
+                                              >
+                                                <Layers size={11} /> Diseñar
+                                              </Link>
+                                              <button
+                                                onClick={() => openTheaterEditModal(theater)}
+                                                className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-1"
+                                              >
+                                                <Edit2 size={11} /> Editar
+                                              </button>
+                                              <button
+                                                onClick={() => handleTheaterDelete(theater.id, theater.name)}
+                                                className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1"
+                                              >
+                                                <Trash2 size={11} /> Borrar
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </motion.div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          {/* ══════ THEATER MODAL (Dashboard) ══════ */}
+                          <AnimatePresence>
+                            {isTheaterModalOpen && (
+                              <div
+                                className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#0B0F0D]/60 backdrop-blur-md"
+                                onClick={(e) => { if (e.target === e.currentTarget) setIsTheaterModalOpen(false); }}
                               >
-                                {sendingCampaignId === c.id ? 'Enviando...' : '🚀 Enviar'}
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => handleCampaignDelete(c.id, c.subject)}
-                            className="w-10 h-10 bg-nature-night/5 hover:bg-red-500/10 border border-nature-night/10 hover:border-red-500/30 rounded-xl flex items-center justify-center text-nature-night/40 hover:text-red-600 transition-all"
-                            title="Eliminar"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.93, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93, y: 20 }}
+                                  transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                                  className="w-full max-w-md bg-[#0B0F0D] border border-white/10 rounded-[2rem] p-8 shadow-2xl shadow-black/40"
+                                >
+                                  <div className="flex items-center justify-between mb-8">
+                                    <div className="flex items-center gap-4">
+                                      <div className="w-12 h-12 bg-amber-honey/10 border border-amber-honey/20 rounded-2xl flex items-center justify-center">
+                                        <MapPin size={20} className="text-amber-honey" />
+                                      </div>
+                                      <div>
+                                        <h2 className="text-[13px] font-black uppercase tracking-[0.25em] text-[#F4F6F0]">
+                                          {editingTheater ? 'Editar Teatro' : 'Nuevo Teatro'}
+                                        </h2>
+                                        <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey mt-0.5">Nectar Studio — Venue Management</p>
+                                      </div>
+                                    </div>
+                                    <button onClick={() => setIsTheaterModalOpen(false)} className="w-9 h-9 rounded-xl bg-white/5 text-[#F4F6F0]/40 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all">
+                                      <X size={16} />
+                                    </button>
+                                  </div>
 
-              {campaignSubTab === 'subscribers' && (
-                <div className="space-y-6">
-                  {/* Summary & CSV Uploader split */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Stats */}
-                    <div className="bg-white border border-nature-night/10 p-6 rounded-[2rem] flex flex-col justify-between gap-4 shadow-md shadow-nature-night/5">
-                      <div>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-nature-night/50 mb-4">Métricas del Newsletter</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 bg-nature-night/5 border border-nature-night/10 rounded-2xl">
-                            <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Activos</span>
-                            <span className="text-2xl font-black text-nature-night font-mono">{subscribers.filter(s => s.is_active).length}</span>
-                          </div>
-                          <div className="p-4 bg-nature-night/5 border border-nature-night/10 rounded-2xl">
-                            <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Premium</span>
-                            <span className="text-2xl font-black text-amber-honey font-mono">{subscribers.filter(s => s.is_premium).length}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-nature-night/50 uppercase tracking-widest font-black pl-1">
-                        Total en Bóveda: {subscribers.length} contactos
-                      </div>
-                    </div>
+                                  <form onSubmit={handleTheaterSubmit} className="space-y-5">
+                                    <div className="space-y-2">
+                                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Nombre del Recinto *</label>
+                                      <input
+                                        type="text" autoFocus value={theaterName} onChange={(e) => setTheaterName(e.target.value)}
+                                        placeholder="Ej: Teatro Metropólitan CDMX"
+                                        className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-honey transition-all placeholder:text-white/30"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Ubicación / Ciudad</label>
+                                      <input
+                                        type="text" value={theaterLocation} onChange={(e) => setTheaterLocation(e.target.value)}
+                                        placeholder="Ej: Ciudad de México, CDMX"
+                                        className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-honey transition-all placeholder:text-white/30"
+                                      />
+                                    </div>
+                                    {!editingTheater && (
+                                      <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-honey/10 border border-amber-honey/20">
+                                        <Calendar size={14} className="text-amber-honey mt-0.5 shrink-0" />
+                                        <p className="text-[9px] font-bold uppercase tracking-wider text-[#F4F6F0]/70 leading-relaxed">
+                                          Después de crear el teatro, ábrelo en Nectar Studio Designer para diseñar la planta y agregar butacas.
+                                        </p>
+                                      </div>
+                                    )}
+                                    {theaterErrorMsg && (
+                                      <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                                        <AlertTriangle size={13} className="text-red-400 shrink-0" />
+                                        <p className="text-[10px] font-bold text-red-400">{theaterErrorMsg}</p>
+                                      </div>
+                                    )}
+                                    <div className="flex gap-3 pt-2">
+                                      <button type="button" onClick={() => setIsTheaterModalOpen(false)} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 transition-all">
+                                        Cancelar
+                                      </button>
+                                      <button type="submit" disabled={theaterLoading} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-amber-500 to-amber-600 text-black flex items-center justify-center gap-2 shadow-[0_2px_15px_rgba(245,158,11,0.2)] disabled:opacity-50">
+                                        {theaterLoading
+                                          ? <><div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> Guardando...</>
+                                          : <><Check size={13} /> {editingTheater ? 'Guardar Cambios' : 'Crear Teatro'}</>
+                                        }
+                                      </button>
+                                    </div>
+                                  </form>
+                                </motion.div>
+                              </div>
+                            )}
+                          </AnimatePresence>
 
-                    {/* CSV Importer Form */}
-                    <div className="lg:col-span-2 bg-white border border-nature-night/10 p-6 rounded-[2rem] shadow-md shadow-nature-night/5">
-                      <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2 mb-2">
-                        📥 Importador Masivo de Contactos (CSV)
-                      </h4>
-                      <p className="text-[9px] text-nature-night/50 uppercase tracking-widest font-bold mb-4">
-                        Sube un archivo para importar o actualizar tu lista. Columnas soportadas: subscriber_id, api_subscription_id, email, tags, status, premium?, created_at
-                      </p>
+                          {/* ══════ TAB 6: CONTRACTS PIPELINE ══════ */}
+                          <AnimatePresence>
+                            {activeTab === 'contracts' && (
+                              <motion.div
+                                key="contracts-tab"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
+                                transition={{ duration: 0.3 }}
+                                className="space-y-6"
+                              >
+                                {/* Header */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                                  <div>
+                                    <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2 text-[#F4F6F0]">
+                                      ✍️ Pipeline de Contratos Artísticos
+                                    </h2>
+                                    <p className="text-[#F4F6F0]/50 text-[10px] uppercase tracking-widest font-bold mt-1">
+                                      Monitorea, comparte enlaces y contrafirma acuerdos digitales de MS Ambar
+                                    </p>
+                                  </div>
+                                </div>
 
-                      <form onSubmit={handleCsvImport} className="flex flex-col sm:flex-row gap-4 items-end">
-                        <div className="space-y-1.5 flex-1 w-full">
-                          <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Seleccionar Archivo CSV</label>
-                          <input
-                            type="file"
-                            id="csv-file-input"
-                            accept=".csv"
-                            onChange={e => {
-                              const file = e.target.files?.[0] || null;
-                              setImportCsvFile(file);
-                            }}
-                            className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold file:bg-nature-night/5 file:border-0 file:rounded-lg file:text-nature-night/70 file:px-3 file:py-1 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-nature-night/10"
-                          />
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={importCsvLoading}
-                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] px-6 py-4 rounded-xl transition-all shadow-[0_2px_15px_rgba(245,158,11,0.15)] disabled:opacity-50 w-full sm:w-auto self-stretch sm:self-end flex items-center justify-center gap-2"
-                        >
-                          {importCsvLoading ? (
-                            <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                          ) : (
-                            'Importar Contactos'
-                          )}
-                        </button>
-                      </form>
+                                {/* Pipeline Kanban Columns */}
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
-                      {importCsvSuccess && (
-                        <div className="mt-4 p-3 bg-green-500/10 border border-green-500/25 text-green-600 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
-                          {importCsvSuccess}
-                        </div>
-                      )}
-                      {importCsvError && (
-                        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/25 text-red-600 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
-                          {importCsvError}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                                  {/* Column 1: Generated/Pending Client Signature */}
+                                  <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-3 pb-2 border-b border-white/10">
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-honey flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-pulse" /> Propuestas (Cliente Pendiente)
+                                      </span>
+                                      <span className="text-[10px] font-black text-[#F4F6F0]/60 bg-white/5 px-2 py-0.5 rounded-full">
+                                        {contracts.filter(c => !c.signature_base64).length}
+                                      </span>
+                                    </div>
 
-                  {/* Subscribers list table */}
-                  <div className="bg-white border border-nature-night/10 rounded-[2rem] p-6 overflow-hidden shadow-md shadow-nature-night/5">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-nature-night mb-4">Lista de Contactos</h4>
-                    {subscribers.length === 0 ? (
-                      <div className="p-8 text-center text-xs text-nature-night/40 italic">
-                        No hay suscriptores en la base de datos.
-                      </div>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="border-b border-nature-night/10 text-[9px] uppercase tracking-widest text-nature-night/50 text-left">
-                              <th className="py-3 font-black">Email</th>
-                              <th className="py-3 font-black">ID Suscriptor</th>
-                              <th className="py-3 font-black">ID API</th>
-                              <th className="py-3 font-black">Tags</th>
-                              <th className="py-3 font-black text-center">Estado</th>
-                              <th className="py-3 font-black text-center">Premium</th>
-                              <th className="py-3 font-black text-right">Fecha Registro</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {subscribers.map((s: any, idx: number) => (
-                              <tr key={idx} className="border-b border-nature-night/10 last:border-0 hover:bg-nature-night/5 transition-all text-xs">
-                                <td className="py-3 font-black text-nature-night">{s.email}</td>
-                                <td className="py-3 font-mono text-nature-night/55">{s.subscriber_id || '-'}</td>
-                                <td className="py-3 font-mono text-nature-night/55">{s.api_subscription_id || '-'}</td>
-                                <td className="py-3">
-                                  {s.tags ? (
-                                    <div className="flex flex-wrap gap-1">
-                                      {s.tags.split(',').map((t: string, i: number) => (
-                                        <span key={i} className="bg-nature-night/5 border border-nature-night/10 px-2 py-0.5 rounded-md text-[8px] font-bold text-nature-night/60">
-                                          {t.trim()}
-                                        </span>
+                                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                                      {contracts.filter(c => !c.signature_base64).length === 0 ? (
+                                        <div className="p-8 text-center rounded-[2rem] border border-white/10 bg-white/5 text-xs text-[#F4F6F0]/40 italic">
+                                          No hay propuestas pendientes
+                                        </div>
+                                      ) : (
+                                        contracts.filter(c => !c.signature_base64).map((c: any) => (
+                                          <div key={c.id} className="p-6 rounded-3xl border border-white/10 bg-white/5 space-y-4 hover:border-amber-honey/30 transition-all shadow-lg shadow-black/20">
+                                            <div className="space-y-1">
+                                              <h4 className="text-sm font-black text-[#F4F6F0]">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                                              <p className="text-[8px] font-bold text-[#F4F6F0]/50 uppercase tracking-widest">
+                                                {c.inquiry_detail?.company || 'Particular'}
+                                              </p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                                              <div>
+                                                <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
+                                                <p className="font-bold text-[#F4F6F0]/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                                              </div>
+                                              <div>
+                                                <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
+                                                <p className="font-bold text-amber-honey">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
+                                              </div>
+                                            </div>
+                                            <button
+                                              onClick={() => {
+                                                const link = `${window.location.origin}/bookings/sign/${c.id}`;
+                                                navigator.clipboard.writeText(link);
+                                                alert('Enlace de firma copiado al portapapeles!');
+                                              }}
+                                              className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-[#F4F6F0]/70 transition-all text-center block"
+                                            >
+                                              🔗 Copiar Enlace de Firma
+                                            </button>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Column 2: Waiting for Manager Countersign */}
+                                  <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-3 pb-2 border-b border-white/10">
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-yellow-600 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-ping" /> Esperando Contrafirma
+                                      </span>
+                                      <span className="text-[10px] font-black text-[#F4F6F0]/60 bg-white/5 px-2 py-0.5 rounded-full">
+                                        {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length}
+                                      </span>
+                                    </div>
+
+                                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                                      {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length === 0 ? (
+                                        <div className="p-8 text-center rounded-[2rem] border border-white/10 bg-white/5 text-xs text-[#F4F6F0]/40 italic">
+                                          Ningún acuerdo pendiente de firma de management
+                                        </div>
+                                      ) : (
+                                        contracts.filter(c => c.signature_base64 && !c.is_fully_signed).map((c: any) => (
+                                          <div key={c.id} className="p-6 rounded-3xl border border-yellow-500/20 bg-white/5 space-y-4 hover:border-yellow-500/40 transition-all shadow-lg shadow-black/20">
+                                            <div className="space-y-1">
+                                              <h4 className="text-sm font-black text-[#F4F6F0]">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                                              <p className="text-[8px] font-bold text-[#F4F6F0]/50 uppercase tracking-widest">
+                                                {c.inquiry_detail?.company || 'Particular'}
+                                              </p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                                              <div>
+                                                <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
+                                                <p className="font-bold text-[#F4F6F0]/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                                              </div>
+                                              <div>
+                                                <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
+                                                <p className="font-bold text-amber-honey">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
+                                              </div>
+                                            </div>
+                                            <Link
+                                              href={`/bookings/sign/${c.id}`}
+                                              className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-yellow-500 hover:bg-yellow-600 text-black font-black transition-all text-center block"
+                                            >
+                                              ✍️ Firmar como Manager
+                                            </Link>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Column 3: Fully Signed and Certified */}
+                                  <div className="space-y-4">
+                                    <div className="flex items-center justify-between px-3 pb-2 border-b border-white/10">
+                                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-2">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Cerrados y Certificados
+                                      </span>
+                                      <span className="text-[10px] font-black text-[#F4F6F0]/60 bg-white/5 px-2 py-0.5 rounded-full">
+                                        {contracts.filter(c => c.is_fully_signed).length}
+                                      </span>
+                                    </div>
+
+                                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+                                      {contracts.filter(c => c.is_fully_signed).length === 0 ? (
+                                        <div className="p-8 text-center rounded-[2rem] border border-white/10 bg-white/5 text-xs text-[#F4F6F0]/40 italic">
+                                          No hay contratos cerrados todavía
+                                        </div>
+                                      ) : (
+                                        contracts.filter(c => c.is_fully_signed).map((c: any) => {
+                                          const pdfUrl = c.pdf_file ? (c.pdf_file.startsWith('http') ? c.pdf_file : `${API_URL.replace('/api', '')}${c.pdf_file}`) : '#';
+                                          return (
+                                            <div key={c.id} className="p-6 rounded-3xl border border-emerald-500/20 bg-white/5 space-y-4 hover:border-emerald-500/40 transition-all shadow-lg shadow-black/20">
+                                              <div className="space-y-1">
+                                                <h4 className="text-sm font-black text-[#F4F6F0]">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                                                <p className="text-[8px] font-bold text-[#F4F6F0]/50 uppercase tracking-widest">
+                                                  {c.inquiry_detail?.company || 'Particular'}
+                                                </p>
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
+                                                <div>
+                                                  <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
+                                                  <p className="font-bold text-[#F4F6F0]/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                                                </div>
+                                                <div>
+                                                  <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
+                                                  <p className="font-bold text-emerald-400">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
+                                                </div>
+                                              </div>
+                                              <a
+                                                href={pdfUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all text-center block border border-emerald-500/20"
+                                              >
+                                                📄 Descargar Contrato PDF
+                                              </a>
+                                            </div>
+                                          );
+                                        })
+                                      )}
+                                    </div>
+                                  </div>
+
+                                </div>
+
+                              </motion.div>
+                            )}
+
+                            {/* TAB 7: EMAIL CAMPAIGNS */}
+                            {activeTab === 'campaigns' && (
+                              <motion.div
+                                key="campaigns-tab"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
+                                transition={{ duration: 0.3 }}
+                                className="space-y-8"
+                              >
+                                {/* Campaigns Sub-Tab Navigation Bar */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 amber-glass border border-white/10 p-4 rounded-[2rem]">
+                                  <div className="flex gap-2 bg-white/5 border border-white/10 p-1 rounded-xl">
+                                    <button
+                                      onClick={() => setCampaignSubTab('campaigns')}
+                                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'campaigns'
+                                        ? 'bg-amber-honey text-[#1E2B22] shadow-sm'
+                                        : 'text-[#F4F6F0]/50 hover:text-[#F4F6F0] hover:bg-white/5'
+                                        }`}
+                                    >
+                                      📧 Campañas de Marketing ({campaigns.length})
+                                    </button>
+                                    <button
+                                      onClick={() => setCampaignSubTab('subscribers')}
+                                      className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'subscribers'
+                                        ? 'bg-amber-honey text-[#1E2B22] shadow-sm'
+                                        : 'text-[#F4F6F0]/50 hover:text-[#F4F6F0] hover:bg-white/5'
+                                        }`}
+                                    >
+                                      👥 Lista de Suscriptores ({subscribers.length})
+                                    </button>
+                                  </div>
+
+                                  {campaignSubTab === 'campaigns' ? (
+                                    <button
+                                      onClick={openCampaignCreateModal}
+                                      className="bg-amber-honey text-black px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-gold transition-all flex items-center gap-2"
+                                    >
+                                      <Plus size={14} /> Nueva Campaña
+                                    </button>
+                                  ) : (
+                                    <span className="text-[10px] text-[#F4F6F0]/50 uppercase tracking-widest font-black pr-4">
+                                      Importación y Gestión de Contactos
+                                    </span>
+                                  )}
+                                </div>
+
+                                {campaignSubTab === 'campaigns' && (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {campaigns.length === 0 ? (
+                                      <div className="col-span-full p-12 text-center rounded-[2rem] border border-white/10 bg-white/5 text-xs text-[#F4F6F0]/40 italic">
+                                        No has creado ninguna campaña de Marketing todavía.
+                                      </div>
+                                    ) : (
+                                      campaigns.map((c: any) => (
+                                        <div key={c.id} className="p-6 rounded-[2rem] border border-white/10 bg-white/5 space-y-4 hover:border-amber-honey/40 transition-all flex flex-col justify-between shadow-lg shadow-black/20">
+                                          <div className="space-y-3">
+                                            <div className="flex justify-between items-start">
+                                              <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${c.template_type === 'moss' ? 'bg-green-950 text-green-300 border border-green-800' :
+                                                c.template_type === 'cosmic' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                                                  c.template_type === 'glow' ? 'bg-yellow-950 text-yellow-300 border border-yellow-800' :
+                                                    c.template_type === 'mist' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' :
+                                                      'bg-neutral-900 text-neutral-300 border border-neutral-700'
+                                                }`}>
+                                                {c.template_type === 'minimalist' ? 'Minimalist Carbon' :
+                                                  c.template_type === 'moss' ? 'Moss Green' :
+                                                    c.template_type === 'cosmic' ? 'Cosmic Night' :
+                                                      c.template_type === 'glow' ? 'Amber Glow' :
+                                                        c.template_type === 'mist' ? 'Mystic Mist' : c.template_type}
+                                              </span>
+
+                                              {c.is_sent ? (
+                                                <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                                  Enviada
+                                                </span>
+                                              ) : (
+                                                <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                                  Borrador
+                                                </span>
+                                              )}
+                                            </div>
+
+                                            <div>
+                                              <h4 className="text-base font-black text-[#F4F6F0] leading-snug line-clamp-2">{c.subject}</h4>
+                                              <p className="text-[9px] text-[#F4F6F0]/50 font-bold uppercase tracking-widest mt-1">
+                                                Creado: {new Date(c.created_at).toLocaleDateString('es-MX')}
+                                              </p>
+                                              {c.is_sent && c.sent_at && (
+                                                <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest font-mono">
+                                                  Enviado: {new Date(c.sent_at).toLocaleDateString('es-MX')}
+                                                </p>
+                                              )}
+                                            </div>
+
+                                            <p className="text-xs text-[#F4F6F0]/70 line-clamp-4 italic bg-white/5 p-4 rounded-2xl border border-white/10 whitespace-pre-line">
+                                              {c.poem_text.substring(0, 180)}{c.poem_text.length > 180 ? '...' : ''}
+                                            </p>
+                                          </div>
+
+                                          <div className="flex gap-2 pt-4 border-t border-white/10">
+                                            <button
+                                              onClick={() => setPreviewCampaign(c)}
+                                              className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 text-[#F4F6F0]/70"
+                                            >
+                                              <Eye size={12} /> Previsualizar
+                                            </button>
+
+                                            {!c.is_sent && (
+                                              <>
+                                                <button
+                                                  onClick={() => openCampaignEditModal(c)}
+                                                  className="w-10 h-10 bg-white/5 hover:bg-amber-honey/10 border border-white/10 hover:border-amber-honey/30 rounded-xl flex items-center justify-center text-[#F4F6F0]/60 hover:text-amber-honey transition-all"
+                                                  title="Editar"
+                                                >
+                                                  <Edit2 size={12} />
+                                                </button>
+                                                <button
+                                                  onClick={() => handleCampaignSend(c.id)}
+                                                  disabled={sendingCampaignId === c.id}
+                                                  className="flex-1 py-2 bg-amber-honey hover:bg-amber-gold text-black rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 font-bold shadow-lg shadow-amber-honey/15"
+                                                >
+                                                  {sendingCampaignId === c.id ? 'Enviando...' : '🚀 Enviar'}
+                                                </button>
+                                              </>
+                                            )}
+                                            <button
+                                              onClick={() => handleCampaignDelete(c.id, c.subject)}
+                                              className="w-10 h-10 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 rounded-xl flex items-center justify-center text-[#F4F6F0]/40 hover:text-red-400 transition-all"
+                                              title="Eliminar"
+                                            >
+                                              <Trash2 size={12} />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                )}
+
+                                {campaignSubTab === 'subscribers' && (
+                                  <div className="space-y-6">
+                                    {/* Summary & CSV Uploader split */}
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                      {/* Stats */}
+                                      <div className="amber-glass border border-white/10 p-6 rounded-[2rem] flex flex-col justify-between gap-4 shadow-lg shadow-black/20">
+                                        <div>
+                                          <h4 className="text-xs font-black uppercase tracking-wider text-[#F4F6F0]/50 mb-4">Métricas del Newsletter</h4>
+                                          <div className="grid grid-cols-2 gap-4">
+                                            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                                              <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Activos</span>
+                                              <span className="text-2xl font-black text-[#F4F6F0] font-mono">{subscribers.filter(s => s.is_active).length}</span>
+                                            </div>
+                                            <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
+                                              <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Premium</span>
+                                              <span className="text-2xl font-black text-amber-honey font-mono">{subscribers.filter(s => s.is_premium).length}</span>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="text-[10px] text-[#F4F6F0]/50 uppercase tracking-widest font-black pl-1">
+                                          Total en Bóveda: {subscribers.length} contactos
+                                        </div>
+                                      </div>
+
+                                      {/* CSV Importer Form */}
+                                      <div className="lg:col-span-2 amber-glass border border-white/10 p-6 rounded-[2rem] shadow-lg shadow-black/20">
+                                        <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2 mb-2">
+                                          📥 Importador Masivo de Contactos (CSV)
+                                        </h4>
+                                        <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mb-4">
+                                          Sube un archivo para importar o actualizar tu lista. Columnas soportadas: subscriber_id, api_subscription_id, email, tags, status, premium?, created_at
+                                        </p>
+
+                                        <form onSubmit={handleCsvImport} className="flex flex-col sm:flex-row gap-4 items-end">
+                                          <div className="space-y-1.5 flex-1 w-full">
+                                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-bold block pl-1">Seleccionar Archivo CSV</label>
+                                            <input
+                                              type="file"
+                                              id="csv-file-input"
+                                              accept=".csv"
+                                              onChange={e => {
+                                                const file = e.target.files?.[0] || null;
+                                                setImportCsvFile(file);
+                                              }}
+                                              className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold file:bg-white/10 file:border-0 file:rounded-lg file:text-[#F4F6F0]/70 file:px-3 file:py-1 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-white/20"
+                                            />
+                                          </div>
+                                          <button
+                                            type="submit"
+                                            disabled={importCsvLoading}
+                                            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] px-6 py-4 rounded-xl transition-all shadow-[0_2px_15px_rgba(245,158,11,0.15)] disabled:opacity-50 w-full sm:w-auto self-stretch sm:self-end flex items-center justify-center gap-2"
+                                          >
+                                            {importCsvLoading ? (
+                                              <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                                            ) : (
+                                              'Importar Contactos'
+                                            )}
+                                          </button>
+                                        </form>
+
+                                        {importCsvSuccess && (
+                                          <div className="mt-4 p-3 bg-green-500/10 border border-green-500/25 text-green-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
+                                            {importCsvSuccess}
+                                          </div>
+                                        )}
+                                        {importCsvError && (
+                                          <div className="mt-4 p-3 bg-red-500/10 border border-red-500/25 text-red-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
+                                            {importCsvError}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Subscribers list table */}
+                                    <div className="amber-glass border border-white/10 rounded-[2rem] p-6 overflow-hidden shadow-lg shadow-black/20">
+                                      <h4 className="text-xs font-black uppercase tracking-wider text-[#F4F6F0] mb-4">Lista de Contactos</h4>
+                                      {subscribers.length === 0 ? (
+                                        <div className="p-8 text-center text-xs text-[#F4F6F0]/40 italic">
+                                          No hay suscriptores en la base de datos.
+                                        </div>
+                                      ) : (
+                                        <div className="overflow-x-auto">
+                                          <table className="w-full border-collapse">
+                                            <thead>
+                                              <tr className="border-b border-white/10 text-[9px] uppercase tracking-widest text-[#F4F6F0]/50 text-left">
+                                                <th className="py-3 font-black">Email</th>
+                                                <th className="py-3 font-black">ID Suscriptor</th>
+                                                <th className="py-3 font-black">ID API</th>
+                                                <th className="py-3 font-black">Tags</th>
+                                                <th className="py-3 font-black text-center">Estado</th>
+                                                <th className="py-3 font-black text-center">Premium</th>
+                                                <th className="py-3 font-black text-right">Fecha Registro</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {subscribers.map((s: any, idx: number) => (
+                                                <tr key={idx} className="border-b border-white/10 last:border-0 hover:bg-white/5 transition-all text-xs">
+                                                  <td className="py-3 font-black text-[#F4F6F0]">{s.email}</td>
+                                                  <td className="py-3 font-mono text-[#F4F6F0]/55">{s.subscriber_id || '-'}</td>
+                                                  <td className="py-3 font-mono text-[#F4F6F0]/55">{s.api_subscription_id || '-'}</td>
+                                                  <td className="py-3">
+                                                    {s.tags ? (
+                                                      <div className="flex flex-wrap gap-1">
+                                                        {s.tags.split(',').map((t: string, i: number) => (
+                                                          <span key={i} className="bg-white/5 border border-white/10 px-2 py-0.5 rounded-md text-[8px] font-bold text-[#F4F6F0]/60">
+                                                            {t.trim()}
+                                                          </span>
+                                                        ))}
+                                                      </div>
+                                                    ) : (
+                                                      <span className="text-[#F4F6F0]/40">-</span>
+                                                    )}
+                                                  </td>
+                                                  <td className="py-3 text-center">
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_active ? 'bg-green-500/10 border border-green-500/25 text-green-400' : 'bg-red-500/10 border border-red-500/25 text-red-400'
+                                                      }`}>
+                                                      {s.is_active ? 'Activo' : 'Inactivo'}
+                                                    </span>
+                                                  </td>
+                                                  <td className="py-3 text-center">
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_premium ? 'bg-amber-honey/20 border border-amber-honey/30 text-amber-honey' : 'bg-white/5 border border-white/10 text-[#F4F6F0]/40'
+                                                      }`}>
+                                                      {s.is_premium ? 'Premium' : 'Estándar'}
+                                                    </span>
+                                                  </td>
+                                                  <td className="py-3 font-mono text-right text-[#F4F6F0]/55">
+                                                    {new Date(s.created_at).toLocaleDateString('es-MX')}
+                                                  </td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          {/* Campaign Creation/Edition Modal */}
+                          {isCampaignModalOpen && (
+                            <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="amber-glass border border-white/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative"
+                              >
+                                <button
+                                  onClick={() => setIsCampaignModalOpen(false)}
+                                  className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-[#F4F6F0]/40 hover:text-[#F4F6F0] flex items-center justify-center transition-all hover:bg-white/5"
+                                >
+                                  <X size={16} />
+                                </button>
+
+                                <div>
+                                  <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">
+                                    {campId ? 'Editar Campaña de Poemas' : 'Nueva Campaña de Poemas'}
+                                  </h3>
+                                  <p className="text-[9px] text-[#F4F6F0]/55 uppercase tracking-widest font-bold mt-1">
+                                    Redacta y elige el diseño de fondo premium
+                                  </p>
+                                </div>
+
+                                <form onSubmit={handleCampaignSubmit} className="space-y-6">
+                                  {campErrorMsg && (
+                                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-xs font-bold uppercase tracking-wide">
+                                      ⚠️ {campErrorMsg}
+                                    </div>
+                                  )}
+
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Asunto del Correo</label>
+                                    <input
+                                      type="text"
+                                      value={campSubject}
+                                      onChange={e => setCampSubject(e.target.value)}
+                                      placeholder="Ej. Susurros del Desierto - Un poema de Ms Ambar"
+                                      required
+                                      className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Plantilla de Fondo / Diseño Premium</label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                                      {[
+                                        { id: 'minimalist', name: 'Carbon', desc: 'Negro & Ámbar', class: 'bg-[#0c0d13] border-amber-honey/40 text-amber-honey' },
+                                        { id: 'moss', name: 'Moss', desc: 'Verde Musgo', class: 'bg-[#122017] border-green-800 text-green-300' },
+                                        { id: 'cosmic', name: 'Cosmic', desc: 'Índigo Cósmico', class: 'bg-[#0c0a1a] border-purple-800 text-purple-300' },
+                                        { id: 'glow', name: 'Glow', desc: 'Cálido Miel', class: 'bg-[#1a130c] border-amber-700 text-amber-500' },
+                                        { id: 'mist', name: 'Mist', desc: 'Gris Pizarra', class: 'bg-[#181b22] border-cyan-800 text-cyan-400' },
+                                      ].map(t => (
+                                        <div
+                                          key={t.id}
+                                          onClick={() => setCampTemplateType(t.id)}
+                                          className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${t.class} ${campTemplateType === t.id ? 'ring-2 ring-amber-honey border-transparent' : 'opacity-65 hover:opacity-100'
+                                            }`}
+                                        >
+                                          <span className="text-[10px] font-black uppercase tracking-wider">{t.name}</span>
+                                          <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t.desc}</span>
+                                        </div>
                                       ))}
                                     </div>
-                                  ) : (
-                                    <span className="text-nature-night/40">-</span>
-                                  )}
-                                </td>
-                                <td className="py-3 text-center">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_active ? 'bg-green-500/10 border border-green-500/25 text-green-600' : 'bg-red-500/10 border border-red-500/25 text-red-600'
-                                    }`}>
-                                    {s.is_active ? 'Activo' : 'Inactivo'}
-                                  </span>
-                                </td>
-                                <td className="py-3 text-center">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_premium ? 'bg-amber-honey/20 border border-amber-honey/30 text-amber-honey' : 'bg-nature-night/5 border border-nature-night/10 text-nature-night/40'
-                                    }`}>
-                                    {s.is_premium ? 'Premium' : 'Estándar'}
-                                  </span>
-                                </td>
-                                <td className="py-3 font-mono text-right text-nature-night/55">
-                                  {new Date(s.created_at).toLocaleDateString('es-MX')}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+                                  </div>
 
-        {/* Campaign Creation/Edition Modal */}
-        {isCampaignModalOpen && (
-          <div className="fixed inset-0 bg-nature-night/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white border border-nature-night/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative"
-            >
-              <button
-                onClick={() => setIsCampaignModalOpen(false)}
-                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-nature-night/15 text-nature-night/40 hover:text-nature-night flex items-center justify-center transition-all hover:bg-nature-night/5"
-              >
-                <X size={16} />
-              </button>
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Cuerpo del Poema (Líricas)</label>
+                                    <textarea
+                                      value={campPoemText}
+                                      onChange={e => setCampPoemText(e.target.value)}
+                                      placeholder="Escribe el poema aquí con saltos de línea normales..."
+                                      required
+                                      rows={8}
+                                      className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-amber-honey transition-all resize-none placeholder:text-[#F4F6F0]/30"
+                                    />
+                                  </div>
 
-              <div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight text-nature-night">
-                  {campId ? 'Editar Campaña de Poemas' : 'Nueva Campaña de Poemas'}
-                </h3>
-                <p className="text-[9px] text-nature-night/55 uppercase tracking-widest font-bold mt-1">
-                  Redacta y elige el diseño de fondo premium
-                </p>
-              </div>
+                                  <div className="space-y-2">
+                                    <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Imagen de Portada (Opcional)</label>
+                                    <div className="flex items-center gap-4">
+                                      {campImagePreview && (
+                                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10">
+                                          <img src={campImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                        </div>
+                                      )}
+                                      <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={e => {
+                                          const file = e.target.files?.[0];
+                                          if (file) {
+                                            setCampImageFile(file);
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => {
+                                              setCampImagePreview(reader.result as string);
+                                            };
+                                            reader.readAsDataURL(file);
+                                          };
+                                        }}
+                                        className="text-xs text-[#F4F6F0]/70 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-white/10 file:text-[#F4F6F0] file:cursor-pointer hover:file:bg-white/20"
+                                      />
+                                    </div>
+                                  </div>
 
-              <form onSubmit={handleCampaignSubmit} className="space-y-6">
-                {campErrorMsg && (
-                  <div className="bg-red-500/10 border border-red-500/20 text-red-600 p-4 rounded-xl text-xs font-bold uppercase tracking-wide">
-                    ⚠️ {campErrorMsg}
-                  </div>
-                )}
+                                  {/* Advanced Background Design Settings */}
+                                  <div className="bg-white/5 border border-white/10 p-5 rounded-3xl space-y-4">
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
+                                      🖼️ Configuración de Fondo del Correo
+                                    </h4>
 
-                <div className="space-y-2">
-                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Asunto del Correo</label>
-                  <input
-                    type="text"
-                    value={campSubject}
-                    onChange={e => setCampSubject(e.target.value)}
-                    placeholder="Ej. Susurros del Desierto - Un poema de Ms Ambar"
-                    required
-                    className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-nature-night/30"
-                  />
-                </div>
+                                    {/* Background Image Upload */}
+                                    <div className="space-y-2">
+                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Imagen de Fondo (Opcional)</label>
+                                      <div className="flex gap-4 items-center bg-white/5 border border-white/10 p-4 rounded-xl">
+                                        <div className="w-16 h-16 bg-white/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
+                                          {campBgImagePreview ? (
+                                            <img src={campBgImagePreview} alt="Background Preview" className="w-full h-full object-cover" />
+                                          ) : (
+                                            <Eye size={20} className="text-[#F4F6F0]/20" />
+                                          )}
+                                        </div>
+                                        <div className="space-y-1 flex-1">
+                                          <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={e => {
+                                              const file = e.target.files?.[0];
+                                              if (file) {
+                                                setCampBgImageFile(file);
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                  setCampBgImagePreview(reader.result as string);
+                                                };
+                                                reader.readAsDataURL(file);
+                                              }
+                                            }}
+                                            className="text-[10px] text-[#F4F6F0]/70 file:bg-white/10 file:border-0 file:rounded-lg file:text-[#F4F6F0] file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-white/20"
+                                          />
+                                          <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold">Añade una imagen que se blendeará con la plantilla.</p>
+                                        </div>
+                                      </div>
+                                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Plantilla de Fondo / Diseño Premium</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                    {[
-                      { id: 'minimalist', name: 'Carbon', desc: 'Negro & Ámbar', class: 'bg-[#0c0d13] border-amber-honey/40 text-amber-honey' },
-                      { id: 'moss', name: 'Moss', desc: 'Verde Musgo', class: 'bg-[#122017] border-green-800 text-green-300' },
-                      { id: 'cosmic', name: 'Cosmic', desc: 'Índigo Cósmico', class: 'bg-[#0c0a1a] border-purple-800 text-purple-300' },
-                      { id: 'glow', name: 'Glow', desc: 'Cálido Miel', class: 'bg-[#1a130c] border-amber-700 text-amber-500' },
-                      { id: 'mist', name: 'Mist', desc: 'Gris Pizarra', class: 'bg-[#181b22] border-cyan-800 text-cyan-400' },
-                    ].map(t => (
-                      <div
-                        key={t.id}
-                        onClick={() => setCampTemplateType(t.id)}
-                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${t.class} ${campTemplateType === t.id ? 'ring-2 ring-amber-honey border-transparent' : 'opacity-65 hover:opacity-100'
-                          }`}
-                      >
-                        <span className="text-[10px] font-black uppercase tracking-wider">{t.name}</span>
-                        <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                                    {/* Sliders and Selects */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                      {/* Opacity */}
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">
+                                          <span>Opacidad</span>
+                                          <span className="text-amber-honey font-mono">{Math.round(campBgOpacity * 100)}%</span>
+                                        </div>
+                                        <input
+                                          type="range"
+                                          min="0"
+                                          max="1"
+                                          step="0.05"
+                                          value={campBgOpacity}
+                                          onChange={e => setCampBgOpacity(parseFloat(e.target.value))}
+                                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                                        />
+                                      </div>
 
-                <div className="space-y-2">
-                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Cuerpo del Poema (Líricas)</label>
-                  <textarea
-                    value={campPoemText}
-                    onChange={e => setCampPoemText(e.target.value)}
-                    placeholder="Escribe el poema aquí con saltos de línea normales..."
-                    required
-                    rows={8}
-                    className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-amber-honey transition-all resize-none placeholder:text-nature-night/30"
-                  />
-                </div>
+                                      {/* Saturation */}
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">
+                                          <span>Saturación</span>
+                                          <span className="text-amber-honey font-mono">{campBgSaturation}%</span>
+                                        </div>
+                                        <input
+                                          type="range"
+                                          min="0"
+                                          max="200"
+                                          step="10"
+                                          value={campBgSaturation}
+                                          onChange={e => setCampBgSaturation(parseInt(e.target.value))}
+                                          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                                        />
+                                      </div>
 
-                <div className="space-y-2">
-                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Imagen de Portada (Opcional)</label>
-                  <div className="flex items-center gap-4">
-                    {campImagePreview && (
-                      <div className="w-20 h-20 rounded-2xl overflow-hidden border border-nature-night/15">
-                        <img src={campImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setCampImageFile(file);
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            setCampImagePreview(reader.result as string);
-                          };
-                          reader.readAsDataURL(file);
-                        };
-                      }}
-                      className="text-xs text-nature-night/70 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-nature-night/5 file:text-nature-night file:cursor-pointer hover:file:bg-nature-night/10"
-                    />
-                  </div>
-                </div>
+                                      {/* Position */}
+                                      <div className="space-y-1">
+                                        <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Posición del Fondo</label>
+                                        <select
+                                          value={campBgPosition}
+                                          onChange={e => setCampBgPosition(e.target.value)}
+                                          className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-[#F4F6F0] bg-[#121915]"
+                                        >
+                                          <option value="center">Centro</option>
+                                          <option value="top">Superior</option>
+                                          <option value="bottom">Inferior</option>
+                                        </select>
+                                      </div>
+                                    </div>
+                                  </div>
 
-                {/* Advanced Background Design Settings */}
-                <div className="bg-nature-night/5 border border-nature-night/10 p-5 rounded-3xl space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
-                    🖼️ Configuración de Fondo del Correo
-                  </h4>
+                                  {/* Call To Action settings */}
+                                  <div className="bg-white/5 border border-white/10 p-5 rounded-3xl space-y-4">
+                                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
+                                      🎯 Botón de Llamada a la Acción (CTA)
+                                    </h4>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                      <div className="space-y-1">
+                                        <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Texto del Botón</label>
+                                        <input
+                                          type="text"
+                                          value={campCtaText}
+                                          onChange={e => setCampCtaText(e.target.value)}
+                                          placeholder="Ej. Escuchar Single"
+                                          className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
+                                        />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Enlace del Botón (URL)</label>
+                                        <input
+                                          type="url"
+                                          value={campCtaLink}
+                                          onChange={e => setCampCtaLink(e.target.value)}
+                                          placeholder="https://..."
+                                          className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono placeholder:text-[#F4F6F0]/30"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
 
-                  {/* Background Image Upload */}
-                  <div className="space-y-2">
-                    <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Imagen de Fondo (Opcional)</label>
-                    <div className="flex gap-4 items-center bg-white border border-nature-night/10 p-4 rounded-xl">
-                      <div className="w-16 h-16 bg-nature-night/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-nature-night/10">
-                        {campBgImagePreview ? (
-                          <img src={campBgImagePreview} alt="Background Preview" className="w-full h-full object-cover" />
-                        ) : (
-                          <Eye size={20} className="text-nature-night/20" />
-                        )}
-                      </div>
-                      <div className="space-y-1 flex-1">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={e => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setCampBgImageFile(file);
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                setCampBgImagePreview(reader.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                          className="text-[10px] text-nature-night/70 file:bg-nature-night/5 file:border-0 file:rounded-lg file:text-nature-night file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-nature-night/10"
-                        />
-                        <p className="text-[8px] text-nature-night/40 uppercase tracking-widest font-bold">Añade una imagen que se blendeará con la plantilla.</p>
+                                  {/* Premium Typography settings */}
+                                  <div className="bg-white/5 border border-white/10 p-5 rounded-3xl space-y-4">
+                                    <div>
+                                      <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
+                                        ✍️ Tipografía Premium del Poema
+                                      </h4>
+                                      <p className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-1">
+                                        Elige una fuente artística de alta fidelidad para el texto del correo
+                                      </p>
+                                    </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                      {[
+                                        { id: 'serif', name: 'Estándar', css: 'font-serif', desc: 'Georgia Elegante' },
+                                        { id: 'playfair', name: 'Playfair', css: 'font-serif', style: { fontFamily: "'Playfair Display', serif" }, desc: 'Clásico & Sofisticado' },
+                                        { id: 'cinzel', name: 'Cinzel', css: 'font-serif', style: { fontFamily: "'Cinzel', serif" }, desc: 'Romano Imperial' },
+                                        { id: 'garamond', name: 'Garamond', css: 'font-serif', style: { fontFamily: "'Cormorant Garamond', serif" }, desc: 'Musgo Artístico' },
+                                        { id: 'montserrat', name: 'Montserrat', css: 'font-sans', style: { fontFamily: "'Montserrat', sans-serif" }, desc: 'Minimalista Moderno' },
+                                        { id: 'pinyon', name: 'Pinyon Script', css: 'font-cursive', style: { fontFamily: "'Pinyon Script', cursive" }, desc: 'Caligrafía Íntima' },
+                                      ].map(f => (
+                                        <div
+                                          key={f.id}
+                                          onClick={() => setCampFontFamily(f.id)}
+                                          className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${campFontFamily === f.id
+                                            ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
+                                            : 'bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/10'
+                                            }`}
+                                        >
+                                          <span
+                                            className="text-xs font-black"
+                                            style={f.style}
+                                          >
+                                            {f.name}
+                                          </span>
+                                          <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{f.desc}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex gap-4 justify-end pt-4 border-t border-white/10">
+                                    <button
+                                      type="button"
+                                      onClick={() => setIsCampaignModalOpen(false)}
+                                      className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-[#F4F6F0]/80"
+                                    >
+                                      Cancelar
+                                    </button>
+                                    <button
+                                      type="submit"
+                                      disabled={campLoading}
+                                      className="px-8 py-3 bg-amber-honey text-[#1E2B22] rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/15 disabled:opacity-50 transition-all hover:bg-amber-gold"
+                                    >
+                                      {campLoading ? 'Procesando...' : campId ? 'Actualizar Campaña' : 'Crear Campaña'}
+                                    </button>
+                                  </div>
+                                </form>
+                              </motion.div>
+                            </div>
+                          )}
+
+                          {/* Simulated Email Client Live Preview Modal */}
+                          {previewCampaign && (
+                            <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="amber-glass border border-white/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative flex flex-col max-h-[90vh]"
+                              >
+                                <button
+                                  onClick={() => setPreviewCampaign(null)}
+                                  className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-[#F4F6F0]/40 hover:text-[#F4F6F0] flex items-center justify-center transition-all hover:bg-white/5"
+                                >
+                                  <X size={16} />
+                                </button>
+
+                                <div>
+                                  <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">Previsualización de Correo</h3>
+                                  <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-1">Simulación de bandeja de entrada</p>
+                                </div>
+
+                                {/* Simulated Email Client Frame */}
+                                <div className="border border-white/10 rounded-2xl overflow-hidden flex flex-col flex-1 bg-[#080C0A]">
+                                  {/* Email header bar */}
+                                  <div className="bg-white/5 border-b border-white/10 px-6 py-4 space-y-1.5 text-xs text-[#F4F6F0]/70">
+                                    <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">De:</span> Ms Ambar &lt;escribe@msambar.dev&gt;</div>
+                                    <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
+                                    <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-[#F4F6F0] font-semibold">{previewCampaign.subject}</span></div>
+                                  </div>
+
+                                  {/* Email body simulation */}
+                                  <div className="flex-1 overflow-y-auto p-8 custom-scroll" style={{
+                                    backgroundColor:
+                                      previewCampaign.template_type === 'moss' ? '#0b130e' :
+                                        previewCampaign.template_type === 'cosmic' ? '#05050f' :
+                                          previewCampaign.template_type === 'glow' ? '#0f0b07' :
+                                            previewCampaign.template_type === 'mist' ? '#0f1115' : '#06070b'
+                                  }}>
+                                    <div style={{
+                                      maxWidth: '500px',
+                                      margin: '0 auto',
+                                      backgroundColor:
+                                        previewCampaign.template_type === 'moss' ? '#122017' :
+                                          previewCampaign.template_type === 'cosmic' ? '#0c0a1a' :
+                                            previewCampaign.template_type === 'glow' ? '#1a130c' :
+                                              previewCampaign.template_type === 'mist' ? '#181b22' : '#0c0d13',
+                                      border:
+                                        previewCampaign.template_type === 'moss' ? '1px solid #2e4d38' :
+                                          previewCampaign.template_type === 'cosmic' ? '1px solid #4a154b' :
+                                            previewCampaign.template_type === 'glow' ? '1px solid #d97706' :
+                                              previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
+                                      padding: '30px',
+                                      borderRadius: '20px',
+                                      fontFamily:
+                                        previewCampaign.font_family === 'playfair' ? "'Playfair Display', Georgia, serif" :
+                                          previewCampaign.font_family === 'cinzel' ? "'Cinzel', Georgia, serif" :
+                                            previewCampaign.font_family === 'garamond' ? "'Cormorant Garamond', 'Times New Roman', serif" :
+                                              previewCampaign.font_family === 'montserrat' ? "'Montserrat', Helvetica, sans-serif" :
+                                                previewCampaign.font_family === 'pinyon' ? "'Pinyon Script', cursive" :
+                                                  'Georgia, serif',
+                                      textAlign: 'left',
+                                      // Background Image Overlay & blending simulation
+                                      ...(previewCampaign.bg_image ? {
+                                        backgroundImage: `linear-gradient(rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                                          previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                                            previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                                              previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                                          }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                                            previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                                              previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                                                previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                                          }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))})) , url(${previewCampaign.bg_image})`,
+                                        backgroundPosition: previewCampaign.bg_position || 'center',
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundSize: 'cover',
+                                        filter: `saturate(${previewCampaign.bg_saturation ?? 100}%)`,
+                                      } : {})
+                                    }}>
+                                      {/* Logo header */}
+                                      <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                                        <div style={{
+                                          display: 'inline-block',
+                                          width: '40px',
+                                          height: '40px',
+                                          borderRadius: '50%',
+                                          backgroundColor:
+                                            previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                              previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                                previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                                  previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                                          color: '#030303',
+                                          lineHeight: '40px',
+                                          textAlign: 'center',
+                                          fontWeight: 'bold',
+                                          fontSize: '20px'
+                                        }}>A</div>
+                                        <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>Ms Ambar</h4>
+                                        <p style={{
+                                          color:
+                                            previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                              previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                                previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                                  previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                                          fontSize: '8px',
+                                          textTransform: 'uppercase',
+                                          letterSpacing: '2px',
+                                          margin: '2px 0 0 0'
+                                        }}>Ambar te escribe • Poesía</p>
+                                      </div>
+
+                                      {/* Optional cover image */}
+                                      {previewCampaign.image && (
+                                        <div style={{
+                                          borderRadius: '12px',
+                                          overflow: 'hidden',
+                                          marginBottom: '20px',
+                                          border: '1px solid rgba(255,255,255,0.05)'
+                                        }}>
+                                          <img src={previewCampaign.image} style={{ width: '100%', height: 'auto', display: 'block' }} alt="Cover" />
+                                        </div>
+                                      )}
+
+                                      {/* Subject as title inside email */}
+                                      <h3 style={{
+                                        color: '#ffffff',
+                                        fontSize: '20px',
+                                        fontWeight: 'bold',
+                                        textAlign: 'center',
+                                        fontStyle: 'italic',
+                                        marginBottom: '25px'
+                                      }}>{previewCampaign.subject}</h3>
+
+                                      {/* Poem body */}
+                                      <div style={{
+                                        color:
+                                          previewCampaign.template_type === 'moss' ? '#f5fbf7' :
+                                            previewCampaign.template_type === 'cosmic' ? '#ffffff' :
+                                              previewCampaign.template_type === 'glow' ? '#fffdfa' :
+                                                previewCampaign.template_type === 'mist' ? '#f3f4f6' : '#ffffff',
+                                        fontSize: '14px',
+                                        lineHeight: '1.8',
+                                        textAlign: 'center',
+                                        fontStyle: 'italic',
+                                        opacity: 0.95
+                                      }}>
+                                        {previewCampaign.poem_text.split('\n').map((line: string, idx: number) => (
+                                          line.trim() ? (
+                                            <p key={idx} style={{ margin: '0 0 12px 0' }}>{line}</p>
+                                          ) : (
+                                            <div key={idx} style={{ height: '12px' }} />
+                                          )
+                                        ))}
+                                      </div>
+
+                                      {/* Dynamic CTA Button */}
+                                      {previewCampaign.cta_text && previewCampaign.cta_link && (
+                                        <div style={{ textAlign: 'center', marginTop: '30px', marginBottom: '20px' }}>
+                                          <a
+                                            href={previewCampaign.cta_link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{
+                                              backgroundColor:
+                                                previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                                  previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                                    previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                                      previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                                              color: '#030303',
+                                              padding: '14px 28px',
+                                              borderRadius: '12px',
+                                              fontSize: '13px',
+                                              fontWeight: 'bold',
+                                              textDecoration: 'none',
+                                              display: 'inline-block',
+                                              letterSpacing: '1px',
+                                              textTransform: 'uppercase',
+                                              boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+                                            }}
+                                          >
+                                            {previewCampaign.cta_text}
+                                          </a>
+                                        </div>
+                                      )}
+
+                                      {/* Footer */}
+                                      <div style={{
+                                        textAlign: 'center',
+                                        borderTop: '1px solid rgba(255,255,255,0.05)',
+                                        paddingTop: '15px',
+                                        marginTop: '30px',
+                                        color: 'rgba(255,255,255,0.3)',
+                                        fontSize: '9px',
+                                        lineHeight: '1.4'
+                                      }}>
+                                        <p style={{ margin: '0 0 8px 0' }}>Recibiste este poema porque eres parte de las Cartas de Ms Ambar.</p>
+                                        <p style={{ margin: '0' }}>
+                                          <span style={{
+                                            color:
+                                              previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                                previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                                  previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                                    previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                                            textDecoration: 'underline',
+                                            cursor: 'pointer'
+                                          }}>Desuscribirse del boletín</span>
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="flex justify-end pt-2">
+                                  <button
+                                    onClick={() => setPreviewCampaign(null)}
+                                    className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-[#F4F6F0]/80 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                                  >
+                                    Cerrar Vista Previa
+                                  </button>
+                                </div>
+                              </motion.div>
+                            </div>
+                          )}
+
                       </div>
                     </div>
-                  </div>
-
-                  {/* Sliders and Selects */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Opacity */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[9px] text-nature-night/60 uppercase tracking-widest font-black">
-                        <span>Opacidad</span>
-                        <span className="text-amber-honey font-mono">{Math.round(campBgOpacity * 100)}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.05"
-                        value={campBgOpacity}
-                        onChange={e => setCampBgOpacity(parseFloat(e.target.value))}
-                        className="w-full h-1 bg-nature-night/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
-                      />
-                    </div>
-
-                    {/* Saturation */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[9px] text-nature-night/60 uppercase tracking-widest font-black">
-                        <span>Saturación</span>
-                        <span className="text-amber-honey font-mono">{campBgSaturation}%</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max="200"
-                        step="10"
-                        value={campBgSaturation}
-                        onChange={e => setCampBgSaturation(parseInt(e.target.value))}
-                        className="w-full h-1 bg-nature-night/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
-                      />
-                    </div>
-
-                    {/* Position */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Posición del Fondo</label>
-                      <select
-                        value={campBgPosition}
-                        onChange={e => setCampBgPosition(e.target.value)}
-                        className="w-full bg-white border border-nature-night/15 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-nature-night"
-                      >
-                        <option value="center">Centro</option>
-                        <option value="top">Superior</option>
-                        <option value="bottom">Inferior</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Call To Action settings */}
-                <div className="bg-nature-night/5 border border-nature-night/10 p-5 rounded-3xl space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
-                    🎯 Botón de Llamada a la Acción (CTA)
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Texto del Botón</label>
-                      <input
-                        type="text"
-                        value={campCtaText}
-                        onChange={e => setCampCtaText(e.target.value)}
-                        placeholder="Ej. Escuchar Single"
-                        className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-nature-night/30"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Enlace del Botón (URL)</label>
-                      <input
-                        type="url"
-                        value={campCtaLink}
-                        onChange={e => setCampCtaLink(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono placeholder:text-nature-night/30"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Premium Typography settings */}
-                <div className="bg-nature-night/5 border border-nature-night/10 p-5 rounded-3xl space-y-4">
-                  <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
-                      ✍️ Tipografía Premium del Poema
-                    </h4>
-                    <p className="text-[8px] text-nature-night/50 uppercase tracking-widest font-bold mt-1">
-                      Elige una fuente artística de alta fidelidad para el texto del correo
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {[
-                      { id: 'serif', name: 'Estándar', css: 'font-serif', desc: 'Georgia Elegante' },
-                      { id: 'playfair', name: 'Playfair', css: 'font-serif', style: { fontFamily: "'Playfair Display', serif" }, desc: 'Clásico & Sofisticado' },
-                      { id: 'cinzel', name: 'Cinzel', css: 'font-serif', style: { fontFamily: "'Cinzel', serif" }, desc: 'Romano Imperial' },
-                      { id: 'garamond', name: 'Garamond', css: 'font-serif', style: { fontFamily: "'Cormorant Garamond', serif" }, desc: 'Musgo Artístico' },
-                      { id: 'montserrat', name: 'Montserrat', css: 'font-sans', style: { fontFamily: "'Montserrat', sans-serif" }, desc: 'Minimalista Moderno' },
-                      { id: 'pinyon', name: 'Pinyon Script', css: 'font-cursive', style: { fontFamily: "'Pinyon Script', cursive" }, desc: 'Caligrafía Íntima' },
-                    ].map(f => (
-                      <div
-                        key={f.id}
-                        onClick={() => setCampFontFamily(f.id)}
-                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${campFontFamily === f.id
-                          ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
-                          : 'bg-white border border-nature-night/10 text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
-                          }`}
-                      >
-                        <span
-                          className="text-xs font-black"
-                          style={f.style}
-                        >
-                          {f.name}
-                        </span>
-                        <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{f.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-4 justify-end pt-4 border-t border-nature-night/10">
-                  <button
-                    type="button"
-                    onClick={() => setIsCampaignModalOpen(false)}
-                    className="px-6 py-3 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-nature-night/80"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={campLoading}
-                    className="px-8 py-3 bg-amber-honey text-nature-night rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/15 disabled:opacity-50 transition-all hover:bg-amber-gold"
-                  >
-                    {campLoading ? 'Procesando...' : campId ? 'Actualizar Campaña' : 'Crear Campaña'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Simulated Email Client Live Preview Modal */}
-        {previewCampaign && (
-          <div className="fixed inset-0 bg-nature-night/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white border border-nature-night/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative flex flex-col max-h-[90vh]"
-            >
-              <button
-                onClick={() => setPreviewCampaign(null)}
-                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-nature-night/15 text-nature-night/40 hover:text-nature-night flex items-center justify-center transition-all hover:bg-nature-night/5"
-              >
-                <X size={16} />
-              </button>
-
-              <div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight text-nature-night">Previsualización de Correo</h3>
-                <p className="text-[9px] text-nature-night/50 uppercase tracking-widest font-bold mt-1">Simulación de bandeja de entrada</p>
-              </div>
-
-              {/* Simulated Email Client Frame */}
-              <div className="border border-nature-night/15 rounded-2xl overflow-hidden flex flex-col flex-1 bg-nature-night/5">
-                {/* Email header bar */}
-                <div className="bg-nature-night/5 border-b border-nature-night/10 px-6 py-4 space-y-1.5 text-xs text-nature-night/70">
-                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">De:</span> Ms Ambar &lt;escribe@msambar.dev&gt;</div>
-                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
-                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-nature-night font-semibold">{previewCampaign.subject}</span></div>
-                </div>
-
-                {/* Email body simulation */}
-                <div className="flex-1 overflow-y-auto p-8 custom-scroll" style={{
-                  backgroundColor:
-                    previewCampaign.template_type === 'moss' ? '#0b130e' :
-                      previewCampaign.template_type === 'cosmic' ? '#05050f' :
-                        previewCampaign.template_type === 'glow' ? '#0f0b07' :
-                          previewCampaign.template_type === 'mist' ? '#0f1115' : '#06070b'
-                }}>
-                  <div style={{
-                    maxWidth: '500px',
-                    margin: '0 auto',
-                    backgroundColor:
-                      previewCampaign.template_type === 'moss' ? '#122017' :
-                        previewCampaign.template_type === 'cosmic' ? '#0c0a1a' :
-                          previewCampaign.template_type === 'glow' ? '#1a130c' :
-                            previewCampaign.template_type === 'mist' ? '#181b22' : '#0c0d13',
-                    border:
-                      previewCampaign.template_type === 'moss' ? '1px solid #2e4d38' :
-                        previewCampaign.template_type === 'cosmic' ? '1px solid #4a154b' :
-                          previewCampaign.template_type === 'glow' ? '1px solid #d97706' :
-                            previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
-                    padding: '30px',
-                    borderRadius: '20px',
-                    fontFamily:
-                      previewCampaign.font_family === 'playfair' ? "'Playfair Display', Georgia, serif" :
-                        previewCampaign.font_family === 'cinzel' ? "'Cinzel', Georgia, serif" :
-                          previewCampaign.font_family === 'garamond' ? "'Cormorant Garamond', 'Times New Roman', serif" :
-                            previewCampaign.font_family === 'montserrat' ? "'Montserrat', Helvetica, sans-serif" :
-                              previewCampaign.font_family === 'pinyon' ? "'Pinyon Script', cursive" :
-                                'Georgia, serif',
-                    textAlign: 'left',
-                    // Background Image Overlay & blending simulation
-                    ...(previewCampaign.bg_image ? {
-                      backgroundImage: `linear-gradient(rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
-                        previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
-                          previewCampaign.template_type === 'glow' ? '26, 19, 12' :
-                            previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
-                        }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
-                          previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
-                            previewCampaign.template_type === 'glow' ? '26, 19, 12' :
-                              previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
-                        }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))})) , url(${previewCampaign.bg_image})`,
-                      backgroundPosition: previewCampaign.bg_position || 'center',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundSize: 'cover',
-                      filter: `saturate(${previewCampaign.bg_saturation ?? 100}%)`,
-                    } : {})
-                  }}>
-                    {/* Logo header */}
-                    <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                      <div style={{
-                        display: 'inline-block',
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        backgroundColor:
-                          previewCampaign.template_type === 'moss' ? '#82c99b' :
-                            previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                              previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                        color: '#030303',
-                        lineHeight: '40px',
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                        fontSize: '20px'
-                      }}>A</div>
-                      <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>Ms Ambar</h4>
-                      <p style={{
-                        color:
-                          previewCampaign.template_type === 'moss' ? '#82c99b' :
-                            previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                              previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                        fontSize: '8px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '2px',
-                        margin: '2px 0 0 0'
-                      }}>Ambar te escribe • Poesía</p>
-                    </div>
-
-                    {/* Optional cover image */}
-                    {previewCampaign.image && (
-                      <div style={{
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        marginBottom: '20px',
-                        border: '1px solid rgba(255,255,255,0.05)'
-                      }}>
-                        <img src={previewCampaign.image} style={{ width: '100%', height: 'auto', display: 'block' }} alt="Cover" />
-                      </div>
-                    )}
-
-                    {/* Subject as title inside email */}
-                    <h3 style={{
-                      color: '#ffffff',
-                      fontSize: '20px',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                      fontStyle: 'italic',
-                      marginBottom: '25px'
-                    }}>{previewCampaign.subject}</h3>
-
-                    {/* Poem body */}
-                    <div style={{
-                      color:
-                        previewCampaign.template_type === 'moss' ? '#f5fbf7' :
-                          previewCampaign.template_type === 'cosmic' ? '#ffffff' :
-                            previewCampaign.template_type === 'glow' ? '#fffdfa' :
-                              previewCampaign.template_type === 'mist' ? '#f3f4f6' : '#ffffff',
-                      fontSize: '14px',
-                      lineHeight: '1.8',
-                      textAlign: 'center',
-                      fontStyle: 'italic',
-                      opacity: 0.95
-                    }}>
-                      {previewCampaign.poem_text.split('\n').map((line: string, idx: number) => (
-                        line.trim() ? (
-                          <p key={idx} style={{ margin: '0 0 12px 0' }}>{line}</p>
-                        ) : (
-                          <div key={idx} style={{ height: '12px' }} />
-                        )
-                      ))}
-                    </div>
-
-                    {/* Dynamic CTA Button */}
-                    {previewCampaign.cta_text && previewCampaign.cta_link && (
-                      <div style={{ textAlign: 'center', marginTop: '30px', marginBottom: '20px' }}>
-                        <a
-                          href={previewCampaign.cta_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            backgroundColor:
-                              previewCampaign.template_type === 'moss' ? '#82c99b' :
-                                previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                                  previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                    previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                            color: '#030303',
-                            padding: '14px 28px',
-                            borderRadius: '12px',
-                            fontSize: '13px',
-                            fontWeight: 'bold',
-                            textDecoration: 'none',
-                            display: 'inline-block',
-                            letterSpacing: '1px',
-                            textTransform: 'uppercase',
-                            boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
-                          }}
-                        >
-                          {previewCampaign.cta_text}
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Footer */}
-                    <div style={{
-                      textAlign: 'center',
-                      borderTop: '1px solid rgba(255,255,255,0.05)',
-                      paddingTop: '15px',
-                      marginTop: '30px',
-                      color: 'rgba(255,255,255,0.3)',
-                      fontSize: '9px',
-                      lineHeight: '1.4'
-                    }}>
-                      <p style={{ margin: '0 0 8px 0' }}>Recibiste este poema porque eres parte de las Cartas de Ms Ambar.</p>
-                      <p style={{ margin: '0' }}>
-                        <span style={{
-                          color:
-                            previewCampaign.template_type === 'moss' ? '#82c99b' :
-                              previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                                previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                  previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                          textDecoration: 'underline',
-                          cursor: 'pointer'
-                        }}>Desuscribirse del boletín</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <button
-                  onClick={() => setPreviewCampaign(null)}
-                  className="px-8 py-3 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 text-nature-night/80 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
-                >
-                  Cerrar Vista Previa
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
+                    );
 }
 
-// Stat Card Component
-const StatCard = ({ icon, title, value, detail, color }: any) => {
+                    // Stat Card Component
+                    const StatCard = ({icon, title, value, detail, color}: any) => {
   const glowColors: any = {
-    amber: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
-    gold: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
-    honey: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
-    yellow: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
+                      amber: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
+                    gold: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
+                    honey: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
+                    yellow: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
   };
 
-  return (
-    <motion.div
-      whileHover={{ y: -4 }}
-      className={`bg-white border rounded-[2rem] p-6 transition-all duration-300 relative group overflow-hidden ${glowColors[color]}`}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black">{title}</span>
-        <div className="p-2.5 bg-nature-night/5 rounded-xl group-hover:scale-110 transition-transform text-nature-night">
-          {icon}
-        </div>
-      </div>
-      <div className="text-2xl md:text-3xl font-black text-nature-night tracking-tight mb-2">{value}</div>
-      <div className="text-nature-night/40 text-[9px] uppercase tracking-widest font-black">{detail}</div>
-    </motion.div>
-  );
+                    return (
+                    <motion.div
+                      whileHover={{ y: -4 }}
+                      className={`amber-glass border rounded-[2rem] p-6 transition-all duration-300 relative group overflow-hidden ${glowColors[color]}`}
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-[10px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">{title}</span>
+                        <div className="p-2.5 bg-white/5 rounded-xl group-hover:scale-110 transition-transform text-[#F4F6F0]">
+                          {icon}
+                        </div>
+                      </div>
+                      <div className="text-2xl md:text-3xl font-black text-[#F4F6F0] tracking-tight mb-2">{value}</div>
+                      <div className="text-[#F4F6F0]/40 text-[9px] uppercase tracking-widest font-black">{detail}</div>
+                    </motion.div>
+                    );
 };
 
-// Quick Action Button Component
-const QuickActionBtn = ({ href, title, desc, icon, external }: any) => {
+                    // Quick Action Button Component
+                    const QuickActionBtn = ({href, title, desc, icon, external}: any) => {
   const BtnContent = (
-    <div className="p-4 bg-white border border-nature-night/10 hover:border-amber-honey/30 hover:bg-amber-honey/[0.02] rounded-2xl shadow-sm transition-all group flex items-center justify-between cursor-pointer">
-      <div className="flex items-center gap-4">
-        <div className="p-2.5 bg-nature-night/5 rounded-xl group-hover:bg-amber-honey/10 group-hover:scale-105 transition-all text-nature-night/60 group-hover:text-amber-honey">
-          {icon}
-        </div>
-        <div>
-          <h4 className="text-xs font-black uppercase tracking-wider text-nature-night group-hover:text-amber-honey transition-colors">{title}</h4>
-          <p className="text-[9px] uppercase tracking-widest text-nature-night/40 group-hover:text-nature-night/60 mt-0.5">{desc}</p>
-        </div>
-      </div>
-      <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-honey" />
-    </div>
-  );
+                    <div className="p-4 bg-white/5 border border-white/10 hover:border-amber-honey/30 hover:bg-amber-honey/[0.02] rounded-2xl shadow-md transition-all group flex items-center justify-between cursor-pointer">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-amber-honey/10 group-hover:scale-105 transition-all text-[#F4F6F0]/60 group-hover:text-amber-honey">
+                          {icon}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-[#F4F6F0] group-hover:text-amber-honey transition-colors">{title}</h4>
+                          <p className="text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 group-hover:text-[#F4F6F0]/60 mt-0.5">{desc}</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-honey" />
+                    </div>
+                    );
 
-  return external ? (
-    <a href={href} target="_blank" rel="noopener noreferrer">{BtnContent}</a>
-  ) : (
-    <Link href={href}>{BtnContent}</Link>
-  );
+                    return external ? (
+                    <a href={href} target="_blank" rel="noopener noreferrer">{BtnContent}</a>
+                    ) : (
+                    <Link href={href}>{BtnContent}</Link>
+                    );
 };
