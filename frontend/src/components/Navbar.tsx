@@ -71,12 +71,12 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Inicio', href: '/' },
     { name: 'Accesos', href: '/comprar-boletos' },
-    { name: 'Galería', href: '/galleria' },
-    { name: 'Música', href: '/musica' },
+    // { name: 'Galería', href: '/galleria' }, // TODO: Habilitar cuando esté completado
+    // { name: 'Música', href: '/musica' }, // TODO: Habilitar cuando esté completado
     { name: 'Tienda', href: '/tienda' },
     { name: 'Ambar Te Escribe', href: '/ambar-te-escribe' },
     { name: 'Contacto', href: '/contacto' },
-    // { name: 'Entretenimiento', href: '/entretenimiento' }, // Oculto por el momento
+    // { name: 'Entretenimiento', href: '/entretenimiento' }, // TODO: Habilitar cuando esté completado
   ];
 
   return (

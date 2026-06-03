@@ -76,6 +76,7 @@ export default function AdminDashboard() {
   const [campBgPosition, setCampBgPosition] = useState('center');
   const [campCtaText, setCampCtaText] = useState('');
   const [campCtaLink, setCampCtaLink] = useState('');
+  const [campFontFamily, setCampFontFamily] = useState('serif');
 
   const [campLoading, setCampLoading] = useState(false);
   const [campSuccessMsg, setCampSuccessMsg] = useState<string | null>(null);
@@ -232,6 +233,7 @@ export default function AdminDashboard() {
     setCampBgPosition('center');
     setCampCtaText('');
     setCampCtaLink('');
+    setCampFontFamily('serif');
     setCampErrorMsg(null);
     setCampSuccessMsg(null);
     setIsCampaignModalOpen(true);
@@ -252,6 +254,7 @@ export default function AdminDashboard() {
     setCampBgPosition(campaign.bg_position || 'center');
     setCampCtaText(campaign.cta_text || '');
     setCampCtaLink(campaign.cta_link || '');
+    setCampFontFamily(campaign.font_family || 'serif');
     setCampErrorMsg(null);
     setCampSuccessMsg(null);
     setIsCampaignModalOpen(true);
@@ -281,6 +284,7 @@ export default function AdminDashboard() {
     formData.append('bg_position', campBgPosition);
     formData.append('cta_text', campCtaText);
     formData.append('cta_link', campCtaLink);
+    formData.append('font_family', campFontFamily);
     if (campBgImageFile) {
       formData.append('bg_image', campBgImageFile);
     }
@@ -2853,6 +2857,46 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
+                {/* Premium Typography settings */}
+                <div className="bg-white/[0.02] border border-white/5 p-5 rounded-3xl space-y-4">
+                  <div>
+                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
+                      ✍️ Tipografía Premium del Poema
+                    </h4>
+                    <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-1">
+                      Elige una fuente artística de alta fidelidad para el texto del correo
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      { id: 'serif', name: 'Estándar', css: 'font-serif', desc: 'Georgia Elegante' },
+                      { id: 'playfair', name: 'Playfair', css: 'font-serif', style: { fontFamily: "'Playfair Display', serif" }, desc: 'Clásico & Sofisticado' },
+                      { id: 'cinzel', name: 'Cinzel', css: 'font-serif', style: { fontFamily: "'Cinzel', serif" }, desc: 'Romano Imperial' },
+                      { id: 'garamond', name: 'Garamond', css: 'font-serif', style: { fontFamily: "'Cormorant Garamond', serif" }, desc: 'Musgo Artístico' },
+                      { id: 'montserrat', name: 'Montserrat', css: 'font-sans', style: { fontFamily: "'Montserrat', sans-serif" }, desc: 'Minimalista Moderno' },
+                      { id: 'pinyon', name: 'Pinyon Script', css: 'font-cursive', style: { fontFamily: "'Pinyon Script', cursive" }, desc: 'Caligrafía Íntima' },
+                    ].map(f => (
+                      <div
+                        key={f.id}
+                        onClick={() => setCampFontFamily(f.id)}
+                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${
+                          campFontFamily === f.id
+                            ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
+                            : 'bg-white/[0.01] border-white/10 text-white/60 hover:text-white hover:bg-white/5'
+                        }`}
+                      >
+                        <span 
+                          className="text-xs font-black" 
+                          style={f.style}
+                        >
+                          {f.name}
+                        </span>
+                        <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{f.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex gap-4 justify-end pt-4 border-t border-white/5">
                   <button
                     type="button"
@@ -2926,7 +2970,13 @@ export default function AdminDashboard() {
                             previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
                     padding: '30px',
                     borderRadius: '20px',
-                    fontFamily: 'Georgia, serif',
+                    fontFamily:
+                      previewCampaign.font_family === 'playfair' ? "'Playfair Display', Georgia, serif" :
+                        previewCampaign.font_family === 'cinzel' ? "'Cinzel', Georgia, serif" :
+                          previewCampaign.font_family === 'garamond' ? "'Cormorant Garamond', 'Times New Roman', serif" :
+                            previewCampaign.font_family === 'montserrat' ? "'Montserrat', Helvetica, sans-serif" :
+                              previewCampaign.font_family === 'pinyon' ? "'Pinyon Script', cursive" :
+                                'Georgia, serif',
                     textAlign: 'left',
                     // Background Image Overlay & blending simulation
                     ...(previewCampaign.bg_image ? {

@@ -449,6 +449,23 @@ class BlogAppTests(APITestCase):
         self.assertIn('href="https://msambar.com/tickets"', html)
         self.assertIn('Comprar Boletos', html)
 
+    def test_campaign_template_rendering_custom_typography(self):
+        """Verify custom typography choice injects Google Font imports and updates font family."""
+        from apps.blog.views import get_campaign_html_template
+        
+        campaign = EmailCampaign.objects.create(
+            subject='Poema Caligráfico',
+            poem_text='Tinta en la arena...',
+            template_type='minimalist',
+            font_family='pinyon'
+        )
+        
+        html = get_campaign_html_template(campaign, 'fan@example.com')
+        # Should import Pinyon Script font
+        self.assertIn("@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap');", html)
+        # Should apply the custom font stack to the body
+        self.assertIn("font-family: 'Pinyon Script', cursive;", html)
+
     @patch('apps.blog.views.send_failover_email')
     def test_send_campaign_success(self, mock_send_email):
         """Verify sending a campaign triggers dispatch to active subscribers."""

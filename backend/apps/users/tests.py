@@ -92,3 +92,39 @@ class UsersAppTests(APITestCase):
         }
         login_response = self.client.post(login_url, login_data, format='json')
         self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+
+    def test_get_user_profile_anonymous(self):
+        """Verify anonymous users cannot get profile info."""
+        url = reverse('profile')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_get_user_profile_authenticated(self):
+        """Verify authenticated user can get profile details."""
+        url = reverse('profile')
+        self.client.force_authenticate(user=self.test_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], 'test@example.com')
+        self.assertEqual(response.data['username'], 'testuser')
+        self.assertEqual(response.data['phone'], '1234567890')
+
+    def test_update_user_profile_authenticated(self):
+        """Verify authenticated user can update profile details."""
+        url = reverse('profile')
+        self.client.force_authenticate(user=self.test_user)
+        data = {
+            'username': 'updateduser',
+            'phone': '9999999999',
+            'first_name': 'Ambar',
+            'last_name': 'Artist',
+            'email': 'should_not_change@example.com' # Should be read-only
+        }
+        response = self.client.put(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['user']['username'], 'updateduser')
+        self.assertEqual(response.data['user']['phone'], '9999999999')
+        self.assertEqual(response.data['user']['first_name'], 'Ambar')
+        self.assertEqual(response.data['user']['last_name'], 'Artist')
+        # Email must remain the original one
+        self.assertEqual(response.data['user']['email'], 'test@example.com')

@@ -43,6 +43,20 @@ class TicketsAppTests(APITestCase):
         self.seat_vip = Seat.objects.filter(theater=self.theater, category='vip').first()
         self.seat_std = Seat.objects.filter(theater=self.theater, category='standard').first()
 
+        # Create test users
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username="buyer",
+            email="buyer@example.com",
+            password="password123"
+        )
+        self.admin_user = User.objects.create_superuser(
+            username="admin",
+            email="admin@example.com",
+            password="password123"
+        )
+
     def test_seat_generation(self):
         """Verify seats are correctly generated from theater layout structure."""
         seats = Seat.objects.filter(theater=self.theater)
@@ -97,6 +111,7 @@ class TicketsAppTests(APITestCase):
         
         # Validate ticket (success check-in)
         data = {'token': str(ticket.token)}
+        self.client.force_authenticate(user=self.admin_user)
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'success')
@@ -117,6 +132,7 @@ class TicketsAppTests(APITestCase):
         )
         url = reverse('ticket-validate')
         data = {'token': str(ticket.token)}
+        self.client.force_authenticate(user=self.admin_user)
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['status'], 'error')
@@ -191,6 +207,7 @@ class TicketsAppTests(APITestCase):
             status="paid"
         )
         url = reverse('ticket-detail', kwargs={'pk': str(ticket.token)})
+        self.client.force_authenticate(user=self.user)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['token'], str(ticket.token))
@@ -205,6 +222,7 @@ class TicketsAppTests(APITestCase):
             status="paid"
         )
         url = reverse('ticket-detail', kwargs={'pk': ticket.id})
+        self.client.force_authenticate(user=self.user)
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['token'], str(ticket.token))
@@ -226,3 +244,50 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['seats'], [])
         self.assertEqual(response.data['elements'], [])
+
+    def test_anonymous_user_cannot_list_tickets(self):
+        """Verify anonymous users cannot list tickets."""
+        url = reverse('ticket-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_customer_can_only_see_own_tickets(self):
+        """Verify customer can only see their own tickets in list."""
+        Ticket.objects.create(event=self.event, seat=self.seat_vip, user_email="buyer@example.com", status="paid")
+        # Ticket belonging to another user email
+        Ticket.objects.create(event=self.event, seat=self.seat_std, user_email="other@example.com", status="paid")
+
+        self.client.force_authenticate(user=self.user)
+        url = reverse('ticket-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should only see 1 ticket (buyer@example.com)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['user_email'], 'buyer@example.com')
+
+    def test_customer_cannot_retrieve_others_ticket(self):
+        """Verify customer cannot retrieve another user's ticket."""
+        ticket = Ticket.objects.create(event=self.event, seat=self.seat_vip, user_email="other@example.com", status="paid")
+
+        self.client.force_authenticate(user=self.user)
+        url = reverse('ticket-detail', kwargs={'pk': ticket.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_admin_can_see_all_tickets(self):
+        """Verify admin can list all tickets."""
+        Ticket.objects.create(event=self.event, seat=self.seat_vip, user_email="buyer@example.com", status="paid")
+        Ticket.objects.create(event=self.event, seat=self.seat_std, user_email="other@example.com", status="paid")
+
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('ticket-list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+
+    def test_generate_seats_restricted_to_staff(self):
+        """Verify non-staff users cannot generate seats."""
+        self.client.force_authenticate(user=self.user)
+        url = reverse('theater-generate-seats', kwargs={'pk': self.theater.pk})
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

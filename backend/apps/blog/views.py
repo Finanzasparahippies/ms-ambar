@@ -417,6 +417,36 @@ def get_campaign_html_template(campaign, sub_email):
         font_family = "'Georgia', serif"
         badge_bg = "rgba(6, 182, 212, 0.15)"
         
+    # Map and load custom premium typography if selected
+    user_font = getattr(campaign, 'font_family', 'serif')
+    font_import = ""
+    if user_font and user_font != 'serif':
+        font_configs = {
+            'playfair': {
+                'import': "@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap');",
+                'family': "'Playfair Display', Georgia, serif"
+            },
+            'cinzel': {
+                'import': "@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');",
+                'family': "'Cinzel', Georgia, serif"
+            },
+            'garamond': {
+                'import': "@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&display=swap');",
+                'family': "'Cormorant Garamond', 'Times New Roman', serif"
+            },
+            'montserrat': {
+                'import': "@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');",
+                'family': "'Montserrat', Helvetica, Arial, sans-serif"
+            },
+            'pinyon': {
+                'import': "@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap');",
+                'family': "'Pinyon Script', cursive"
+            }
+        }
+        if user_font in font_configs:
+            font_import = font_configs[user_font]['import']
+            font_family = font_configs[user_font]['family']
+
     bg_style = ""
     if campaign.bg_image:
         bg_url = campaign.bg_image.url
@@ -468,6 +498,12 @@ def get_campaign_html_template(campaign, sub_email):
 
     html_content = f"""
     <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          {font_import}
+        </style>
+      </head>
       <body style="background-color: {bg_color}; color: {text_color}; font-family: {font_family}; padding: 40px 20px; margin: 0; text-align: center;">
         <div style="max-width: 600px; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: left;">
           

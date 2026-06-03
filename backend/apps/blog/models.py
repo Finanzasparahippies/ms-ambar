@@ -102,6 +102,9 @@ class EmailCampaign(models.Model):
     # Customizable CTA Button settings
     cta_text = models.CharField(max_length=100, blank=True, default='')
     cta_link = models.URLField(blank=True, default='')
+    
+    # Premium Typography settings
+    font_family = models.CharField(max_length=100, default='serif')
 
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(null=True, blank=True)

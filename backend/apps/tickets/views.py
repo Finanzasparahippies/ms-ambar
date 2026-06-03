@@ -55,6 +55,9 @@ class TheaterViewSet(viewsets.ModelViewSet):
         Called automatically by the Nectar Studio Designer after saving a layout.
         Nectar Pro: Eliminates the need for Django Admin to sync seats.
         """
+        if not request.user or not request.user.is_authenticated or not request.user.is_staff:
+            return Response({'error': 'No tienes permisos para realizar esta acción.'}, status=status.HTTP_403_FORBIDDEN)
+            
         theater = self.get_object()
         if not theater.layout:
             return Response(
@@ -79,13 +82,21 @@ class TheaterViewSet(viewsets.ModelViewSet):
 class TicketViewSet(viewsets.ModelViewSet):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        if self.action == 'checkout':
+            return [permissions.AllowAny()]
+        elif self.action == 'validate':
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
-        email = self.request.query_params.get('email')
-        if email:
-            return Ticket.objects.filter(user_email=email)
-        return Ticket.objects.all()
+        user = self.request.user
+        if not user or user.is_anonymous:
+            return Ticket.objects.none()
+        if user.is_staff or user.is_superuser:
+            return Ticket.objects.all()
+        return Ticket.objects.filter(user_email=user.email)
 
     def get_object(self):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
@@ -93,9 +104,9 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         try:
             import uuid
-            # Try parsing as UUID to lookup by token
+            # Try parsing as UUID to lookup by token in user's permitted queryset
             uuid.UUID(str(lookup_value))
-            return Ticket.objects.get(token=lookup_value)
+            return self.get_queryset().get(token=lookup_value)
         except (ValueError, Ticket.DoesNotExist, TypeError):
             # Fallback to default primary key lookup
             return super().get_object()
