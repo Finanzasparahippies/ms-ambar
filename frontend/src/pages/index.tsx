@@ -798,7 +798,7 @@ const Home = () => {
             .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
             .filter((e: any) => e.dateObj >= now)
             .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
-          
+
           if (upcoming.length > 0) {
             setNextEvent(upcoming[0]);
           } else {
@@ -857,7 +857,7 @@ const Home = () => {
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night">
       <Head>
-        <title>MS AMBAR | Esencia Artística y Experiencia de Sonidos</title>
+        <title>Ms Ambar | Esencia Artística y Experiencia de Sonidos</title>
         <meta name="description" content="MS Ambar - Una fusión vanguardista de música, arte digital y escenografía de alta gama. Adquiere boletos oficiales y reserva experiencias exclusivas." />
       </Head>
 
@@ -882,7 +882,7 @@ const Home = () => {
           >
             <Sparkles size={12} className="text-amber-honey animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
-              {nextEvent 
+              {nextEvent
                 ? `Tour Oficial 2026 • Próximo Show: ${nextEvent.title} (${getFormattedEventDate(nextEvent.date)})`
                 : "Tour Oficial 2026 • Próximo Show Oct 24"
               }
@@ -1004,7 +1004,7 @@ const Home = () => {
                   </div>
                   <h4 className="font-bold uppercase tracking-wider text-[11px] mt-2">¡Suscripción Completada!</h4>
                   <p className="text-[10px] text-white/80 leading-relaxed">
-                    Te has unido con éxito a las cartas de MS AMBAR.
+                    Te has unido con éxito a las cartas de Ms Ambar.
                   </p>
                 </motion.div>
               ) : (

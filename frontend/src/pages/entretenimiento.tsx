@@ -637,7 +637,7 @@ const Entretenimiento = () => {
       "Tus tres arcanos del desierto se alinean en una constelación de luz única, manifestando tu lectura trina. ",
       "El viento cálido de la sierra y la sabiduría de la tierra revelan una frecuencia de viaje sumamente especial. "
     ];
-    
+
     const roots = [
       `Como punto de partida, ${c0.name} (${c0.vibe.toLowerCase()}) actúa como tu cimiento primordial. Te invita a conectar con la esencia de "${c0.song}", recordándote que la fuerza reside en tus raíces y que tu origen sostiene todo tu ser. `,
       `Tu energía nace y se ancla con ${c0.name} (${c0.vibe.toLowerCase()}). Esta carta siembra una semilla de poder y resiliencia en tu interior, alineada con la melodía de "${c0.song}" para darte fuerza. `,
@@ -676,7 +676,7 @@ const Entretenimiento = () => {
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioContextClass();
-      
+
       const masterGain = ctx.createGain();
       masterGain.gain.setValueAtTime(0, ctx.currentTime);
       masterGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.1);
@@ -699,10 +699,10 @@ const Entretenimiento = () => {
           noteGain.gain.setValueAtTime(0, ctx.currentTime);
           noteGain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + index * 0.15 + 0.05);
           noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + index * 0.15 + 1.2);
-          
+
           osc.connect(noteGain);
           noteGain.connect(masterGain);
-          
+
           osc.start(ctx.currentTime + index * 0.15);
           osc.stop(ctx.currentTime + 2.5);
         } else if (useTremolo) {
@@ -719,10 +719,10 @@ const Entretenimiento = () => {
 
           osc.connect(tremoloGain);
           tremoloGain.connect(masterGain);
-          
+
           lfo.start();
           osc.start();
-          
+
           lfo.stop(ctx.currentTime + 2.5);
           osc.stop(ctx.currentTime + 2.5);
         } else {
@@ -735,9 +735,9 @@ const Entretenimiento = () => {
       setTimeout(() => {
         try {
           ctx.close();
-        } catch (e) {}
+        } catch (e) { }
       }, 2800);
-      
+
     } catch (err) {
       console.error('Local AudioContext chord play failed:', err);
     }
@@ -780,7 +780,7 @@ const Entretenimiento = () => {
     setIsShuffling(true);
     setMorphTarget('none');
     setFlippedSlots({ 0: false, 1: false, 2: false });
-    
+
     if (morphTimeoutRef.current) {
       clearTimeout(morphTimeoutRef.current);
     }
@@ -798,7 +798,7 @@ const Entretenimiento = () => {
 
   useEffect(() => {
     setIsMounted(true);
-    
+
     const dbInterval = setInterval(() => {
       setHudDecibels(prev => {
         const delta = (Math.random() - 0.5) * 1.8;
@@ -868,7 +868,7 @@ const Entretenimiento = () => {
         try {
           osc.stop();
           ctx.close();
-        } catch (e) {}
+        } catch (e) { }
         audioCtxRef.current = null;
         oscillatorRef.current = null;
         gainNodeRef.current = null;
@@ -897,7 +897,7 @@ const Entretenimiento = () => {
         try {
           oscillatorRef.current?.stop();
           audioCtxRef.current.close();
-        } catch (e) {}
+        } catch (e) { }
       }
       if (morphTimeoutRef.current) {
         clearTimeout(morphTimeoutRef.current);
@@ -1027,7 +1027,7 @@ const Entretenimiento = () => {
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-white min-h-screen relative">
       <Head>
-        <title>MS AMBAR | Entretenimiento & Oráculo Sensorial</title>
+        <title>Ms Ambar | Entretenimiento & Oráculo Sensorial</title>
         <meta name="description" content="Oráculo Interactivo y Consola de Frecuencias de MS Ambar. Sintoniza tus arcanos y modula la energía de nuestra escenografía virtual." />
       </Head>
 
@@ -1050,7 +1050,7 @@ const Entretenimiento = () => {
               <Sparkles size={12} className="text-amber-honey animate-pulse" />
               <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">Portal Multidisciplinario</span>
             </motion.div>
-            
+
             <motion.h1
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1080,7 +1080,7 @@ const Entretenimiento = () => {
               LECTOR DE ARCANOS DEL DESIERTO
             </h2>
             <p className="text-white/60 text-xs md:text-sm max-w-2xl mx-auto leading-relaxed">
-              El tarot del desierto es una brújula intuitiva inspirada en el cosmos, la naturaleza sonorense y la mística del viaje de MS Ámbar. 
+              El tarot del desierto es una brújula intuitiva inspirada en el cosmos, la naturaleza sonorense y la mística del viaje de MS Ámbar.
               Selecciona tres arcanos para sintonizar tu día: cada carta elegida revela un mensaje de luz y buena vibra, proyecta su constelación en el cielo de partículas y resuena en un acorde acústico único sintetizado en tiempo real.
             </p>
           </div>
@@ -1095,7 +1095,7 @@ const Entretenimiento = () => {
                   'II. Camino (Presente)',
                   'III. Cosmos (Destino)'
                 ];
-                
+
                 return (
                   <div key={slotIndex} className="flex flex-col items-center gap-4 animate-fadeIn">
                     <div className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-honey/70 bg-amber-honey/5 border border-amber-honey/10 px-3 py-1 rounded-full backdrop-blur-sm">
@@ -1120,7 +1120,7 @@ const Entretenimiento = () => {
                             <svg className="absolute inset-0 w-full h-full p-2 pointer-events-none opacity-85" viewBox="0 0 240 370" fill="none">
                               <rect x="6" y="6" width="228" height="358" rx="24" stroke="#FFBF00" strokeWidth="1.5" strokeDasharray="3 3" />
                               <rect x="12" y="12" width="216" height="346" rx="18" stroke="#FFBF00" strokeWidth="0.75" />
-                              
+
                               <path d="M12 28 L28 12 M228 28 L212 12 M12 342 L28 358 M228 342 L212 358" stroke="#FFBF00" strokeWidth="1" />
                               <circle cx="28" cy="28" r="2" fill="#FFBF00" />
                               <circle cx="212" cy="28" r="2" fill="#FFBF00" />
@@ -1129,14 +1129,14 @@ const Entretenimiento = () => {
 
                               <path d="M120 135 L150 152 L150 188 L120 205 L90 188 L90 152 Z" stroke="#FFBF00" strokeWidth="1" strokeOpacity="0.5" />
                               <path d="M120 142 L143 155 L143 182 L120 195 L97 182 L97 155 Z" stroke="#FFBF00" strokeWidth="0.75" strokeOpacity="0.3" />
-                              
+
                               <path d="M150 152 L180 135 L180 99 L150 82 L120 99 L120 135" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
                               <path d="M90 152 L60 135 L60 99 L90 82 L120 99 L120 135" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
                               <path d="M150 188 L180 205 L180 241 L150 258 L120 241 L120 188" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
                               <path d="M90 188 L60 205 L60 241 L90 258 L120 241 L120 188" stroke="#FFBF00" strokeWidth="0.5" strokeOpacity="0.25" />
-                              
+
                               <path d="M120 215 L120 148 M120 185 Q135 185 135 170 L135 158 M120 195 Q105 195 105 180 L105 168" stroke="#FFBF00" strokeWidth="1.5" className="filter drop-shadow-[0_0_4px_rgba(255,191,0,0.6)]" />
-                              
+
                               <circle cx="120" cy="50" r="1.5" fill="#FFBF00" />
                               <circle cx="65" cy="65" r="1.5" fill="#FFBF00" />
                               <circle cx="175" cy="65" r="1.5" fill="#FFBF00" />
@@ -1168,7 +1168,7 @@ const Entretenimiento = () => {
                               className="absolute w-[150px] h-[150px] rounded-full blur-[60px] opacity-25 pointer-events-none -top-10 -right-10"
                               style={{ backgroundColor: card?.color || '#FFBF00' }}
                             />
-                            
+
                             <div className="space-y-4 z-10">
                               <div className="flex justify-between items-center border-b border-white/5 pb-3">
                                 <span className="text-[9px] font-black uppercase tracking-widest text-amber-honey/80">Arcano Revelado</span>
@@ -1226,7 +1226,7 @@ const Entretenimiento = () => {
                   className="w-full max-w-4xl bg-nature-night/60 border border-white/5 rounded-[2rem] p-8 md:p-10 backdrop-blur-md space-y-6 relative overflow-hidden mt-6"
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/5 rounded-bl-[8rem] pointer-events-none" />
-                  
+
                   <div className="text-center space-y-2">
                     <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">Sintonía de tu Lectura Trina</span>
                     <h3 className="text-xl font-black uppercase tracking-tight text-white">El Eco de tu Destino</h3>
@@ -1237,7 +1237,7 @@ const Entretenimiento = () => {
                     {[0, 1, 2].map((slotIndex) => {
                       const card = drawnCards[slotIndex];
                       const slotLabels = ['I. Raíz (Origen)', 'II. Camino (Presente)', 'III. Cosmos (Destino)'];
-                      
+
                       return (
                         <div key={slotIndex} className="space-y-2">
                           <div className="text-[9px] font-black uppercase tracking-widest text-amber-honey/60">{slotLabels[slotIndex]}</div>
@@ -1362,7 +1362,7 @@ const Entretenimiento = () => {
         {/* ─── INTERACTIVE FREQUENCY MODULATOR ─── */}
         <section id="modulator" className="py-20 relative overflow-hidden">
           <div className="absolute top-1/2 left-1/4 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
-          
+
           <div className="max-w-[1600px] mx-auto px-6 md:px-10">
             <div className="text-center max-w-2xl mx-auto mb-20 space-y-4">
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Simulador Interactivo</span>
@@ -1373,7 +1373,7 @@ const Entretenimiento = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              
+
               {/* Controls Panel */}
               <div className="lg:col-span-5 space-y-8 bg-nature-night/60 border border-white/5 p-8 md:p-10 rounded-[2.5rem] backdrop-blur-md relative">
                 <div className="absolute top-4 right-6 flex items-center gap-2">
@@ -1389,11 +1389,10 @@ const Entretenimiento = () => {
                   </div>
                   <button
                     onClick={isAudioActive ? stopAudio : startAudio}
-                    className={`p-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all ${
-                      isAudioActive 
-                        ? 'bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/20' 
+                    className={`p-4 rounded-2xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest transition-all ${isAudioActive
+                        ? 'bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/20'
                         : 'border border-white/10 hover:border-amber-honey/30 hover:bg-amber-honey/5 text-white/60 hover:text-white'
-                    }`}
+                      }`}
                   >
                     {isAudioActive ? <Volume2 size={14} className="animate-bounce" /> : <VolumeX size={14} />}
                     {isAudioActive ? 'Encendido' : 'Apagado'}
@@ -1458,11 +1457,10 @@ const Entretenimiento = () => {
                       <button
                         key={p.id}
                         onClick={() => setLedPattern(p.id as any)}
-                        className={`py-3 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider text-center border transition-all ${
-                          ledPattern === p.id 
-                            ? 'border-amber-honey/50 bg-amber-honey/10 text-amber-honey shadow-sm shadow-amber-honey/10' 
+                        className={`py-3 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider text-center border transition-all ${ledPattern === p.id
+                            ? 'border-amber-honey/50 bg-amber-honey/10 text-amber-honey shadow-sm shadow-amber-honey/10'
                             : 'border-white/5 hover:border-white/20 text-white/40 hover:text-white bg-white/[0.005]'
-                        }`}
+                          }`}
                       >
                         {p.label}
                       </button>
@@ -1484,7 +1482,7 @@ const Entretenimiento = () => {
                       <Activity size={10} className="animate-pulse" /> MONITOREO VIBRACIONAL
                     </div>
                   </div>
-                  
+
                   <div className="absolute top-6 right-6 text-[8px] font-mono text-white/30 text-right space-y-1">
                     <div>VIBE: <span className="text-amber-honey font-bold">{acousticHz} Hz</span></div>
                     <div>BRILLO: <span className="text-white/60">{(lightLumen / 100 * 0.1).toFixed(3)}</span></div>
@@ -1514,12 +1512,12 @@ const Entretenimiento = () => {
                         <stop offset="100%" stopColor="#FFBF00" stopOpacity="0.2" />
                       </linearGradient>
                     </defs>
-                    
+
                     {renderVisualizerContent()}
                   </svg>
 
                   {/* Ambient glow in the center */}
-                  <div 
+                  <div
                     className="absolute w-[200px] h-[200px] rounded-full blur-[80px] pointer-events-none transition-all duration-300"
                     style={{
                       backgroundColor: ledPattern === 'sine' ? 'rgba(255, 191, 0, ' + (lightLumen / 300) + ')' : ledPattern === 'matrix' ? 'rgba(244, 208, 63, ' + (lightLumen / 400) + ')' : 'rgba(159, 43, 0, ' + (lightLumen / 350) + ')',

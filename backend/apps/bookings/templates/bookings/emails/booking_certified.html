@@ -1,21 +1,27 @@
 {% extends "users/emails/base_ambar.html" %}
 
-{% block email_title %}Contrato de Booking Certificado - MS AMBAR{% endblock %}
+{% block email_title %}Contrato de Booking Certificado - Ms Ambar{% endblock %}
 
 {% block subtitle %}Contrato Certificado{% endblock %}
 
 {% block content %}
-<h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">✅ ¡Contrato Certificado!</h2>
+<h2
+  style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">
+  ✅ ¡Contrato Certificado!</h2>
 
 <p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
   Hola <strong>{{ inquiry.name }}</strong>,<br><br>
-  El contrato de presentación artística para <strong>MS AMBAR</strong> ha sido firmado electrónicamente por ambas partes y ahora está completamente certificado.
+  El contrato de presentación artística para <strong>Ms Ambar</strong> ha sido firmado electrónicamente por ambas partes
+  y ahora está completamente certificado.
 </p>
 
 <!-- Event details -->
-<div style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 30px;">
-  <h3 style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Resumen del Compromiso</h3>
-  
+<div
+  style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 30px;">
+  <h3
+    style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
+    Resumen del Compromiso</h3>
+
   <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
     <tr>
       <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4); width: 35%;">Organizador:</td>
@@ -41,12 +47,15 @@
 </p>
 
 <!-- Stage message -->
-<div style="background-color: rgba(245, 158, 11, 0.05); border-left: 4px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 30px; color: rgba(255,255,255,0.8); font-size: 13px; line-height: 1.6;">
+<div
+  style="background-color: rgba(245, 158, 11, 0.05); border-left: 4px solid #f59e0b; padding: 15px; border-radius: 8px; margin-bottom: 30px; color: rgba(255,255,255,0.8); font-size: 13px; line-height: 1.6;">
   <strong>¿Qué sigue?</strong><br>
-  Nuestro equipo se pondrá en contacto pronto para coordinar los aspectos técnicos (rider de audio/iluminación) y de hospitalidad para la artista.
+  Nuestro equipo se pondrá en contacto pronto para coordinar los aspectos técnicos (rider de audio/iluminación) y de
+  hospitalidad para la artista.
 </div>
 
-<div style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-  ¡Nos vemos pronto en el escenario! Gracias por confiar en el arte y música de MS AMBAR.
+<div
+  style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+  ¡Nos vemos pronto en el escenario! Gracias por confiar en el arte y música de Ms Ambar.
 </div>
 {% endblock %}

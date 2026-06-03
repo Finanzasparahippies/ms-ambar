@@ -5,7 +5,7 @@ import Link from 'next/link';
 import SeatingChart from '../components/SeatingChart';
 import TourTimeline from '../components/TourTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Ticket, Users, MapPin, Calendar, Star, Sparkles, Minus, Plus, X, CheckCircle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -98,7 +98,7 @@ const TourPage = () => {
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';
   const seatsTotal = isMeetGreet ? 0 : selectedSeats.reduce((acc, seat) => acc + getPrice(seat), 0);
-  const mgPrice = isMeetGreet 
+  const mgPrice = isMeetGreet
     ? mgQuantity * Number(currentEvent?.mg_price || 0)
     : (wantsMG ? Number(currentEvent?.mg_price || 0) : 0);
   const totalPrice = seatsTotal + mgPrice;
@@ -107,7 +107,7 @@ const TourPage = () => {
     e.preventDefault();
     if (!email || !fullName) return;
     setIsSubmitting(true);
-    
+
     try {
       const apiUrl = getApiUrl();
       const res = await axios.post(`${apiUrl}/tickets/tickets/checkout/`, {
@@ -118,7 +118,7 @@ const TourPage = () => {
         phone,
         has_mg: isMeetGreet ? true : wantsMG
       });
-      
+
       setCreatedTickets(res.data.tickets || []);
       setCheckoutSuccess(true);
       setSelectedSeats([]);
@@ -134,7 +134,7 @@ const TourPage = () => {
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night min-h-screen">
       <Head>
-        <title>MS AMBAR | Accesos Oficiales 2026</title>
+        <title>Ms Ambar | Accesos Oficiales 2026</title>
         <meta name="description" content="MS Ambar Accesos Oficiales 2026. Reserva tus entradas y vive la experiencia acústico-visual de vanguardia." />
       </Head>
 
@@ -150,7 +150,7 @@ const TourPage = () => {
             <Sparkles size={12} className="text-amber-honey animate-spin" />
             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">Experiencia Inmersiva</span>
           </motion.div>
-          
+
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -171,8 +171,8 @@ const TourPage = () => {
 
       {/* Main Reservation Section */}
       <section className="pb-32 max-w-[1600px] mx-auto px-6 md:px-10">
-        <TourTimeline 
-          events={events} 
+        <TourTimeline
+          events={events}
           onEventSelect={(event) => {
             setCurrentEvent(event);
             setSelectedSeats([]);
@@ -181,13 +181,13 @@ const TourPage = () => {
             setCheckoutSuccess(false);
             setCreatedTickets([]);
           }}
-          currentEvent={currentEvent} 
+          currentEvent={currentEvent}
         />
 
         <div className="grid lg:grid-cols-12 gap-12 xl:gap-20 mt-12">
           <div className="lg:col-span-8">
             <header className="mb-10">
-              <motion.h2 
+              <motion.h2
                 key={currentEvent?.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -220,26 +220,26 @@ const TourPage = () => {
                 <div className="space-y-2 z-10">
                   <h3 className="text-2xl font-black uppercase tracking-wider text-white">Convivencia Meet & Greet</h3>
                   <p className="text-xs text-white/70 max-w-md mx-auto leading-relaxed">
-                    Pase exclusivo para convivir con MS Ambar. Evento especial sin límite de boletos para compartir momentos únicos, firmar autógrafos y tomarse fotografías.
+                    Pase exclusivo para convivir con Ms Ambar. Evento especial sin límite de boletos para compartir momentos únicos, firmar autógrafos y tomarse fotografías.
                   </p>
                 </div>
-                
+
                 <div className="flex items-center gap-6 bg-white/10 border border-white/20 px-8 py-4 rounded-3xl backdrop-blur-md z-10">
-                  <button 
+                  <button
                     onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
                     className="w-10 h-10 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-bold text-white hover:bg-amber-honey hover:text-black transition-colors"
                   >
                     <Minus size={14} />
                   </button>
                   <span className="text-2xl font-black min-w-[2rem] text-center text-white">{mgQuantity}</span>
-                  <button 
+                  <button
                     onClick={() => setMgQuantity(mgQuantity + 1)}
                     className="w-10 h-10 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-bold text-white hover:bg-amber-honey hover:text-black transition-colors"
                   >
                     <Plus size={14} />
                   </button>
                 </div>
-                
+
                 <div className="space-y-1 z-10">
                   <p className="text-[10px] font-black uppercase text-amber-honey tracking-widest">Precio por Boleto</p>
                   <p className="text-xl font-bold text-white">${Number(currentEvent.mg_price).toLocaleString()} MXN</p>
@@ -249,11 +249,11 @@ const TourPage = () => {
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
                 <div className="h-[450px] md:h-[700px] rounded-[3.5rem] overflow-hidden border border-nature-night/10">
-                  <SeatingChart 
-                    seats={seats} 
-                    onSelect={handleSelectionChange} 
+                  <SeatingChart
+                    seats={seats}
+                    onSelect={handleSelectionChange}
                     selectedIds={selectedSeats.map(s => String(s.id))}
-                    theme={theme} 
+                    theme={theme}
                     elements={elements}
                   />
                 </div>
@@ -370,10 +370,10 @@ const TourPage = () => {
                 className="bg-white border border-nature-night/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-hidden"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/10 rounded-bl-[8rem] pointer-events-none" />
-                
+
                 {/* Close Button */}
                 {!checkoutSuccess && (
-                  <button 
+                  <button
                     onClick={() => {
                       setIsCheckoutOpen(false);
                       setFullName('');
@@ -403,8 +403,8 @@ const TourPage = () => {
                         {createdTickets.map((t, idx) => (
                           <div key={t.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-nature-night/10">
                             <span className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</span>
-                            <Link 
-                              href={`/tickets/${t.token}`} 
+                            <Link
+                              href={`/tickets/${t.token}`}
                               className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors"
                               target="_blank"
                             >
@@ -441,7 +441,7 @@ const TourPage = () => {
                       <p className="text-[10px] font-black uppercase tracking-widest text-nature-night/50">Resumen del Evento</p>
                       <h4 className="text-sm font-black text-nature-night">{currentEvent?.title}</h4>
                       <p className="text-xs text-nature-night/60">
-                        {isMeetGreet 
+                        {isMeetGreet
                           ? `${mgQuantity} Pase(s) de Convivencia Meet & Greet`
                           : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
                         }
@@ -466,7 +466,7 @@ const TourPage = () => {
                           className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
                         />
                       </div>
-                      
+
                       <div className="space-y-1.5">
                         <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Correo Electrónico</label>
                         <input

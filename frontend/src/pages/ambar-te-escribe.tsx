@@ -145,7 +145,7 @@ export default function AmbarTeEscribePage() {
           // Process unsubscribe
           axios.post(`${API_URL}/blog/subscribers/unsubscribe/`, { email: emailToUnsubscribe })
             .then(() => {
-              showToast('Te has desuscrito con éxito del newsletter de MS AMBAR.', 'success');
+              showToast('Te has desuscrito con éxito del Club de Ms Ambar.', 'success');
               localStorage.removeItem('ms_ambar_subscriber_email');
               setIsUnlocked(false);
               window.history.replaceState({}, document.title, window.location.pathname);
@@ -182,7 +182,7 @@ export default function AmbarTeEscribePage() {
       setNewsletterSuccess(true);
       setNewsletterEmail('');
       setNewsletterName('');
-      showToast('Te has suscrito con éxito al Newsletter de MS AMBAR.', 'success');
+      showToast('Te has suscrito con éxito al Club de Ms Ambar.', 'success');
     } catch (err: any) {
       console.error(err);
       const isAlreadySubbed = err.response?.data?.email?.[0]?.includes('exists') ||
@@ -378,7 +378,7 @@ export default function AmbarTeEscribePage() {
   return (
     <div className="selection:bg-amber-honey/30 min-h-screen text-white relative">
       <Head>
-        <title>MS AMBAR | Ambar Te Escribe</title>
+        <title>Ms Ambar | Ambar Te Escribe</title>
         <style>{`
           .rich-text-content h2 {
             font-size: 1.875rem;
@@ -488,7 +488,7 @@ export default function AmbarTeEscribePage() {
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Cartas Exclusivas</span>
               <h2 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te Escribe</h2>
               <p className="text-white/60 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
-                Las crónicas y bitácoras de MS AMBAR están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido de las cartas y recibir poemas exclusivos en tu bandeja.
+                Las crónicas y bitácoras de Ms Ambar están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido de las cartas y recibir poemas exclusivos en tu bandeja.
               </p>
 
               <form className="flex flex-col gap-3 text-left" onSubmit={handleSubscribe}>
@@ -712,7 +712,7 @@ export default function AmbarTeEscribePage() {
               </div>
               <h3 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Miembro de las Cartas</h3>
               <p className="text-white/60 mb-6 max-w-md mx-auto text-xs leading-relaxed">
-                Estás registrado correctamente. Recibirás de manera directa y en exclusiva los poemas y lanzamientos de MS AMBAR.
+                Estás registrado correctamente. Recibirás de manera directa y en exclusiva los poemas y lanzamientos de Ms Ambar.
               </p>
               <button
                 onClick={() => {

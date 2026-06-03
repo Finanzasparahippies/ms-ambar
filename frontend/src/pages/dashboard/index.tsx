@@ -688,30 +688,30 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030303] text-white flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen text-nature-night flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-        <p className="text-white/60 tracking-widest font-black uppercase text-xs">Cargando Bóveda MS AMBAR...</p>
+        <p className="text-nature-night/60 tracking-widest font-black uppercase text-xs">Cargando Bóveda MS AMBAR...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[#030303] text-white flex items-center justify-center p-8">
+      <div className="min-h-screen text-nature-night flex items-center justify-center p-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white/5 border border-white/10 p-8 rounded-[2rem] text-center backdrop-blur-xl amber-glass"
+          className="max-w-md w-full bg-white border border-nature-night/10 p-8 rounded-[2rem] text-center shadow-xl shadow-nature-night/5"
         >
-          <AlertTriangle className="text-amber-500 w-16 h-16 mx-auto mb-6 drop-shadow-[0_0_15px_rgba(245,158,11,0.3)]" />
-          <h2 className="text-2xl font-black uppercase italic tracking-tight mb-2">⚠️ Acceso Limitado</h2>
-          <p className="text-white/60 text-sm mb-6 leading-relaxed">
+          <AlertTriangle className="text-amber-honey w-16 h-16 mx-auto mb-6" />
+          <h2 className="text-2xl font-black uppercase italic tracking-tight mb-2 text-nature-night">⚠️ Acceso Limitado</h2>
+          <p className="text-nature-night/60 text-sm mb-6 leading-relaxed">
             {error}. Se requiere una cuenta de administrador registrada en el sistema.
           </p>
           <a
             href="/admin/"
             target="_blank"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-gold hover:from-amber-gold hover:to-amber-500 text-black font-black uppercase tracking-widest text-xs px-6 py-4 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.2)]"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-gold hover:from-amber-gold hover:to-amber-500 text-[#1E2B22] font-black uppercase tracking-widest text-xs px-6 py-4 rounded-xl transition-all shadow-[0_4px_20px_rgba(229,169,59,0.2)]"
           >
             Django Admin <ExternalLink size={14} />
           </a>
@@ -789,37 +789,37 @@ export default function AdminDashboard() {
   } : null);
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white py-12 px-6 lg:px-12 relative overflow-hidden font-sans">
+    <div className="min-h-screen text-nature-night py-12 px-6 lg:px-12 relative overflow-hidden font-sans">
       {/* Background Decorative Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-500/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-700/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-nature-sky/5 blur-[120px] rounded-full pointer-events-none" />
 
       {/* Main Header */}
       <header className="mb-8 relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
-          <span className="text-[10px] text-amber-500 uppercase tracking-widest font-black flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+          <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-honey animate-ping" />
             Consola del Artista
           </span>
-          <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-amber-100 via-amber-300 to-amber-500 bg-clip-text text-transparent uppercase italic tracking-tighter mt-1">
+          <h1 className="text-4xl md:text-5xl font-black text-nature-night uppercase italic tracking-tighter mt-1">
             Bóveda de Resumen
           </h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-2">
-            Métricas de Ventas, Taquilla, Logística y Salud de Servidores de MS AMBAR
+          <p className="text-nature-night/50 text-xs font-bold uppercase tracking-widest mt-2">
+            Métricas de Ventas, Taquilla, Logística y Salud de Servidores de Ms Ambar
           </p>
         </div>
 
         <div className="flex gap-4">
           <Link
             href="/dashboard/performance"
-            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
+            className="flex items-center gap-2 bg-white hover:bg-nature-night/5 border border-nature-night/10 px-5 py-3 rounded-xl shadow-sm transition-all text-xs font-bold uppercase tracking-widest text-nature-night"
           >
-            <Activity size={14} className="text-amber-400" /> Rendimiento
+            <Activity size={14} className="text-amber-honey" /> Rendimiento
           </Link>
           <a
             href="/admin/"
             target="_blank"
-            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#1E2B22] font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(229,169,59,0.15)]"
           >
             Django <ExternalLink size={14} />
           </a>
@@ -827,12 +827,12 @@ export default function AdminDashboard() {
       </header>
 
       {/* Navigation Tabs Bar */}
-      <div className="flex gap-4 mb-8 bg-white/[0.02] border border-white/5 p-2 rounded-2xl w-fit relative z-10 backdrop-blur-xl">
+      <div className="flex gap-4 mb-8 bg-white border border-nature-night/10 p-2 rounded-2xl w-fit relative z-10 shadow-sm flex-wrap">
         <button
           onClick={() => setActiveTab('summary')}
           className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'summary'
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+            ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+            : 'text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
             }`}
         >
           📊 Resumen General
@@ -840,8 +840,8 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('orders')}
           className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'orders'
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+            ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+            : 'text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
             }`}
         >
           📦 Despacho de Pedidos
@@ -854,8 +854,8 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('expenses')}
           className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'expenses'
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+            ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+            : 'text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
             }`}
         >
           💸 Control de Gastos
@@ -863,8 +863,8 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('catalog')}
           className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'catalog'
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+            ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+            : 'text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
             }`}
         >
           🛍️ Catálogo de Tienda
@@ -872,8 +872,8 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('theaters')}
           className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'theaters'
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+            ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+            : 'text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
             }`}
         >
           🎭 Teatros
@@ -881,8 +881,8 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('contracts')}
           className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'contracts'
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+            ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+            : 'text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
             }`}
         >
           ✍️ Contratos
@@ -895,11 +895,11 @@ export default function AdminDashboard() {
         <button
           onClick={() => setActiveTab('campaigns')}
           className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'campaigns'
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
-              : 'text-white/60 hover:text-white hover:bg-white/5'
+            ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+            : 'text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
             }`}
         >
-          📧 Campañas de Poemas
+          📧 Campañas de Marketing
         </button>
       </div>
 
@@ -967,22 +967,22 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
                 {/* SVG Interactive Area Chart */}
-                <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass flex flex-col justify-between">
+                <div className="lg:col-span-2 bg-white border border-nature-night/10 p-6 rounded-[2rem] shadow-md shadow-nature-night/5 flex flex-col justify-between">
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-2">
-                        <TrendingUp size={18} className="text-amber-500" /> Flujo de Ingresos Diarios
+                      <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-2 text-nature-night">
+                        <TrendingUp size={18} className="text-amber-honey" /> Flujo de Ingresos Diarios
                       </h3>
-                      <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">
+                      <p className="text-nature-night/50 text-[10px] font-bold uppercase tracking-widest mt-1">
                         Taquilla & Tienda - Últimos 30 días
                       </p>
                     </div>
                     {activePoint && (
                       <div className="text-right">
-                        <span className="text-amber-400 font-mono text-sm font-bold">
+                        <span className="text-amber-honey font-mono text-sm font-bold">
                           ${activePoint.total.toLocaleString()}
                         </span>
-                        <p className="text-[9px] text-white/50 uppercase font-black tracking-wider">
+                        <p className="text-[9px] text-nature-night/50 uppercase font-black tracking-wider">
                           {activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy (Día Actual)' : activePoint.date}
                         </p>
                       </div>
@@ -998,8 +998,8 @@ export default function AdminDashboard() {
                     >
                       <defs>
                         <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.00" />
+                          <stop offset="0%" stopColor="#E5A93B" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#E5A93B" stopOpacity="0.00" />
                         </linearGradient>
                       </defs>
                       {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
@@ -1007,8 +1007,8 @@ export default function AdminDashboard() {
                         const val = maxVal * ratio;
                         return (
                           <g key={idx}>
-                            <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#ffffff" strokeOpacity="0.03" strokeDasharray="4 4" />
-                            <text x={paddingLeft - 8} y={y + 4} fill="#ffffff" fillOpacity="0.2" fontSize="9" fontWeight="bold" textAnchor="end">${Math.round(val)}</text>
+                            <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#000000" strokeOpacity="0.05" strokeDasharray="4 4" />
+                            <text x={paddingLeft - 8} y={y + 4} fill="#000000" fillOpacity="0.3" fontSize="9" fontWeight="bold" textAnchor="end">${Math.round(val)}</text>
                           </g>
                         );
                       })}
@@ -1021,8 +1021,8 @@ export default function AdminDashboard() {
                             key={idx}
                             x={p.x}
                             y={paddingTop + innerHeight + 18}
-                            fill={isLast ? "#F59E0B" : "#ffffff"}
-                            fillOpacity={isLast ? "0.9" : "0.2"}
+                            fill={isLast ? "#E5A93B" : "#000000"}
+                            fillOpacity={isLast ? "0.9" : "0.3"}
                             fontSize="9"
                             fontWeight={isLast ? "black" : "bold"}
                             textAnchor="middle"
@@ -1033,7 +1033,7 @@ export default function AdminDashboard() {
                       })}
 
                       {areaPath && <path d={areaPath} fill="url(#salesGradient)" />}
-                      {linePath && <path d={linePath} fill="none" stroke="#F59E0B" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
+                      {linePath && <path d={linePath} fill="none" stroke="#E5A93B" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
 
                       {/* Premium Proximity Guide Line and Glowing Dot */}
                       {activePoint && (
@@ -1044,14 +1044,14 @@ export default function AdminDashboard() {
                             y1={paddingTop}
                             x2={activePoint.x}
                             y2={paddingTop + innerHeight}
-                            stroke="#F59E0B"
-                            strokeOpacity="0.2"
+                            stroke="#E5A93B"
+                            strokeOpacity="0.3"
                             strokeDasharray="4 4"
                             strokeWidth="1.5"
                           />
                           {/* Concentric glowing indicator */}
-                          <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="#F59E0B" fillOpacity="0.35" className="animate-pulse" />
-                          <circle cx={activePoint.x} cy={activePoint.y} r="4.5" fill="#F59E0B" stroke="#ffffff" strokeWidth="2" />
+                          <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="#E5A93B" fillOpacity="0.35" className="animate-pulse" />
+                          <circle cx={activePoint.x} cy={activePoint.y} r="4.5" fill="#E5A93B" stroke="#ffffff" strokeWidth="2" />
                         </g>
                       )}
                     </svg>
@@ -1071,12 +1071,12 @@ export default function AdminDashboard() {
                             top: `${(activePoint.y / chartHeight) * 100 - 15}%`,
                             transform: 'translate(-50%, -100%)',
                           }}
-                          className="pointer-events-none z-[100] bg-black/90 border border-amber-honey/30 px-3 py-2 rounded-xl backdrop-blur-md flex flex-col gap-0.5 shadow-[0_4px_25px_rgba(245,158,11,0.25)] min-w-[100px] text-center"
+                          className="pointer-events-none z-[100] bg-white border border-amber-honey/30 px-3 py-2 rounded-xl flex flex-col gap-0.5 shadow-lg shadow-nature-night/5 min-w-[100px] text-center"
                         >
                           <span className="text-[10px] font-black text-amber-honey font-mono tracking-tight">
                             ${activePoint.total.toLocaleString()}
                           </span>
-                          <span className="text-[8px] text-white/50 uppercase font-black tracking-wider">
+                          <span className="text-[8px] text-nature-night/50 uppercase font-black tracking-wider">
                             {activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy' : activePoint.date}
                           </span>
                         </motion.div>
@@ -1086,9 +1086,9 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Quick Operations */}
-                <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass flex flex-col gap-4">
-                  <h3 className="text-lg font-black uppercase italic tracking-tight mb-2 flex items-center gap-2">
-                    <Layers size={18} className="text-amber-500" /> Operaciones Rápidas
+                <div className="bg-white border border-nature-night/10 p-6 rounded-[2rem] shadow-md shadow-nature-night/5 flex flex-col gap-4">
+                  <h3 className="text-lg font-black uppercase italic tracking-tight mb-2 flex items-center gap-2 text-nature-night">
+                    <Layers size={18} className="text-amber-honey" /> Operaciones Rápidas
                   </h3>
                   <QuickActionBtn href="/designer" title="Diseñador de Mapas" desc="Editor de Seating Chart 2D" icon={<Layers size={18} />} />
                   <QuickActionBtn href="/dashboard/performance" title="Monitor Core Web Vitals" desc="Tiempos del Servidor y Logs" icon={<Activity size={18} />} />
@@ -1096,18 +1096,18 @@ export default function AdminDashboard() {
                   <QuickActionBtn href="/admin/tickets/event/" title="Fechas & Conciertos" desc="Programar nuevos eventos" icon={<Ticket size={18} />} external />
                   <div
                     onClick={() => setActiveTab('theaters')}
-                    className="p-4 bg-white/[0.02] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/[0.02] rounded-2xl transition-all group flex items-center justify-between cursor-pointer"
+                    className="p-4 bg-white border border-nature-night/10 hover:border-amber-honey/30 hover:bg-amber-honey/[0.02] rounded-2xl shadow-sm transition-all group flex items-center justify-between cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-amber-500/10 group-hover:scale-105 transition-all text-white/60 group-hover:text-amber-400">
+                      <div className="p-2.5 bg-nature-night/5 rounded-xl group-hover:bg-amber-honey/10 group-hover:scale-105 transition-all text-nature-night/60 group-hover:text-amber-honey">
                         <MapPin size={18} />
                       </div>
                       <div>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-white group-hover:text-amber-300 transition-colors">Gestión de Teatros</h4>
-                        <p className="text-[9px] uppercase tracking-widest opacity-30 group-hover:opacity-40 mt-0.5">Crear y administrar recintos</p>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-nature-night group-hover:text-amber-honey transition-colors">Gestión de Teatros</h4>
+                        <p className="text-[9px] uppercase tracking-widest text-nature-night/40 group-hover:text-nature-night/60 mt-0.5">Crear y administrar recintos</p>
                       </div>
                     </div>
-                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-400" />
+                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-honey" />
                   </div>
 
                 </div>
@@ -1115,65 +1115,65 @@ export default function AdminDashboard() {
 
               {/* Health and Products section */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass">
-                  <h3 className="text-lg font-black uppercase italic tracking-tight mb-4 flex items-center gap-2">
-                    <Cpu size={18} className="text-amber-500" /> Servidor y Base de Datos
+                <div className="bg-white border border-nature-night/10 p-6 rounded-[2rem] shadow-md shadow-nature-night/5">
+                  <h3 className="text-lg font-black uppercase italic tracking-tight mb-4 flex items-center gap-2 text-nature-night">
+                    <Cpu size={18} className="text-amber-honey" /> Servidor y Base de Datos
                   </h3>
                   {sysMetrics ? (
                     <div className="space-y-6">
                       <div>
-                        <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                        <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2 text-nature-night">
                           <span className="flex items-center gap-1 opacity-60"><Cpu size={12} /> Carga CPU ({sysMetrics.cpu?.cores} Núcleos)</span>
-                          <span className="text-amber-400">{sysMetrics.cpu?.percent}%</span>
+                          <span className="text-amber-honey">{sysMetrics.cpu?.percent}%</span>
                         </div>
-                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-500" style={{ width: `${sysMetrics.cpu?.percent}%` }} />
+                        <div className="h-2 w-full bg-nature-night/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-amber-honey to-amber-500 transition-all duration-500" style={{ width: `${sysMetrics.cpu?.percent}%` }} />
                         </div>
                       </div>
                       <div>
-                        <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                        <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2 text-nature-night">
                           <span className="flex items-center gap-1 opacity-60"><Layers size={12} /> Memoria RAM</span>
-                          <span className="text-amber-400">{sysMetrics.memory?.used_gb} / {sysMetrics.memory?.total_gb} GB</span>
+                          <span className="text-amber-honey">{sysMetrics.memory?.used_gb} / {sysMetrics.memory?.total_gb} GB</span>
                         </div>
-                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-500" style={{ width: `${sysMetrics.memory?.percent}%` }} />
+                        <div className="h-2 w-full bg-nature-night/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-amber-honey to-amber-500 transition-all duration-500" style={{ width: `${sysMetrics.memory?.percent}%` }} />
                         </div>
                       </div>
                       <div>
-                        <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2">
+                        <div className="flex justify-between text-xs font-bold uppercase tracking-wider mb-2 text-nature-night">
                           <span className="flex items-center gap-1 opacity-60"><HardDrive size={12} /> Almacenamiento SSD</span>
-                          <span className="text-amber-400">{sysMetrics.disk?.used_gb?.toFixed(1)} / {sysMetrics.disk?.total_gb?.toFixed(1)} GB</span>
+                          <span className="text-amber-honey">{sysMetrics.disk?.used_gb?.toFixed(1)} / {sysMetrics.disk?.total_gb?.toFixed(1)} GB</span>
                         </div>
-                        <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                          <div className="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-500" style={{ width: `${sysMetrics.disk?.percent}%` }} />
+                        <div className="h-2 w-full bg-nature-night/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-gradient-to-r from-amber-honey to-amber-500 transition-all duration-500" style={{ width: `${sysMetrics.disk?.percent}%` }} />
                         </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4 pt-2">
-                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col justify-between">
-                          <span className="text-[10px] uppercase opacity-40 font-bold">Base de Datos</span>
-                          <span className="text-sm font-black flex items-center gap-2 mt-2">
-                            <Database size={14} className={sysMetrics.database?.status === 'Conectado' ? 'text-green-400' : 'text-red-400'} />
+                        <div className="p-4 bg-nature-night/5 border border-nature-night/10 rounded-2xl flex flex-col justify-between">
+                          <span className="text-[10px] uppercase opacity-40 font-bold text-nature-night/60">Base de Datos</span>
+                          <span className="text-sm font-black flex items-center gap-2 mt-2 text-nature-night">
+                            <Database size={14} className={sysMetrics.database?.status === 'Conectado' ? 'text-green-600' : 'text-red-600'} />
                             {sysMetrics.database?.status}
                           </span>
                         </div>
-                        <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl flex flex-col justify-between">
-                          <span className="text-[10px] uppercase opacity-40 font-bold">Uptime</span>
-                          <span className="text-[11px] font-mono font-bold truncate mt-2 text-amber-300">{sysMetrics.system?.uptime || 'N/A'}</span>
+                        <div className="p-4 bg-nature-night/5 border border-nature-night/10 rounded-2xl flex flex-col justify-between">
+                          <span className="text-[10px] uppercase opacity-40 font-bold text-nature-night/60">Uptime</span>
+                          <span className="text-[11px] font-mono font-bold truncate mt-2 text-amber-honey">{sysMetrics.system?.uptime || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-white/20 text-xs py-8 text-center uppercase tracking-widest font-bold">Sin datos del sistema</p>
+                    <p className="text-nature-night/20 text-xs py-8 text-center uppercase tracking-widest font-bold">Sin datos del sistema</p>
                   )}
                 </div>
 
-                <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass lg:col-span-2">
+                <div className="bg-white border border-nature-night/10 p-6 rounded-[2rem] shadow-md shadow-nature-night/5 lg:col-span-2">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-2">
-                      <ShoppingBag size={18} className="text-amber-500" /> Inteligencia de Ventas (Top Merch)
+                    <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-2 text-nature-night">
+                      <ShoppingBag size={18} className="text-amber-honey" /> Inteligencia de Ventas (Top Merch)
                     </h3>
                     {shop?.low_stock_count > 0 && (
-                      <span className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full animate-pulse">
+                      <span className="flex items-center gap-1 bg-amber-50 border border-amber-honey/30 text-amber-honey text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full animate-pulse">
                         <AlertTriangle size={10} /> {shop?.low_stock_count} Stock Bajo
                       </span>
                     )}
@@ -1182,7 +1182,7 @@ export default function AdminDashboard() {
                     <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="border-b border-white/5 text-[9px] uppercase tracking-widest opacity-40 text-left">
+                          <tr className="border-b border-nature-night/10 text-[9px] uppercase tracking-widest opacity-40 text-left text-nature-night">
                             <th className="py-3 font-black">Producto</th>
                             <th className="py-3 font-black text-center">Unidades</th>
                             <th className="py-3 font-black text-right">Ingresos</th>
@@ -1190,10 +1190,10 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody>
                           {shop.top_products.map((p: any, idx: number) => (
-                            <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-all">
-                              <td className="py-3.5 text-xs font-black text-white/80">{p.name}</td>
-                              <td className="py-3.5 text-xs font-mono text-center text-amber-400 font-bold">{p.quantity}</td>
-                              <td className="py-3.5 text-xs font-mono text-right text-white font-black">${p.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <tr key={idx} className="border-b border-nature-night/5 last:border-0 hover:bg-nature-night/5 transition-all">
+                              <td className="py-3.5 text-xs font-black text-nature-night/85">{p.name}</td>
+                              <td className="py-3.5 text-xs font-mono text-center text-amber-honey font-bold">{p.quantity}</td>
+                              <td className="py-3.5 text-xs font-mono text-right text-nature-night font-black">${p.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1201,8 +1201,8 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-12 opacity-30 text-center">
-                      <ShoppingBag size={48} className="mb-4" />
-                      <p className="text-xs uppercase tracking-widest font-black">Sin ventas de mercancía registradas</p>
+                      <ShoppingBag size={48} className="mb-4 text-nature-night/30" />
+                      <p className="text-xs uppercase tracking-widest font-black text-nature-night/30">Sin ventas de mercancía registradas</p>
                     </div>
                   )}
                 </div>
@@ -1221,14 +1221,14 @@ export default function AdminDashboard() {
               className="space-y-6"
             >
               {/* Order Filtering Options */}
-              <div className="flex gap-3 bg-white/[0.02] border border-white/5 p-1.5 rounded-xl w-fit">
+              <div className="flex gap-3 bg-white border border-nature-night/10 p-1.5 rounded-xl w-fit shadow-sm">
                 {['all', 'paid', 'shipped', 'delivered'].map((filter) => (
                   <button
                     key={filter}
                     onClick={() => setOrderFilter(filter as any)}
                     className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${orderFilter === filter
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                      ? 'bg-nature-night/10 text-nature-night'
+                      : 'text-nature-night/50 hover:text-nature-night hover:bg-nature-night/5'
                       }`}
                   >
                     {filter === 'all' && 'Todos'}
@@ -1241,37 +1241,37 @@ export default function AdminDashboard() {
 
               {/* Simulated Shipping Modal Overlay */}
               {shippingOrderId && shippingStep !== 'idle' && (
-                <div className="fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-6 backdrop-blur-md">
+                <div className="fixed inset-0 bg-[#0B0F0D]/60 z-[110] flex items-center justify-center p-6 backdrop-blur-md">
                   <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="max-w-md w-full bg-[#080808] border border-white/10 p-8 rounded-[2.5rem] text-center shadow-2xl"
+                    className="max-w-md w-full bg-white border border-nature-night/10 p-8 rounded-[2.5rem] text-center shadow-2xl shadow-nature-night/10"
                   >
                     {shippingStep === 'contacting' && (
                       <div className="py-6 space-y-4">
                         <div className="w-12 h-12 border-4 border-amber-honey/20 border-t-amber-honey rounded-full animate-spin mx-auto" />
-                        <h4 className="text-md font-black uppercase tracking-wider">Despachando Guía DHL...</h4>
-                        <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Estableciendo comunicación de paquetería</p>
+                        <h4 className="text-md font-black uppercase tracking-wider text-nature-night">Despachando Guía DHL...</h4>
+                        <p className="text-[10px] text-nature-night/40 uppercase tracking-widest font-bold">Estableciendo comunicación de paquetería</p>
                       </div>
                     )}
                     {shippingStep === 'generating' && (
                       <div className="py-6 space-y-4">
                         <div className="w-12 h-12 border-4 border-amber-honey/20 border-t-amber-gold rounded-full animate-spin mx-auto" />
-                        <h4 className="text-md font-black uppercase tracking-wider">Imprimiendo Guía Postal...</h4>
-                        <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Generando archivo PDF y Tracking Number</p>
+                        <h4 className="text-md font-black uppercase tracking-wider text-nature-night">Imprimiendo Guía Postal...</h4>
+                        <p className="text-[10px] text-nature-night/40 uppercase tracking-widest font-bold">Generando archivo PDF y Tracking Number</p>
                       </div>
                     )}
                     {shippingStep === 'success' && (
                       <div className="py-6 space-y-5">
-                        <div className="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 flex items-center justify-center mx-auto animate-bounce">
+                        <div className="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-full text-green-600 flex items-center justify-center mx-auto animate-bounce">
                           <Check size={32} />
                         </div>
                         <div>
-                          <h4 className="text-md font-black uppercase tracking-wider">¡Guía Generada Exitosamente!</h4>
-                          <p className="text-xs text-white/50 mt-2">El pedido ha sido entregado a paquetería.</p>
+                          <h4 className="text-md font-black uppercase tracking-wider text-nature-night">¡Guía Generada Exitosamente!</h4>
+                          <p className="text-xs text-nature-night/50 mt-2">El pedido ha sido entregado a paquetería.</p>
                         </div>
-                        <div className="bg-white/[0.02] border border-white/5 p-4 rounded-2xl text-left space-y-1">
-                          <span className="text-[9px] text-white/30 uppercase tracking-widest font-black block">Código de Seguimiento</span>
+                        <div className="bg-nature-night/5 border border-nature-night/10 p-4 rounded-2xl text-left space-y-1">
+                          <span className="text-[9px] text-nature-night/40 uppercase tracking-widest font-black block">Código de Seguimiento</span>
                           <span className="text-xs font-mono font-bold text-amber-honey">{simulatedTracking}</span>
                         </div>
                         <button
@@ -1279,7 +1279,7 @@ export default function AdminDashboard() {
                             setShippingOrderId(null);
                             setShippingStep('idle');
                           }}
-                          className="w-full bg-white text-black font-black uppercase tracking-widest text-[9px] py-3.5 rounded-xl mt-4"
+                          className="w-full bg-nature-night text-white font-black uppercase tracking-widest text-[9px] py-3.5 rounded-xl mt-4 hover:bg-nature-night/90 transition-all"
                         >
                           Cerrar y Actualizar Lista
                         </button>
@@ -1294,23 +1294,23 @@ export default function AdminDashboard() {
                 {orders
                   .filter((o) => orderFilter === 'all' ? true : o.status === orderFilter)
                   .length === 0 ? (
-                  <div className="bg-white/[0.02] border border-white/5 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4">
-                    <Package size={48} className="text-white/10" />
-                    <p className="text-xs uppercase tracking-widest font-black text-white/30">No se encontraron pedidos en esta categoría</p>
+                  <div className="bg-white border border-nature-night/10 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4 shadow-sm">
+                    <Package size={48} className="text-nature-night/10" />
+                    <p className="text-xs uppercase tracking-widest font-black text-nature-night/30">No se encontraron pedidos en esta categoría</p>
                   </div>
                 ) : (
                   orders
                     .filter((o) => orderFilter === 'all' ? true : o.status === orderFilter)
                     .map((order) => (
-                      <div key={order.id} className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] hover:border-white/10 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden group">
+                      <div key={order.id} className="bg-white border border-nature-night/10 p-6 rounded-[2rem] hover:border-amber-honey/20 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden group shadow-sm">
                         {/* Left Info: Meta, address, items */}
                         <div className="space-y-4 flex-1">
                           <div className="flex flex-wrap items-center gap-3">
-                            <span className="text-xs font-black text-white/80">Orden #{order.id}</span>
-                            <span className="text-[9px] opacity-40 font-bold uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> {new Date(order.created_at).toLocaleString()}</span>
-                            <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${order.status === 'paid' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 animate-pulse' :
-                                order.status === 'shipped' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                                  'bg-green-500/10 border-green-500/30 text-green-400'
+                            <span className="text-xs font-black text-nature-night/80">Orden #{order.id}</span>
+                            <span className="text-[9px] opacity-40 font-bold uppercase tracking-wider flex items-center gap-1 text-nature-night"><Calendar size={10} /> {new Date(order.created_at).toLocaleString()}</span>
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${order.status === 'paid' ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 animate-pulse' :
+                              order.status === 'shipped' ? 'bg-blue-500/10 border-blue-500/30 text-blue-600' :
+                                'bg-green-500/10 border-green-500/30 text-green-600'
                               }`}>
                               {order.status === 'paid' ? 'Pendiente Envío (Pagado)' :
                                 order.status === 'shipped' ? 'En Tránsito (Shipped)' :
@@ -1319,25 +1319,25 @@ export default function AdminDashboard() {
                           </div>
 
                           {/* Recipient card details */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/[0.01] border border-white/[0.03] p-4 rounded-xl">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-nature-night/5 border border-nature-night/10 p-4 rounded-xl">
                             <div className="space-y-1.5">
-                              <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Información del Cliente</span>
-                              <div className="text-xs font-black flex items-center gap-1.5"><User size={12} className="text-white/40" /> {order.full_name}</div>
-                              <div className="text-[10px] text-white/60 flex items-center gap-1.5"><Mail size={12} className="text-white/40" /> {order.user_email}</div>
+                              <span className="text-[8px] text-nature-night/40 uppercase tracking-widest font-black block">Información del Cliente</span>
+                              <div className="text-xs font-black flex items-center gap-1.5 text-nature-night"><User size={12} className="text-nature-night/50" /> {order.full_name}</div>
+                              <div className="text-[10px] text-nature-night/60 flex items-center gap-1.5"><Mail size={12} className="text-nature-night/50" /> {order.user_email}</div>
                             </div>
                             <div className="space-y-1.5">
-                              <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Dirección de Despacho</span>
-                              <div className="text-xs font-black flex items-center gap-1.5"><MapPin size={12} className="text-white/40" /> {order.address}</div>
-                              <div className="text-[10px] text-white/60 pl-4">{order.city}, {order.country}</div>
+                              <span className="text-[8px] text-nature-night/40 uppercase tracking-widest font-black block">Dirección de Despacho</span>
+                              <div className="text-xs font-black flex items-center gap-1.5 text-nature-night"><MapPin size={12} className="text-nature-night/50" /> {order.address}</div>
+                              <div className="text-[10px] text-nature-night/60 pl-4">{order.city}, {order.country}</div>
                             </div>
                           </div>
 
                           {/* Items table list */}
                           <div className="space-y-1.5">
-                            <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Artículos a Enviar</span>
+                            <span className="text-[8px] text-nature-night/40 uppercase tracking-widest font-black block">Artículos a Enviar</span>
                             <div className="flex flex-wrap gap-2">
                               {order.items.map((item: any, idx: number) => (
-                                <span key={idx} className="bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white/80">
+                                <span key={idx} className="bg-nature-night/5 border border-nature-night/10 px-3 py-1.5 rounded-lg text-[10px] font-bold text-nature-night/80">
                                   {item.quantity}x <span className="text-amber-honey font-black uppercase tracking-wider">{item.product_name}</span> (${item.price})
                                 </span>
                               ))}
@@ -1346,9 +1346,9 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* Right actions: Total & Shipping Buttons */}
-                        <div className="flex flex-col items-end gap-3 shrink-0 self-stretch lg:self-center justify-between border-t lg:border-t-0 border-white/5 pt-4 lg:pt-0">
+                        <div className="flex flex-col items-end gap-3 shrink-0 self-stretch lg:self-center justify-between border-t lg:border-t-0 border-nature-night/10 pt-4 lg:pt-0">
                           <div className="text-right">
-                            <span className="text-[9px] uppercase tracking-widest text-white/30 font-black block mb-0.5">Total Abonado</span>
+                            <span className="text-[9px] uppercase tracking-widest text-nature-night/40 font-black block mb-0.5">Total Abonado</span>
                             <span className="text-lg font-black text-amber-honey">${order.total_amount}</span>
                           </div>
 
@@ -1365,14 +1365,14 @@ export default function AdminDashboard() {
 
                           {order.status === 'shipped' && (
                             <div className="flex flex-col gap-2 w-full">
-                              <div className="p-2 bg-blue-500/5 border border-blue-500/10 rounded-lg text-[9px] text-blue-400 font-mono text-center font-bold">
+                              <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg text-[9px] text-blue-700 font-mono text-center font-bold">
                                 En Tránsito
                               </div>
                               <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}
-                                className="border border-green-500/30 bg-green-500/10 text-green-400 font-black uppercase tracking-widest text-[9px] px-5 py-3 rounded-xl hover:bg-green-500/25 transition-all flex items-center justify-center gap-1"
+                                className="border border-green-500/30 bg-green-500/10 text-green-600 font-black uppercase tracking-widest text-[9px] px-5 py-3 rounded-xl hover:bg-green-500/25 transition-all flex items-center justify-center gap-1"
                               >
                                 <Check size={12} /> Confirmar Entrega
                               </motion.button>
@@ -1380,7 +1380,7 @@ export default function AdminDashboard() {
                           )}
 
                           {order.status === 'delivered' && (
-                            <div className="flex items-center gap-1 text-green-400 text-xs font-black uppercase tracking-widest border border-green-500/25 bg-green-500/5 px-4 py-2 rounded-xl">
+                            <div className="flex items-center gap-1 text-green-700 text-xs font-black uppercase tracking-widest border border-green-200 bg-green-50 px-4 py-2 rounded-xl">
                               <Check size={14} /> Entregado
                             </div>
                           )}
@@ -1406,31 +1406,31 @@ export default function AdminDashboard() {
               <div className="lg:col-span-2 space-y-4">
                 <div className="flex justify-between items-center mb-2">
                   <div>
-                    <h3 className="text-lg font-black uppercase italic tracking-tight">Registro de Gastos Históricos</h3>
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold mt-0.5">Control de pérdidas y costos logísticos</p>
+                    <h3 className="text-lg font-black uppercase italic tracking-tight text-nature-night">Registro de Gastos Históricos</h3>
+                    <p className="text-[10px] text-nature-night/40 uppercase tracking-widest font-bold mt-0.5">Control de pérdidas y costos logísticos</p>
                   </div>
                 </div>
 
                 {expenses.length === 0 ? (
-                  <div className="bg-white/[0.02] border border-white/5 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4">
-                    <ClipboardList size={48} className="text-white/10" />
-                    <p className="text-xs uppercase tracking-widest font-black text-white/30">No se han registrado gastos operativos aún</p>
+                  <div className="bg-white border border-nature-night/10 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4 shadow-sm">
+                    <ClipboardList size={48} className="text-nature-night/10" />
+                    <p className="text-xs uppercase tracking-widest font-black text-nature-night/30">No se han registrado gastos operativos aún</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
                     {expenses.map((e) => (
-                      <div key={e.id} className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl flex justify-between items-center gap-6">
+                      <div key={e.id} className="bg-white border border-nature-night/10 p-5 rounded-2xl flex justify-between items-center gap-6 shadow-sm">
                         <div className="space-y-1">
-                          <div className="text-xs font-black uppercase tracking-wider text-white">{e.title}</div>
-                          {e.description && <p className="text-[10px] text-white/50 leading-relaxed max-w-md">{e.description}</p>}
-                          <div className="flex gap-3 text-[9px] opacity-40 font-bold uppercase tracking-widest pt-1">
+                          <div className="text-xs font-black uppercase tracking-wider text-nature-night">{e.title}</div>
+                          {e.description && <p className="text-[10px] text-nature-night/60 leading-relaxed max-w-md">{e.description}</p>}
+                          <div className="flex gap-3 text-[9px] opacity-40 font-bold uppercase tracking-widest pt-1 text-nature-night">
                             <span>Categoría: {e.category}</span>
                             <span>•</span>
                             <span>{new Date(e.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <span className="text-sm font-mono font-black text-red-400">-${e.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span className="text-sm font-mono font-black text-red-600">-${e.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     ))}
@@ -1439,9 +1439,9 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Column: Add Expense Form */}
-              <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass h-fit">
-                <h3 className="text-lg font-black uppercase italic tracking-tight mb-4 flex items-center gap-2">
-                  <PlusCircle size={18} className="text-amber-500" /> Registrar Gasto
+              <div className="bg-white border border-nature-night/10 p-6 rounded-[2rem] h-fit shadow-md shadow-nature-night/5">
+                <h3 className="text-lg font-black uppercase italic tracking-tight mb-4 flex items-center gap-2 text-nature-night">
+                  <PlusCircle size={18} className="text-amber-honey" /> Registrar Gasto
                 </h3>
 
                 <form onSubmit={handleAddExpense} className="space-y-4">
@@ -1449,7 +1449,7 @@ export default function AdminDashboard() {
                     <motion.div
                       initial={{ scale: 0.95, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
-                      className="p-3.5 bg-green-500/10 border border-green-500/25 text-green-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center"
+                      className="p-3.5 bg-green-50 border border-green-200 text-green-700 rounded-xl text-xs font-bold uppercase tracking-wider text-center"
                     >
                       ¡Gasto registrado con éxito!
                     </motion.div>
@@ -1457,22 +1457,22 @@ export default function AdminDashboard() {
 
                   {/* Title */}
                   <div className="space-y-1">
-                    <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Título del Gasto</label>
+                    <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Título del Gasto</label>
                     <input
                       type="text"
                       required
                       value={expenseTitle}
                       onChange={(e) => setExpenseTitle(e.target.value)}
                       placeholder="Ej: Tarifas de Envío DHL"
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold"
+                      className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold text-nature-night placeholder-nature-night/30"
                     />
                   </div>
 
                   {/* Amount */}
                   <div className="space-y-1">
-                    <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Monto (USD/ARS)</label>
+                    <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Monto (USD/ARS)</label>
                     <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 text-xs font-bold">$</div>
+                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-nature-night/30 text-xs font-bold">$</div>
                       <input
                         type="number"
                         required
@@ -1480,18 +1480,18 @@ export default function AdminDashboard() {
                         value={expenseAmount}
                         onChange={(e) => setExpenseAmount(e.target.value)}
                         placeholder="1500.00"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-8 pr-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold font-mono"
+                        className="w-full bg-white border border-nature-night/15 rounded-xl pl-8 pr-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold font-mono text-nature-night placeholder-nature-night/30"
                       />
                     </div>
                   </div>
 
                   {/* Category Selection */}
                   <div className="space-y-1">
-                    <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Categoría</label>
+                    <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Categoría</label>
                     <select
                       value={expenseCategory}
                       onChange={(e) => setExpenseCategory(e.target.value)}
-                      className="w-full bg-[#080808] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold uppercase tracking-wider text-white"
+                      className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-nature-night"
                     >
                       <option value="Logística & Envío">🚚 Logística & Envío</option>
                       <option value="Producción de Merch">👕 Producción de Merch</option>
@@ -1504,13 +1504,13 @@ export default function AdminDashboard() {
 
                   {/* Description */}
                   <div className="space-y-1">
-                    <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Descripción Breve</label>
+                    <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Descripción Breve</label>
                     <textarea
                       rows={3}
                       value={expenseDesc}
                       onChange={(e) => setExpenseDesc(e.target.value)}
                       placeholder="Detalles complementarios del gasto..."
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold"
+                      className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold text-nature-night placeholder-nature-night/30"
                     />
                   </div>
 
@@ -1556,13 +1556,13 @@ export default function AdminDashboard() {
               )}
 
               {/* Catalog Navigation Sub-Bar & Create Buttons */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.01] border border-white/5 p-4 rounded-[2rem]">
-                <div className="flex gap-2 bg-white/[0.02] border border-white/5 p-1 rounded-xl">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white border border-nature-night/10 p-4 rounded-[2rem] shadow-sm">
+                <div className="flex gap-2 bg-nature-night/5 border border-nature-night/10 p-1 rounded-xl">
                   <button
                     onClick={() => setCatalogSubTab('products')}
                     className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${catalogSubTab === 'products'
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                      ? 'bg-nature-night/10 text-nature-night'
+                      : 'text-nature-night/50 hover:text-nature-night hover:bg-nature-night/5'
                       }`}
                   >
                     🛍️ Productos ({products.length})
@@ -1570,8 +1570,8 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => setCatalogSubTab('categories')}
                     className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${catalogSubTab === 'categories'
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                      ? 'bg-nature-night/10 text-nature-night'
+                      : 'text-nature-night/50 hover:text-nature-night hover:bg-nature-night/5'
                       }`}
                   >
                     🏷️ Categorías ({categories.length})
@@ -1599,21 +1599,21 @@ export default function AdminDashboard() {
               {catalogSubTab === 'products' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {products.length === 0 ? (
-                    <div className="col-span-full bg-white/[0.02] border border-white/5 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4">
-                      <ShoppingBag size={48} className="text-white/10" />
-                      <p className="text-xs uppercase tracking-widest font-black text-white/30">No se encontraron productos registrados</p>
+                    <div className="col-span-full bg-white border border-nature-night/10 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4 shadow-sm">
+                      <ShoppingBag size={48} className="text-nature-night/10" />
+                      <p className="text-xs uppercase tracking-widest font-black text-nature-night/30">No se encontraron productos registrados</p>
                     </div>
                   ) : (
                     products.map((product) => (
-                      <div key={product.id} className="bg-white/[0.02] border border-white/5 p-5 rounded-[2rem] hover:border-white/10 transition-all flex flex-col justify-between relative overflow-hidden group">
+                      <div key={product.id} className="bg-white border border-nature-night/10 p-5 rounded-[2rem] hover:border-amber-honey/20 transition-all flex flex-col justify-between relative overflow-hidden group shadow-sm">
                         {/* Status badge */}
-                        <div className="absolute top-4 right-4 flex gap-2">
+                        <div className="absolute top-4 right-4 flex gap-2 z-10">
                           <button
                             onClick={() => handleProductToggleActive(product)}
                             title={product.is_active ? "Desactivar" : "Activar"}
                             className={`p-2 rounded-xl border backdrop-blur-md transition-all ${product.is_active
-                                ? 'bg-green-500/10 border-green-500/25 text-green-400'
-                                : 'bg-red-500/10 border-red-500/25 text-red-400'
+                              ? 'bg-green-50 border-green-200 text-green-700'
+                              : 'bg-red-50 border-red-200 text-red-700'
                               }`}
                           >
                             {product.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
@@ -1622,7 +1622,7 @@ export default function AdminDashboard() {
 
                         <div>
                           {/* Image Preview Container */}
-                          <div className="w-full h-40 bg-white/[0.01] border border-white/5 rounded-2xl mb-4 overflow-hidden relative flex items-center justify-center">
+                          <div className="w-full h-40 bg-nature-night/5 border border-nature-night/10 rounded-2xl mb-4 overflow-hidden relative flex items-center justify-center">
                             {product.image ? (
                               <img
                                 src={product.image}
@@ -1630,27 +1630,27 @@ export default function AdminDashboard() {
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               />
                             ) : (
-                              <ShoppingBag size={40} className="text-white/10" />
+                              <ShoppingBag size={40} className="text-nature-night/10" />
                             )}
                           </div>
 
                           {/* Info */}
                           <div className="space-y-1">
-                            <span className="text-[8px] bg-white/5 border border-white/5 px-2 py-0.5 rounded-full text-white/40 uppercase tracking-widest font-bold">
+                            <span className="text-[8px] bg-nature-night/5 border border-nature-night/10 px-2 py-0.5 rounded-full text-nature-night/50 uppercase tracking-widest font-bold">
                               {product.category_name || 'Sin Categoría'}
                             </span>
-                            <h4 className="text-sm font-black text-white uppercase tracking-tight line-clamp-1 pt-1">{product.name}</h4>
-                            <p className="text-[10px] text-white/50 line-clamp-2 leading-relaxed h-8">{product.description || 'Sin descripción'}</p>
+                            <h4 className="text-sm font-black text-nature-night uppercase tracking-tight line-clamp-1 pt-1">{product.name}</h4>
+                            <p className="text-[10px] text-nature-night/60 line-clamp-2 leading-relaxed h-8">{product.description || 'Sin descripción'}</p>
                           </div>
                         </div>
 
                         {/* Bottom Metadata & CTA */}
-                        <div className="border-t border-white/5 pt-4 mt-4 flex justify-between items-center">
+                        <div className="border-t border-nature-night/10 pt-4 mt-4 flex justify-between items-center">
                           <div>
-                            <span className="text-[8px] uppercase tracking-widest text-white/30 font-black block">Precio & Stock</span>
+                            <span className="text-[8px] uppercase tracking-widest text-nature-night/40 font-black block">Precio & Stock</span>
                             <div className="flex gap-2 items-baseline">
                               <span className="text-sm font-black text-amber-honey">${product.price}</span>
-                              <span className={`text-[9px] font-mono font-bold ${product.stock > 5 ? 'text-white/50' : 'text-red-400 animate-pulse'}`}>
+                              <span className={`text-[9px] font-mono font-bold ${product.stock > 5 ? 'text-nature-night/50' : 'text-red-600 animate-pulse'}`}>
                                 ({product.stock} disp.)
                               </span>
                             </div>
@@ -1659,14 +1659,14 @@ export default function AdminDashboard() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => openProductEditModal(product)}
-                              className="p-2.5 bg-white/5 border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/10 text-white rounded-xl transition-all"
+                              className="p-2.5 bg-nature-night/5 border border-nature-night/10 hover:border-amber-honey/30 hover:bg-amber-honey/10 text-nature-night rounded-xl transition-all"
                               title="Editar Producto"
                             >
                               <Edit2 size={12} />
                             </button>
                             <button
                               onClick={() => handleProductDelete(product.id)}
-                              className="p-2.5 bg-white/5 border border-white/5 hover:border-red-500/30 hover:bg-red-500/10 text-red-400 rounded-xl transition-all"
+                              className="p-2.5 bg-nature-night/5 border border-nature-night/10 hover:border-red-500/30 hover:bg-red-50 border-red-200 text-red-700 rounded-xl transition-all"
                               title="Eliminar Producto"
                             >
                               <Trash2 size={12} />
@@ -1683,28 +1683,28 @@ export default function AdminDashboard() {
               {catalogSubTab === 'categories' && (
                 <div className="space-y-4">
                   {categories.length === 0 ? (
-                    <div className="bg-white/[0.02] border border-white/5 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4">
-                      <Layers size={48} className="text-white/10" />
-                      <p className="text-xs uppercase tracking-widest font-black text-white/30">No se encontraron categorías registradas</p>
+                    <div className="bg-white border border-nature-night/10 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4 shadow-sm">
+                      <Layers size={48} className="text-nature-night/10" />
+                      <p className="text-xs uppercase tracking-widest font-black text-nature-night/30">No se encontraron categorías registradas</p>
                     </div>
                   ) : (
                     categories.map((category) => (
-                      <div key={category.id} className="bg-white/[0.02] border border-white/5 p-5 rounded-2xl hover:border-white/10 transition-all flex justify-between items-center gap-6">
+                      <div key={category.id} className="bg-white border border-nature-night/10 p-5 rounded-2xl hover:border-amber-honey/20 transition-all flex justify-between items-center gap-6 shadow-sm">
                         <div>
-                          <h4 className="text-xs font-black uppercase tracking-wider text-white">{category.name}</h4>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-nature-night">{category.name}</h4>
                           <p className="text-[10px] text-amber-honey/60 font-mono font-bold mt-0.5">slug: {category.slug}</p>
                         </div>
 
                         <div className="flex gap-2">
                           <button
                             onClick={() => openCategoryEditModal(category)}
-                            className="p-2.5 bg-white/5 border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/10 text-white rounded-xl transition-all"
+                            className="p-2.5 bg-nature-night/5 border border-nature-night/10 hover:border-amber-honey/30 hover:bg-amber-honey/10 text-nature-night rounded-xl transition-all"
                           >
                             <Edit2 size={12} />
                           </button>
                           <button
                             onClick={() => handleCategoryDelete(category.id)}
-                            className="p-2.5 bg-white/5 border border-white/5 hover:border-red-500/30 hover:bg-red-500/10 text-red-400 rounded-xl transition-all"
+                            className="p-2.5 bg-nature-night/5 border border-nature-night/10 hover:border-red-500/30 hover:bg-red-550/10 text-red-600 rounded-xl transition-all"
                           >
                             <Trash2 size={12} />
                           </button>
@@ -1717,42 +1717,42 @@ export default function AdminDashboard() {
 
               {/* PRODUCT CREATION/EDIT MODAL OVERLAY */}
               {isProductModalOpen && (
-                <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
+                <div className="fixed inset-0 bg-[#0B0F0D]/60 z-[120] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="max-w-xl w-full bg-[#080808] border border-white/10 p-8 rounded-[2.5rem] shadow-2xl relative my-8"
+                    className="max-w-xl w-full bg-white border border-nature-night/10 p-8 rounded-[2.5rem] shadow-2xl shadow-nature-night/10 relative my-8"
                   >
                     <button
                       onClick={() => setIsProductModalOpen(false)}
-                      className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-all"
+                      className="absolute top-6 right-6 p-2 bg-nature-night/5 hover:bg-nature-night/10 rounded-xl text-nature-night/50 hover:text-nature-night transition-all"
                     >
                       <X size={16} />
                     </button>
 
-                    <h3 className="text-xl font-black uppercase italic tracking-tight mb-6 text-white flex items-center gap-2">
-                      <ShoppingBag size={20} className="text-amber-500" />
+                    <h3 className="text-xl font-black uppercase italic tracking-tight mb-6 text-nature-night flex items-center gap-2">
+                      <ShoppingBag size={20} className="text-amber-honey" />
                       {prodId ? 'Editar Producto Merch' : 'Nuevo Producto Merch'}
                     </h3>
 
                     <form onSubmit={handleProductSubmit} className="space-y-4">
                       {/* Name */}
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Nombre del Producto</label>
+                        <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Nombre del Producto</label>
                         <input
                           type="text"
                           required
                           value={prodName}
                           onChange={(e) => setProdName(e.target.value)}
                           placeholder="Ej: Remera MS AMBAR Premium Black"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold"
+                          className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold text-nature-night placeholder-nature-night/30"
                         />
                       </div>
 
                       {/* Price & Stock */}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Precio (USD)</label>
+                          <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Precio (USD)</label>
                           <input
                             type="number"
                             required
@@ -1760,30 +1760,30 @@ export default function AdminDashboard() {
                             value={prodPrice}
                             onChange={(e) => setProdPrice(e.target.value)}
                             placeholder="25.00"
-                            className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold font-mono"
+                            className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold font-mono text-nature-night placeholder-nature-night/30"
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Stock Disponible</label>
+                          <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Stock Disponible</label>
                           <input
                             type="number"
                             required
                             value={prodStock}
                             onChange={(e) => setProdStock(e.target.value)}
                             placeholder="50"
-                            className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold font-mono"
+                            className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold font-mono text-nature-night placeholder-nature-night/30"
                           />
                         </div>
                       </div>
 
                       {/* Category Select */}
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Categoría</label>
+                        <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Categoría</label>
                         <select
                           required
                           value={prodCategory}
                           onChange={(e) => setProdCategory(e.target.value)}
-                          className="w-full bg-[#080808] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold uppercase tracking-wider text-white"
+                          className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-nature-night"
                         >
                           <option value="">Seleccionar Categoría...</option>
                           {categories.map((c) => (
@@ -1794,13 +1794,13 @@ export default function AdminDashboard() {
 
                       {/* Image Upload */}
                       <div className="space-y-2">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Imagen del Producto</label>
-                        <div className="flex gap-4 items-center bg-white/[0.01] border border-white/5 p-4 rounded-xl">
-                          <div className="w-16 h-16 bg-white/[0.02] rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
+                        <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Imagen del Producto</label>
+                        <div className="flex gap-4 items-center bg-nature-night/5 border border-nature-night/10 p-4 rounded-xl">
+                          <div className="w-16 h-16 bg-white rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-nature-night/10">
                             {prodImagePreview ? (
                               <img src={prodImagePreview} alt="Preview" className="w-full h-full object-cover" />
                             ) : (
-                              <ShoppingBag size={24} className="text-white/10" />
+                              <ShoppingBag size={24} className="text-nature-night/10" />
                             )}
                           </div>
                           <div className="space-y-1 flex-1">
@@ -1814,36 +1814,36 @@ export default function AdminDashboard() {
                                   setProdImagePreview(URL.createObjectURL(file));
                                 }
                               }}
-                              className="text-[10px] text-white/60 file:bg-white/5 file:border-0 file:rounded-lg file:text-white file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer"
+                              className="text-[10px] text-nature-night/60 file:bg-nature-night/5 file:border-0 file:rounded-lg file:text-nature-night file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer"
                             />
-                            <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold">Formatos recomendados: JPG, PNG o WebP. Máx 5MB.</p>
+                            <p className="text-[8px] text-nature-night/40 uppercase tracking-widest font-bold">Formatos recomendados: JPG, PNG o WebP. Máx 5MB.</p>
                           </div>
                         </div>
                       </div>
 
                       {/* Description */}
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Descripción del Producto</label>
+                        <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Descripción del Producto</label>
                         <textarea
                           rows={3}
                           required
                           value={prodDesc}
                           onChange={(e) => setProdDesc(e.target.value)}
                           placeholder="Características, material, talles, etc..."
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold"
+                          className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold text-nature-night placeholder-nature-night/30"
                         />
                       </div>
 
                       {/* Active Status Checkbox */}
-                      <div className="flex items-center gap-3 bg-white/[0.02] border border-white/5 p-4 rounded-xl">
+                      <div className="flex items-center gap-3 bg-nature-night/5 border border-nature-night/10 p-4 rounded-xl">
                         <input
                           type="checkbox"
                           id="prodIsActive"
                           checked={prodIsActive}
                           onChange={(e) => setProdIsActive(e.target.checked)}
-                          className="w-4 h-4 accent-amber-honey rounded border-white/10 cursor-pointer"
+                          className="w-4 h-4 accent-amber-honey rounded border-nature-night/15 cursor-pointer"
                         />
-                        <label htmlFor="prodIsActive" className="text-[10px] text-white/80 uppercase tracking-widest font-black cursor-pointer selection:bg-transparent">
+                        <label htmlFor="prodIsActive" className="text-[10px] text-nature-night/80 uppercase tracking-widest font-black cursor-pointer selection:bg-transparent">
                           Artículo Activo (Visible en la Tienda Pública)
                         </label>
                       </div>
@@ -1853,7 +1853,7 @@ export default function AdminDashboard() {
                         <button
                           type="button"
                           onClick={() => setIsProductModalOpen(false)}
-                          className="w-1/2 bg-white/5 hover:bg-white/10 border border-white/5 text-white font-black uppercase tracking-widest text-[9px] py-4 rounded-xl transition-all"
+                          className="w-1/2 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 text-nature-night font-black uppercase tracking-widest text-[9px] py-4 rounded-xl transition-all"
                         >
                           Cancelar
                         </button>
@@ -1876,47 +1876,47 @@ export default function AdminDashboard() {
 
               {/* CATEGORY CREATION/EDIT MODAL OVERLAY */}
               {isCategoryModalOpen && (
-                <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-[#0B0F0D]/60 z-[120] flex items-center justify-center p-4 backdrop-blur-sm">
                   <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    className="max-w-md w-full bg-[#080808] border border-white/10 p-8 rounded-[2.5rem] shadow-2xl relative"
+                    className="max-w-md w-full bg-white border border-nature-night/10 p-8 rounded-[2.5rem] shadow-2xl shadow-nature-night/10 relative"
                   >
                     <button
                       onClick={() => setIsCategoryModalOpen(false)}
-                      className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-all"
+                      className="absolute top-6 right-6 p-2 bg-nature-night/5 hover:bg-nature-night/10 rounded-xl text-nature-night/50 hover:text-nature-night transition-all"
                     >
                       <X size={16} />
                     </button>
 
-                    <h3 className="text-xl font-black uppercase italic tracking-tight mb-6 text-white flex items-center gap-2">
-                      <Layers size={20} className="text-amber-500" />
+                    <h3 className="text-xl font-black uppercase italic tracking-tight mb-6 text-nature-night flex items-center gap-2">
+                      <Layers size={20} className="text-amber-honey" />
                       {catId ? 'Editar Categoría' : 'Nueva Categoría'}
                     </h3>
 
                     <form onSubmit={handleCategorySubmit} className="space-y-4">
                       {/* Name */}
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Nombre de la Categoría</label>
+                        <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Nombre de la Categoría</label>
                         <input
                           type="text"
                           required
                           value={catName}
                           onChange={(e) => setCatName(e.target.value)}
                           placeholder="Ej: Accesorios"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold"
+                          className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold text-nature-night placeholder-nature-night/30"
                         />
                       </div>
 
                       {/* Slug */}
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Slug Personalizado (Opcional)</label>
+                        <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Slug Personalizado (Opcional)</label>
                         <input
                           type="text"
                           value={catSlug}
                           onChange={(e) => setCatSlug(e.target.value)}
                           placeholder="Ej: accesorios-indumentaria"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold font-mono"
+                          className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold font-mono text-nature-night placeholder-nature-night/30"
                         />
                       </div>
 
@@ -1925,7 +1925,7 @@ export default function AdminDashboard() {
                         <button
                           type="button"
                           onClick={() => setIsCategoryModalOpen(false)}
-                          className="w-1/2 bg-white/5 hover:bg-white/10 border border-white/5 text-white font-black uppercase tracking-widest text-[9px] py-4 rounded-xl transition-all"
+                          className="w-1/2 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 text-nature-night font-black uppercase tracking-widest text-[9px] py-4 rounded-xl transition-all"
                         >
                           Cancelar
                         </button>
@@ -1968,7 +1968,7 @@ export default function AdminDashboard() {
                   <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2">
                     <MapPin size={20} className="text-amber-500" /> Gestión de Recintos
                   </h2>
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold mt-1">
+                  <p className="text-nature-night/50 text-[10px] uppercase tracking-widest font-bold mt-1">
                     Crea y administra teatros — abre cada uno en Nectar Studio para diseñar su planta
                   </p>
                 </div>
@@ -1983,24 +1983,24 @@ export default function AdminDashboard() {
               {/* Success / Error messages */}
               {theaterSuccessMsg && (
                 <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-2xl">
-                  <Check size={14} className="text-green-400 shrink-0" />
-                  <p className="text-xs font-bold text-green-400">{theaterSuccessMsg}</p>
+                  <Check size={14} className="text-green-600 shrink-0" />
+                  <p className="text-xs font-bold text-green-600">{theaterSuccessMsg}</p>
                 </motion.div>
               )}
               {theaterErrorMsg && (
                 <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
-                  <AlertTriangle size={14} className="text-red-400 shrink-0" />
-                  <p className="text-xs font-bold text-red-400">{theaterErrorMsg}</p>
+                  <AlertTriangle size={14} className="text-red-600 shrink-0" />
+                  <p className="text-xs font-bold text-red-600">{theaterErrorMsg}</p>
                 </motion.div>
               )}
 
               {/* Theaters Grid */}
               {theaters.length === 0 ? (
-                <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-16 flex flex-col items-center gap-4 text-center">
-                  <MapPin size={48} className="text-white/10" />
-                  <p className="text-white/30 text-xs uppercase tracking-widest font-black">Sin teatros registrados</p>
-                  <p className="text-white/20 text-[10px] font-bold">Crea tu primer recinto para comenzar a vender boletos</p>
-                  <button onClick={openTheaterCreateModal} className="mt-4 px-6 py-3 bg-amber-honey text-nature-night text-xs font-black uppercase tracking-widest rounded-xl">
+                <div className="bg-white border border-nature-night/10 rounded-[2rem] p-16 flex flex-col items-center gap-4 text-center shadow-md shadow-nature-night/5">
+                  <MapPin size={48} className="text-nature-night/20" />
+                  <p className="text-nature-night/40 text-xs uppercase tracking-widest font-black">Sin teatros registrados</p>
+                  <p className="text-nature-night/30 text-[10px] font-bold">Crea tu primer recinto para comenzar a vender boletos</p>
+                  <button onClick={openTheaterCreateModal} className="mt-4 px-6 py-3 bg-amber-honey text-nature-night text-xs font-black uppercase tracking-widest rounded-xl hover:bg-amber-gold transition-all">
                     Crear primer Teatro
                   </button>
                 </div>
@@ -2013,7 +2013,7 @@ export default function AdminDashboard() {
                       <motion.div
                         key={theater.id}
                         whileHover={{ y: -4 }}
-                        className="bg-white/[0.02] border border-white/5 hover:border-amber-500/20 rounded-[2rem] p-6 flex flex-col gap-5 transition-all backdrop-blur-xl"
+                        className="bg-white border border-nature-night/10 hover:border-amber-honey/40 rounded-[2rem] p-6 flex flex-col gap-5 transition-all shadow-md shadow-nature-night/5"
                       >
                         {/* Card Header */}
                         <div className="flex items-start justify-between gap-3">
@@ -2022,24 +2022,24 @@ export default function AdminDashboard() {
                               <MapPin size={18} className="text-amber-honey" />
                             </div>
                             <div>
-                              <h3 className="text-sm font-black text-white/90 leading-tight">{theater.name}</h3>
-                              <p className="text-[9px] text-white/30 uppercase tracking-widest font-bold mt-0.5">{theater.location || 'Sin ubicación'}</p>
+                              <h3 className="text-sm font-black text-nature-night leading-tight">{theater.name}</h3>
+                              <p className="text-[9px] text-nature-night/50 uppercase tracking-widest font-bold mt-0.5">{theater.location || 'Sin ubicación'}</p>
                             </div>
                           </div>
-                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-white/40">
+                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-nature-night/5 border border-nature-night/10 text-nature-night/60">
                             ID #{theater.id}
                           </span>
                         </div>
 
                         {/* Stats row */}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
-                            <p className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Asientos</p>
-                            <p className="text-lg font-black text-white mt-1">{seatCount}</p>
+                          <div className="p-3 bg-nature-night/5 border border-nature-night/10 rounded-xl">
+                            <p className="text-[8px] uppercase tracking-widest text-nature-night/50 font-bold">Asientos</p>
+                            <p className="text-lg font-black text-nature-night mt-1">{seatCount}</p>
                           </div>
-                          <div className="p-3 bg-white/[0.02] border border-white/5 rounded-xl">
-                            <p className="text-[8px] uppercase tracking-widest text-white/30 font-bold">Zonas GA</p>
-                            <p className="text-lg font-black text-white mt-1">{theater.ga_zones?.length ?? 0}</p>
+                          <div className="p-3 bg-nature-night/5 border border-nature-night/10 rounded-xl">
+                            <p className="text-[8px] uppercase tracking-widest text-nature-night/50 font-bold">Zonas GA</p>
+                            <p className="text-lg font-black text-nature-night mt-1">{theater.ga_zones?.length ?? 0}</p>
                           </div>
                         </div>
 
@@ -2049,9 +2049,9 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => handleTheaterSync(theater.id)}
                             disabled={syncSt === 'loading'}
-                            className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${syncSt === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-                                syncSt === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                                  'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
+                            className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${syncSt === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-600' :
+                              syncSt === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-600' :
+                                'bg-nature-night/5 border-nature-night/10 text-nature-night/60 hover:bg-nature-night/10 hover:text-nature-night'
                               }`}
                           >
                             {syncSt === 'loading' ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> :
@@ -2072,13 +2072,13 @@ export default function AdminDashboard() {
                             </Link>
                             <button
                               onClick={() => openTheaterEditModal(theater)}
-                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white transition-all flex items-center justify-center gap-1"
+                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-nature-night/5 border border-nature-night/10 text-nature-night/60 hover:bg-nature-night/10 hover:text-nature-night transition-all flex items-center justify-center gap-1"
                             >
                               <Edit2 size={11} /> Editar
                             </button>
                             <button
                               onClick={() => handleTheaterDelete(theater.id, theater.name)}
-                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-red-500/5 border border-red-500/15 text-red-500/50 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1"
+                              className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider bg-red-500/5 border border-red-500/15 text-red-500/70 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1"
                             >
                               <Trash2 size={11} /> Borrar
                             </button>
@@ -2098,13 +2098,13 @@ export default function AdminDashboard() {
           {isTheaterModalOpen && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
+              className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-nature-night/60 backdrop-blur-md"
               onClick={(e) => { if (e.target === e.currentTarget) setIsTheaterModalOpen(false); }}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.93, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.93, y: 20 }}
                 transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-                className="w-full max-w-md bg-[#0b0d17]/95 border border-white/10 rounded-[2rem] p-8 shadow-2xl backdrop-blur-3xl"
+                className="w-full max-w-md bg-white border border-nature-night/10 rounded-[2rem] p-8 shadow-2xl"
               >
                 <div className="flex items-center justify-between mb-8">
                   <div className="flex items-center gap-4">
@@ -2112,50 +2112,50 @@ export default function AdminDashboard() {
                       <MapPin size={20} className="text-amber-honey" />
                     </div>
                     <div>
-                      <h2 className="text-[13px] font-black uppercase tracking-[0.25em] text-white">
+                      <h2 className="text-[13px] font-black uppercase tracking-[0.25em] text-nature-night">
                         {editingTheater ? 'Editar Teatro' : 'Nuevo Teatro'}
                       </h2>
-                      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey/60 mt-0.5">Nectar Studio — Venue Management</p>
+                      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey mt-0.5">Nectar Studio — Venue Management</p>
                     </div>
                   </div>
-                  <button onClick={() => setIsTheaterModalOpen(false)} className="w-9 h-9 rounded-xl bg-white/5 text-white/40 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all">
+                  <button onClick={() => setIsTheaterModalOpen(false)} className="w-9 h-9 rounded-xl bg-nature-night/5 text-nature-night/40 hover:bg-nature-night/10 hover:text-nature-night flex items-center justify-center transition-all">
                     <X size={16} />
                   </button>
                 </div>
 
                 <form onSubmit={handleTheaterSubmit} className="space-y-5">
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">Nombre del Recinto *</label>
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-nature-night/60 block">Nombre del Recinto *</label>
                     <input
                       type="text" autoFocus value={theaterName} onChange={(e) => setTheaterName(e.target.value)}
                       placeholder="Ej: Teatro Metropólitan CDMX"
-                      className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-500/50 transition-all placeholder:text-white/20"
+                      className="w-full px-4 py-3.5 rounded-xl bg-white border border-nature-night/15 text-nature-night text-sm font-semibold outline-none focus:border-amber-honey transition-all placeholder:text-nature-night/30"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">Ubicación / Ciudad</label>
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-nature-night/60 block">Ubicación / Ciudad</label>
                     <input
                       type="text" value={theaterLocation} onChange={(e) => setTheaterLocation(e.target.value)}
                       placeholder="Ej: Ciudad de México, CDMX"
-                      className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm font-semibold outline-none focus:border-amber-500/50 transition-all placeholder:text-white/20"
+                      className="w-full px-4 py-3.5 rounded-xl bg-white border border-nature-night/15 text-nature-night text-sm font-semibold outline-none focus:border-amber-honey transition-all placeholder:text-nature-night/30"
                     />
                   </div>
                   {!editingTheater && (
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-honey/5 border border-amber-honey/15">
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-honey/10 border border-amber-honey/20">
                       <Calendar size={14} className="text-amber-honey mt-0.5 shrink-0" />
-                      <p className="text-[9px] font-bold uppercase tracking-wider text-white/40 leading-relaxed">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-nature-night/70 leading-relaxed">
                         Después de crear el teatro, ábrelo en Nectar Studio Designer para diseñar la planta y agregar butacas.
                       </p>
                     </div>
                   )}
                   {theaterErrorMsg && (
                     <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                      <AlertTriangle size={13} className="text-red-400 shrink-0" />
-                      <p className="text-[10px] font-bold text-red-400">{theaterErrorMsg}</p>
+                      <AlertTriangle size={13} className="text-red-600 shrink-0" />
+                      <p className="text-[10px] font-bold text-red-600">{theaterErrorMsg}</p>
                     </div>
                   )}
                   <div className="flex gap-3 pt-2">
-                    <button type="button" onClick={() => setIsTheaterModalOpen(false)} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 transition-all">
+                    <button type="button" onClick={() => setIsTheaterModalOpen(false)} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-nature-night/5 border border-nature-night/10 text-nature-night/60 hover:bg-nature-night/10 transition-all">
                       Cancelar
                     </button>
                     <button type="submit" disabled={theaterLoading} className="flex-1 py-3.5 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-amber-500 to-amber-600 text-black flex items-center justify-center gap-2 shadow-[0_2px_15px_rgba(245,158,11,0.2)] disabled:opacity-50">
@@ -2185,10 +2185,10 @@ export default function AdminDashboard() {
               {/* Header */}
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <div>
-                  <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2 text-white">
+                  <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2 text-nature-night">
                     ✍️ Pipeline de Contratos Artísticos
                   </h2>
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest font-bold mt-1">
+                  <p className="text-nature-night/50 text-[10px] uppercase tracking-widest font-bold mt-1">
                     Monitorea, comparte enlaces y contrafirma acuerdos digitales de MS Ambar
                   </p>
                 </div>
@@ -2199,33 +2199,33 @@ export default function AdminDashboard() {
 
                 {/* Column 1: Generated/Pending Client Signature */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/5">
+                  <div className="flex items-center justify-between px-3 pb-2 border-b border-nature-night/10">
                     <span className="text-[10px] font-black uppercase tracking-widest text-amber-honey flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-pulse" /> Propuestas (Cliente Pendiente)
                     </span>
-                    <span className="text-[10px] font-black text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-nature-night/60 bg-nature-night/5 px-2 py-0.5 rounded-full">
                       {contracts.filter(c => !c.signature_base64).length}
                     </span>
                   </div>
 
                   <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                     {contracts.filter(c => !c.signature_base64).length === 0 ? (
-                      <div className="p-8 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                      <div className="p-8 text-center rounded-[2rem] border border-nature-night/10 bg-nature-night/5 text-xs text-nature-night/40 italic">
                         No hay propuestas pendientes
                       </div>
                     ) : (
                       contracts.filter(c => !c.signature_base64).map((c: any) => (
-                        <div key={c.id} className="p-6 rounded-3xl border border-white/5 bg-white/[0.02] space-y-4 hover:border-white/10 transition-all">
+                        <div key={c.id} className="p-6 rounded-3xl border border-nature-night/10 bg-white space-y-4 hover:border-amber-honey/30 transition-all shadow-md shadow-nature-night/5">
                           <div className="space-y-1">
-                            <h4 className="text-sm font-black text-white">{c.inquiry_detail?.name || 'Promotor'}</h4>
-                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">
+                            <h4 className="text-sm font-black text-nature-night">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                            <p className="text-[8px] font-bold text-nature-night/50 uppercase tracking-widest">
                               {c.inquiry_detail?.company || 'Particular'}
                             </p>
                           </div>
                           <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
                             <div>
                               <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
-                              <p className="font-bold text-white/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                              <p className="font-bold text-nature-night/80">{c.inquiry_detail?.date || 'Definir'}</p>
                             </div>
                             <div>
                               <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
@@ -2238,7 +2238,7 @@ export default function AdminDashboard() {
                               navigator.clipboard.writeText(link);
                               alert('Enlace de firma copiado al portapapeles!');
                             }}
-                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-white/80 transition-all text-center block"
+                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-nature-night/5 hover:bg-nature-night/10 text-nature-night/70 transition-all text-center block"
                           >
                             🔗 Copiar Enlace de Firma
                           </button>
@@ -2250,33 +2250,33 @@ export default function AdminDashboard() {
 
                 {/* Column 2: Waiting for Manager Countersign */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-400 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" /> Esperando Contrafirma
+                  <div className="flex items-center justify-between px-3 pb-2 border-b border-nature-night/10">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-600 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-ping" /> Esperando Contrafirma
                     </span>
-                    <span className="text-[10px] font-black text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-nature-night/60 bg-nature-night/5 px-2 py-0.5 rounded-full">
                       {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length}
                     </span>
                   </div>
 
                   <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                     {contracts.filter(c => c.signature_base64 && !c.is_fully_signed).length === 0 ? (
-                      <div className="p-8 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                      <div className="p-8 text-center rounded-[2rem] border border-nature-night/10 bg-nature-night/5 text-xs text-nature-night/40 italic">
                         Ningún acuerdo pendiente de firma de management
                       </div>
                     ) : (
                       contracts.filter(c => c.signature_base64 && !c.is_fully_signed).map((c: any) => (
-                        <div key={c.id} className="p-6 rounded-3xl border border-yellow-500/10 bg-yellow-500/[0.02] space-y-4 hover:border-yellow-500/20 transition-all">
+                        <div key={c.id} className="p-6 rounded-3xl border border-yellow-500/20 bg-white space-y-4 hover:border-yellow-500/40 transition-all shadow-md shadow-nature-night/5">
                           <div className="space-y-1">
-                            <h4 className="text-sm font-black text-white">{c.inquiry_detail?.name || 'Promotor'}</h4>
-                            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">
+                            <h4 className="text-sm font-black text-nature-night">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                            <p className="text-[8px] font-bold text-nature-night/50 uppercase tracking-widest">
                               {c.inquiry_detail?.company || 'Particular'}
                             </p>
                           </div>
                           <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
                             <div>
                               <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
-                              <p className="font-bold text-white/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                              <p className="font-bold text-nature-night/80">{c.inquiry_detail?.date || 'Definir'}</p>
                             </div>
                             <div>
                               <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
@@ -2285,7 +2285,7 @@ export default function AdminDashboard() {
                           </div>
                           <Link
                             href={`/bookings/sign/${c.id}`}
-                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-yellow-400 hover:bg-yellow-500 text-black font-black transition-all text-center block"
+                            className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-yellow-500 hover:bg-yellow-600 text-white font-black transition-all text-center block"
                           >
                             ✍️ Firmar como Manager
                           </Link>
@@ -2297,46 +2297,46 @@ export default function AdminDashboard() {
 
                 {/* Column 3: Fully Signed and Certified */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between px-3 pb-2 border-b border-white/5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Cerrados y Certificados
+                  <div className="flex items-center justify-between px-3 pb-2 border-b border-nature-night/10">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Cerrados y Certificados
                     </span>
-                    <span className="text-[10px] font-black text-white/30 bg-white/5 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-black text-nature-night/60 bg-nature-night/5 px-2 py-0.5 rounded-full">
                       {contracts.filter(c => c.is_fully_signed).length}
                     </span>
                   </div>
 
                   <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                     {contracts.filter(c => c.is_fully_signed).length === 0 ? (
-                      <div className="p-8 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                      <div className="p-8 text-center rounded-[2rem] border border-nature-night/10 bg-nature-night/5 text-xs text-nature-night/40 italic">
                         No hay contratos cerrados todavía
                       </div>
                     ) : (
                       contracts.filter(c => c.is_fully_signed).map((c: any) => {
                         const pdfUrl = c.pdf_file ? (c.pdf_file.startsWith('http') ? c.pdf_file : `${API_URL.replace('/api', '')}${c.pdf_file}`) : '#';
                         return (
-                          <div key={c.id} className="p-6 rounded-3xl border border-emerald-500/10 bg-emerald-500/[0.02] space-y-4 hover:border-emerald-500/20 transition-all">
+                          <div key={c.id} className="p-6 rounded-3xl border border-emerald-500/20 bg-white space-y-4 hover:border-emerald-500/40 transition-all shadow-md shadow-nature-night/5">
                             <div className="space-y-1">
-                              <h4 className="text-sm font-black text-white">{c.inquiry_detail?.name || 'Promotor'}</h4>
-                              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">
+                              <h4 className="text-sm font-black text-nature-night">{c.inquiry_detail?.name || 'Promotor'}</h4>
+                              <p className="text-[8px] font-bold text-nature-night/50 uppercase tracking-widest">
                                 {c.inquiry_detail?.company || 'Particular'}
                               </p>
                             </div>
                             <div className="grid grid-cols-2 gap-4 pt-2 text-[10px]">
                               <div>
                                 <p className="opacity-40 uppercase font-bold text-[8px]">Fecha Show</p>
-                                <p className="font-bold text-white/80">{c.inquiry_detail?.date || 'Definir'}</p>
+                                <p className="font-bold text-nature-night/80">{c.inquiry_detail?.date || 'Definir'}</p>
                               </div>
                               <div>
                                 <p className="opacity-40 uppercase font-bold text-[8px]">Honorarios</p>
-                                <p className="font-bold text-emerald-400">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
+                                <p className="font-bold text-emerald-600">${parseFloat(c.fee).toLocaleString('es-MX')} MXN</p>
                               </div>
                             </div>
                             <a
                               href={pdfUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all text-center block border border-emerald-500/20"
+                              className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 transition-all text-center block border border-emerald-500/20"
                             >
                               📄 Descargar Contrato PDF
                             </a>
@@ -2363,13 +2363,13 @@ export default function AdminDashboard() {
               className="space-y-8"
             >
               {/* Campaigns Sub-Tab Navigation Bar */}
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.01] border border-white/5 p-4 rounded-[2rem]">
-                <div className="flex gap-2 bg-white/[0.02] border border-white/5 p-1 rounded-xl">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-nature-night/5 border border-nature-night/10 p-4 rounded-[2rem]">
+                <div className="flex gap-2 bg-nature-night/5 border border-nature-night/10 p-1 rounded-xl">
                   <button
                     onClick={() => setCampaignSubTab('campaigns')}
                     className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'campaigns'
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                      ? 'bg-white text-nature-night border border-nature-night/10 shadow-sm'
+                      : 'text-nature-night/50 hover:text-nature-night hover:bg-white'
                       }`}
                   >
                     📧 Campañas de Poemas ({campaigns.length})
@@ -2377,8 +2377,8 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => setCampaignSubTab('subscribers')}
                     className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'subscribers'
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                      ? 'bg-white text-nature-night border border-nature-night/10 shadow-sm'
+                      : 'text-nature-night/50 hover:text-nature-night hover:bg-white'
                       }`}
                   >
                     👥 Lista de Suscriptores ({subscribers.length})
@@ -2393,7 +2393,7 @@ export default function AdminDashboard() {
                     <Plus size={14} /> Nueva Campaña
                   </button>
                 ) : (
-                  <span className="text-[10px] text-white/40 uppercase tracking-widest font-black pr-4">
+                  <span className="text-[10px] text-nature-night/50 uppercase tracking-widest font-black pr-4">
                     Importación y Gestión de Contactos
                   </span>
                 )}
@@ -2402,19 +2402,19 @@ export default function AdminDashboard() {
               {campaignSubTab === 'campaigns' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {campaigns.length === 0 ? (
-                    <div className="col-span-full p-12 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                    <div className="col-span-full p-12 text-center rounded-[2rem] border border-nature-night/10 bg-nature-night/5 text-xs text-nature-night/40 italic">
                       No has creado ninguna campaña de poemas todavía.
                     </div>
                   ) : (
                     campaigns.map((c: any) => (
-                      <div key={c.id} className="p-6 rounded-[2rem] border border-white/5 bg-white/[0.02] space-y-4 hover:border-amber-honey/20 transition-all flex flex-col justify-between">
+                      <div key={c.id} className="p-6 rounded-[2rem] border border-nature-night/10 bg-white space-y-4 hover:border-amber-honey/40 transition-all flex flex-col justify-between shadow-md shadow-nature-night/5">
                         <div className="space-y-3">
                           <div className="flex justify-between items-start">
                             <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${c.template_type === 'moss' ? 'bg-green-950 text-green-300 border border-green-800' :
-                                c.template_type === 'cosmic' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                                  c.template_type === 'glow' ? 'bg-yellow-950 text-yellow-300 border border-yellow-800' :
-                                    c.template_type === 'mist' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' :
-                                      'bg-neutral-900 text-neutral-300 border border-neutral-700'
+                              c.template_type === 'cosmic' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                                c.template_type === 'glow' ? 'bg-yellow-950 text-yellow-300 border border-yellow-800' :
+                                  c.template_type === 'mist' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' :
+                                    'bg-neutral-900 text-neutral-300 border border-neutral-700'
                               }`}>
                               {c.template_type === 'minimalist' ? 'Minimalist Carbon' :
                                 c.template_type === 'moss' ? 'Moss Green' :
@@ -2424,37 +2424,37 @@ export default function AdminDashboard() {
                             </span>
 
                             {c.is_sent ? (
-                              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
+                              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
                                 Enviada
                               </span>
                             ) : (
-                              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
+                              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-600 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
                                 Borrador
                               </span>
                             )}
                           </div>
 
                           <div>
-                            <h4 className="text-base font-black text-white leading-snug line-clamp-2">{c.subject}</h4>
-                            <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-1">
+                            <h4 className="text-base font-black text-nature-night leading-snug line-clamp-2">{c.subject}</h4>
+                            <p className="text-[9px] text-nature-night/50 font-bold uppercase tracking-widest mt-1">
                               Creado: {new Date(c.created_at).toLocaleDateString('es-MX')}
                             </p>
                             {c.is_sent && c.sent_at && (
-                              <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest font-mono">
+                              <p className="text-[9px] text-emerald-600 font-bold uppercase tracking-widest font-mono">
                                 Enviado: {new Date(c.sent_at).toLocaleDateString('es-MX')}
                               </p>
                             )}
                           </div>
 
-                          <p className="text-xs text-white/50 line-clamp-4 italic bg-black/20 p-4 rounded-2xl border border-white/[0.02] whitespace-pre-line">
+                          <p className="text-xs text-nature-night/70 line-clamp-4 italic bg-nature-night/5 p-4 rounded-2xl border border-nature-night/10 whitespace-pre-line">
                             {c.poem_text.substring(0, 180)}{c.poem_text.length > 180 ? '...' : ''}
                           </p>
                         </div>
 
-                        <div className="flex gap-2 pt-4 border-t border-white/5">
+                        <div className="flex gap-2 pt-4 border-t border-nature-night/10">
                           <button
                             onClick={() => setPreviewCampaign(c)}
-                            className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 text-white/80"
+                            className="flex-1 py-2 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 text-nature-night/70"
                           >
                             <Eye size={12} /> Previsualizar
                           </button>
@@ -2463,7 +2463,7 @@ export default function AdminDashboard() {
                             <>
                               <button
                                 onClick={() => openCampaignEditModal(c)}
-                                className="w-10 h-10 bg-white/5 hover:bg-amber-honey/10 border border-white/10 hover:border-amber-honey/30 rounded-xl flex items-center justify-center text-white/60 hover:text-amber-honey transition-all"
+                                className="w-10 h-10 bg-nature-night/5 hover:bg-amber-honey/10 border border-nature-night/10 hover:border-amber-honey/30 rounded-xl flex items-center justify-center text-nature-night/60 hover:text-amber-honey transition-all"
                                 title="Editar"
                               >
                                 <Edit2 size={12} />
@@ -2479,7 +2479,7 @@ export default function AdminDashboard() {
                           )}
                           <button
                             onClick={() => handleCampaignDelete(c.id, c.subject)}
-                            className="w-10 h-10 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 rounded-xl flex items-center justify-center text-white/40 hover:text-red-400 transition-all"
+                            className="w-10 h-10 bg-nature-night/5 hover:bg-red-500/10 border border-nature-night/10 hover:border-red-500/30 rounded-xl flex items-center justify-center text-nature-night/40 hover:text-red-600 transition-all"
                             title="Eliminar"
                           >
                             <Trash2 size={12} />
@@ -2496,37 +2496,37 @@ export default function AdminDashboard() {
                   {/* Summary & CSV Uploader split */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Stats */}
-                    <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass flex flex-col justify-between gap-4">
+                    <div className="bg-white border border-nature-night/10 p-6 rounded-[2rem] flex flex-col justify-between gap-4 shadow-md shadow-nature-night/5">
                       <div>
-                        <h4 className="text-xs font-black uppercase tracking-wider text-white/50 mb-4">Métricas del Newsletter</h4>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-nature-night/50 mb-4">Métricas del Newsletter</h4>
                         <div className="grid grid-cols-2 gap-4">
-                          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                          <div className="p-4 bg-nature-night/5 border border-nature-night/10 rounded-2xl">
                             <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Activos</span>
-                            <span className="text-2xl font-black text-white font-mono">{subscribers.filter(s => s.is_active).length}</span>
+                            <span className="text-2xl font-black text-nature-night font-mono">{subscribers.filter(s => s.is_active).length}</span>
                           </div>
-                          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                          <div className="p-4 bg-nature-night/5 border border-nature-night/10 rounded-2xl">
                             <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Premium</span>
                             <span className="text-2xl font-black text-amber-honey font-mono">{subscribers.filter(s => s.is_premium).length}</span>
                           </div>
                         </div>
                       </div>
-                      <div className="text-[10px] text-white/30 uppercase tracking-widest font-black pl-1">
+                      <div className="text-[10px] text-nature-night/50 uppercase tracking-widest font-black pl-1">
                         Total en Bóveda: {subscribers.length} contactos
                       </div>
                     </div>
 
                     {/* CSV Importer Form */}
-                    <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass">
+                    <div className="lg:col-span-2 bg-white border border-nature-night/10 p-6 rounded-[2rem] shadow-md shadow-nature-night/5">
                       <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2 mb-2">
                         📥 Importador Masivo de Contactos (CSV)
                       </h4>
-                      <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mb-4">
+                      <p className="text-[9px] text-nature-night/50 uppercase tracking-widest font-bold mb-4">
                         Sube un archivo para importar o actualizar tu lista. Columnas soportadas: subscriber_id, api_subscription_id, email, tags, status, premium?, created_at
                       </p>
 
                       <form onSubmit={handleCsvImport} className="flex flex-col sm:flex-row gap-4 items-end">
                         <div className="space-y-1.5 flex-1 w-full">
-                          <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Seleccionar Archivo CSV</label>
+                          <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-bold block pl-1">Seleccionar Archivo CSV</label>
                           <input
                             type="file"
                             id="csv-file-input"
@@ -2535,7 +2535,7 @@ export default function AdminDashboard() {
                               const file = e.target.files?.[0] || null;
                               setImportCsvFile(file);
                             }}
-                            className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold file:bg-white/10 file:border-0 file:rounded-lg file:text-white file:px-3 file:py-1 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer"
+                            className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold file:bg-nature-night/5 file:border-0 file:rounded-lg file:text-nature-night/70 file:px-3 file:py-1 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-nature-night/10"
                           />
                         </div>
                         <button
@@ -2552,12 +2552,12 @@ export default function AdminDashboard() {
                       </form>
 
                       {importCsvSuccess && (
-                        <div className="mt-4 p-3 bg-green-500/10 border border-green-500/25 text-green-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
+                        <div className="mt-4 p-3 bg-green-500/10 border border-green-500/25 text-green-600 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
                           {importCsvSuccess}
                         </div>
                       )}
                       {importCsvError && (
-                        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/25 text-red-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
+                        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/25 text-red-600 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
                           {importCsvError}
                         </div>
                       )}
@@ -2565,17 +2565,17 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Subscribers list table */}
-                  <div className="bg-white/[0.01] border border-white/5 rounded-[2rem] p-6 overflow-hidden">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-white mb-4">Lista de Contactos</h4>
+                  <div className="bg-white border border-nature-night/10 rounded-[2rem] p-6 overflow-hidden shadow-md shadow-nature-night/5">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-nature-night mb-4">Lista de Contactos</h4>
                     {subscribers.length === 0 ? (
-                      <div className="p-8 text-center text-xs text-white/30 italic">
+                      <div className="p-8 text-center text-xs text-nature-night/40 italic">
                         No hay suscriptores en la base de datos.
                       </div>
                     ) : (
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse">
                           <thead>
-                            <tr className="border-b border-white/5 text-[9px] uppercase tracking-widest opacity-40 text-left">
+                            <tr className="border-b border-nature-night/10 text-[9px] uppercase tracking-widest text-nature-night/50 text-left">
                               <th className="py-3 font-black">Email</th>
                               <th className="py-3 font-black">ID Suscriptor</th>
                               <th className="py-3 font-black">ID API</th>
@@ -2587,36 +2587,36 @@ export default function AdminDashboard() {
                           </thead>
                           <tbody>
                             {subscribers.map((s: any, idx: number) => (
-                              <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-all text-xs">
-                                <td className="py-3 font-black text-white/80">{s.email}</td>
-                                <td className="py-3 font-mono text-white/40">{s.subscriber_id || '-'}</td>
-                                <td className="py-3 font-mono text-white/40">{s.api_subscription_id || '-'}</td>
+                              <tr key={idx} className="border-b border-nature-night/10 last:border-0 hover:bg-nature-night/5 transition-all text-xs">
+                                <td className="py-3 font-black text-nature-night">{s.email}</td>
+                                <td className="py-3 font-mono text-nature-night/55">{s.subscriber_id || '-'}</td>
+                                <td className="py-3 font-mono text-nature-night/55">{s.api_subscription_id || '-'}</td>
                                 <td className="py-3">
                                   {s.tags ? (
                                     <div className="flex flex-wrap gap-1">
                                       {s.tags.split(',').map((t: string, i: number) => (
-                                        <span key={i} className="bg-white/5 border border-white/10 px-2 py-0.5 rounded-md text-[8px] font-bold text-white/50">
+                                        <span key={i} className="bg-nature-night/5 border border-nature-night/10 px-2 py-0.5 rounded-md text-[8px] font-bold text-nature-night/60">
                                           {t.trim()}
                                         </span>
                                       ))}
                                     </div>
                                   ) : (
-                                    <span className="text-white/20">-</span>
+                                    <span className="text-nature-night/40">-</span>
                                   )}
                                 </td>
                                 <td className="py-3 text-center">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_active ? 'bg-green-500/10 border border-green-500/25 text-green-400' : 'bg-red-500/10 border border-red-500/25 text-red-400'
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_active ? 'bg-green-500/10 border border-green-500/25 text-green-600' : 'bg-red-500/10 border border-red-500/25 text-red-600'
                                     }`}>
                                     {s.is_active ? 'Activo' : 'Inactivo'}
                                   </span>
                                 </td>
                                 <td className="py-3 text-center">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_premium ? 'bg-amber-honey/20 border border-amber-honey/30 text-amber-honey' : 'bg-white/5 border border-white/10 text-white/30'
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_premium ? 'bg-amber-honey/20 border border-amber-honey/30 text-amber-honey' : 'bg-nature-night/5 border border-nature-night/10 text-nature-night/40'
                                     }`}>
                                     {s.is_premium ? 'Premium' : 'Estándar'}
                                   </span>
                                 </td>
-                                <td className="py-3 font-mono text-right text-white/40">
+                                <td className="py-3 font-mono text-right text-nature-night/55">
                                   {new Date(s.created_at).toLocaleDateString('es-MX')}
                                 </td>
                               </tr>
@@ -2634,49 +2634,49 @@ export default function AdminDashboard() {
 
         {/* Campaign Creation/Edition Modal */}
         {isCampaignModalOpen && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-nature-night/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-[#0b0c10] border border-white/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative"
+              className="bg-white border border-nature-night/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative"
             >
               <button
                 onClick={() => setIsCampaignModalOpen(false)}
-                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-white/40 hover:text-white flex items-center justify-center transition-all hover:bg-white/5"
+                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-nature-night/15 text-nature-night/40 hover:text-nature-night flex items-center justify-center transition-all hover:bg-nature-night/5"
               >
                 <X size={16} />
               </button>
 
               <div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight">
+                <h3 className="text-xl font-black uppercase italic tracking-tight text-nature-night">
                   {campId ? 'Editar Campaña de Poemas' : 'Nueva Campaña de Poemas'}
                 </h3>
-                <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mt-1">
+                <p className="text-[9px] text-nature-night/55 uppercase tracking-widest font-bold mt-1">
                   Redacta y elige el diseño de fondo premium
                 </p>
               </div>
 
               <form onSubmit={handleCampaignSubmit} className="space-y-6">
                 {campErrorMsg && (
-                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-xs font-bold uppercase tracking-wide">
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-600 p-4 rounded-xl text-xs font-bold uppercase tracking-wide">
                     ⚠️ {campErrorMsg}
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Asunto del Correo</label>
+                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Asunto del Correo</label>
                   <input
                     type="text"
                     value={campSubject}
                     onChange={e => setCampSubject(e.target.value)}
                     placeholder="Ej. Susurros del Desierto - Un poema de MS AMBAR"
                     required
-                    className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all"
+                    className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-nature-night/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Plantilla de Fondo / Diseño Premium</label>
+                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Plantilla de Fondo / Diseño Premium</label>
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                     {[
                       { id: 'minimalist', name: 'Carbon', desc: 'Negro & Ámbar', class: 'bg-[#0c0d13] border-amber-honey/40 text-amber-honey' },
@@ -2699,22 +2699,22 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Cuerpo del Poema (Líricas)</label>
+                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Cuerpo del Poema (Líricas)</label>
                   <textarea
                     value={campPoemText}
                     onChange={e => setCampPoemText(e.target.value)}
                     placeholder="Escribe el poema aquí con saltos de línea normales..."
                     required
                     rows={8}
-                    className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-amber-honey transition-all resize-none"
+                    className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-amber-honey transition-all resize-none placeholder:text-nature-night/30"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Imagen de Portada (Opcional)</label>
+                  <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Imagen de Portada (Opcional)</label>
                   <div className="flex items-center gap-4">
                     {campImagePreview && (
-                      <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10">
+                      <div className="w-20 h-20 rounded-2xl overflow-hidden border border-nature-night/15">
                         <img src={campImagePreview} alt="Preview" className="w-full h-full object-cover" />
                       </div>
                     )}
@@ -2732,26 +2732,26 @@ export default function AdminDashboard() {
                           reader.readAsDataURL(file);
                         };
                       }}
-                      className="text-xs text-white/60 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-white/5 file:text-white file:cursor-pointer hover:file:bg-white/10"
+                      className="text-xs text-nature-night/70 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-nature-night/5 file:text-nature-night file:cursor-pointer hover:file:bg-nature-night/10"
                     />
                   </div>
                 </div>
 
                 {/* Advanced Background Design Settings */}
-                <div className="bg-white/[0.02] border border-white/5 p-5 rounded-3xl space-y-4">
+                <div className="bg-nature-night/5 border border-nature-night/10 p-5 rounded-3xl space-y-4">
                   <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
                     🖼️ Configuración de Fondo del Correo
                   </h4>
 
                   {/* Background Image Upload */}
                   <div className="space-y-2">
-                    <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Imagen de Fondo (Opcional)</label>
-                    <div className="flex gap-4 items-center bg-white/[0.01] border border-white/5 p-4 rounded-xl">
-                      <div className="w-16 h-16 bg-white/[0.02] rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
+                    <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Imagen de Fondo (Opcional)</label>
+                    <div className="flex gap-4 items-center bg-white border border-nature-night/10 p-4 rounded-xl">
+                      <div className="w-16 h-16 bg-nature-night/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-nature-night/10">
                         {campBgImagePreview ? (
                           <img src={campBgImagePreview} alt="Background Preview" className="w-full h-full object-cover" />
                         ) : (
-                          <Eye size={20} className="text-white/10" />
+                          <Eye size={20} className="text-nature-night/20" />
                         )}
                       </div>
                       <div className="space-y-1 flex-1">
@@ -2769,9 +2769,9 @@ export default function AdminDashboard() {
                               reader.readAsDataURL(file);
                             }
                           }}
-                          className="text-[10px] text-white/60 file:bg-white/5 file:border-0 file:rounded-lg file:text-white file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer"
+                          className="text-[10px] text-nature-night/70 file:bg-nature-night/5 file:border-0 file:rounded-lg file:text-nature-night file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-nature-night/10"
                         />
-                        <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold">Añade una imagen que se blendeará con la plantilla.</p>
+                        <p className="text-[8px] text-nature-night/40 uppercase tracking-widest font-bold">Añade una imagen que se blendeará con la plantilla.</p>
                       </div>
                     </div>
                   </div>
@@ -2780,7 +2780,7 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {/* Opacity */}
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[9px] text-white/40 uppercase tracking-widest font-black">
+                      <div className="flex justify-between text-[9px] text-nature-night/60 uppercase tracking-widest font-black">
                         <span>Opacidad</span>
                         <span className="text-amber-honey font-mono">{Math.round(campBgOpacity * 100)}%</span>
                       </div>
@@ -2791,13 +2791,13 @@ export default function AdminDashboard() {
                         step="0.05"
                         value={campBgOpacity}
                         onChange={e => setCampBgOpacity(parseFloat(e.target.value))}
-                        className="w-full h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                        className="w-full h-1 bg-nature-night/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
                       />
                     </div>
 
                     {/* Saturation */}
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[9px] text-white/40 uppercase tracking-widest font-black">
+                      <div className="flex justify-between text-[9px] text-nature-night/60 uppercase tracking-widest font-black">
                         <span>Saturación</span>
                         <span className="text-amber-honey font-mono">{campBgSaturation}%</span>
                       </div>
@@ -2808,17 +2808,17 @@ export default function AdminDashboard() {
                         step="10"
                         value={campBgSaturation}
                         onChange={e => setCampBgSaturation(parseInt(e.target.value))}
-                        className="w-full h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                        className="w-full h-1 bg-nature-night/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
                       />
                     </div>
 
                     {/* Position */}
                     <div className="space-y-1">
-                      <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Posición del Fondo</label>
+                      <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block">Posición del Fondo</label>
                       <select
                         value={campBgPosition}
                         onChange={e => setCampBgPosition(e.target.value)}
-                        className="w-full bg-[#080808] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-500 transition-all font-semibold uppercase tracking-wider text-white"
+                        className="w-full bg-white border border-nature-night/15 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-nature-night"
                       >
                         <option value="center">Centro</option>
                         <option value="top">Superior</option>
@@ -2829,41 +2829,41 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Call To Action settings */}
-                <div className="bg-white/[0.02] border border-white/5 p-5 rounded-3xl space-y-4">
+                <div className="bg-nature-night/5 border border-nature-night/10 p-5 rounded-3xl space-y-4">
                   <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
                     🎯 Botón de Llamada a la Acción (CTA)
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block pl-1">Texto del Botón</label>
+                      <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Texto del Botón</label>
                       <input
                         type="text"
                         value={campCtaText}
                         onChange={e => setCampCtaText(e.target.value)}
                         placeholder="Ej. Escuchar Single"
-                        className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all"
+                        className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-nature-night/30"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block pl-1">Enlace del Botón (URL)</label>
+                      <label className="text-[9px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Enlace del Botón (URL)</label>
                       <input
                         type="url"
                         value={campCtaLink}
                         onChange={e => setCampCtaLink(e.target.value)}
                         placeholder="https://..."
-                        className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono"
+                        className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono placeholder:text-nature-night/30"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Premium Typography settings */}
-                <div className="bg-white/[0.02] border border-white/5 p-5 rounded-3xl space-y-4">
+                <div className="bg-nature-night/5 border border-nature-night/10 p-5 rounded-3xl space-y-4">
                   <div>
                     <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
                       ✍️ Tipografía Premium del Poema
                     </h4>
-                    <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold mt-1">
+                    <p className="text-[8px] text-nature-night/50 uppercase tracking-widest font-bold mt-1">
                       Elige una fuente artística de alta fidelidad para el texto del correo
                     </p>
                   </div>
@@ -2879,14 +2879,13 @@ export default function AdminDashboard() {
                       <div
                         key={f.id}
                         onClick={() => setCampFontFamily(f.id)}
-                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${
-                          campFontFamily === f.id
+                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${campFontFamily === f.id
                             ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
-                            : 'bg-white/[0.01] border-white/10 text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
+                            : 'bg-white border border-nature-night/10 text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
+                          }`}
                       >
-                        <span 
-                          className="text-xs font-black" 
+                        <span
+                          className="text-xs font-black"
                           style={f.style}
                         >
                           {f.name}
@@ -2897,18 +2896,18 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 justify-end pt-4 border-t border-white/5">
+                <div className="flex gap-4 justify-end pt-4 border-t border-nature-night/10">
                   <button
                     type="button"
                     onClick={() => setIsCampaignModalOpen(false)}
-                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                    className="px-6 py-3 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all text-nature-night/80"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
                     disabled={campLoading}
-                    className="px-8 py-3 bg-amber-honey text-black rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/15 disabled:opacity-50 transition-all"
+                    className="px-8 py-3 bg-amber-honey text-nature-night rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/15 disabled:opacity-50 transition-all hover:bg-amber-gold"
                   >
                     {campLoading ? 'Procesando...' : campId ? 'Actualizar Campaña' : 'Crear Campaña'}
                   </button>
@@ -2920,31 +2919,31 @@ export default function AdminDashboard() {
 
         {/* Simulated Email Client Live Preview Modal */}
         {previewCampaign && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
+          <div className="fixed inset-0 bg-nature-night/60 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-[#0b0c10] border border-white/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative flex flex-col max-h-[90vh]"
+              className="bg-white border border-nature-night/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative flex flex-col max-h-[90vh]"
             >
               <button
                 onClick={() => setPreviewCampaign(null)}
-                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-white/40 hover:text-white flex items-center justify-center transition-all hover:bg-white/5"
+                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-nature-night/15 text-nature-night/40 hover:text-nature-night flex items-center justify-center transition-all hover:bg-nature-night/5"
               >
                 <X size={16} />
               </button>
 
               <div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight">Previsualización de Correo</h3>
-                <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mt-1">Simulación de bandeja de entrada</p>
+                <h3 className="text-xl font-black uppercase italic tracking-tight text-nature-night">Previsualización de Correo</h3>
+                <p className="text-[9px] text-nature-night/50 uppercase tracking-widest font-bold mt-1">Simulación de bandeja de entrada</p>
               </div>
 
               {/* Simulated Email Client Frame */}
-              <div className="border border-white/10 rounded-2xl overflow-hidden flex flex-col flex-1 bg-black/40">
+              <div className="border border-nature-night/15 rounded-2xl overflow-hidden flex flex-col flex-1 bg-nature-night/5">
                 {/* Email header bar */}
-                <div className="bg-black/80 border-b border-white/5 px-6 py-4 space-y-1.5 text-xs text-white/60">
-                  <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">De:</span> MS AMBAR &lt;escribe@msambar.dev&gt;</div>
-                  <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
-                  <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-white font-semibold">{previewCampaign.subject}</span></div>
+                <div className="bg-nature-night/5 border-b border-nature-night/10 px-6 py-4 space-y-1.5 text-xs text-nature-night/70">
+                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">De:</span> MS AMBAR &lt;escribe@msambar.dev&gt;</div>
+                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
+                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-nature-night font-semibold">{previewCampaign.subject}</span></div>
                 </div>
 
                 {/* Email body simulation */}
@@ -2981,9 +2980,9 @@ export default function AdminDashboard() {
                     // Background Image Overlay & blending simulation
                     ...(previewCampaign.bg_image ? {
                       backgroundImage: `linear-gradient(rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
-                          previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
-                            previewCampaign.template_type === 'glow' ? '26, 19, 12' :
-                              previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                        previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                          previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                            previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
                         }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
                           previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
                             previewCampaign.template_type === 'glow' ? '26, 19, 12' :
@@ -3131,7 +3130,7 @@ export default function AdminDashboard() {
               <div className="flex justify-end pt-2">
                 <button
                   onClick={() => setPreviewCampaign(null)}
-                  className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                  className="px-8 py-3 bg-nature-night/5 hover:bg-nature-night/10 border border-nature-night/10 text-nature-night/80 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
                 >
                   Cerrar Vista Previa
                 </button>
@@ -3148,25 +3147,25 @@ export default function AdminDashboard() {
 // Stat Card Component
 const StatCard = ({ icon, title, value, detail, color }: any) => {
   const glowColors: any = {
-    amber: 'shadow-[0_4px_30px_rgba(245,158,11,0.05)] border-amber-500/10 hover:border-amber-500/25',
-    gold: 'shadow-[0_4px_30px_rgba(251,191,36,0.05)] border-yellow-500/10 hover:border-yellow-500/25',
-    honey: 'shadow-[0_4px_30px_rgba(180,83,9,0.05)] border-amber-700/10 hover:border-amber-700/25',
-    yellow: 'shadow-[0_4px_30px_rgba(253,224,71,0.05)] border-yellow-300/10 hover:border-yellow-300/25',
+    amber: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
+    gold: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
+    honey: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
+    yellow: 'shadow-md shadow-nature-night/5 border-amber-honey/20 hover:border-amber-honey/40',
   };
 
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      className={`bg-white/[0.02] border rounded-[2rem] p-6 backdrop-blur-xl transition-all duration-300 relative group overflow-hidden ${glowColors[color]}`}
+      className={`bg-white border rounded-[2rem] p-6 transition-all duration-300 relative group overflow-hidden ${glowColors[color]}`}
     >
       <div className="flex items-center justify-between mb-4">
-        <span className="text-[10px] text-white/50 uppercase tracking-widest font-black">{title}</span>
-        <div className="p-2.5 bg-white/5 rounded-xl group-hover:scale-110 transition-transform">
+        <span className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black">{title}</span>
+        <div className="p-2.5 bg-nature-night/5 rounded-xl group-hover:scale-110 transition-transform text-nature-night">
           {icon}
         </div>
       </div>
-      <div className="text-2xl md:text-3xl font-black text-white tracking-tight mb-2">{value}</div>
-      <div className="text-white/20 text-[9px] uppercase tracking-widest font-black">{detail}</div>
+      <div className="text-2xl md:text-3xl font-black text-nature-night tracking-tight mb-2">{value}</div>
+      <div className="text-nature-night/40 text-[9px] uppercase tracking-widest font-black">{detail}</div>
     </motion.div>
   );
 };
@@ -3174,17 +3173,17 @@ const StatCard = ({ icon, title, value, detail, color }: any) => {
 // Quick Action Button Component
 const QuickActionBtn = ({ href, title, desc, icon, external }: any) => {
   const BtnContent = (
-    <div className="p-4 bg-white/[0.02] border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/[0.02] rounded-2xl transition-all group flex items-center justify-between cursor-pointer">
+    <div className="p-4 bg-white border border-nature-night/10 hover:border-amber-honey/30 hover:bg-amber-honey/[0.02] rounded-2xl shadow-sm transition-all group flex items-center justify-between cursor-pointer">
       <div className="flex items-center gap-4">
-        <div className="p-2.5 bg-white/5 rounded-xl group-hover:bg-amber-500/10 group-hover:scale-105 transition-all text-white/60 group-hover:text-amber-400">
+        <div className="p-2.5 bg-nature-night/5 rounded-xl group-hover:bg-amber-honey/10 group-hover:scale-105 transition-all text-nature-night/60 group-hover:text-amber-honey">
           {icon}
         </div>
         <div>
-          <h4 className="text-xs font-black uppercase tracking-wider text-white group-hover:text-amber-300 transition-colors">{title}</h4>
-          <p className="text-[9px] uppercase tracking-widest opacity-30 group-hover:opacity-40 mt-0.5">{desc}</p>
+          <h4 className="text-xs font-black uppercase tracking-wider text-nature-night group-hover:text-amber-honey transition-colors">{title}</h4>
+          <p className="text-[9px] uppercase tracking-widest text-nature-night/40 group-hover:text-nature-night/60 mt-0.5">{desc}</p>
         </div>
       </div>
-      <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-400" />
+      <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-amber-honey" />
     </div>
   );
 

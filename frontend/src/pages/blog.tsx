@@ -107,7 +107,7 @@ export default function BlogPage() {
       setNewsletterEmail('');
       setNewsletterName('');
       setTimeout(() => setNewsletterSuccess(false), 5000);
-      showToast('Te has suscrito con éxito al Newsletter de MS AMBAR.', 'success');
+      showToast('Te has suscrito con éxito al Club de Ms Ambar.', 'success');
     } catch (err: any) {
       console.error(err);
       const msg = err.response?.data?.email?.[0] || 'Error al suscribirse. Inténtalo de nuevo.';
@@ -158,7 +158,7 @@ export default function BlogPage() {
       if (emailToUnsubscribe) {
         axios.post(`${API_URL}/blog/subscribers/unsubscribe/`, { email: emailToUnsubscribe })
           .then(() => {
-            showToast('Te has desuscrito con éxito del newsletter de MS AMBAR.', 'success');
+            showToast('Te has desuscrito con éxito del Club de Ms Ambar.', 'success');
             // Clean url params
             window.history.replaceState({}, document.title, window.location.pathname);
           })
@@ -354,7 +354,7 @@ export default function BlogPage() {
   return (
     <div className="selection:bg-amber-honey/30 min-h-screen text-white relative">
       <Head>
-        <title>MS AMBAR | Journal</title>
+        <title>Ms Ambar  | Journal</title>
         <style>{`
           .rich-text-content h2 {
             font-size: 1.875rem;

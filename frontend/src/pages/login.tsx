@@ -10,7 +10,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 export default function LoginPage() {
   const router = useRouter();
   const { redirect } = router.query;
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,12 +32,12 @@ export default function LoginPage() {
       // Save tokens and user info
       localStorage.setItem('token', res.data.access);
       localStorage.setItem('refresh_token', res.data.refresh);
-      
+
       // Parse payload to check if they are staff/admin
       const base64Url = res.data.access.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const payload = JSON.parse(window.atob(base64));
-      
+
       localStorage.setItem('user', JSON.stringify({
         email: email,
         id: payload.user_id,
@@ -45,7 +45,7 @@ export default function LoginPage() {
       }));
 
       setSuccess(true);
-      
+
       setTimeout(() => {
         if (payload.is_staff) {
           router.push((redirect as string) || '/dashboard');
@@ -66,10 +66,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen text-nature-night flex items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Dynamic Background Gradients */}
-      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-amber-500/5 blur-[150px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-amber-700/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-amber-honey/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-nature-sky/5 blur-[150px] rounded-full pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -79,37 +79,37 @@ export default function LoginPage() {
       >
         {/* Logo Section */}
         <div className="text-center mb-8">
-          <span className="text-[10px] text-amber-500 uppercase tracking-widest font-black flex items-center justify-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+          <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center justify-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-ping" />
             Acceso Autorizado
           </span>
-          <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-amber-100 via-amber-300 to-amber-500 bg-clip-text text-transparent uppercase italic tracking-tighter mt-2">
+          <h1 className="text-3xl md:text-4xl font-black text-nature-night uppercase italic tracking-tighter mt-2">
             Iniciar Sesión
           </h1>
-          <p className="text-white/40 text-xs font-bold uppercase tracking-wider mt-1">
-            Ingresa a la Bóveda de MS AMBAR
+          <p className="text-nature-night/50 text-xs font-bold uppercase tracking-wider mt-1">
+            Ingresa a la Bóveda de Ms Ambar
           </p>
         </div>
 
         {/* Form Container Card */}
-        <div className="bg-white/[0.02] border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-amber-500 to-transparent opacity-60" />
-          
+        <div className="bg-white border border-nature-night/10 p-8 rounded-[2.5rem] shadow-xl shadow-nature-night/5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-amber-honey to-transparent opacity-60" />
+
           <AnimatePresence mode="wait">
             {!success ? (
-              <motion.form 
+              <motion.form
                 key="login-form"
-                onSubmit={handleSubmit} 
+                onSubmit={handleSubmit}
                 className="space-y-6"
                 initial={{ opacity: 1 }}
                 exit={{ opacity: 0, y: -10 }}
               >
                 {/* Error Banner */}
                 {error && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-start gap-3 text-red-400 text-xs font-bold uppercase"
+                    className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 text-red-600 text-xs font-bold uppercase"
                   >
                     <ShieldAlert className="w-5 h-5 shrink-0" />
                     <span>{error}</span>
@@ -118,9 +118,9 @@ export default function LoginPage() {
 
                 {/* Email Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-white/50 uppercase tracking-widest font-black block pl-1">Correo Electrónico</label>
+                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Correo Electrónico</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-500 transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
                       <Mail size={16} />
                     </div>
                     <input
@@ -129,7 +129,7 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="nombre@ejemplo.com"
-                      className="w-full bg-white/[0.03] border border-white/10 focus:border-amber-500/60 rounded-2xl pl-11 pr-4 py-4 text-sm font-semibold placeholder-white/20 outline-none transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)] focus:bg-white/[0.05]"
+                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-4 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
                     />
                   </div>
                 </div>
@@ -137,16 +137,16 @@ export default function LoginPage() {
                 {/* Password Field */}
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] text-white/50 uppercase tracking-widest font-black block">Contraseña</label>
-                    <Link 
-                      href="/forgot-password" 
-                      className="text-[9px] text-amber-500/80 hover:text-amber-400 uppercase tracking-widest font-black transition-colors"
+                    <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block">Contraseña</label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-[9px] text-amber-honey hover:text-amber-honey/80 uppercase tracking-widest font-black transition-colors"
                     >
                       ¿Olvidaste tu contraseña?
                     </Link>
                   </div>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-500 transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
                       <Lock size={16} />
                     </div>
                     <input
@@ -155,12 +155,12 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-white/[0.03] border border-white/10 focus:border-amber-500/60 rounded-2xl pl-11 pr-12 py-4 text-sm font-semibold placeholder-white/20 outline-none transition-all focus:shadow-[0_0_15px_rgba(245,158,11,0.1)] focus:bg-white/[0.05]"
+                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-12 py-4 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/30 hover:text-white/60 transition-colors"
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-nature-night/30 hover:text-nature-night/60 transition-colors"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -173,7 +173,7 @@ export default function LoginPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-xs py-4 rounded-2xl transition-all shadow-[0_4px_30px_rgba(245,158,11,0.2)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#1E2B22] font-black uppercase tracking-widest text-xs py-4 rounded-2xl transition-all shadow-[0_4px_30px_rgba(229,169,59,0.2)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <div className="w-5 h-5 rounded-full border-2 border-black/20 border-t-black animate-spin" />
@@ -185,18 +185,18 @@ export default function LoginPage() {
                 </motion.button>
               </motion.form>
             ) : (
-              <motion.div 
+              <motion.div
                 key="success-screen"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="py-8 text-center flex flex-col items-center gap-4"
               >
-                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 animate-bounce">
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-600 animate-bounce">
                   <CheckCircle size={36} />
                 </div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight">Acceso Concedido</h3>
-                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">
-                  Estableciendo túnel seguro y redirigiendo...
+                <h3 className="text-xl font-black uppercase italic tracking-tight text-nature-night">Acceso Concedido</h3>
+                <p className="text-nature-night/60 text-xs font-bold uppercase tracking-widest">
+                  Estableciendo canal seguro y redirigiendo...
                 </p>
               </motion.div>
             )}
@@ -205,11 +205,11 @@ export default function LoginPage() {
 
         {/* Switch to Signup */}
         <div className="text-center mt-6">
-          <p className="text-xs text-white/40 font-semibold">
+          <p className="text-xs text-nature-night/50 font-semibold">
             ¿No tienes una cuenta aún?{' '}
-            <Link 
-              href="/signup" 
-              className="text-amber-500 hover:text-amber-400 font-black uppercase tracking-widest text-[10px] transition-colors ml-1"
+            <Link
+              href="/signup"
+              className="text-amber-honey hover:text-amber-honey/80 font-black uppercase tracking-widest text-[10px] transition-colors ml-1"
             >
               Registrarse
             </Link>

@@ -16,7 +16,7 @@ const GalleryPage = () => {
   return (
     <div className="selection:bg-amber-honey/30">
       <Head>
-        <title>MS AMBAR | Galería de Luz</title>
+        <title>Ms Ambar | Galería de Luz</title>
       </Head>
 
       <section className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20">

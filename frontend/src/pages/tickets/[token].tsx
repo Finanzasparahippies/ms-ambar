@@ -65,7 +65,7 @@ export default function TicketPage() {
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-amber-500/30">
       <Head>
-        <title>Boleto Digital | MS AMBAR</title>
+        <title>Boleto Digital | Ms Ambar</title>
       </Head>
 
       {/* Decorative Background Elements */}
@@ -74,8 +74,8 @@ export default function TicketPage() {
 
       {/* Back Button */}
       <div className="w-full max-w-md mb-6 z-10">
-        <Link 
-          href="/comprar-boletos" 
+        <Link
+          href="/comprar-boletos"
           className="inline-flex items-center text-xs text-neutral-400 hover:text-amber-500 transition-colors duration-200 group"
         >
           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform duration-200" />
@@ -85,7 +85,7 @@ export default function TicketPage() {
 
       <AnimatePresence mode="wait">
         {loading ? (
-          <motion.div 
+          <motion.div
             key="loading"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -106,8 +106,8 @@ export default function TicketPage() {
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-lg font-bold text-white mb-2">Boleto no encontrado</h2>
             <p className="text-sm text-neutral-400 mb-6">{error}</p>
-            <Link 
-              href="/comprar-boletos" 
+            <Link
+              href="/comprar-boletos"
               className="inline-block bg-neutral-800 hover:bg-neutral-700 text-white font-medium text-xs px-6 py-3 rounded-xl transition-all duration-200"
             >
               Ir al Tour
@@ -125,7 +125,7 @@ export default function TicketPage() {
             {/* Holographic Top Banner */}
             <div className="relative py-6 px-8 bg-gradient-to-r from-amber-600/20 via-amber-500/10 to-amber-600/20 border-b border-neutral-800 text-center">
               <div className="absolute inset-0 bg-neutral-950/20 mix-blend-overlay pointer-events-none" />
-              <h1 className="text-2xl font-black tracking-[0.2em] text-white">MS AMBAR</h1>
+              <h1 className="text-2xl font-black tracking-[0.2em] text-white">Ms Ambar</h1>
               <p className="text-amber-500 text-[10px] font-mono uppercase tracking-[0.3em] mt-1 font-bold">BOLETO DIGITAL OFICIAL</p>
             </div>
 
@@ -136,17 +136,17 @@ export default function TicketPage() {
               <div className="absolute right-[-12px] bottom-[-12px] w-6 h-6 rounded-full bg-neutral-950 border border-neutral-800" />
 
               <div className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(255,255,255,0.08)] mb-6 transition-transform duration-300 hover:scale-105">
-                <QRCodeSVG 
+                <QRCodeSVG
                   value={JSON.stringify({
                     token: ticket.token,
                     event: ticket.event_title,
                     seat: ticket.seat_display
-                  })} 
-                  size={200} 
+                  })}
+                  size={200}
                   level="H"
                 />
               </div>
-              
+
               <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-amber-500 text-[10px] font-mono uppercase tracking-wider">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Boleto Verificado y Activo
@@ -158,9 +158,9 @@ export default function TicketPage() {
               <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                 <div className="col-span-2">
                   <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Artista</span>
-                  <span className="font-semibold text-lg text-white block">{ticket.event_artist || 'MS AMBAR'}</span>
+                  <span className="font-semibold text-lg text-white block">{ticket.event_artist || 'Ms Ambar'}</span>
                 </div>
-                
+
                 <div className="col-span-2">
                   <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Evento</span>
                   <span className="font-semibold text-sm text-neutral-200 block">{ticket.event_title}</span>

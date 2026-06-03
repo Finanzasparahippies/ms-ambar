@@ -45,20 +45,20 @@ const ContactPage = () => {
   return (
     <div className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-nature-night">
       <Head>
-        <title>MS AMBAR | Booking & Contrataciones</title>
+        <title>Ms Ambar | Promociones & Contrataciones</title>
       </Head>
 
       <div className="max-w-[1400px] mx-auto px-6 md:px-10">
         <div className="grid lg:grid-cols-2 gap-20 items-center">
           <div>
-            <motion.span 
+            <motion.span
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-amber-honey text-xs font-black uppercase tracking-[0.5em] mb-8 block text-glow"
             >
-              Management & Booking
+              Management & Promociones
             </motion.span>
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -66,43 +66,43 @@ const ContactPage = () => {
             >
               HAGAMOS ALGO<br /><span className="text-amber-honey opacity-80 italic">MEMORABLE</span>
             </motion.h1>
-            
+
             <p className="text-nature-night/70 text-lg mb-16 max-w-md leading-relaxed">
               Para presentaciones en festivales, clubes, teatros o eventos privados, inicia tu solicitud formal aquí. Nuestro motor genera un borrador de acuerdo inmediato al finalizar.
             </p>
 
             <div className="space-y-6">
-               <div className="flex items-center gap-6 group bg-nature-night/[0.02] border border-nature-night/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all">
-                  <div className="w-14 h-14 bg-amber-honey rounded-2xl flex items-center justify-center text-nature-night shadow-lg shadow-amber-honey/20">
-                     <Mail size={24} />
-                  </div>
-                  <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-nature-night/50 mb-1">Email Oficial</p>
-                     <p className="text-sm font-bold text-nature-night">booking@msambar.dev</p>
-                  </div>
-               </div>
-               <a 
-                  href="/MS_AMBAR_EPK.pdf"
-                  download="MS_AMBAR_EPK.pdf"
-                  className="flex items-center gap-6 group bg-nature-night/[0.02] border border-nature-night/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all cursor-pointer"
-               >
-                  <div className="w-14 h-14 bg-amber-honey/10 rounded-2xl flex items-center justify-center text-amber-honey">
-                     <Download size={24} />
-                  </div>
-                  <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest text-nature-night/50 mb-1">Press Kit</p>
-                     <p className="text-sm font-bold underline decoration-amber-honey/40 text-nature-night">Descargar EPK (PDF, 25MB)</p>
-                  </div>
-               </a>
+              <div className="flex items-center gap-6 group bg-nature-night/[0.02] border border-nature-night/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all">
+                <div className="w-14 h-14 bg-amber-honey rounded-2xl flex items-center justify-center text-nature-night shadow-lg shadow-amber-honey/20">
+                  <Mail size={24} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-nature-night/50 mb-1">Email Oficial</p>
+                  <p className="text-sm font-bold text-nature-night">booking@msambar.dev</p>
+                </div>
+              </div>
+              <a
+                href="/MS_AMBAR_EPK.pdf"
+                download="MS_AMBAR_EPK.pdf"
+                className="flex items-center gap-6 group bg-nature-night/[0.02] border border-nature-night/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all cursor-pointer"
+              >
+                <div className="w-14 h-14 bg-amber-honey/10 rounded-2xl flex items-center justify-center text-amber-honey">
+                  <Download size={24} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-nature-night/50 mb-1">Press Kit</p>
+                  <p className="text-sm font-bold underline decoration-amber-honey/40 text-nature-night">Descargar EPK (PDF, 25MB)</p>
+                </div>
+              </a>
             </div>
           </div>
 
           <div className="relative">
             <div className="absolute -inset-4 bg-amber-honey/5 blur-3xl rounded-full opacity-50 pointer-events-none" />
-            
+
             <AnimatePresence mode="wait">
               {!successData ? (
-                <motion.form 
+                <motion.form
                   key="booking-form"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -113,24 +113,24 @@ const ContactPage = () => {
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Nombre del Promotor</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         required
                         value={name}
                         onChange={e => setName(e.target.value)}
                         placeholder="Ej. Juan Pérez"
-                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Correo de Contacto</label>
-                      <input 
-                        type="email" 
+                      <input
+                        type="email"
                         required
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="promotor@evento.com"
-                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night"
                       />
                     </div>
                   </div>
@@ -138,42 +138,42 @@ const ContactPage = () => {
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Teléfono / WhatsApp</label>
-                      <input 
-                        type="tel" 
+                      <input
+                        type="tel"
                         required
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
                         placeholder="+52 55 1234 5678"
-                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Compañía / Razón Social</label>
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={company}
                         onChange={e => setCompany(e.target.value)}
                         placeholder="Opcional"
-                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night"
                       />
                     </div>
                   </div>
-                  
+
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Fecha Tentativa</label>
-                      <input 
-                        type="date" 
+                      <input
+                        type="date"
                         required
                         value={date}
                         onChange={e => setDate(e.target.value)}
-                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Tipo de Foro</label>
                       <div className="relative">
-                        <select 
+                        <select
                           value={venueType}
                           onChange={e => setVenueType(e.target.value)}
                           className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all appearance-none text-nature-night"
@@ -190,8 +190,8 @@ const ContactPage = () => {
 
                   <div className="space-y-2 mb-10">
                     <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Detalles de la Oferta / Mensaje</label>
-                    <textarea 
-                      rows={4} 
+                    <textarea
+                      rows={4}
                       required
                       value={message}
                       onChange={e => setMessage(e.target.value)}
@@ -200,12 +200,12 @@ const ContactPage = () => {
                     />
                   </div>
 
-                  <button 
+                  <button
                     type="submit"
                     disabled={submitting}
                     className="w-full bg-amber-honey text-nature-night px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                   >
-                    {submitting ? 'Procesando Booking...' : 'Enviar Propuesta Formal'} 
+                    {submitting ? 'Procesando Booking...' : 'Enviar Propuesta Formal'}
                     <Send size={14} />
                   </button>
                 </motion.form>
@@ -242,7 +242,7 @@ const ContactPage = () => {
                     </div>
                   </div>
 
-                  <Link 
+                  <Link
                     href={`/bookings/sign/${successData.contract_id}`}
                     className="w-full bg-amber-honey text-nature-night px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                   >

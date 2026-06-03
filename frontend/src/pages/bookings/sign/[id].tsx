@@ -39,14 +39,14 @@ const BookingSignaturePage = () => {
     if (!contract) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     // Match resolution to parent scale
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
+
     // Custom MS Ambar golden ink
     ctx.strokeStyle = '#f59e0b';
     ctx.lineWidth = 4;
@@ -69,7 +69,7 @@ const BookingSignaturePage = () => {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [contract]);
@@ -161,13 +161,13 @@ const BookingSignaturePage = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const base64Signature = canvas.toDataURL('image/png');
-    
+
     setSaving(true);
     try {
-      const endpoint = isManager 
+      const endpoint = isManager
         ? `${API_URL}/bookings/contracts/${id}/manager_sign/`
         : `${API_URL}/bookings/contracts/${id}/sign/`;
-      
+
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -216,7 +216,7 @@ const BookingSignaturePage = () => {
         {isManager ? 'Contrato Certificado' : 'Firma Registrada'}
       </h2>
       <p className="text-white/60 text-xs font-bold text-center uppercase tracking-widest max-w-sm">
-        {isManager 
+        {isManager
           ? 'El acuerdo se ha cerrado. Se enviaron las copias finales certificadas por correo.'
           : 'Tu firma fue recibida con éxito. Representación técnica revisará y cerrará el acuerdo a la brevedad.'
         }
@@ -233,11 +233,11 @@ const BookingSignaturePage = () => {
   return (
     <div className="min-h-screen bg-[#06070b] text-white pt-32 pb-20 font-sans">
       <Head>
-        <title>MS AMBAR | Visor de Contrato de Booking</title>
+        <title>Ms Ambar | Visor de Contrato de Booking</title>
       </Head>
 
       <div className="max-w-4xl mx-auto px-6">
-        
+
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-16 space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 flex items-center justify-center text-amber-honey">
@@ -248,7 +248,7 @@ const BookingSignaturePage = () => {
               Acuerdo de <span className="text-amber-honey italic">Presentación</span>
             </h1>
             <p className="text-white/40 text-[9px] uppercase tracking-[0.3em] font-black mt-2">
-              MS AMBAR • Contrato de Booking #{contract.id}
+              Ms Ambar • Contrato de Booking #{contract.id}
             </p>
           </div>
         </div>
@@ -256,10 +256,10 @@ const BookingSignaturePage = () => {
         {/* Contract Info Panel */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white/[0.02] border border-white/5 p-8 rounded-[2.5rem] mb-12 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-amber-honey/5 rounded-full blur-3xl pointer-events-none" />
-          
+
           <div className="space-y-6 border-r border-white/5 pr-8">
             <h3 className="text-amber-honey font-black uppercase text-[10px] tracking-[0.2em]">Especificaciones</h3>
-            
+
             <div className="space-y-1">
               <p className="text-[8px] text-white/40 uppercase font-black tracking-widest">Organizador / Empresa</p>
               <p className="text-lg font-black">{inquiry.name} {inquiry.company ? `(${inquiry.company})` : ''}</p>
@@ -306,11 +306,11 @@ const BookingSignaturePage = () => {
         <div className="space-y-8">
           <div className="text-center">
             <h2 className="text-2xl font-black uppercase tracking-tight">
-              {isManager ? 'Firma de Management (MS AMBAR)' : 'Firma Digital de Aceptación'}
+              {isManager ? 'Firma de Management (Ms Ambar)' : 'Firma Digital de Aceptación'}
             </h2>
             <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">
-              {isManager 
-                ? 'Estampa la firma digital autorizada para cerrar el contrato' 
+              {isManager
+                ? 'Estampa la firma digital autorizada para cerrar el contrato'
                 : 'Usa tu cursor, trackpad o pantalla táctil para dibujar tu firma sobre el lienzo'
               }
             </p>
@@ -329,7 +329,7 @@ const BookingSignaturePage = () => {
                 onTouchEnd={stopDrawing}
                 className="w-full h-full cursor-crosshair relative z-10"
               />
-              
+
               {/* Background Guide Line */}
               <div className="absolute left-10 right-10 bottom-16 border-b border-dashed border-white/10 pointer-events-none" />
               <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-widest opacity-25 flex items-center gap-1.5 pointer-events-none select-none">

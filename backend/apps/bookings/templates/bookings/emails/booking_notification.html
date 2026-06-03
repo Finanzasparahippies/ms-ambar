@@ -1,20 +1,25 @@
 {% extends "users/emails/base_ambar.html" %}
 
-{% block email_title %}Nueva solicitud de Booking - MS AMBAR{% endblock %}
+{% block email_title %}Nueva solicitud de Negocio - Ms Ambar{% endblock %}
 
 {% block subtitle %}Notificación de Sistema{% endblock %}
 
 {% block content %}
-<h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">🔔 Nueva Solicitud de Booking</h2>
+<h2
+  style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">
+  🔔 Nueva Solicitud de Booking</h2>
 
 <p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 25px;">
   Se ha registrado una nueva solicitud de presentación y se ha generado la propuesta de contrato correspondiente.
 </p>
 
 <!-- Lead Details -->
-<div style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 30px;">
-  <h3 style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">Detalles de la Solicitud</h3>
-  
+<div
+  style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 30px;">
+  <h3
+    style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
+    Detalles de la Solicitud</h3>
+
   <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
     <tr>
       <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4); width: 35%;">Organizador:</td>
@@ -26,7 +31,8 @@
     </tr>
     <tr>
       <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Email:</td>
-      <td style="padding: 8px 0; color: #ffffff;"><a href="mailto:{{ inquiry.email }}" style="color: #f59e0b; text-decoration: none;">{{ inquiry.email }}</a></td>
+      <td style="padding: 8px 0; color: #ffffff;"><a href="mailto:{{ inquiry.email }}"
+          style="color: #f59e0b; text-decoration: none;">{{ inquiry.email }}</a></td>
     </tr>
     <tr>
       <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Teléfono:</td>
@@ -49,16 +55,18 @@
       <td style="padding: 8px 0; font-weight: bold; color: #f59e0b;">${{ contract.fee }} MXN</td>
     </tr>
   </table>
-  
+
   {% if inquiry.message %}
   <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
     <h4 style="color: rgba(255,255,255,0.4); font-size: 13px; margin: 0 0 5px 0;">Mensaje del Organizador:</h4>
-    <p style="margin: 0; font-style: italic; color: rgba(255,255,255,0.7); font-size: 13px; line-height: 1.5;">{{ inquiry.message }}</p>
+    <p style="margin: 0; font-style: italic; color: rgba(255,255,255,0.7); font-size: 13px; line-height: 1.5;">{{
+      inquiry.message }}</p>
   </div>
   {% endif %}
 </div>
 
-<div style="color: rgba(255,255,255,0.5); font-size: 13px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+<div
+  style="color: rgba(255,255,255,0.5); font-size: 13px; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
   El cliente ya ha recibido automáticamente el correo con el enlace de revisión y firma digital.
 </div>
 {% endblock %}

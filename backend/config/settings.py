@@ -196,7 +196,7 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="MS AMBAR <hola@msambar.com>")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="Ms Ambar <hola@msambar.com>")
 
 # SMTP Brevo (Plan Gratuito)
 BREVO_EMAIL_HOST = env("BREVO_EMAIL_HOST", default="smtp-relay.brevo.com")
@@ -204,7 +204,7 @@ BREVO_EMAIL_PORT = env.int("BREVO_EMAIL_PORT", default=587)
 BREVO_EMAIL_USE_TLS = env.bool("BREVO_EMAIL_USE_TLS", default=True)
 BREVO_EMAIL_HOST_USER = env("BREVO_EMAIL_HOST_USER", default="")
 BREVO_EMAIL_HOST_PASSWORD = env("BREVO_EMAIL_HOST_PASSWORD", default="")
-BREVO_DEFAULT_FROM_EMAIL = env("BREVO_DEFAULT_FROM_EMAIL", default="MS AMBAR <hola@msambar.com>")
+BREVO_DEFAULT_FROM_EMAIL = env("BREVO_DEFAULT_FROM_EMAIL", default="Ms Ambar <hola@msambar.com>")
 
 # SMTP Amazon SES (Plan Premium/Failover)
 SES_EMAIL_HOST = env("SES_EMAIL_HOST", default="email-smtp.us-east-1.amazonaws.com")
@@ -212,7 +212,7 @@ SES_EMAIL_PORT = env.int("SES_EMAIL_PORT", default=587)
 SES_EMAIL_USE_TLS = env.bool("SES_EMAIL_USE_TLS", default=True)
 SES_EMAIL_HOST_USER = env("SES_EMAIL_HOST_USER", default="")
 SES_EMAIL_HOST_PASSWORD = env("SES_EMAIL_HOST_PASSWORD", default="")
-SES_DEFAULT_FROM_EMAIL = env("SES_DEFAULT_FROM_EMAIL", default="MS AMBAR <hola@msambar.com>")
+SES_DEFAULT_FROM_EMAIL = env("SES_DEFAULT_FROM_EMAIL", default="Ms Ambar <hola@msambar.com>")
 
 # Logging configuration to display logs in console with Nectar Labs styling
 LOGGING = {

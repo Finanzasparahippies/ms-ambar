@@ -99,7 +99,7 @@ class PasswordResetRequestView(APIView):
                 text_content = strip_tags(html_content)
 
                 email_msg = EmailMultiAlternatives(
-                    subject="Restablece tu contraseña - MS AMBAR",
+                    subject="Restablece tu contraseña - Ms Ambar",
                     body=text_content,
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     to=[email],

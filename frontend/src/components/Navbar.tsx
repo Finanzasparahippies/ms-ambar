@@ -85,7 +85,7 @@ const Navbar = () => {
           <div className="w-10 h-10 bg-amber-honey rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20 transition-transform group-hover:rotate-12">
             <span className="text-nature-night font-black text-lg">A</span>
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tighter text-glow">MS AMBAR</h1>
+          <h1 className="text-2xl font-extrabold tracking-tighter text-glow">Ms Ambar</h1>
         </Link>
 
         {/* Desktop Menu */}

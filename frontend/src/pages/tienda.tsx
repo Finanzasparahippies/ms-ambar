@@ -2,18 +2,18 @@ import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ShoppingBag, 
-  Star, 
-  ArrowRight, 
-  X, 
-  Trash2, 
-  Plus, 
-  Minus, 
-  CheckCircle, 
-  Mail, 
-  MapPin, 
-  Globe, 
+import {
+  ShoppingBag,
+  Star,
+  ArrowRight,
+  X,
+  Trash2,
+  Plus,
+  Minus,
+  CheckCircle,
+  Mail,
+  MapPin,
+  Globe,
   User,
   ShoppingBag as CartIcon
 } from 'lucide-react';
@@ -22,7 +22,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 const FALLBACK_PRODUCTS = [
   { id: 1, name: 'Vinilo "Eclipse" Edición Limitada', price: 850, image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=500&q=80', category: { name: 'Música' } },
-  { id: 2, name: 'Hoodie MS AMBAR Black Onyx', price: 1200, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&q=80', category: { name: 'Ropa' } },
+  { id: 2, name: 'Hoodie Ms Ambar Black Onyx', price: 1200, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&q=80', category: { name: 'Ropa' } },
   { id: 3, name: 'T-Shirt Gira Mundial 2026', price: 550, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80', category: { name: 'Ropa' } },
   { id: 4, name: 'Poster Autografiado Numerado', price: 400, image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=500&q=80', category: { name: 'Arte' } },
 ];
@@ -34,7 +34,7 @@ export default function MerchPage() {
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'success'>('cart');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Shipping Form State
   const [email, setEmail] = useState('');
   const [fullName, setFullName] = useState('');
@@ -65,7 +65,7 @@ export default function MerchPage() {
       try {
         const user = JSON.parse(userStr);
         if (user.email) setEmail(user.email);
-      } catch (e) {}
+      } catch (e) { }
     }
   }, []);
 
@@ -142,7 +142,7 @@ export default function MerchPage() {
   return (
     <div className="selection:bg-amber-honey/30 relative">
       <Head>
-        <title>MS AMBAR | Tienda</title>
+        <title>Ms Ambar | Tienda</title>
       </Head>
 
       {/* Floating Cart Button */}
@@ -172,7 +172,7 @@ export default function MerchPage() {
         </div>
 
         <header className="mb-24 text-center">
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             className="text-7xl md:text-9xl font-black tracking-tighter"
@@ -185,7 +185,7 @@ export default function MerchPage() {
         {/* Product Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {products.map((product, i) => (
-            <motion.div 
+            <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -197,7 +197,7 @@ export default function MerchPage() {
                 <div className="w-full h-full rounded-[2.2rem] overflow-hidden relative">
                   <img src={product.image} alt={product.name} className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-90 group-hover:opacity-100" />
                   <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <motion.button 
+                    <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => addToCart(product)}
@@ -208,7 +208,7 @@ export default function MerchPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="px-4">
                 <div className="flex justify-between items-start mb-3">
                   <h3 className="text-xs font-extrabold uppercase tracking-widest group-hover:text-amber-honey transition-colors leading-tight max-w-[70%]">{product.name}</h3>
@@ -250,7 +250,7 @@ export default function MerchPage() {
                   <h3 className="text-lg font-black uppercase tracking-wider">Tu Carrito</h3>
                   <p className="text-[10px] text-white/40 uppercase tracking-widest font-bold">Resumen de tu Pedido</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsCartOpen(false)}
                   className="p-2 hover:bg-white/5 rounded-full text-white/60 hover:text-white transition-colors"
                 >
@@ -274,16 +274,16 @@ export default function MerchPage() {
                           <div className="flex-1 min-w-0">
                             <h4 className="text-xs font-black uppercase tracking-wider truncate mb-1 pr-4">{item.product.name}</h4>
                             <p className="text-xs text-amber-honey font-bold mb-3">${item.product.price}</p>
-                            
+
                             <div className="flex items-center gap-3">
-                              <button 
+                              <button
                                 onClick={() => updateQuantity(item.product.id, -1)}
                                 className="w-7 h-7 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
                               >
                                 <Minus size={12} />
                               </button>
                               <span className="text-xs font-black">{item.quantity}</span>
-                              <button 
+                              <button
                                 onClick={() => updateQuantity(item.product.id, 1)}
                                 className="w-7 h-7 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
                               >
@@ -292,7 +292,7 @@ export default function MerchPage() {
                             </div>
                           </div>
 
-                          <button 
+                          <button
                             onClick={() => removeFromCart(item.product.id)}
                             className="absolute top-4 right-4 text-white/30 hover:text-red-400 transition-colors"
                           >
@@ -307,7 +307,7 @@ export default function MerchPage() {
                 {checkoutStep === 'shipping' && (
                   <form onSubmit={handleCheckout} className="space-y-4">
                     <span className="text-[9px] text-amber-500 uppercase tracking-widest font-black block mb-2">Paso 2: Detalles de Entrega</span>
-                    
+
                     {error && (
                       <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold uppercase tracking-wider">
                         {error}
@@ -409,7 +409,7 @@ export default function MerchPage() {
                           <>Confirmar y Pagar Compra <ArrowRight size={14} /></>
                         )}
                       </motion.button>
-                      
+
                       <button
                         type="button"
                         onClick={() => setCheckoutStep('cart')}
@@ -422,7 +422,7 @@ export default function MerchPage() {
                 )}
 
                 {checkoutStep === 'success' && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="py-10 text-center flex flex-col items-center gap-5"
@@ -432,7 +432,7 @@ export default function MerchPage() {
                     </div>
                     <h3 className="text-lg font-black uppercase tracking-wider italic">¡Pedido Completado!</h3>
                     <p className="text-xs text-white/60 leading-relaxed px-4">
-                      Tu orden ha sido registrada en el sistema de MS AMBAR. Generando el pedido para el despacho logístico.
+                      Tu orden ha sido registrada en el sistema de Ms Ambar. Generando el pedido para el despacho logístico.
                     </p>
 
                     <div className="w-full p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-left space-y-2 mt-4">
@@ -450,7 +450,7 @@ export default function MerchPage() {
                       </div>
                     </div>
 
-                    <button 
+                    <button
                       onClick={() => {
                         setIsCartOpen(false);
                         setCheckoutStep('cart');
@@ -470,7 +470,7 @@ export default function MerchPage() {
                     <span>Subtotal:</span>
                     <span className="text-amber-honey text-glow text-lg">${cartTotal}</span>
                   </div>
-                  
+
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
