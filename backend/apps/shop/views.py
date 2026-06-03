@@ -71,32 +71,57 @@ def handle_successful_payment(session):
     metadata = session.get('metadata', {})
     if metadata.get('type') == 'ticket_purchase':
         event_id = metadata.get('event_id')
-        seat_ids = metadata.get('seat_ids', '').split(',')
+        seat_ids_raw = metadata.get('seat_ids', '')
         user_email = metadata.get('user_email')
         
         event = Event.objects.get(id=event_id)
-        for seat_id in seat_ids:
-            seat = Seat.objects.get(id=seat_id)
-            # Create or update ticket
-            ticket, created = Ticket.objects.get_or_create(
-                event=event,
-                seat=seat,
-                defaults={'user_email': user_email, 'status': 'paid'}
-            )
-            if not created:
-                ticket.status = 'paid'
-                ticket.save()
-            
-            # Trigger delivery
-            try:
-                send_ticket_email(ticket)
-                if ticket.user_phone:
-                    send_ticket_whatsapp(ticket)
-                # send_ticket_telegram(ticket) # Optional
-            except Exception as e:
-                print(f"Error delivering ticket: {e}")
-            
-            print(f"Payment confirmed and ticket delivered: {ticket.token}")
+        seat_ids = [s for s in seat_ids_raw.split(',') if s.strip()] if seat_ids_raw else []
+
+        if seat_ids:
+            for seat_id in seat_ids:
+                seat = Seat.objects.get(id=seat_id)
+                # Create or update ticket
+                ticket, created = Ticket.objects.get_or_create(
+                    event=event,
+                    seat=seat,
+                    defaults={'user_email': user_email, 'status': 'paid'}
+                )
+                if not created:
+                    ticket.status = 'paid'
+                    ticket.save()
+                
+                # Trigger delivery
+                try:
+                    send_ticket_email(ticket)
+                    if ticket.user_phone:
+                        send_ticket_whatsapp(ticket)
+                    # send_ticket_telegram(ticket) # Optional
+                except Exception as e:
+                    print(f"Error delivering ticket: {e}")
+                
+                print(f"Payment confirmed and ticket delivered: {ticket.token}")
+        else:
+            quantity = int(metadata.get('quantity', 1))
+            for _ in range(quantity):
+                ticket = Ticket.objects.create(
+                    event=event,
+                    seat=None,
+                    ga_zone=None,
+                    user_email=user_email,
+                    status='paid',
+                    has_mg=True
+                )
+                
+                # Trigger delivery
+                try:
+                    send_ticket_email(ticket)
+                    if ticket.user_phone:
+                        send_ticket_whatsapp(ticket)
+                    # send_ticket_telegram(ticket) # Optional
+                except Exception as e:
+                    print(f"Error delivering ticket: {e}")
+                
+                print(f"Payment confirmed and ticket delivered: {ticket.token}")
 
 
 def send_order_confirmation_email(order):

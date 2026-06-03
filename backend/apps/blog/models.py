@@ -36,6 +36,7 @@ class Post(models.Model):
         return self.title
 
 class NewsletterSubscriber(models.Model):
+    name = models.CharField(max_length=255, blank=True, default='')
     email = models.EmailField(unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)

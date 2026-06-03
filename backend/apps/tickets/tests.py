@@ -120,3 +120,109 @@ class TicketsAppTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['status'], 'error')
+
+    def test_checkout_concert_success(self):
+        """Test checking out seats for a concert event successfully."""
+        url = reverse('ticket-list') + 'checkout/'
+        data = {
+            'email': 'concert_buyer@example.com',
+            'event_id': self.event.id,
+            'seat_ids': [self.seat_std.id],
+            'phone': '+525511223344',
+            'has_mg': False
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['status'], 'success')
+        self.assertEqual(len(response.data['tickets']), 1)
+        self.assertEqual(response.data['tickets'][0]['seat_display'], f"{self.seat_std.row}{self.seat_std.number}")
+
+    def test_checkout_concert_occupied_fail(self):
+        """Test checking out an already occupied seat fails."""
+        Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_std,
+            user_email="occupant@example.com",
+            status="paid"
+        )
+        url = reverse('ticket-list') + 'checkout/'
+        data = {
+            'email': 'buyer@example.com',
+            'event_id': self.event.id,
+            'seat_ids': [self.seat_std.id]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+
+    def test_checkout_meet_greet_success(self):
+        """Test checking out Meet & Greet tickets with quantity."""
+        mg_event = Event.objects.create(
+            title="Convivencia Hermosillo",
+            artist="MS AMBAR",
+            date=timezone.now() + timezone.timedelta(days=5),
+            theater=None,
+            event_type='meet_greet',
+            mg_price=800.00,
+            mg_limit=10,
+            is_active=True
+        )
+        url = reverse('ticket-list') + 'checkout/'
+        data = {
+            'email': 'mg_buyer@example.com',
+            'event_id': mg_event.id,
+            'quantity': 3,
+            'phone': '+525511223344',
+            'has_mg': True
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(response.data['tickets']), 3)
+        for ticket in response.data['tickets']:
+            self.assertEqual(ticket['seat_display'], 'Meet & Greet')
+            self.assertEqual(ticket['theater_name'], 'Convivencia')
+
+    def test_retrieve_ticket_by_uuid(self):
+        """Test that we can retrieve a ticket by its UUID token using the retrieve detail endpoint."""
+        ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_std,
+            user_email="buyer@example.com",
+            status="paid"
+        )
+        url = reverse('ticket-detail', kwargs={'pk': str(ticket.token)})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['token'], str(ticket.token))
+        self.assertEqual(response.data['user_email'], 'buyer@example.com')
+
+    def test_retrieve_ticket_by_numeric_id(self):
+        """Test that we can still retrieve a ticket by its numeric primary key."""
+        ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_std,
+            user_email="buyer@example.com",
+            status="paid"
+        )
+        url = reverse('ticket-detail', kwargs={'pk': ticket.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['token'], str(ticket.token))
+
+    def test_meet_greet_seats_view(self):
+        """Test that seats action on event endpoint for meet_greet events returns empty lists gracefully."""
+        mg_event = Event.objects.create(
+            title="Convivencia VIP",
+            artist="MS AMBAR",
+            date=timezone.now() + timezone.timedelta(days=5),
+            theater=None,
+            event_type='meet_greet',
+            mg_price=800.00,
+            mg_limit=10,
+            is_active=True
+        )
+        url = reverse('event-seats', kwargs={'pk': mg_event.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['seats'], [])
+        self.assertEqual(response.data['elements'], [])

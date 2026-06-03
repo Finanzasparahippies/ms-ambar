@@ -1,74 +1,231 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { QRCodeSVG } from 'qrcode.react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
+import { Calendar, MapPin, Armchair, Mail, ChevronLeft, ShieldCheck, AlertCircle } from 'lucide-react';
 
 export default function TicketPage() {
   const router = useRouter();
   const { token } = router.query;
+  const [ticket, setTicket] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // In a real app, fetch ticket data using the token
-  const ticketData = {
-    event: "MS AMBAR - World Tour",
-    date: "15 de Junio, 2026",
-    venue: "Teatro Metropolitan",
-    seat: "B-12",
-    owner: "Fan #1"
+  const getApiUrl = () => {
+    return process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
+        ? window.location.origin.replace(window.location.port, '8000') + '/api'
+        : 'http://localhost:8000/api');
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    const apiUrl = getApiUrl();
+    setLoading(true);
+    fetch(`${apiUrl}/tickets/tickets/${token}/`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('El boleto digital especificado no existe o es inválido.');
+        }
+        return res.json();
+      })
+      .then(data => {
+        setTicket(data);
+        setError(null);
+      })
+      .catch(err => {
+        console.error("Error fetching ticket:", err);
+        setError(err.message || 'Error de conexión al recuperar el boleto.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [token]);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Fecha por confirmar';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('es-MX', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-6">
+    <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-amber-500/30">
       <Head>
-        <title>Tu Boleto | MS AMBAR</title>
+        <title>Boleto Digital | MS AMBAR</title>
       </Head>
 
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-white text-black rounded-[40px] overflow-hidden shadow-[0_0_50px_rgba(255,255,255,0.1)]"
-      >
-        <div className="p-8 bg-black text-white text-center">
-          <h1 className="text-2xl font-black tracking-tighter">MS AMBAR</h1>
-          <p className="text-amber-500 text-xs uppercase tracking-widest mt-1">Boleto Digital</p>
-        </div>
+      {/* Decorative Background Elements */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-500/5 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-amber-600/5 blur-[120px] pointer-events-none" />
 
-        <div className="p-10 flex flex-col items-center">
-          <div className="bg-white p-4 rounded-3xl shadow-xl mb-8">
-            <QRCodeSVG value={`https://msambar.com/tickets/${token}`} size={200} />
-          </div>
+      {/* Back Button */}
+      <div className="w-full max-w-md mb-6 z-10">
+        <Link 
+          href="/tour" 
+          className="inline-flex items-center text-xs text-neutral-400 hover:text-amber-500 transition-colors duration-200 group"
+        >
+          <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform duration-200" />
+          Volver a Fechas del Tour
+        </Link>
+      </div>
 
-          <div className="w-full space-y-6">
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <p className="text-[10px] uppercase text-neutral-400 font-bold">Evento</p>
-                <p className="font-bold text-sm">{ticketData.event}</p>
+      <AnimatePresence mode="wait">
+        {loading ? (
+          <motion.div 
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center justify-center py-20 z-10"
+          >
+            <div className="w-12 h-12 rounded-full border-2 border-t-amber-500 border-neutral-800 animate-spin mb-4" />
+            <p className="text-xs text-neutral-400 font-mono tracking-widest uppercase">Cargando boleto...</p>
+          </motion.div>
+        ) : error ? (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="w-full max-w-md bg-neutral-900/60 backdrop-blur-xl border border-red-500/20 p-8 rounded-3xl text-center shadow-2xl z-10"
+          >
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-lg font-bold text-white mb-2">Boleto no encontrado</h2>
+            <p className="text-sm text-neutral-400 mb-6">{error}</p>
+            <Link 
+              href="/tour" 
+              className="inline-block bg-neutral-800 hover:bg-neutral-700 text-white font-medium text-xs px-6 py-3 rounded-xl transition-all duration-200"
+            >
+              Ir al Tour
+            </Link>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="ticket"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.4 }}
+            className="w-full max-w-md bg-neutral-900/50 backdrop-blur-xl border border-neutral-800 rounded-[32px] overflow-hidden shadow-[0_0_50px_rgba(245,158,11,0.05)] z-10"
+          >
+            {/* Holographic Top Banner */}
+            <div className="relative py-6 px-8 bg-gradient-to-r from-amber-600/20 via-amber-500/10 to-amber-600/20 border-b border-neutral-800 text-center">
+              <div className="absolute inset-0 bg-neutral-950/20 mix-blend-overlay pointer-events-none" />
+              <h1 className="text-2xl font-black tracking-[0.2em] text-white">MS AMBAR</h1>
+              <p className="text-amber-500 text-[10px] font-mono uppercase tracking-[0.3em] mt-1 font-bold">BOLETO DIGITAL OFICIAL</p>
+            </div>
+
+            {/* QR Section */}
+            <div className="p-8 flex flex-col items-center border-b border-dashed border-neutral-800 relative">
+              {/* Ticket cutouts on the sides */}
+              <div className="absolute left-[-12px] bottom-[-12px] w-6 h-6 rounded-full bg-neutral-950 border border-neutral-800" />
+              <div className="absolute right-[-12px] bottom-[-12px] w-6 h-6 rounded-full bg-neutral-950 border border-neutral-800" />
+
+              <div className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(255,255,255,0.08)] mb-6 transition-transform duration-300 hover:scale-105">
+                <QRCodeSVG 
+                  value={JSON.stringify({
+                    token: ticket.token,
+                    event: ticket.event_title,
+                    seat: ticket.seat_display
+                  })} 
+                  size={200} 
+                  level="H"
+                />
               </div>
-              <div>
-                <p className="text-[10px] uppercase text-neutral-400 font-bold">Fecha</p>
-                <p className="font-bold text-sm">{ticketData.date}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase text-neutral-400 font-bold">Lugar</p>
-                <p className="font-bold text-sm">{ticketData.venue}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase text-neutral-400 font-bold">Asiento</p>
-                <p className="font-bold text-sm">{ticketData.seat}</p>
+              
+              <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-amber-500 text-[10px] font-mono uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Boleto Verificado y Activo
               </div>
             </div>
 
-            <div className="pt-6 border-t border-dashed border-neutral-200">
-              <p className="text-[10px] uppercase text-neutral-400 font-bold text-center mb-1">ID de Boleto</p>
-              <p className="font-mono text-[10px] text-center text-neutral-500">{token || 'MS-AMBAR-XXXX-XXXX'}</p>
-            </div>
-          </div>
-        </div>
+            {/* Ticket Info Section */}
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                <div className="col-span-2">
+                  <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Artista</span>
+                  <span className="font-semibold text-lg text-white block">{ticket.event_artist || 'MS AMBAR'}</span>
+                </div>
+                
+                <div className="col-span-2">
+                  <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Evento</span>
+                  <span className="font-semibold text-sm text-neutral-200 block">{ticket.event_title}</span>
+                </div>
 
-        <div className="bg-amber-500 p-4 text-center">
-          <p className="text-[10px] font-black uppercase tracking-widest text-black">Presenta este código en la entrada</p>
-        </div>
-      </motion.div>
+                <div className="col-span-2">
+                  <div className="flex items-start gap-2.5">
+                    <Calendar className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Fecha y Hora</span>
+                      <span className="text-xs text-neutral-200 font-medium capitalize">{formatDate(ticket.event_date)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-start gap-2.5">
+                    <MapPin className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Lugar</span>
+                      <span className="text-xs text-neutral-200 font-medium block">{ticket.theater_name}</span>
+                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{ticket.theater_location}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-start gap-2.5">
+                    <Armchair className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div>
+                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Ubicación</span>
+                      <span className="text-xs font-semibold text-amber-500 block uppercase tracking-wide">
+                        {ticket.seat_display}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="col-span-2 pt-4 border-t border-neutral-800/80">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-neutral-500 shrink-0" />
+                    <div>
+                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block">Propietario</span>
+                      <span className="text-xs text-neutral-300 font-mono break-all">{ticket.user_email}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dotted separator for footer */}
+              <div className="pt-6 border-t border-dashed border-neutral-800">
+                <span className="text-[9px] uppercase text-neutral-600 font-mono tracking-widest block text-center mb-1">ID Único de Entrada</span>
+                <span className="font-mono text-[10px] text-center text-neutral-400 block break-all tracking-wider">{ticket.token}</span>
+              </div>
+            </div>
+
+            {/* Accent Footer */}
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-center">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-950">
+                PRESENTA ESTE CÓDIGO QR EN LA ENTRADA
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

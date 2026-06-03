@@ -125,12 +125,17 @@ class Theater(models.Model):
         return created_count
 
 class Event(models.Model):
+    EVENT_TYPES = [
+        ('concert', 'Concierto / Venue'),
+        ('meet_greet', 'Meet & Greet (Convivencia)'),
+    ]
     title = models.CharField(max_length=255)
     artist = models.CharField(max_length=255)
     date = models.DateTimeField()
-    theater = models.ForeignKey(Theater, on_delete=models.CASCADE, related_name='events')
+    theater = models.ForeignKey(Theater, on_delete=models.CASCADE, null=True, blank=True, related_name='events')
     image = models.ImageField(upload_to='events/', null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default='concert')
     
     # Meet & Greet Logic
     mg_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)

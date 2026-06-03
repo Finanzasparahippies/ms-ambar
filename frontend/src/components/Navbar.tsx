@@ -76,6 +76,7 @@ const Navbar = () => {
     { name: 'Shop', href: '/merch' },
     { name: 'Blog', href: '/blog' },
     { name: 'Booking', href: '/contact' },
+    // { name: 'Entretenimiento', href: '/entretenimiento' }, // Oculto por el momento
   ];
 
   return (

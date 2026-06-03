@@ -99,10 +99,12 @@ def send_welcome_email(subscriber):
           </div>
           
           <!-- Content -->
-          <h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">¡Gracias por unirte a nuestro viaje!</h2>
+          <h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">
+            {f"¡Hola, {subscriber.name}!" if subscriber.name else "¡Gracias por unirte a nuestro viaje!"}
+          </h2>
           
           <div style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
-            A partir de ahora, recibirás antes que nadie nuestras crónicas, fechas de presentaciones, sets exclusivos y actualizaciones del universo sonoro y visual de MS AMBAR.
+            {f"Gracias por unirte a nuestro viaje. " if subscriber.name else ""}A partir de ahora, recibirás antes que nadie nuestras crónicas, fechas de presentaciones, sets exclusivos y actualizaciones del universo sonoro y visual de MS AMBAR.
           </div>
           
           <!-- Button link -->

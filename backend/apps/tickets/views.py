@@ -14,6 +14,12 @@ class EventViewSet(viewsets.ModelViewSet):
     def seats(self, request, pk=None):
         event = self.get_object()
         theater = event.theater
+        if not theater:
+            return Response({
+                "seats": [],
+                "elements": [],
+                "message": "Este evento es un Meet & Greet y no requiere mapa de asientos."
+            })
         seats = Seat.objects.filter(theater=theater)
         
         # Get occupied seats for this event
@@ -81,6 +87,19 @@ class TicketViewSet(viewsets.ModelViewSet):
             return Ticket.objects.filter(user_email=email)
         return Ticket.objects.all()
 
+    def get_object(self):
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        try:
+            import uuid
+            # Try parsing as UUID to lookup by token
+            uuid.UUID(str(lookup_value))
+            return Ticket.objects.get(token=lookup_value)
+        except (ValueError, Ticket.DoesNotExist, TypeError):
+            # Fallback to default primary key lookup
+            return super().get_object()
+
     @action(detail=False, methods=['post'], url_path='validate')
     def validate(self, request):
         token = request.data.get('token')
@@ -112,8 +131,90 @@ class TicketViewSet(viewsets.ModelViewSet):
                 'status': 'success',
                 'message': 'Acceso Permitido',
                 'event': ticket.event.title,
-                'seat': f"{ticket.seat.row}{ticket.seat.number}"
+                'seat': f"{ticket.seat.row}{ticket.seat.number}" if ticket.seat else "Meet & Greet"
             })
             
         except Ticket.DoesNotExist:
             return Response({'error': 'Boleto Inválido o Falsificado'}, status=404)
+
+    @action(detail=False, methods=['post'], url_path='checkout')
+    def checkout(self, request):
+        email = request.data.get('email')
+        event_id = request.data.get('event_id')
+        seat_ids = request.data.get('seat_ids', [])
+        quantity = request.data.get('quantity', 1)
+        phone = request.data.get('phone', '')
+        has_mg = request.data.get('has_mg', False)
+
+        if not email or not event_id:
+            return Response({'error': 'Email y ID de evento son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            event = Event.objects.get(id=event_id)
+        except Event.DoesNotExist:
+            return Response({'error': 'Evento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from apps.tickets.utils import send_ticket_email
+
+        tickets_created = []
+
+        if event.event_type == 'meet_greet':
+            qty = int(quantity)
+            if qty < 1:
+                return Response({'error': 'La cantidad debe ser al menos 1.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            for _ in range(qty):
+                ticket = Ticket.objects.create(
+                    event=event,
+                    seat=None,
+                    ga_zone=None,
+                    user_email=email,
+                    user_phone=phone,
+                    status='paid',
+                    has_mg=True
+                )
+                tickets_created.append(ticket)
+                try:
+                    send_ticket_email(ticket)
+                except Exception as e:
+                    print(f"Error sending ticket email: {e}")
+        else:
+            if not seat_ids:
+                return Response({'error': 'Debes seleccionar al menos un asiento.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            occupied_seat_ids = Ticket.objects.filter(
+                event=event,
+                seat_id__in=seat_ids,
+                status__in=['paid', 'reserved']
+            ).values_list('seat_id', flat=True)
+
+            if occupied_seat_ids:
+                return Response({'error': 'Uno o más asientos ya están reservados o pagados.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            for s_id in seat_ids:
+                try:
+                    seat = Seat.objects.get(id=s_id)
+                except Seat.DoesNotExist:
+                    return Response({'error': f'Asiento con ID {s_id} no existe.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                ticket = Ticket.objects.create(
+                    event=event,
+                    seat=seat,
+                    ga_zone=None,
+                    user_email=email,
+                    user_phone=phone,
+                    status='paid',
+                    has_mg=has_mg
+                )
+                tickets_created.append(ticket)
+                try:
+                    send_ticket_email(ticket)
+                except Exception as e:
+                    print(f"Error sending ticket email: {e}")
+
+        serializer = TicketSerializer(tickets_created, many=True)
+        return Response({
+            'status': 'success',
+            'message': f'Se han generado {len(tickets_created)} boletos exitosamente.',
+            'tickets': serializer.data
+        }, status=status.HTTP_201_CREATED)

@@ -3,21 +3,21 @@
 @tailwind utilities;
 
 :root {
-  /* Day Mode - Earth & Nature */
-  --foreground-rgb: 28, 33, 48;
-  --background-start: #fdfaf3; /* Creamy/Amber touch */
-  --background-end: #f5efe2;   /* Earthy beige */
+  /* Day Mode - Earth & Nature (Warm Cream & Forest Green) */
+  --foreground-rgb: 26, 38, 30;
+  --background-start: #F8F7F2;   /* Soft paper cream */
+  --background-end: #EEEDE4;     /* Creamy warm beige */
   --sky-accent: 34, 166, 179;
-  --amber-primary: 255, 191, 0;
+  --amber-primary: 229, 169, 59; /* Rich golden amber */
 }
 
 [data-theme='dark'] {
-  /* Night Mode - Stars */
-  --foreground-rgb: 245, 246, 250;
-  --background-start: #0b0d17;
-  --background-end: #05060b;
+  /* Night Mode - Forest Night (Deep Green & Golden Stars) */
+  --foreground-rgb: 244, 246, 240; /* Warm off-white cream */
+  --background-start: #121915;     /* Deep forest green */
+  --background-end: #080C0A;       /* Deep green-black */
   --sky-accent: 159, 43, 0;
-  --amber-primary: 255, 191, 0;
+  --amber-primary: 229, 169, 59;   /* Rich golden amber */
 }
 
 body {
@@ -26,6 +26,10 @@ body {
   min-height: 100vh;
   font-family: 'Outfit', 'Inter', sans-serif;
   transition: background 0.5s ease, color 0.5s ease;
+}
+
+h1, h2, h3, h4, h5, h6, .font-serif {
+  font-family: 'Cormorant Garamond', Georgia, serif;
 }
 
 /* Star Background Effect for Dark Mode */
@@ -37,14 +41,14 @@ body {
   width: 100%;
   height: 100%;
   background-image: 
-    radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 50px 160px, #ddd, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 130px 80px, #fff, rgba(0,0,0,0));
+    radial-gradient(2px 2px at 20px 30px, rgba(229, 169, 59, 0.45), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, rgba(244, 246, 240, 0.5), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 50px 160px, rgba(229, 169, 59, 0.35), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 90px 40px, rgba(244, 246, 240, 0.55), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 130px 80px, rgba(244, 246, 240, 0.45), rgba(0,0,0,0));
   background-repeat: repeat;
   background-size: 200px 200px;
-  opacity: 0.30;
+  opacity: 0.18;
   z-index: -1;
   animation: stars 100s linear infinite;
 }
@@ -56,11 +60,11 @@ body {
 
 @layer components {
   .amber-glass {
-    @apply bg-white/40 backdrop-blur-xl border border-amber-honey/30 shadow-xl transition-all duration-300;
+    @apply bg-white/40 backdrop-blur-xl border border-amber-honey/20 shadow-xl transition-all duration-300;
   }
   
   [data-theme='dark'] .amber-glass {
-    @apply bg-nature-night/60 border-amber-honey/30 shadow-amber-honey/5;
+    @apply bg-nature-night/60 border-amber-honey/20 shadow-amber-honey/5;
   }
 
   .btn-amber {

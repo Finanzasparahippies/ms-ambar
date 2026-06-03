@@ -87,6 +87,7 @@ export default function BlogPage() {
   const [showSettingsSidebar, setShowSettingsSidebar] = useState(true);
   const [editorMode, setEditorMode] = useState<'write' | 'preview'>('write');
 
+  const [newsletterName, setNewsletterName] = useState('');
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
@@ -98,9 +99,13 @@ export default function BlogPage() {
     if (!newsletterEmail.trim()) return;
     setNewsletterSubmitting(true);
     try {
-      await axios.post(`${API_URL}/blog/subscribers/`, { email: newsletterEmail });
+      await axios.post(`${API_URL}/blog/subscribers/`, { 
+        email: newsletterEmail,
+        name: newsletterName
+      });
       setNewsletterSuccess(true);
       setNewsletterEmail('');
+      setNewsletterName('');
       setTimeout(() => setNewsletterSuccess(false), 5000);
       showToast('Te has suscrito con éxito al Newsletter de MS AMBAR.', 'success');
     } catch (err: any) {
@@ -604,37 +609,54 @@ export default function BlogPage() {
           </div>
         )}
 
-        {/* Newsletter Section */}
-        <div className="mt-40 amber-glass p-12 md:p-24 rounded-[4rem] text-center border border-white/5 relative overflow-hidden">
+        {/* Newsletter Section (Ambar te Escribe) */}
+        <div className="mt-40 bg-forest-green border border-amber-honey/10 p-12 md:p-20 rounded-[3rem] text-center relative overflow-hidden shadow-[0_0_50px_rgba(30,43,34,0.25)] max-w-2xl mx-auto">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
-          <h3 className="text-4xl md:text-6xl font-black mb-6 tracking-tighter">Únete al <span className="text-amber-honey text-glow">Círculo</span></h3>
-          <p className="opacity-50 mb-12 max-w-lg mx-auto text-sm italic">Recibe contenido exclusivo, preventas y crónicas antes que nadie.</p>
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Boletín Oficial</span>
+          <h3 className="text-4xl md:text-5xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te Escribe</h3>
+          <p className="text-white/60 mb-10 max-w-md mx-auto text-xs leading-relaxed">
+            Regístrate con tu nombre y correo electrónico para recibir crónicas, novedades y preventas exclusivas.
+          </p>
 
           {newsletterSuccess ? (
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="max-w-md mx-auto p-6 rounded-3xl bg-amber-honey/10 border border-amber-honey/20 text-amber-honey text-xs font-black uppercase tracking-wider flex items-center justify-center gap-3"
+              className="max-w-md mx-auto p-6 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 text-amber-honey text-xs font-black uppercase tracking-wider flex items-center justify-center gap-3"
             >
               <Check size={16} /> ¡Te has suscrito con éxito!
             </motion.div>
           ) : (
-            <form className="max-w-md mx-auto flex flex-col md:flex-row gap-4" onSubmit={handleSubscribe}>
+            <form className="max-w-sm mx-auto flex flex-col gap-3 text-left" onSubmit={handleSubscribe}>
+              <input
+                type="text"
+                required
+                value={newsletterName}
+                onChange={e => setNewsletterName(e.target.value)}
+                placeholder="Nombre"
+                className="w-full bg-white text-black rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-neutral-200 placeholder:text-neutral-400"
+                disabled={newsletterSubmitting}
+              />
               <input
                 type="email"
                 required
                 value={newsletterEmail}
                 onChange={e => setNewsletterEmail(e.target.value)}
-                placeholder="TU CORREO ELECTRÓNICO"
-                className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-8 py-5 text-xs font-bold focus:outline-none focus:border-amber-honey/50 transition-colors placeholder:text-white/20 text-white"
+                placeholder="Dirección de correo electrónico"
+                className="w-full bg-white text-black rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-neutral-200 placeholder:text-neutral-400"
+                disabled={newsletterSubmitting}
               />
               <button
                 type="submit"
                 disabled={newsletterSubmitting}
-                className="bg-amber-honey text-nature-night px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/15 hover:scale-105 transition-all disabled:opacity-50"
+                className="w-full bg-amber-honey hover:bg-amber-butterscotch active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.2em] py-4.5 rounded-xl transition-all shadow-lg shadow-amber-honey/15"
               >
-                {newsletterSubmitting ? 'Procesando...' : 'Suscribir'}
+                {newsletterSubmitting ? 'Procesando...' : 'Suscribirse'}
               </button>
+              
+              <p className="text-[9px] text-white/40 tracking-wider text-center pt-2">
+                Respetamos tu privacidad.
+              </p>
             </form>
           )}
         </div>

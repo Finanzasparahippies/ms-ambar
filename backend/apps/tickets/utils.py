@@ -50,13 +50,16 @@ def send_ticket_email(ticket):
     else:
         seat_str = "Entrada General"
         
+    theater_name = ticket.event.theater.name if ticket.event.theater else "Convivencia Online / Lugar por confirmar"
+    theater_loc = ticket.event.theater.location if ticket.event.theater else "Plataforma Digital"
+        
     text_content = (
         f"¡Hola!\n\nHemos preparado tu acceso para {ticket.event.title}.\n\n"
         f"Detalles del Evento:\n"
         f"• Artista: {ticket.event.artist}\n"
         f"• Fecha: {ticket.event.date.strftime('%d/%m/%Y %H:%M')} hrs\n"
         f"• Ubicación: {seat_str}\n"
-        f"• Lugar: {ticket.event.theater.name} ({ticket.event.theater.location})\n\n"
+        f"• Lugar: {theater_name} ({theater_loc})\n\n"
         f"Puedes ver tu boleto digital en el siguiente enlace:\n"
         f"{settings.FRONTEND_URL}/tickets/{ticket.token}\n\n"
         f"Presenta el código QR adjunto en la entrada.\n"

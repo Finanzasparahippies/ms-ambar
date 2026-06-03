@@ -27,7 +27,13 @@
     </tr>
     <tr>
       <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Lugar:</td>
-      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">{{ event.theater.name }}<br><span style="font-size: 12px; color: rgba(255, 255, 255, 0.5); font-weight: normal;">{{ event.theater.location }}</span></td>
+      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">
+        {% if event.theater %}
+          {{ event.theater.name }}<br><span style="font-size: 12px; color: rgba(255, 255, 255, 0.5); font-weight: normal;">{{ event.theater.location }}</span>
+        {% else %}
+          Convivencia Online / Lugar por confirmar<br><span style="font-size: 12px; color: rgba(255, 255, 255, 0.5); font-weight: normal;">Plataforma Digital</span>
+        {% endif %}
+      </td>
     </tr>
     <tr>
       <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Ubicación:</td>
