@@ -785,10 +785,43 @@ const Home = () => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [newsletterErrorMessage, setNewsletterErrorMessage] = useState('');
+  const [nextEvent, setNextEvent] = useState<any>(null);
 
   useEffect(() => {
     setIsMounted(true);
+    axios.get(`${API_URL}/tickets/events/`)
+      .then(res => {
+        if (res.data && res.data.length > 0) {
+          const now = new Date();
+          const upcoming = res.data
+            .filter((e: any) => e.is_active !== false)
+            .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
+            .filter((e: any) => e.dateObj >= now)
+            .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
+          
+          if (upcoming.length > 0) {
+            setNextEvent(upcoming[0]);
+          } else {
+            const activeEvents = res.data.filter((e: any) => e.is_active !== false);
+            if (activeEvents.length > 0) {
+              setNextEvent(activeEvents[0]);
+            }
+          }
+        }
+      })
+      .catch(err => console.error("Error fetching next event:", err));
   }, []);
+
+  const getFormattedEventDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+      const formatted = d.toLocaleDateString('es-MX', options);
+      return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    } catch {
+      return "Oct 24";
+    }
+  };
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -822,7 +855,7 @@ const Home = () => {
   if (!isMounted) return null;
 
   return (
-    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-white">
+    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night">
       <Head>
         <title>MS AMBAR | Esencia Artística y Experiencia de Sonidos</title>
         <meta name="description" content="MS Ambar - Una fusión vanguardista de música, arte digital y escenografía de alta gama. Adquiere boletos oficiales y reserva experiencias exclusivas." />
@@ -848,7 +881,12 @@ const Home = () => {
             className="flex items-center justify-center gap-2 bg-amber-honey/10 border border-amber-honey/20 px-4 py-2 rounded-full w-fit mx-auto mb-4"
           >
             <Sparkles size={12} className="text-amber-honey animate-pulse" />
-            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">Tour Oficial 2026 • Próximo Show Oct 24</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
+              {nextEvent 
+                ? `Tour Oficial 2026 • Próximo Show: ${nextEvent.title} (${getFormattedEventDate(nextEvent.date)})`
+                : "Tour Oficial 2026 • Próximo Show Oct 24"
+              }
+            </span>
           </motion.div>
 
           <motion.h1
@@ -864,7 +902,7 @@ const Home = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-white/60 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
+            className="text-nature-night/70 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
           >
             La fusión vanguardista de arte lumínico, diseño acústico premium y expresión escénica digital.
           </motion.p>
@@ -873,7 +911,7 @@ const Home = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.25 }}
-            className="text-white/40 text-[10px] md:text-xs uppercase tracking-[0.2em] max-w-3xl mx-auto leading-relaxed"
+            className="text-nature-night/50 text-[10px] md:text-xs uppercase tracking-[0.2em] max-w-3xl mx-auto leading-relaxed"
           >
             Ms Ambar  desierto de Sonora. Frecuencias cósmicas, blues hipnótico, líricas del cosmos y activismo terrestre junto a Tierra Viva.
           </motion.p>
@@ -892,7 +930,7 @@ const Home = () => {
             </Link>
             <Link
               href="/contacto"
-              className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all flex items-center gap-3"
+              className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border border-nature-night/20 text-nature-night hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all flex items-center gap-3"
             >
               Contacto <ArrowRight size={14} />
             </Link>
@@ -901,14 +939,14 @@ const Home = () => {
       </section>
 
       {/* ─── LIVE MUSIC RELEASES SHOWCASE ─── */}
-      <section className="py-32 border-y border-white/5 bg-black/20 relative">
+      <section className="py-32 border-y border-nature-night/10 bg-nature-night/[0.02] relative">
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16">
             <div>
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Lanzamientos Recientes</span>
               <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tight mt-2">Música & Producción</h3>
             </div>
-            <Link href="/musica" className="text-xs font-bold uppercase tracking-widest text-white/40 hover:text-amber-honey transition-colors flex items-center gap-2 mt-4 md:mt-0">
+            <Link href="/musica" className="text-xs font-bold uppercase tracking-widest text-nature-night/50 hover:text-amber-honey transition-colors flex items-center gap-2 mt-4 md:mt-0">
               Escuchar Discografía Completa <ChevronRight size={14} />
             </Link>
           </div>
@@ -919,8 +957,8 @@ const Home = () => {
               { title: 'Ambar Vision', desc: 'LP Álbum de Estudio • 2024', img: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=500&q=80' },
               { title: 'Desierto de Cristal', desc: 'LP Álbum de Estudio • 2023', img: 'https://images.unsplash.com/photo-1514525253361-bee8a48790c3?w=500&q=80' }
             ].map((track, i) => (
-              <div key={i} className="group relative rounded-[2.5rem] border border-white/5 bg-white/[0.02] overflow-hidden p-4 hover:border-amber-honey/20 transition-all">
-                <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-6 border border-white/5">
+              <div key={i} className="group relative rounded-[2.5rem] border border-nature-night/10 bg-nature-night/[0.01] hover:border-amber-honey/20 transition-all">
+                <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-6 border border-nature-night/10">
                   <img src={track.img} alt={track.title} className="object-cover w-full h-full grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Link href="/musica" className="w-16 h-16 rounded-full bg-amber-honey text-black flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
@@ -929,8 +967,8 @@ const Home = () => {
                   </div>
                 </div>
                 <div className="px-2 space-y-1">
-                  <h4 className="font-black uppercase text-sm text-white group-hover:text-amber-honey transition-colors">{track.title}</h4>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{track.desc}</p>
+                  <h4 className="font-black uppercase text-sm text-nature-night group-hover:text-amber-honey transition-colors">{track.title}</h4>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-nature-night/50">{track.desc}</p>
                 </div>
               </div>
             ))}
@@ -939,7 +977,7 @@ const Home = () => {
       </section>
 
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
-      <section className="py-32 border-t border-white/5 relative overflow-hidden bg-black/10">
+      <section className="py-32 border-t border-nature-night/10 relative overflow-hidden bg-nature-night/[0.02]">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
 
         <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-forest-green border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
@@ -1042,7 +1080,7 @@ const Home = () => {
           <div className="pt-2">
             <Link
               href="/ambar-te-escribe"
-              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30 hover:text-amber-honey transition-colors"
+              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-nature-night/50 hover:text-amber-honey transition-colors"
             >
               Leer las Cartas <ChevronRight size={12} />
             </Link>

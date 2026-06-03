@@ -43,7 +43,7 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-white">
+    <div className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-nature-night">
       <Head>
         <title>MS AMBAR | Booking & Contrataciones</title>
       </Head>
@@ -64,32 +64,36 @@ const ContactPage = () => {
               transition={{ delay: 0.1 }}
               className="text-6xl md:text-8xl font-black tracking-tighter mb-10 leading-[0.9]"
             >
-              HAGAMOS ALGO<br /><span className="text-amber-honey opacity-40 italic">MEMORABLE</span>
+              HAGAMOS ALGO<br /><span className="text-amber-honey opacity-80 italic">MEMORABLE</span>
             </motion.h1>
             
-            <p className="opacity-60 text-lg mb-16 max-w-md leading-relaxed">
+            <p className="text-nature-night/70 text-lg mb-16 max-w-md leading-relaxed">
               Para presentaciones en festivales, clubes, teatros o eventos privados, inicia tu solicitud formal aquí. Nuestro motor genera un borrador de acuerdo inmediato al finalizar.
             </p>
 
             <div className="space-y-6">
-               <div className="flex items-center gap-6 group bg-white/[0.02] border border-white/5 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all">
+               <div className="flex items-center gap-6 group bg-nature-night/[0.02] border border-nature-night/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all">
                   <div className="w-14 h-14 bg-amber-honey rounded-2xl flex items-center justify-center text-nature-night shadow-lg shadow-amber-honey/20">
                      <Mail size={24} />
                   </div>
                   <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Email Oficial</p>
-                     <p className="text-sm font-bold">booking@msambar.dev</p>
+                     <p className="text-[9px] font-black uppercase tracking-widest text-nature-night/50 mb-1">Email Oficial</p>
+                     <p className="text-sm font-bold text-nature-night">booking@msambar.dev</p>
                   </div>
                </div>
-               <div className="flex items-center gap-6 group bg-white/[0.02] border border-white/5 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all cursor-pointer">
+               <a 
+                  href="/MS_AMBAR_EPK.pdf"
+                  download="MS_AMBAR_EPK.pdf"
+                  className="flex items-center gap-6 group bg-nature-night/[0.02] border border-nature-night/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all cursor-pointer"
+               >
                   <div className="w-14 h-14 bg-amber-honey/10 rounded-2xl flex items-center justify-center text-amber-honey">
                      <Download size={24} />
                   </div>
                   <div>
-                     <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Press Kit</p>
-                     <p className="text-sm font-bold underline decoration-amber-honey/40">Descargar EPK (PDF, 25MB)</p>
+                     <p className="text-[9px] font-black uppercase tracking-widest text-nature-night/50 mb-1">Press Kit</p>
+                     <p className="text-sm font-bold underline decoration-amber-honey/40 text-nature-night">Descargar EPK (PDF, 25MB)</p>
                   </div>
-               </div>
+               </a>
             </div>
           </div>
 
@@ -104,95 +108,95 @@ const ContactPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   onSubmit={handleSubmit}
-                  className="bg-white/[0.02] border border-white/5 p-8 md:p-12 rounded-[3rem] relative"
+                  className="bg-white border border-nature-night/10 p-8 md:p-12 rounded-[3rem] relative shadow-xl shadow-nature-night/5"
                 >
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1">Nombre del Promotor</label>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Nombre del Promotor</label>
                       <input 
                         type="text" 
                         required
                         value={name}
                         onChange={e => setName(e.target.value)}
                         placeholder="Ej. Juan Pérez"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey/50 outline-none transition-all text-white" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1">Correo de Contacto</label>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Correo de Contacto</label>
                       <input 
                         type="email" 
                         required
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="promotor@evento.com"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey/50 outline-none transition-all text-white" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
                       />
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1">Teléfono / WhatsApp</label>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Teléfono / WhatsApp</label>
                       <input 
                         type="tel" 
                         required
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
                         placeholder="+52 55 1234 5678"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey/50 outline-none transition-all text-white" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1">Compañía / Razón Social</label>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Compañía / Razón Social</label>
                       <input 
                         type="text" 
                         value={company}
                         onChange={e => setCompany(e.target.value)}
                         placeholder="Opcional"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey/50 outline-none transition-all text-white" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
                       />
                     </div>
                   </div>
                   
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1">Fecha Tentativa</label>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Fecha Tentativa</label>
                       <input 
                         type="date" 
                         required
                         value={date}
                         onChange={e => setDate(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey/50 outline-none transition-all text-white" 
+                        className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-nature-night" 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1">Tipo de Foro</label>
+                      <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Tipo de Foro</label>
                       <div className="relative">
                         <select 
                           value={venueType}
                           onChange={e => setVenueType(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey/50 outline-none transition-all appearance-none text-white"
+                          className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all appearance-none text-nature-night"
                         >
-                          <option value="festival" className="bg-[#0e0f14]">Festival de Música</option>
-                          <option value="theater" className="bg-[#0e0f14]">Teatro / Auditorio</option>
-                          <option value="club" className="bg-[#0e0f14]">Club / Centro Nocturno</option>
-                          <option value="private" className="bg-[#0e0f14]">Evento Privado</option>
-                          <option value="other" className="bg-[#0e0f14]">Otro</option>
+                          <option value="festival" className="bg-white text-nature-night">Festival de Música</option>
+                          <option value="theater" className="bg-white text-nature-night">Teatro / Auditorio</option>
+                          <option value="club" className="bg-white text-nature-night">Club / Centro Nocturno</option>
+                          <option value="private" className="bg-white text-nature-night">Evento Privado</option>
+                          <option value="other" className="bg-white text-nature-night">Otro</option>
                         </select>
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2 mb-10">
-                    <label className="text-[9px] font-black uppercase tracking-widest opacity-40 ml-1">Detalles de la Oferta / Mensaje</label>
+                    <label className="text-[9px] font-black uppercase tracking-widest text-nature-night/60 ml-1">Detalles de la Oferta / Mensaje</label>
                     <textarea 
                       rows={4} 
                       required
                       value={message}
                       onChange={e => setMessage(e.target.value)}
                       placeholder="Especifica aforo estimado, locación y condiciones propuestas..."
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey/50 outline-none transition-all resize-none text-white"
+                      className="w-full bg-nature-night/[0.02] border border-nature-night/15 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all resize-none text-nature-night"
                     />
                   </div>
 
@@ -211,29 +215,29 @@ const ContactPage = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="bg-white/[0.02] border border-amber-honey/20 p-8 md:p-12 rounded-[3rem] text-center"
+                  className="bg-white border border-amber-honey/30 p-8 md:p-12 rounded-[3rem] text-center shadow-xl shadow-nature-night/5"
                 >
                   <div className="w-20 h-20 bg-amber-honey/10 border border-amber-honey/30 rounded-full flex items-center justify-center mx-auto mb-8 text-amber-honey">
                     <CheckCircle size={36} />
                   </div>
                   <h3 className="text-2xl md:text-3xl font-black mb-4 tracking-tighter">¡SOLICITUD REGISTRADA!</h3>
-                  <p className="opacity-60 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
+                  <p className="text-nature-night/70 text-sm leading-relaxed mb-8 max-w-sm mx-auto">
                     Hemos recibido tu propuesta para la presentación del día <strong>{date}</strong>. Se ha generado un borrador de contrato artístico.
                   </p>
 
-                  <div className="bg-white/[0.01] border border-white/5 p-6 rounded-2xl mb-10 text-left space-y-4">
+                  <div className="bg-nature-night/[0.02] border border-nature-night/10 p-6 rounded-2xl mb-10 text-left space-y-4">
                     <div className="flex items-center gap-3 text-xs">
                       <Award size={16} className="text-amber-honey" />
                       <div>
-                        <p className="text-[9px] font-black uppercase opacity-40">Estatus del Acuerdo</p>
-                        <p className="font-bold text-white/90">Pendiente de Firma del Promotor</p>
+                        <p className="text-[9px] font-black uppercase text-nature-night/50">Estatus del Acuerdo</p>
+                        <p className="font-bold text-nature-night/90">Pendiente de Firma del Promotor</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 text-xs">
                       <Calendar size={16} className="text-amber-honey" />
                       <div>
-                        <p className="text-[9px] font-black uppercase opacity-40">Fecha Asignada</p>
-                        <p className="font-bold text-white/90">{date}</p>
+                        <p className="text-[9px] font-black uppercase text-nature-night/50">Fecha Asignada</p>
+                        <p className="font-bold text-nature-night/90">{date}</p>
                       </div>
                     </div>
                   </div>

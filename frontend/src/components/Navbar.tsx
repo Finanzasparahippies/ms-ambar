@@ -17,18 +17,17 @@ function decodeJwt(token: string): Record<string, any> | null {
 }
 
 const Navbar = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    }
+    // Force light theme
+    setTheme('light');
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.setItem('theme', 'light');
 
     // Read auth status directly from the JWT payload — no localStorage.user needed
     const token = localStorage.getItem('token');
@@ -148,13 +147,13 @@ const Navbar = () => {
             </Link>
           )}
 
-          <div className="h-6 w-px bg-white/10 mx-1" />
-          <ThemeToggle theme={theme} toggle={toggleTheme} />
+          {/* <div className="h-6 w-px bg-white/10 mx-1" />
+          <ThemeToggle theme={theme} toggle={toggleTheme} /> */}
         </div>
 
         {/* Mobile controls */}
         <div className="flex md:hidden items-center gap-4">
-          <ThemeToggle theme={theme} toggle={toggleTheme} />
+          {/* <ThemeToggle theme={theme} toggle={toggleTheme} /> */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="text-white hover:text-amber-honey p-1 transition-colors outline-none"
