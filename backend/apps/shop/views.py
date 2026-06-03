@@ -58,6 +58,17 @@ def stripe_webhook(request):
     except stripe.error.SignatureVerificationError as e:
         return HttpResponse(status=400)
 
+    # Idempotency check: prevent duplicate Stripe event processing
+    from .models import StripeEvent
+    event_id = event.get('id')
+    if event_id:
+        if StripeEvent.objects.filter(event_id=event_id).exists():
+            return HttpResponse("Event already processed", status=200)
+        try:
+            StripeEvent.objects.create(event_id=event_id)
+        except Exception:
+            return HttpResponse("Event processing in progress", status=200)
+
     # Handle the checkout.session.completed event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']

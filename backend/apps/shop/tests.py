@@ -133,3 +133,36 @@ class ShopAppTests(APITestCase):
         
         # Verify email was triggered
         mock_send_ticket.assert_called_once_with(ticket)
+
+    @patch('apps.shop.views.send_ticket_email')
+    @patch('stripe.Webhook.construct_event')
+    def test_stripe_webhook_duplicate_prevented(self, mock_construct, mock_send_ticket):
+        """Verify that duplicate webhook events with the same event ID are not processed twice."""
+        mock_construct.return_value = {
+            'id': 'evt_test_123456',
+            'type': 'checkout.session.completed',
+            'data': {
+                'object': {
+                    'metadata': {
+                        'type': 'ticket_purchase',
+                        'event_id': str(self.event.id),
+                        'seat_ids': str(self.seat.id),
+                        'user_email': 'ticketbuyer@example.com'
+                    }
+                }
+            }
+        }
+
+        url = reverse('stripe-webhook')
+        
+        # 1. First event call should process successfully
+        response1 = self.client.post(url, {}, HTTP_STRIPE_SIGNATURE='valid_sig')
+        self.assertEqual(response1.status_code, status.HTTP_200_OK)
+        self.assertEqual(Ticket.objects.filter(event=self.event, seat=self.seat).count(), 1)
+        self.assertEqual(mock_send_ticket.call_count, 1)
+
+        # 2. Second event call with same event ID should be ignored
+        response2 = self.client.post(url, {}, HTTP_STRIPE_SIGNATURE='valid_sig')
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        # Should NOT trigger send_ticket_email again
+        self.assertEqual(mock_send_ticket.call_count, 1)

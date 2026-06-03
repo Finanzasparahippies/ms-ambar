@@ -278,7 +278,10 @@ class BlogAppTests(APITestCase):
         self.assertEqual(sub1.tags, 'concierto;vip')
         self.assertTrue(sub1.is_premium)
         self.assertTrue(sub1.is_active)
-        self.assertEqual(sub1.created_at.strftime('%Y-%m-%d %H:%M:%S'), '2026-05-20 14:30:00')
+        from django.utils import timezone
+        import datetime
+        expected_dt = timezone.make_aware(datetime.datetime.strptime('2026-05-20 14:30:00', '%Y-%m-%d %H:%M:%S'))
+        self.assertEqual(sub1.created_at, expected_dt)
         
         sub2 = NewsletterSubscriber.objects.get(email='another_fan@example.com')
         self.assertEqual(sub2.subscriber_id, 'sub_124')
