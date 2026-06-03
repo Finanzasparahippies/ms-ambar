@@ -17,8 +17,8 @@ services:
     build: ./backend
     volumes:
       - ./backend:/app:Z
-      - static_volume:/staticfiles:Z
-      - media_volume:/media_files:Z
+      - static_volume:/staticfiles
+      - media_volume:/media_files
     environment:
       - STATIC_ROOT=/staticfiles
       - MEDIA_ROOT=/media_files
@@ -56,8 +56,8 @@ services:
       - "3000:80"
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/default.conf.template:Z
-      - static_volume:/app/staticfiles:Z
-      - media_volume:/app/media:Z
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     depends_on:
       - backend
       - frontend

@@ -6,8 +6,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile.prod
     volumes:
-      - static_volume:/staticfiles:Z
-      - media_volume:/media_files:Z
+      - static_volume:/staticfiles
+      - media_volume:/media_files
     environment:
       - STATIC_ROOT=/staticfiles
       - MEDIA_ROOT=/media_files

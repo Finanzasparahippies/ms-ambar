@@ -35,6 +35,18 @@ run_django_cmd_prod() {
     fi
 }
 
+# Helper function to find and remove conflicting containers from other project namespaces
+remove_conflicting_containers() {
+    local container_names=("$@")
+    for container in "${container_names[@]}"; do
+        if docker ps -a --format '{{.Name}}' | grep -q "^${container}$"; then
+            echo "Warning: Container '${container}' already exists (possibly from a different or older Docker Compose project/run)."
+            echo "Removing existing container '${container}' to prevent naming conflicts..."
+            docker rm -f "${container}"
+        fi
+    done
+}
+
 show_help() {
     echo "==========================================="
     echo "           MS AMBAR - Nectar Labs CLI      "
@@ -88,6 +100,7 @@ show_help() {
 case $COMMAND in
     dev)
         echo "Starting MS AMBAR Dev Environment..."
+        remove_conflicting_containers ambar_dev_db ambar_dev_backend ambar_dev_frontend ambar_dev_nginx
         docker compose up -d --build "$@"
         ;;
     stop)
@@ -137,6 +150,7 @@ case $COMMAND in
         ;;
     up-staging)
         echo "Starting MS AMBAR Staging Environment..."
+        remove_conflicting_containers ambar_staging_backend ambar_staging_frontend ambar_staging_nginx ambar_staging_autostop
         docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build "$@"
         ;;
     down-staging|stop-staging)
@@ -187,6 +201,7 @@ case $COMMAND in
         ;;
     up-prod)
         echo "Starting MS AMBAR Production Environment..."
+        remove_conflicting_containers ambar_backend ambar_frontend
         docker compose -f docker-compose.prod.yml up -d "$@"
         ;;
     down-prod)
@@ -246,13 +261,21 @@ case $COMMAND in
         echo "5. Removing Docker build cache..."
         docker builder prune -f
         
+        echo "6. Checking for legacy/conflicting Docker Compose project 'ms-ambar'..."
+        if docker compose -p ms-ambar ps -q &>/dev/null || [ -n "$(docker ps -a --filter 'label=com.docker.compose.project=ms-ambar' -q)" ]; then
+            echo "   Stopping and removing legacy 'ms-ambar' project containers and networks..."
+            docker compose -p ms-ambar down
+        else
+            echo "   No legacy 'ms-ambar' project containers found."
+        fi
+        
         if command -v journalctl &> /dev/null; then
-            echo "6. Vacuuming system logs (journald) to 100MB..."
+            echo "7. Vacuuming system logs (journald) to 100MB..."
             sudo journalctl --vacuum-size=100M 2>/dev/null || echo "   (Skip: sudo privileges required to vacuum logs)"
         fi
         
         if command -v apt-get &> /dev/null; then
-            echo "7. Cleaning APT package cache..."
+            echo "8. Cleaning APT package cache..."
             sudo apt-get autoclean -y 2>/dev/null || echo "   (Skip: sudo privileges required to clean APT cache)"
         fi
         
