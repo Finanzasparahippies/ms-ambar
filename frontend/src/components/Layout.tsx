@@ -22,7 +22,7 @@ const Layout = ({ children }: LayoutProps) => {
 
   if (isAuthOrAdmin) {
     return (
-      <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative bg-gradient-to-br from-[#F8F7F2] to-[#EEEDE4] text-nature-night">
+      <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative bg-gradient-to-br from-[#121915] to-[#080C0A] text-[#F4F6F0]">
         <main className="relative z-10 min-h-screen">
           {children}
         </main>
@@ -45,7 +45,7 @@ const Layout = ({ children }: LayoutProps) => {
       </main>
 
       {/* Footer (Nature inspired) */}
-      <footer className="relative z-10 py-20 px-10 mt-20 border-t border-nature-night/10 amber-glass rounded-t-[4rem]">
+      <footer className="relative z-10 py-20 px-10 mt-20 border-t border-white/5 amber-glass rounded-t-[4rem]">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-4 gap-12">
           <div className="col-span-2">
             <h2 className="text-4xl font-black mb-6 tracking-tighter">Ms Ambar</h2>
@@ -71,17 +71,17 @@ const Layout = ({ children }: LayoutProps) => {
             </ul>
           </div>
         </div>
-        <div className="max-w-[1200px] mx-auto mt-20 pt-8 border-t border-nature-night/10 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-nature-night/50 font-black gap-4">
+        <div className="max-w-[1200px] mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-[#F4F6F0]/40 font-black gap-4">
           <span>&copy; {new Date().getFullYear()} Ms Ambar</span>
           <span className="flex flex-wrap items-center justify-center gap-1.5">
             <span>Hecho con Ámbar en México</span>
             <span className="opacity-30">•</span>
             <span>Desarrollado por</span>
             <a
-              href="https://nectarlabs.co"
+              href="https://nectarlabs.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-nature-night/80 hover:text-amber-honey transition-all duration-300 font-black tracking-normal group"
+              className="inline-flex items-center gap-1 text-[#F4F6F0]/80 hover:text-amber-honey transition-all duration-300 font-black tracking-normal group"
             >
               <svg className="w-3.5 h-3.5 fill-current text-amber-honey group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />

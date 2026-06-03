@@ -612,10 +612,10 @@ export default function BlogPage() {
         {/* Newsletter Section (Ambar te Escribe) */}
         <div className="mt-40 bg-forest-green border border-amber-honey/10 p-12 md:p-20 rounded-[3rem] text-center relative overflow-hidden shadow-[0_0_50px_rgba(30,43,34,0.25)] max-w-2xl mx-auto">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Boletín Oficial</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Esto es solo para los reales</span>
           <h3 className="text-4xl md:text-5xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te escribe</h3>
           <p className="text-white/60 mb-10 max-w-md mx-auto text-xs leading-relaxed">
-            Regístrate con tu nombre y correo electrónico para recibir crónicas, novedades y preventas exclusivas.
+            Déja tu correo aquí y recibe el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
           </p>
 
           {newsletterSuccess ? (

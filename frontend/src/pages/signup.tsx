@@ -83,7 +83,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen text-nature-night flex items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen text-[#F4F6F0] flex items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Dynamic Background Gradients */}
       <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-amber-honey/5 blur-[150px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-nature-sky/5 blur-[150px] rounded-full pointer-events-none" />
@@ -100,16 +100,16 @@ export default function SignupPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-ping" />
             Crea tu Credencial
           </span>
-          <h1 className="text-3xl md:text-4xl font-black text-nature-night uppercase italic tracking-tighter mt-2">
+          <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mt-2">
             Registro Oficial
           </h1>
-          <p className="text-nature-night/50 text-xs font-bold uppercase tracking-wider mt-1">
+          <p className="text-white/50 text-xs font-bold uppercase tracking-wider mt-1">
             Únete al Club de Ms Ambar
           </p>
         </div>
 
         {/* Form Container Card */}
-        <div className="bg-white border border-nature-night/10 p-8 rounded-[2.5rem] shadow-xl shadow-nature-night/5 relative overflow-hidden">
+        <div className="amber-glass p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl border border-white/5">
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-amber-honey to-transparent opacity-60" />
 
           <AnimatePresence mode="wait">
@@ -126,7 +126,7 @@ export default function SignupPage() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 text-red-600 text-xs font-bold uppercase"
+                    className="p-4 bg-red-950/40 border border-red-500/30 rounded-2xl flex items-start gap-3 text-red-200 text-xs font-bold uppercase"
                   >
                     <ShieldAlert className="w-5 h-5 shrink-0" />
                     <span>{error}</span>
@@ -135,9 +135,9 @@ export default function SignupPage() {
 
                 {/* Username Field */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Nombre de Usuario</label>
+                  <label className="text-[10px] text-white/60 uppercase tracking-widest font-black block pl-1">Nombre de Usuario</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
                       <User size={16} />
                     </div>
                     <input
@@ -146,16 +146,16 @@ export default function SignupPage() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="tu_usuario"
-                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
+                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
                     />
                   </div>
                 </div>
 
                 {/* Email Field */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Correo Electrónico</label>
+                  <label className="text-[10px] text-white/60 uppercase tracking-widest font-black block pl-1">Correo Electrónico</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
                       <Mail size={16} />
                     </div>
                     <input
@@ -164,16 +164,16 @@ export default function SignupPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="nombre@ejemplo.com"
-                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
+                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
                     />
                   </div>
                 </div>
 
                 {/* Phone Field */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Celular (Opcional)</label>
+                  <label className="text-[10px] text-white/60 uppercase tracking-widest font-black block pl-1">Celular (Opcional)</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
                       <Phone size={16} />
                     </div>
                     <input
@@ -181,16 +181,16 @@ export default function SignupPage() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+54 9 11 1234 5678"
-                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
+                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
                     />
                   </div>
                 </div>
 
                 {/* Password Field */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Contraseña</label>
+                  <label className="text-[10px] text-white/60 uppercase tracking-widest font-black block pl-1">Contraseña</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
                       <Lock size={16} />
                     </div>
                     <input
@@ -199,12 +199,12 @@ export default function SignupPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-12 py-3.5 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
+                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-12 py-3.5 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-nature-night/30 hover:text-nature-night/60 transition-colors"
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/30 hover:text-white/60 transition-colors"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -213,9 +213,9 @@ export default function SignupPage() {
 
                 {/* Confirm Password Field */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Confirmar Contraseña</label>
+                  <label className="text-[10px] text-white/60 uppercase tracking-widest font-black block pl-1">Confirmar Contraseña</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
                       <Lock size={16} />
                     </div>
                     <input
@@ -224,7 +224,7 @@ export default function SignupPage() {
                       value={passwordConfirm}
                       onChange={(e) => setPasswordConfirm(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
+                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-3.5 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.05)]"
                     />
                   </div>
                 </div>
@@ -253,11 +253,11 @@ export default function SignupPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="py-8 text-center flex flex-col items-center gap-4"
               >
-                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-600 animate-bounce">
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 animate-bounce">
                   <CheckCircle size={36} />
                 </div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight text-nature-night">Registro Exitoso</h3>
-                <p className="text-nature-night/60 text-xs font-bold uppercase tracking-widest">
+                <h3 className="text-xl font-black uppercase italic tracking-tight text-white">Registro Exitoso</h3>
+                <p className="text-white/60 text-xs font-bold uppercase tracking-widest">
                   Creando cuenta y preparando canal de acceso...
                 </p>
               </motion.div>
@@ -267,7 +267,7 @@ export default function SignupPage() {
 
         {/* Switch to Login */}
         <div className="text-center mt-6">
-          <p className="text-xs text-nature-night/50 font-semibold">
+          <p className="text-xs text-white/50 font-semibold">
             ¿Ya tienes una cuenta registrada?{' '}
             <Link
               href="/login"

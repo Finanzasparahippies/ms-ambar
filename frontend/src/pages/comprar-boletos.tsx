@@ -19,7 +19,7 @@ const TourPage = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [wantsMG, setWantsMG] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [elements, setElements] = useState<any[]>([]);
 
   // Meet & Greet and Checkout states

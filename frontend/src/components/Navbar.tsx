@@ -17,17 +17,17 @@ function decodeJwt(token: string): Record<string, any> | null {
 }
 
 const Navbar = () => {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Force light theme
-    setTheme('light');
-    document.documentElement.setAttribute('data-theme', 'light');
-    localStorage.setItem('theme', 'light');
+    // Force dark theme
+    setTheme('dark');
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('theme', 'dark');
 
     // Read auth status directly from the JWT payload — no localStorage.user needed
     const token = localStorage.getItem('token');

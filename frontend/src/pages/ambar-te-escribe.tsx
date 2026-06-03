@@ -417,7 +417,7 @@ export default function AmbarTeEscribePage() {
             color: rgba(255, 255, 255, 0.75);
           }
           .rich-text-content blockquote {
-            border-left: 4px solid #f59e0b;
+            border-left: 4px solid #e5a93b;
             background: rgba(255, 255, 255, 0.02);
             padding: 1rem 1.25rem;
             border-radius: 0 1rem 1rem 0;
@@ -426,7 +426,7 @@ export default function AmbarTeEscribePage() {
             color: rgba(255, 255, 255, 0.85);
           }
           .rich-text-content a {
-            color: #f59e0b;
+            color: #e5a93b;
             text-decoration: underline;
             transition: color 0.2s;
           }
@@ -452,22 +452,20 @@ export default function AmbarTeEscribePage() {
             border-radius: 99px;
           }
           .custom-scroll::-webkit-scrollbar-thumb:hover {
-            background: rgba(245, 158, 11, 0.3);
+            background: rgba(229, 169, 59, 0.3);
           }
           .rich-text-content[contenteditable]:empty::before {
             content: attr(data-placeholder);
-            color: rgba(255, 255, 255, 0.25);
+            color: rgba(11, 15, 13, 0.3);
             pointer-events: none;
             display: block;
           }
         `}</style>
-      </Head>
-
-      <AnimatePresence mode="wait">
+           <AnimatePresence mode="wait">
         {checkingSub ? (
-          <div className="min-h-screen bg-[#030303] text-white flex flex-col items-center justify-center gap-4">
+          <div className="min-h-screen bg-gradient-to-br from-[#121915] to-[#080C0A] text-[#F4F6F0] flex flex-col items-center justify-center gap-4">
             <div className="w-10 h-10 border-4 border-amber-honey/20 border-t-amber-honey rounded-full animate-spin" />
-            <p className="text-xs uppercase tracking-widest text-white/40 font-bold">Validando Acceso...</p>
+            <p className="text-[#F4F6F0]/40 tracking-widest font-bold uppercase text-xs">Validando Acceso...</p>
           </div>
         ) : !isUnlocked ? (
           /* Lock screen / Subscriber Registration */
@@ -476,18 +474,18 @@ export default function AmbarTeEscribePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="min-h-screen flex items-center justify-center bg-[#030303] px-6 py-20 relative overflow-hidden"
+            className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#121915] to-[#080C0A] px-6 py-20 relative overflow-hidden"
           >
             <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
 
-            <div className="max-w-md w-full bg-white/[0.01] border border-white/5 p-8 md:p-12 rounded-[3.5rem] text-center backdrop-blur-xl amber-glass shadow-2xl relative">
+            <div className="max-w-md w-full amber-glass p-8 md:p-12 rounded-[3.5rem] text-center relative z-10">
               <div className="w-16 h-16 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mx-auto mb-8 text-amber-honey">
                 <Lock size={28} className="animate-pulse" />
               </div>
 
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Cartas Exclusivas</span>
-              <h2 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
-              <p className="text-white/60 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
+              <h2 className="text-3xl font-serif text-[#F4F6F0] mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
+              <p className="text-[#F4F6F0]/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
                 Las crónicas y bitácoras de Ms Ambar están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido de las cartas y recibir poemas exclusivos en tu bandeja.
               </p>
 
@@ -498,7 +496,7 @@ export default function AmbarTeEscribePage() {
                   value={newsletterName}
                   onChange={e => setNewsletterName(e.target.value)}
                   placeholder="Tu Nombre"
-                  className="w-full bg-white text-black rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-neutral-200 placeholder:text-neutral-400"
+                  className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
                   disabled={newsletterSubmitting}
                 />
                 <input
@@ -507,7 +505,7 @@ export default function AmbarTeEscribePage() {
                   value={newsletterEmail}
                   onChange={e => setNewsletterEmail(e.target.value)}
                   placeholder="Tu Correo Electrónico"
-                  className="w-full bg-white text-black rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-neutral-200 placeholder:text-neutral-400"
+                  className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
                   disabled={newsletterSubmitting}
                 />
                 <button
@@ -517,7 +515,7 @@ export default function AmbarTeEscribePage() {
                 >
                   {newsletterSubmitting ? (
                     <span className="flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />imate-spin" />
                       Verificando...
                     </span>
                   ) : (
@@ -566,12 +564,10 @@ export default function AmbarTeEscribePage() {
                 <p className="opacity-40 mt-4 text-sm font-bold uppercase tracking-[0.4em] text-glow text-amber-honey">
                   Cartas desde el escenario
                 </p>
-              </div>
-
-              {/* Categories bar */}
+                      {/* Categories bar */}
               <div className="amber-glass px-8 py-4 rounded-2xl border border-white/5">
                 <p className="text-[9px] font-black uppercase tracking-[0.4em] text-amber-honey mb-4">Filtrar Historias</p>
-                <div className="flex flex-wrap gap-6 text-[10px] uppercase font-bold opacity-70">
+                <div className="flex flex-wrap gap-6 text-[10px] uppercase font-bold text-[#F4F6F0]/70">
                   <span
                     onClick={() => setSelectedCategory('all')}
                     className={`cursor-pointer transition-all ${selectedCategory === 'all'
@@ -601,17 +597,17 @@ export default function AmbarTeEscribePage() {
             {loading ? (
               <div className="flex flex-col items-center justify-center py-40 gap-4">
                 <div className="w-10 h-10 border-4 border-amber-honey/20 border-t-amber-honey rounded-full animate-spin" />
-                <p className="text-xs uppercase tracking-widest text-white/40 font-bold">Cargando crónicas...</p>
+                <p className="text-xs uppercase tracking-widest text-[#F4F6F0]/40 font-bold">Cargando crónicas...</p>
               </div>
             ) : filteredPosts.length === 0 ? (
-              <div className="text-center py-40 border border-white/5 bg-white/[0.01] rounded-[3rem] p-10">
+              <div className="text-center py-40 border border-white/10 bg-white/[0.01] rounded-[3rem] p-10">
                 <AlertCircle size={32} className="mx-auto text-amber-honey/40 mb-4" />
-                <p className="text-sm uppercase tracking-widest text-white/40 font-black">No hay crónicas disponibles</p>
+                <p className="text-sm uppercase tracking-widest text-[#F4F6F0]/45 font-black">No hay crónicas disponibles</p>
                 {isAdmin && (
                   <button
                     onClick={() => setIsEditorOpen(true)}
                     className="mt-6 text-[10px] font-black text-amber-honey uppercase tracking-wider underline hover:text-white"
-                  >
+                  >               >
                     Redacta la primera crónica ahora
                   </button>
                 )}
@@ -635,13 +631,11 @@ export default function AmbarTeEscribePage() {
                           alt={post.title}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
                         />
-
+ 
                         <div className="absolute top-6 left-6 flex justify-between w-[85%] items-start">
                           <span className="bg-amber-honey text-nature-night px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20">
                             {post.category_name || 'Sin Categoría'}
-                          </span>
-
-                          {!post.is_published && (
+                                            {!post.is_published && (
                             <span className="bg-white/10 text-white border border-white/20 px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest backdrop-blur-md">
                               Borrador
                             </span>
@@ -676,16 +670,16 @@ export default function AmbarTeEscribePage() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-6 mb-6 text-[9px] font-black uppercase tracking-[0.2em] opacity-40">
+                      <div className="flex items-center gap-6 mb-6 text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/40">
                         <div className="flex items-center gap-2">
                           <Calendar size={12} className="text-amber-honey" /> {new Date(post.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </div>
                         <div className="flex items-center gap-2">
-                          <User size={12} className="text-amber-honey" /> MS Ambar
+                          <User size={12} className="text-amber-honey" /> Ms Ambar
                         </div>
                       </div>
 
-                      <h2 className="text-2xl font-extrabold tracking-tight mb-4 group-hover:text-amber-honey transition-colors leading-tight line-clamp-2">
+                      <h2 className="text-2xl font-extrabold tracking-tight mb-4 group-hover:text-amber-honey transition-colors leading-tight line-clamp-2">ght line-clamp-2">
                         {post.title}
                       </h2>
                       <p className="opacity-60 text-xs leading-relaxed mb-8 line-clamp-3">
@@ -727,16 +721,14 @@ export default function AmbarTeEscribePage() {
             </div>
           </motion.div>
         )}
-      </AnimatePresence>
-
-      {/* ─── BEEHIIV STYLE POST EDITOR OVERLAY (Admins Only) ─── */}
+         {/* ─── BEEHIIV STYLE POST EDITOR OVERLAY (Admins Only) ─── */}
       <AnimatePresence>
         {isEditorOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#06070b] z-[200] flex flex-col font-sans"
+            className="fixed inset-0 bg-[#080C0A] z-[200] flex flex-col font-sans text-[#F4F6F0]"
           >
             {/* Editor Top Bar */}
             <header className="h-16 px-6 border-b border-white/5 flex items-center justify-between bg-black/40 backdrop-blur-md">
@@ -814,7 +806,7 @@ export default function AmbarTeEscribePage() {
                 <div className="max-w-[720px] w-full flex flex-col h-full">
                   {editorMode === 'write' ? (
                     <>
-                      <div className="sticky top-0 z-50 mb-10 bg-white/[0.02] border border-white/10 p-2 rounded-2xl backdrop-blur-xl flex flex-wrap gap-1 items-center shadow-2xl">
+                      <div className="sticky top-0 z-50 mb-10 bg-white/[0.02] border border-white/10 p-2 rounded-2xl flex flex-wrap gap-1 items-center shadow-2xl">
                         <button
                           onClick={() => executeCommand('bold')}
                           className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
@@ -903,7 +895,7 @@ export default function AmbarTeEscribePage() {
                         </button>
                         <button
                           onClick={() => executeCommand('removeFormat')}
-                          className="w-8 h-8 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center ml-auto"
+                          className="w-8 h-8 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-500/5 flex items-center justify-center ml-auto"
                           title="Limpiar Formatos"
                         >
                           <Trash2 size={12} />
@@ -911,7 +903,7 @@ export default function AmbarTeEscribePage() {
                       </div>
 
                       {editorImagePreview && (
-                        <div className="w-full aspect-[21/9] rounded-[2rem] overflow-hidden mb-10 border border-white/5 relative group">
+                        <div className="w-full aspect-[21/9] rounded-[2rem] overflow-hidden mb-10 border border-white/10 relative group">
                           <img src={editorImagePreview} alt="Cover preview" className="w-full h-full object-cover" />
                           <button
                             onClick={() => {
@@ -930,10 +922,10 @@ export default function AmbarTeEscribePage() {
                         value={editorTitle}
                         onChange={handleTitleChange}
                         placeholder="Escribe un título fascinante..."
-                        className="w-full bg-transparent text-white placeholder-white/10 text-4xl md:text-5xl font-black focus:outline-none mb-4 tracking-tighter"
+                        className="w-full bg-transparent text-white placeholder-white/20 text-4xl md:text-5xl font-black focus:outline-none mb-4 tracking-tighter"
                       />
 
-                      <div className="flex items-center gap-2 mb-8 text-[10px] text-white/30 font-bold uppercase tracking-wider pl-1">
+                      <div className="flex items-center gap-2 mb-8 text-[10px] text-white/40 font-bold uppercase tracking-wider pl-1">
                         <span>URL Slug:</span>
                         <input
                           type="text"
@@ -956,7 +948,7 @@ export default function AmbarTeEscribePage() {
                   ) : (
                     <div className="flex flex-col">
                       {editorImagePreview && (
-                        <div className="w-full aspect-[16/9] rounded-[2.5rem] overflow-hidden mb-12 border border-white/5">
+                        <div className="w-full aspect-[16/9] rounded-[2.5rem] overflow-hidden mb-12 border border-white/10">
                           <img src={editorImagePreview} alt="Cover" className="w-full h-full object-cover" />
                         </div>
                       )}
@@ -968,10 +960,10 @@ export default function AmbarTeEscribePage() {
                           {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                       </div>
-                      <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-8 leading-none">{editorTitle || 'Entrada sin Título'}</h1>
+                      <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-8 leading-none text-white">{editorTitle || 'Entrada sin Título'}</h1>
                       <div
                         className="rich-text-content"
-                        dangerouslySetInnerHTML={{ __html: editorRef.current?.innerHTML || '<p className="italic text-white/20">Contenido vacío...</p>' }}
+                        dangerouslySetInnerHTML={{ __html: editorRef.current?.innerHTML || '<p class="italic text-white/30">Contenido vacío...</p>' }}
                       />
                     </div>
                   )}
@@ -979,12 +971,11 @@ export default function AmbarTeEscribePage() {
               </div>
 
               <AnimatePresence>
-                {showSettingsSidebar && (
                   <motion.aside
                     initial={{ width: 0, opacity: 0 }}
                     animate={{ width: 340, opacity: 1 }}
                     exit={{ width: 0, opacity: 0 }}
-                    className="border-l border-white/5 bg-black/20 backdrop-blur-2xl flex flex-col overflow-hidden"
+                    className="border-l border-white/5 bg-black/40 backdrop-blur-2xl flex flex-col overflow-hidden"
                   >
                     <div className="p-6 flex-1 overflow-y-auto space-y-8 custom-scroll w-[340px]">
                       <div className="flex items-center justify-between pb-4 border-b border-white/5">
@@ -992,17 +983,17 @@ export default function AmbarTeEscribePage() {
                           <Settings size={12} /> Parámetros del Post
                         </h3>
                       </div>
-
+ 
                       <div className="space-y-3">
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Estado de Publicación</label>
-                        <div className="bg-white/[0.02] border border-white/5 p-2.5 rounded-2xl flex items-center justify-between">
+                        <div className="bg-white/5 border border-white/10 p-2.5 rounded-2xl flex items-center justify-between">
                           <span className="text-xs font-bold uppercase tracking-wider pl-1">
                             {editorIsPublished ? (
                               <span className="text-amber-honey flex items-center gap-1.5">
                                 <Globe size={12} /> Público / Activo
                               </span>
                             ) : (
-                              <span className="text-white/40 flex items-center gap-1.5">
+                              <span className="text-white/45 flex items-center gap-1.5">
                                 <FileText size={12} /> Borrador Local
                               </span>
                             )}
@@ -1011,11 +1002,11 @@ export default function AmbarTeEscribePage() {
                             onClick={() => setEditorIsPublished(!editorIsPublished)}
                             className={`w-12 h-6 rounded-full p-1 transition-all ${editorIsPublished ? 'bg-amber-honey' : 'bg-white/10'}`}
                           >
-                            <div className={`w-4 h-4 rounded-full bg-nature-night transition-all ${editorIsPublished ? 'translate-x-6' : 'translate-x-0'}`} />
+                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transition-all ${editorIsPublished ? 'translate-x-6' : 'translate-x-0'}`} />
                           </button>
                         </div>
                       </div>
-
+ 
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Categoría</label>
@@ -1026,7 +1017,7 @@ export default function AmbarTeEscribePage() {
                             <FolderPlus size={10} /> {showNewCatInput ? 'Cancelar' : 'Nueva'}
                           </button>
                         </div>
-
+ 
                         {showNewCatInput ? (
                           <form onSubmit={handleCreateCategory} className="flex gap-2">
                             <input
@@ -1035,7 +1026,7 @@ export default function AmbarTeEscribePage() {
                               value={newCatName}
                               onChange={(e) => setNewCatName(e.target.value)}
                               placeholder="Nombre de categoría"
-                              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-honey/50"
+                              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-honey/50 text-white"
                             />
                             <button
                               type="submit"
@@ -1050,20 +1041,20 @@ export default function AmbarTeEscribePage() {
                             onChange={(e) => setEditorCategory(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-amber-honey/50 outline-none text-white/80"
                           >
-                            <option value="" className="bg-[#0c0d12]">Seleccionar Categoría</option>
+                            <option value="" className="bg-[#121915]">Seleccionar Categoría</option>
                             {categories.map((cat) => (
-                              <option key={cat.id} value={cat.id} className="bg-[#0c0d12]">
+                              <option key={cat.id} value={cat.id} className="bg-[#121915]">
                                 {cat.name}
                               </option>
                             ))}
                           </select>
                         )}
                       </div>
-
+ 
                       <div className="space-y-3">
                         <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Imagen de Portada</label>
-
-                        <div className="border border-dashed border-white/10 bg-white/[0.01] hover:bg-white/[0.03] rounded-2.5rem p-6 text-center cursor-pointer transition-colors relative group">
+ 
+                        <div className="border border-dashed border-white/10 bg-white/5 hover:bg-white/10 rounded-2.5rem p-6 text-center cursor-pointer transition-colors relative group">
                           <input
                             type="file"
                             accept="image/*"
@@ -1074,9 +1065,9 @@ export default function AmbarTeEscribePage() {
                           <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Cargar Archivo</p>
                           <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest mt-1">PNG, JPG, WEBP hasta 5MB</p>
                         </div>
-
+ 
                         {editorImagePreview && (
-                          <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-black/40">
+                          <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-[#07080d]">
                             <img src={editorImagePreview} alt="Preview" className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                               <p className="text-[9px] font-black uppercase tracking-widest text-white">Imagen Cargada</p>
@@ -1086,7 +1077,6 @@ export default function AmbarTeEscribePage() {
                       </div>
                     </div>
                   </motion.aside>
-                )}
               </AnimatePresence>
             </div>
           </motion.div>
@@ -1100,12 +1090,12 @@ export default function AmbarTeEscribePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#05060a]/95 z-[210] overflow-y-auto custom-scroll flex justify-center py-20 px-6 backdrop-blur-xl"
+            className="fixed inset-0 bg-[#080C0A]/95 z-[210] overflow-y-auto custom-scroll flex justify-center py-20 px-6 backdrop-blur-xl text-[#F4F6F0]"
           >
             <div className="max-w-[800px] w-full relative">
               <button
                 onClick={() => setActivePost(null)}
-                className="fixed top-8 right-8 md:right-20 w-12 h-12 rounded-full bg-black/40 border border-white/10 hover:border-amber-honey/40 text-white flex items-center justify-center hover:scale-105 transition-all shadow-2xl backdrop-blur-md"
+                className="fixed top-8 right-8 md:right-20 w-12 h-12 rounded-full bg-black/60 border border-white/20 hover:border-amber-honey/40 text-white flex items-center justify-center hover:scale-105 transition-all shadow-2xl backdrop-blur-md"
               >
                 <X size={18} />
               </button>
@@ -1116,7 +1106,7 @@ export default function AmbarTeEscribePage() {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ duration: 0.6 }}
-                    className="w-full aspect-[21/10] rounded-[3rem] overflow-hidden mb-12 border border-white/5 shadow-2xl"
+                    className="w-full aspect-[21/10] rounded-[3rem] overflow-hidden mb-12 border border-white/10 shadow-2xl"
                   >
                     <img src={activePost.image} alt={activePost.title} className="w-full h-full object-cover" />
                   </motion.div>
@@ -1127,21 +1117,21 @@ export default function AmbarTeEscribePage() {
                     {activePost.category_name || 'Crónica'}
                   </span>
 
-                  <div className="flex items-center gap-2 text-white/40">
+                  <div className="flex items-center gap-2 text-[#F4F6F0]/50">
                     <Calendar size={12} className="text-amber-honey" />
                     {new Date(activePost.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </div>
 
-                  <div className="flex items-center gap-2 text-white/40">
-                    <User size={12} className="text-amber-honey" /> MS Ambar
+                  <div className="flex items-center gap-2 text-[#F4F6F0]/50">
+                    <User size={12} className="text-amber-honey" /> Ms Ambar
                   </div>
                 </div>
 
-                <h1 className="text-4xl md:text-7xl font-black tracking-tighter mb-10 leading-none bg-gradient-to-r from-white via-white to-white/60 bg-clip-text text-transparent">
+                <h1 className="text-4xl md:text-7xl font-black tracking-tighter mb-10 leading-none text-[#F4F6F0]">
                   {activePost.title}
                 </h1>
 
-                <div className="h-px bg-gradient-to-r from-amber-honey/20 via-transparent to-transparent mb-12" />
+                <div className="h-px bg-gradient-to-r from-amber-honey/30 via-transparent to-transparent mb-12" />
 
                 <div
                   className="rich-text-content pb-20 select-text"

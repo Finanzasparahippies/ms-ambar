@@ -69,7 +69,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen text-nature-night flex items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen text-[#F4F6F0] flex items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Dynamic Background Gradients */}
       <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-amber-honey/5 blur-[150px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-nature-sky/5 blur-[150px] rounded-full pointer-events-none" />
@@ -86,16 +86,16 @@ export default function ResetPasswordPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-ping" />
             Reinicializar Acceso
           </span>
-          <h1 className="text-3xl md:text-4xl font-black text-nature-night uppercase italic tracking-tighter mt-2">
+          <h1 className="text-3xl md:text-4xl font-black text-[#F4F6F0] uppercase italic tracking-tighter mt-2">
             Nueva Contraseña
           </h1>
-          <p className="text-nature-night/50 text-xs font-bold uppercase tracking-wider mt-1 text-center">
+          <p className="text-[#F4F6F0]/50 text-xs font-bold uppercase tracking-wider mt-1 text-center">
             {email ? `Restableciendo para: ${email}` : 'Establece tu nueva contraseña de ingreso'}
           </p>
         </div>
 
         {/* Form Container Card */}
-        <div className="bg-white border border-nature-night/10 p-8 rounded-[2.5rem] shadow-xl shadow-nature-night/5 relative overflow-hidden">
+        <div className="amber-glass p-8 rounded-[2.5rem] relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-amber-honey to-transparent opacity-60" />
 
           <AnimatePresence mode="wait">
@@ -112,7 +112,7 @@ export default function ResetPasswordPage() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3 text-red-600 text-xs font-bold uppercase"
+                    className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400 text-xs font-bold uppercase"
                   >
                     <ShieldAlert className="w-5 h-5 shrink-0" />
                     <span>{error}</span>
@@ -121,9 +121,9 @@ export default function ResetPasswordPage() {
 
                 {/* Password Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Nueva Contraseña</label>
+                  <label className="text-[10px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Nueva Contraseña</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
                       <Lock size={16} />
                     </div>
                     <input
@@ -132,12 +132,12 @@ export default function ResetPasswordPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Nueva contraseña"
-                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-12 py-4 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
+                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-12 py-4 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-nature-night/30 hover:text-nature-night/60 transition-colors"
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/30 hover:text-white/60 transition-colors"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -146,9 +146,9 @@ export default function ResetPasswordPage() {
 
                 {/* Confirm Password Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-nature-night/60 uppercase tracking-widest font-black block pl-1">Confirmar Nueva Contraseña</label>
+                  <label className="text-[10px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Confirmar Nueva Contraseña</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-nature-night/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
                       <Lock size={16} />
                     </div>
                     <input
@@ -157,7 +157,7 @@ export default function ResetPasswordPage() {
                       value={passwordConfirm}
                       onChange={(e) => setPasswordConfirm(e.target.value)}
                       placeholder="Confirmar contraseña"
-                      className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-4 text-sm font-semibold text-nature-night placeholder-nature-night/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
+                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-4 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
                     />
                   </div>
                 </div>
@@ -186,11 +186,11 @@ export default function ResetPasswordPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="py-6 text-center flex flex-col items-center gap-5"
               >
-                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-600">
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400">
                   <CheckCircle size={36} className="animate-pulse" />
                 </div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight text-nature-night">Contraseña Cambiada</h3>
-                <p className="text-nature-night/70 text-xs font-semibold leading-relaxed px-4">
+                <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">Contraseña Cambiada</h3>
+                <p className="text-[#F4F6F0]/70 text-xs font-semibold leading-relaxed px-4">
                   Tu clave ha sido actualizada con éxito en el club de Ms Ambar. Redirigiéndote al inicio de sesión...
                 </p>
               </motion.div>

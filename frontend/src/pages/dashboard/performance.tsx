@@ -47,29 +47,29 @@ const PerformanceDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen text-nature-night flex flex-col items-center justify-center gap-4">
+      <div className="min-h-screen text-[#F4F6F0] flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-        <p className="text-nature-night/60 tracking-widest font-black uppercase text-xs">Cargando métricas de rendimiento...</p>
+        <p className="text-[#F4F6F0]/60 tracking-widest font-black uppercase text-xs">Cargando métricas de rendimiento...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen text-nature-night flex flex-col items-center justify-center gap-4 p-8 text-center">
-        <AlertTriangle className="text-red-600 w-16 h-16 animate-pulse" />
-        <h2 className="text-2xl font-black uppercase italic tracking-tight text-nature-night">{error}</h2>
+      <div className="min-h-screen text-[#F4F6F0] flex flex-col items-center justify-center gap-4 p-8 text-center">
+        <AlertTriangle className="text-red-500 w-16 h-16 animate-pulse" />
+        <h2 className="text-2xl font-black uppercase italic tracking-tight text-[#F4F6F0]">{error}</h2>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen text-nature-night p-8">
+    <div className="min-h-screen text-[#F4F6F0] p-8">
       <header className="mb-10">
-        <h1 className="text-4xl font-black text-nature-night tracking-tight uppercase italic">
+        <h1 className="text-4xl font-black text-[#F4F6F0] tracking-tight uppercase italic">
           Administrador de Rendimiento
         </h1>
-        <p className="text-nature-night/50 mt-2 font-semibold">Monitoreo profesional de Ms Ambar</p>
+        <p className="text-[#F4F6F0]/50 mt-2 font-semibold">Monitoreo profesional de Ms Ambar</p>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
@@ -92,7 +92,7 @@ const PerformanceDashboard = () => {
           detail="Registradas en este periodo"
         />
         <MetricCard
-          icon={<AlertTriangle className="text-[#b91c1c]" />}
+          icon={<AlertTriangle className="text-red-400" />}
           title="Tiempo Máximo"
           value={`${summary?.server?.max_response_time?.toFixed(2)}s`}
           detail="Peor caso registrado"
@@ -100,29 +100,29 @@ const PerformanceDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white border border-nature-night/10 rounded-2xl p-6 shadow-md shadow-nature-night/5">
-          <h2 className="text-xl font-black text-nature-night mb-6 flex items-center gap-2">
+        <div className="amber-glass border border-white/10 rounded-2xl p-6 shadow-lg shadow-black/20">
+          <h2 className="text-xl font-black text-[#F4F6F0] mb-6 flex items-center gap-2">
             <BarChart3 size={20} className="text-amber-honey" /> Core Web Vitals (Promedio)
           </h2>
           <div className="space-y-4">
             {summary?.vitals?.map((v: any) => (
-              <div key={v.name} className="flex items-center justify-between p-3 bg-nature-night/5 rounded-lg">
+              <div key={v.name} className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-lg">
                 <span className="font-mono text-amber-honey font-bold">{v.name}</span>
-                <span className="text-nature-night/85 font-semibold">{v.avg_value.toFixed(2)}</span>
+                <span className="text-[#F4F6F0]/85 font-semibold">{v.avg_value.toFixed(2)}</span>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white border border-nature-night/10 rounded-2xl p-6 shadow-md shadow-nature-night/5">
-          <h2 className="text-xl font-black text-nature-night mb-6 flex items-center gap-2">
+        <div className="amber-glass border border-white/10 rounded-2xl p-6 shadow-lg shadow-black/20">
+          <h2 className="text-xl font-black text-[#F4F6F0] mb-6 flex items-center gap-2">
             <Zap size={20} className="text-amber-honey" /> Endpoints más lentos
           </h2>
           <div className="space-y-4">
             {summary?.slowest_endpoints?.map((e: any, i: number) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-nature-night/5 rounded-lg">
-                <span className="text-sm font-mono truncate max-w-[250px] text-nature-night/60">{e.path}</span>
-                <span className="text-red-600 font-bold">{e.avg_time.toFixed(3)}s</span>
+              <div key={i} className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-lg">
+                <span className="text-sm font-mono truncate max-w-[250px] text-[#F4F6F0]/60">{e.path}</span>
+                <span className="text-red-400 font-bold">{e.avg_time.toFixed(3)}s</span>
               </div>
             ))}
           </div>
@@ -135,15 +135,15 @@ const PerformanceDashboard = () => {
 const MetricCard = ({ icon, title, value, detail }: any) => (
   <motion.div
     whileHover={{ y: -5 }}
-    className="bg-white border border-nature-night/10 rounded-2xl p-6 shadow-md shadow-nature-night/5"
+    className="amber-glass border border-white/10 rounded-2xl p-6 shadow-lg shadow-black/20"
   >
     <div className="flex items-center gap-3 mb-4">
       {icon}
-      <h3 className="text-nature-night/60 text-sm uppercase tracking-wider font-semibold">{title}</h3>
+      <h3 className="text-[#F4F6F0]/60 text-sm uppercase tracking-wider font-semibold">{title}</h3>
     </div>
-    <div className="text-3xl font-black text-nature-night mb-1">{value}</div>
-    <div className="text-nature-night/40 text-xs font-medium">{detail}</div>
+    <div className="text-3xl font-black text-[#F4F6F0] mb-1">{value}</div>
+    <div className="text-[#F4F6F0]/40 text-xs font-medium">{detail}</div>
   </motion.div>
 );
 
-export default PerformanceDashboard;
+export default PerformanceDashboard;ard;

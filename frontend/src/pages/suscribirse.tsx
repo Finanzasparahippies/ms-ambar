@@ -73,10 +73,10 @@ export default function Suscribirse() {
   };
 
   return (
-    <div className="min-h-screen text-nature-night flex items-center justify-center px-6 py-20 relative overflow-hidden font-sans selection:bg-amber-honey/30">
+    <div className="min-h-screen text-[#F4F6F0] flex items-center justify-center px-6 py-20 relative overflow-hidden font-sans selection:bg-amber-honey/30">
       <Head>
-        <title>Suscribirse al Boletín Oficial | Ms Ambar</title>
-        <meta name="description" content="Sintoniza con las crónicas, bitácoras y poemas exclusivos de Ms Ambar." />
+        <title>Solo para reales | Ms Ambar</title>
+        <meta name="description" content="Deja tu correo aquí y recibe el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
@@ -93,16 +93,16 @@ export default function Suscribirse() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.4 }}
-            className="max-w-md w-full bg-white border border-nature-night/10 p-8 md:p-12 rounded-[3.5rem] text-center shadow-xl shadow-nature-night/5 relative z-10"
+            className="max-w-md w-full amber-glass p-8 md:p-12 rounded-[3.5rem] text-center relative z-10"
           >
             <div className="w-16 h-16 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mx-auto mb-8 text-amber-honey shadow-[0_0_20px_rgba(245,158,11,0.1)]">
               <Mail size={24} className="animate-pulse" />
             </div>
 
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Cartas Oficiales</span>
-            <h2 className="text-3xl font-serif text-nature-night mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
-            <p className="text-nature-night/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
-              Únete al club exclusivo de Ms Ambar para recibir contenido de viajes, adelantos de producción y poemas íntimos directamente en tu bandeja de entrada.
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Newsletter Oficial</span>
+            <h2 className="text-3xl font-serif text-[#F4F6F0] mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
+            <p className="text-[#F4F6F0]/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
+              Deja tu correo aquí y recibe el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
             </p>
 
             <form className="flex flex-col gap-3 text-left" onSubmit={handleSubscribe}>
@@ -112,7 +112,7 @@ export default function Suscribirse() {
                 value={newsletterName}
                 onChange={e => setNewsletterName(e.target.value)}
                 placeholder="Tu Nombre"
-                className="w-full bg-white text-black rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-neutral-200 placeholder:text-neutral-400"
+                className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/20 transition-all border border-white/10 placeholder:text-white/30"
                 disabled={newsletterSubmitting}
               />
               <input
@@ -121,7 +121,7 @@ export default function Suscribirse() {
                 value={newsletterEmail}
                 onChange={e => setNewsletterEmail(e.target.value)}
                 placeholder="Tu Correo Electrónico"
-                className="w-full bg-white text-black rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-neutral-200 placeholder:text-neutral-400"
+                className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/20 transition-all border border-[#ffffff]/10 placeholder:text-white/30"
                 disabled={newsletterSubmitting}
               />
               <button
@@ -150,21 +150,21 @@ export default function Suscribirse() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.4 }}
-            className="max-w-md w-full bg-white border border-nature-night/10 p-8 md:p-12 rounded-[3.5rem] text-center shadow-xl shadow-nature-night/5 relative z-10"
+            className="max-w-md w-full amber-glass p-8 md:p-12 rounded-[3.5rem] text-center relative z-10"
           >
-            <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto mb-8 text-green-600 shadow-[0_0_20px_rgba(34,197,94,0.1)]">
+            <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center mx-auto mb-8 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.1)]">
               <Check size={28} className="animate-bounce" />
             </div>
 
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-green-600 block mb-2">¡Suscripción Completa!</span>
-            <h2 className="text-3xl font-serif text-nature-night mb-4 tracking-tight italic font-normal">Frecuencia Sintonizada</h2>
-            <p className="text-nature-night/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-green-400 block mb-2">¡Suscripción Completa!</span>
+            <h2 className="text-3xl font-serif text-[#F4F6F0] mb-4 tracking-tight italic font-normal">Frecuencia Sintonizada</h2>
+            <p className="text-[#F4F6F0]/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
               Gracias por sumarte. Hemos guardado tu suscripción correctamente. Muy pronto recibirás poemas y crónicas íntimas directo en tu bandeja de entrada.
             </p>
 
             <Link
               href="/"
-              className="w-full bg-nature-night/5 hover:bg-nature-night/10 active:scale-[0.98] border border-nature-night/10 text-nature-night font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 whitespace-nowrap text-center block hover:scale-[1.02]"
+              className="w-full bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 text-[#F4F6F0] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 whitespace-nowrap text-center block hover:scale-[1.02]"
             >
               Explorar Ms Ambar
             </Link>
@@ -182,22 +182,22 @@ export default function Suscribirse() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               className={`pointer-events-auto p-4 rounded-2xl border flex items-start gap-3 shadow-xl backdrop-blur-md ${toast.type === 'success'
-                ? 'bg-white border-amber-honey/30 text-nature-night'
-                : 'bg-white border-red-200 text-red-700'
+                ? 'bg-[#0B0F0D] border-amber-honey/30 text-[#F4F6F0]'
+                : 'bg-[#0B0F0D] border-red-500/30 text-red-400'
                 }`}
             >
-              <div className={`p-1.5 rounded-lg ${toast.type === 'success' ? 'bg-amber-honey/10 text-amber-honey animate-pulse' : 'bg-red-50 text-red-500'}`}>
+              <div className={`p-1.5 rounded-lg ${toast.type === 'success' ? 'bg-amber-honey/10 text-amber-honey animate-pulse' : 'bg-red-500/10 text-red-400'}`}>
                 {toast.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
               </div>
               <div className="flex-1 space-y-1">
-                <h4 className={`text-[10px] font-black uppercase tracking-widest ${toast.type === 'success' ? 'text-amber-honey' : 'text-red-500'}`}>
+                <h4 className={`text-[10px] font-black uppercase tracking-widest ${toast.type === 'success' ? 'text-amber-honey' : 'text-red-400'}`}>
                   {toast.type === 'success' ? 'SINTONIZACIÓN' : 'FRECUENCIA INCOMPATIBLE'}
                 </h4>
                 <p className="text-[11px] font-medium leading-relaxed opacity-85">{toast.message}</p>
               </div>
               <button
                 onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))}
-                className="text-nature-night/30 hover:text-nature-night transition-colors"
+                className="text-[#F4F6F0]/30 hover:text-[#F4F6F0] transition-colors"
               >
                 <X size={14} />
               </button>
