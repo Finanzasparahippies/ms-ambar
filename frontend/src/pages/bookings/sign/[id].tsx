@@ -177,7 +177,7 @@ const BookingSignaturePage = () => {
         if (isManager) {
           router.push('/dashboard');
         } else {
-          router.push('/contact');
+          router.push('/contacto');
         }
       }, 4000);
     } catch (err: any) {
@@ -201,7 +201,7 @@ const BookingSignaturePage = () => {
         <AlertTriangle size={32} />
         <p className="font-bold text-sm uppercase tracking-wide">{error}</p>
       </div>
-      <Link href="/contact" className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey hover:underline flex items-center gap-2">
+      <Link href="/contacto" className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey hover:underline flex items-center gap-2">
         <ArrowLeft size={12} /> Regresar a Solicitudes
       </Link>
     </div>

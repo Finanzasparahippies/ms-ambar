@@ -51,9 +51,43 @@ export default function AdminDashboard() {
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
   
   // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns'>('summary');
   const [contracts, setContracts] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
+
+  // Campaigns & Subscribers State
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers'>('campaigns');
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
+  const [campId, setCampId] = useState<number | null>(null);
+  const [campSubject, setCampSubject] = useState('');
+  const [campPoemText, setCampPoemText] = useState('');
+  const [campTemplateType, setCampTemplateType] = useState('minimalist');
+  const [campImageFile, setCampImageFile] = useState<File | null>(null);
+  const [campImagePreview, setCampImagePreview] = useState<string | null>(null);
+  
+  // Custom Background and CTA settings
+  const [campBgImageFile, setCampBgImageFile] = useState<File | null>(null);
+  const [campBgImagePreview, setCampBgImagePreview] = useState<string | null>(null);
+  const [campBgOpacity, setCampBgOpacity] = useState(1.0);
+  const [campBgSaturation, setCampBgSaturation] = useState(100);
+  const [campBgPosition, setCampBgPosition] = useState('center');
+  const [campCtaText, setCampCtaText] = useState('');
+  const [campCtaLink, setCampCtaLink] = useState('');
+
+  const [campLoading, setCampLoading] = useState(false);
+  const [campSuccessMsg, setCampSuccessMsg] = useState<string | null>(null);
+  const [campErrorMsg, setCampErrorMsg] = useState<string | null>(null);
+  const [previewCampaign, setPreviewCampaign] = useState<any | null>(null);
+  const [sendingCampaignId, setSendingCampaignId] = useState<number | null>(null);
+
+  // CSV Import State
+  const [importCsvFile, setImportCsvFile] = useState<File | null>(null);
+  const [importCsvLoading, setImportCsvLoading] = useState(false);
+  const [importCsvError, setImportCsvError] = useState<string | null>(null);
+  const [importCsvSuccess, setImportCsvSuccess] = useState<string | null>(null);
 
   // Shipment Simulator State
   const [shippingOrderId, setShippingOrderId] = useState<number | null>(null);
@@ -120,8 +154,8 @@ export default function AdminDashboard() {
     try {
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch analytics, system metrics, orders, expenses, products, categories, theaters, and booking contracts in parallel
-      const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes] = await Promise.all([
+      // Fetch analytics, system metrics, orders, expenses, products, categories, theaters, booking contracts, email campaigns, and subscribers in parallel
+      const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes] = await Promise.all([
         axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
         axios.get(`${API_URL}/dashboard/system/`, { headers }).catch(err => {
           console.error("System metrics fetch failed, using fallback", err);
@@ -132,7 +166,9 @@ export default function AdminDashboard() {
         axios.get(`${API_URL}/shop/products/`, { headers }),
         axios.get(`${API_URL}/shop/categories/`, { headers }),
         axios.get(`${API_URL}/tickets/theaters/`).catch(() => ({ data: [] })),
-        axios.get(`${API_URL}/bookings/contracts/`, { headers }).catch(() => ({ data: [] }))
+        axios.get(`${API_URL}/bookings/contracts/`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/blog/campaigns/`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API_URL}/blog/subscribers/`, { headers }).catch(() => ({ data: [] }))
       ]);
 
       setStats(analyticsRes.data);
@@ -142,6 +178,8 @@ export default function AdminDashboard() {
       setCategories(categoriesRes.data);
       setTheaters(Array.isArray(theatersRes.data) ? theatersRes.data : []);
       setContracts(Array.isArray(contractsRes.data) ? contractsRes.data : []);
+      setCampaigns(Array.isArray(campaignsRes.data) ? campaignsRes.data : []);
+      setSubscribers(Array.isArray(subscribersRes.data) ? subscribersRes.data : []);
       if (systemRes.data) {
         setSysMetrics(systemRes.data);
       }
@@ -177,6 +215,152 @@ export default function AdminDashboard() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // ════ Campaign CRUD Handlers ════
+  const openCampaignCreateModal = () => {
+    setEditingCampaign(null);
+    setCampId(null);
+    setCampSubject('');
+    setCampPoemText('');
+    setCampTemplateType('minimalist');
+    setCampImageFile(null);
+    setCampImagePreview(null);
+    setCampBgImageFile(null);
+    setCampBgImagePreview(null);
+    setCampBgOpacity(1.0);
+    setCampBgSaturation(100);
+    setCampBgPosition('center');
+    setCampCtaText('');
+    setCampCtaLink('');
+    setCampErrorMsg(null);
+    setCampSuccessMsg(null);
+    setIsCampaignModalOpen(true);
+  };
+
+  const openCampaignEditModal = (campaign: any) => {
+    setEditingCampaign(campaign);
+    setCampId(campaign.id);
+    setCampSubject(campaign.subject);
+    setCampPoemText(campaign.poem_text);
+    setCampTemplateType(campaign.template_type);
+    setCampImageFile(null);
+    setCampImagePreview(campaign.image || null);
+    setCampBgImageFile(null);
+    setCampBgImagePreview(campaign.bg_image || null);
+    setCampBgOpacity(campaign.bg_opacity ?? 1.0);
+    setCampBgSaturation(campaign.bg_saturation ?? 100);
+    setCampBgPosition(campaign.bg_position || 'center');
+    setCampCtaText(campaign.cta_text || '');
+    setCampCtaLink(campaign.cta_link || '');
+    setCampErrorMsg(null);
+    setCampSuccessMsg(null);
+    setIsCampaignModalOpen(true);
+  };
+
+  const handleCampaignSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campSubject.trim()) { setCampErrorMsg('El asunto es obligatorio.'); return; }
+    if (!campPoemText.trim()) { setCampErrorMsg('El texto del poema es obligatorio.'); return; }
+    
+    setCampLoading(true);
+    setCampErrorMsg(null);
+    setCampSuccessMsg(null);
+
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+
+    const formData = new FormData();
+    formData.append('subject', campSubject);
+    formData.append('poem_text', campPoemText);
+    formData.append('template_type', campTemplateType);
+    if (campImageFile) {
+      formData.append('image', campImageFile);
+    }
+    formData.append('bg_opacity', String(campBgOpacity));
+    formData.append('bg_saturation', String(campBgSaturation));
+    formData.append('bg_position', campBgPosition);
+    formData.append('cta_text', campCtaText);
+    formData.append('cta_link', campCtaLink);
+    if (campBgImageFile) {
+      formData.append('bg_image', campBgImageFile);
+    }
+
+    try {
+      if (campId) {
+        await axios.patch(`${API_URL}/blog/campaigns/${campId}/`, formData, { headers });
+        setCampSuccessMsg('¡Campaña de correos actualizada con éxito!');
+      } else {
+        await axios.post(`${API_URL}/blog/campaigns/`, formData, { headers });
+        setCampSuccessMsg('¡Campaña de correos creada con éxito!');
+      }
+      setIsCampaignModalOpen(false);
+      fetchDashboardData();
+    } catch (err: any) {
+      console.error(err);
+      setCampErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar la campaña.');
+    } finally {
+      setCampLoading(false);
+    }
+  };
+
+  const handleCampaignDelete = async (id: number, subject: string) => {
+    if (!confirm(`¿Eliminar permanentemente la campaña "${subject}"?`)) return;
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      await axios.delete(`${API_URL}/blog/campaigns/${id}/`, { headers });
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Error eliminando campaña:', err);
+    }
+  };
+
+  const handleCampaignSend = async (id: number) => {
+    if (!confirm('¿Estás seguro de que deseas enviar esta campaña de poemas a todos los suscriptores activos? Esta acción es irreversible.')) return;
+    setSendingCampaignId(id);
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      await axios.post(`${API_URL}/blog/campaigns/${id}/send_campaign/`, {}, { headers });
+      alert('¡Envío de campaña iniciado con éxito en segundo plano!');
+      fetchDashboardData();
+    } catch (err: any) {
+      console.error(err);
+      alert(err.response?.data?.error || 'Error al enviar la campaña.');
+    } finally {
+      setSendingCampaignId(null);
+    }
+  };
+
+  const handleCsvImport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!importCsvFile) {
+      setImportCsvError('Por favor selecciona un archivo CSV.');
+      return;
+    }
+    setImportCsvLoading(true);
+    setImportCsvError(null);
+    setImportCsvSuccess(null);
+    const token = localStorage.getItem('token');
+    const headers = { 
+      Authorization: `Bearer ${token}`
+    };
+    const formData = new FormData();
+    formData.append('file', importCsvFile);
+    try {
+      const res = await axios.post(`${API_URL}/blog/subscribers/import_csv/`, formData, { headers });
+      setImportCsvSuccess(res.data.message || 'Importación completada con éxito.');
+      setImportCsvFile(null);
+      const fileInput = document.getElementById('csv-file-input') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+      fetchDashboardData();
+    } catch (err: any) {
+      console.error(err);
+      setImportCsvError(err.response?.data?.error || 'Error al importar los contactos.');
+    } finally {
+      setImportCsvLoading(false);
+    }
+  };
 
   // ════ Theater CRUD Handlers (Nectar Pro) ════
   const openTheaterCreateModal = () => {
@@ -709,6 +893,16 @@ export default function AdminDashboard() {
               {contracts.filter(c => !c.is_fully_signed).length}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('campaigns')}
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
+            activeTab === 'campaigns'
+              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
+              : 'text-white/60 hover:text-white hover:bg-white/5'
+          }`}
+        >
+          📧 Campañas de Poemas
         </button>
       </div>
 
@@ -2166,7 +2360,756 @@ export default function AdminDashboard() {
 
             </motion.div>
           )}
+
+          {/* TAB 7: EMAIL CAMPAIGNS */}
+          {activeTab === 'campaigns' && (
+            <motion.div
+              key="campaigns-tab"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-8"
+            >
+              {/* Campaigns Sub-Tab Navigation Bar */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white/[0.01] border border-white/5 p-4 rounded-[2rem]">
+                <div className="flex gap-2 bg-white/[0.02] border border-white/5 p-1 rounded-xl">
+                  <button
+                    onClick={() => setCampaignSubTab('campaigns')}
+                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      campaignSubTab === 'campaigns' 
+                        ? 'bg-white/10 text-white' 
+                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    📧 Campañas de Poemas ({campaigns.length})
+                  </button>
+                  <button
+                    onClick={() => setCampaignSubTab('subscribers')}
+                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                      campaignSubTab === 'subscribers' 
+                        ? 'bg-white/10 text-white' 
+                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    👥 Lista de Suscriptores ({subscribers.length})
+                  </button>
+                </div>
+
+                {campaignSubTab === 'campaigns' ? (
+                  <button
+                    onClick={openCampaignCreateModal}
+                    className="bg-amber-honey text-black px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-gold transition-all flex items-center gap-2"
+                  >
+                    <Plus size={14} /> Nueva Campaña
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest font-black pr-4">
+                    Importación y Gestión de Contactos
+                  </span>
+                )}
+              </div>
+
+              {campaignSubTab === 'campaigns' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {campaigns.length === 0 ? (
+                    <div className="col-span-full p-12 text-center rounded-[2rem] border border-white/5 bg-white/[0.01] text-xs text-white/30 italic">
+                      No has creado ninguna campaña de poemas todavía.
+                    </div>
+                  ) : (
+                    campaigns.map((c: any) => (
+                      <div key={c.id} className="p-6 rounded-[2rem] border border-white/5 bg-white/[0.02] space-y-4 hover:border-amber-honey/20 transition-all flex flex-col justify-between">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-start">
+                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
+                              c.template_type === 'moss' ? 'bg-green-950 text-green-300 border border-green-800' :
+                              c.template_type === 'cosmic' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                              c.template_type === 'glow' ? 'bg-yellow-950 text-yellow-300 border border-yellow-800' :
+                              c.template_type === 'mist' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' :
+                              'bg-neutral-900 text-neutral-300 border border-neutral-700'
+                            }`}>
+                              {c.template_type === 'minimalist' ? 'Minimalist Carbon' :
+                               c.template_type === 'moss' ? 'Moss Green' :
+                               c.template_type === 'cosmic' ? 'Cosmic Night' :
+                               c.template_type === 'glow' ? 'Amber Glow' :
+                               c.template_type === 'mist' ? 'Mystic Mist' : c.template_type}
+                            </span>
+                            
+                            {c.is_sent ? (
+                              <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                Enviada
+                              </span>
+                            ) : (
+                              <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
+                                Borrador
+                              </span>
+                            )}
+                          </div>
+
+                          <div>
+                            <h4 className="text-base font-black text-white leading-snug line-clamp-2">{c.subject}</h4>
+                            <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-1">
+                              Creado: {new Date(c.created_at).toLocaleDateString('es-MX')}
+                            </p>
+                            {c.is_sent && c.sent_at && (
+                              <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest font-mono">
+                                Enviado: {new Date(c.sent_at).toLocaleDateString('es-MX')}
+                              </p>
+                            )}
+                          </div>
+
+                          <p className="text-xs text-white/50 line-clamp-4 italic bg-black/20 p-4 rounded-2xl border border-white/[0.02] whitespace-pre-line">
+                            {c.poem_text.substring(0, 180)}{c.poem_text.length > 180 ? '...' : ''}
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2 pt-4 border-t border-white/5">
+                          <button
+                            onClick={() => setPreviewCampaign(c)}
+                            className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 text-white/80"
+                          >
+                            <Eye size={12} /> Previsualizar
+                          </button>
+                          
+                          {!c.is_sent && (
+                            <>
+                              <button
+                                onClick={() => openCampaignEditModal(c)}
+                                className="w-10 h-10 bg-white/5 hover:bg-amber-honey/10 border border-white/10 hover:border-amber-honey/30 rounded-xl flex items-center justify-center text-white/60 hover:text-amber-honey transition-all"
+                                title="Editar"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <button
+                                onClick={() => handleCampaignSend(c.id)}
+                                disabled={sendingCampaignId === c.id}
+                                className="flex-1 py-2 bg-amber-honey hover:bg-amber-gold text-black rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1 font-bold shadow-lg shadow-amber-honey/15"
+                              >
+                                {sendingCampaignId === c.id ? 'Enviando...' : '🚀 Enviar'}
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleCampaignDelete(c.id, c.subject)}
+                            className="w-10 h-10 bg-white/5 hover:bg-red-500/10 border border-white/10 hover:border-red-500/30 rounded-xl flex items-center justify-center text-white/40 hover:text-red-400 transition-all"
+                            title="Eliminar"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {campaignSubTab === 'subscribers' && (
+                <div className="space-y-6">
+                  {/* Summary & CSV Uploader split */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Stats */}
+                    <div className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass flex flex-col justify-between gap-4">
+                      <div>
+                        <h4 className="text-xs font-black uppercase tracking-wider text-white/50 mb-4">Métricas del Newsletter</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                            <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Activos</span>
+                            <span className="text-2xl font-black text-white font-mono">{subscribers.filter(s => s.is_active).length}</span>
+                          </div>
+                          <div className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl">
+                            <span className="text-[8px] uppercase tracking-widest opacity-40 font-bold block">Premium</span>
+                            <span className="text-2xl font-black text-amber-honey font-mono">{subscribers.filter(s => s.is_premium).length}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-white/30 uppercase tracking-widest font-black pl-1">
+                        Total en Bóveda: {subscribers.length} contactos
+                      </div>
+                    </div>
+
+                    {/* CSV Importer Form */}
+                    <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2 mb-2">
+                        📥 Importador Masivo de Contactos (CSV)
+                      </h4>
+                      <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mb-4">
+                        Sube un archivo para importar o actualizar tu lista. Columnas soportadas: subscriber_id, api_subscription_id, email, tags, status, premium?, created_at
+                      </p>
+
+                      <form onSubmit={handleCsvImport} className="flex flex-col sm:flex-row gap-4 items-end">
+                        <div className="space-y-1.5 flex-1 w-full">
+                          <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Seleccionar Archivo CSV</label>
+                          <input
+                            type="file"
+                            id="csv-file-input"
+                            accept=".csv"
+                            onChange={e => {
+                              const file = e.target.files?.[0] || null;
+                              setImportCsvFile(file);
+                            }}
+                            className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-500 transition-all font-semibold file:bg-white/10 file:border-0 file:rounded-lg file:text-white file:px-3 file:py-1 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer"
+                          />
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={importCsvLoading}
+                          className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] px-6 py-4 rounded-xl transition-all shadow-[0_2px_15px_rgba(245,158,11,0.15)] disabled:opacity-50 w-full sm:w-auto self-stretch sm:self-end flex items-center justify-center gap-2"
+                        >
+                          {importCsvLoading ? (
+                            <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                          ) : (
+                            'Importar Contactos'
+                          )}
+                        </button>
+                      </form>
+
+                      {importCsvSuccess && (
+                        <div className="mt-4 p-3 bg-green-500/10 border border-green-500/25 text-green-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
+                          {importCsvSuccess}
+                        </div>
+                      )}
+                      {importCsvError && (
+                        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/25 text-red-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center">
+                          {importCsvError}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Subscribers list table */}
+                  <div className="bg-white/[0.01] border border-white/5 rounded-[2rem] p-6 overflow-hidden">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-white mb-4">Lista de Contactos</h4>
+                    {subscribers.length === 0 ? (
+                      <div className="p-8 text-center text-xs text-white/30 italic">
+                        No hay suscriptores en la base de datos.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b border-white/5 text-[9px] uppercase tracking-widest opacity-40 text-left">
+                              <th className="py-3 font-black">Email</th>
+                              <th className="py-3 font-black">ID Suscriptor</th>
+                              <th className="py-3 font-black">ID API</th>
+                              <th className="py-3 font-black">Tags</th>
+                              <th className="py-3 font-black text-center">Estado</th>
+                              <th className="py-3 font-black text-center">Premium</th>
+                              <th className="py-3 font-black text-right">Fecha Registro</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subscribers.map((s: any, idx: number) => (
+                              <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-all text-xs">
+                                <td className="py-3 font-black text-white/80">{s.email}</td>
+                                <td className="py-3 font-mono text-white/40">{s.subscriber_id || '-'}</td>
+                                <td className="py-3 font-mono text-white/40">{s.api_subscription_id || '-'}</td>
+                                <td className="py-3">
+                                  {s.tags ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {s.tags.split(',').map((t: string, i: number) => (
+                                        <span key={i} className="bg-white/5 border border-white/10 px-2 py-0.5 rounded-md text-[8px] font-bold text-white/50">
+                                          {t.trim()}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="text-white/20">-</span>
+                                  )}
+                                </td>
+                                <td className="py-3 text-center">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+                                    s.is_active ? 'bg-green-500/10 border border-green-500/25 text-green-400' : 'bg-red-500/10 border border-red-500/25 text-red-400'
+                                  }`}>
+                                    {s.is_active ? 'Activo' : 'Inactivo'}
+                                  </span>
+                                </td>
+                                <td className="py-3 text-center">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
+                                    s.is_premium ? 'bg-amber-honey/20 border border-amber-honey/30 text-amber-honey' : 'bg-white/5 border border-white/10 text-white/30'
+                                  }`}>
+                                    {s.is_premium ? 'Premium' : 'Estándar'}
+                                  </span>
+                                </td>
+                                <td className="py-3 font-mono text-right text-white/40">
+                                  {new Date(s.created_at).toLocaleDateString('es-MX')}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
+
+        {/* Campaign Creation/Edition Modal */}
+        {isCampaignModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-[#0b0c10] border border-white/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative"
+            >
+              <button
+                onClick={() => setIsCampaignModalOpen(false)}
+                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-white/40 hover:text-white flex items-center justify-center transition-all hover:bg-white/5"
+              >
+                <X size={16} />
+              </button>
+
+              <div>
+                <h3 className="text-xl font-black uppercase italic tracking-tight">
+                  {campId ? 'Editar Campaña de Poemas' : 'Nueva Campaña de Poemas'}
+                </h3>
+                <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mt-1">
+                  Redacta y elige el diseño de fondo premium
+                </p>
+              </div>
+
+              <form onSubmit={handleCampaignSubmit} className="space-y-6">
+                {campErrorMsg && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-xs font-bold uppercase tracking-wide">
+                    ⚠️ {campErrorMsg}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Asunto del Correo</label>
+                  <input
+                    type="text"
+                    value={campSubject}
+                    onChange={e => setCampSubject(e.target.value)}
+                    placeholder="Ej. Susurros del Desierto - Un poema de MS AMBAR"
+                    required
+                    className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Plantilla de Fondo / Diseño Premium</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                    {[
+                      { id: 'minimalist', name: 'Carbon', desc: 'Negro & Ámbar', class: 'bg-[#0c0d13] border-amber-honey/40 text-amber-honey' },
+                      { id: 'moss', name: 'Moss', desc: 'Verde Musgo', class: 'bg-[#122017] border-green-800 text-green-300' },
+                      { id: 'cosmic', name: 'Cosmic', desc: 'Índigo Cósmico', class: 'bg-[#0c0a1a] border-purple-800 text-purple-300' },
+                      { id: 'glow', name: 'Glow', desc: 'Cálido Miel', class: 'bg-[#1a130c] border-amber-700 text-amber-500' },
+                      { id: 'mist', name: 'Mist', desc: 'Gris Pizarra', class: 'bg-[#181b22] border-cyan-800 text-cyan-400' },
+                    ].map(t => (
+                      <div
+                        key={t.id}
+                        onClick={() => setCampTemplateType(t.id)}
+                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${t.class} ${
+                          campTemplateType === t.id ? 'ring-2 ring-amber-honey border-transparent' : 'opacity-65 hover:opacity-100'
+                        }`}
+                      >
+                        <span className="text-[10px] font-black uppercase tracking-wider">{t.name}</span>
+                        <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t.desc}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Cuerpo del Poema (Líricas)</label>
+                  <textarea
+                    value={campPoemText}
+                    onChange={e => setCampPoemText(e.target.value)}
+                    placeholder="Escribe el poema aquí con saltos de línea normales..."
+                    required
+                    rows={8}
+                    className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-amber-honey transition-all resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Imagen de Portada (Opcional)</label>
+                  <div className="flex items-center gap-4">
+                    {campImagePreview && (
+                      <div className="w-20 h-20 rounded-2xl overflow-hidden border border-white/10">
+                        <img src={campImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCampImageFile(file);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setCampImagePreview(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        };
+                      }}
+                      className="text-xs text-white/60 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-white/5 file:text-white file:cursor-pointer hover:file:bg-white/10"
+                    />
+                  </div>
+                </div>
+
+                {/* Advanced Background Design Settings */}
+                <div className="bg-white/[0.02] border border-white/5 p-5 rounded-3xl space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
+                    🖼️ Configuración de Fondo del Correo
+                  </h4>
+
+                  {/* Background Image Upload */}
+                  <div className="space-y-2">
+                    <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Imagen de Fondo (Opcional)</label>
+                    <div className="flex gap-4 items-center bg-white/[0.01] border border-white/5 p-4 rounded-xl">
+                      <div className="w-16 h-16 bg-white/[0.02] rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
+                        {campBgImagePreview ? (
+                          <img src={campBgImagePreview} alt="Background Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <Eye size={20} className="text-white/10" />
+                        )}
+                      </div>
+                      <div className="space-y-1 flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setCampBgImageFile(file);
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setCampBgImagePreview(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="text-[10px] text-white/60 file:bg-white/5 file:border-0 file:rounded-lg file:text-white file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer"
+                        />
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest font-bold">Añade una imagen que se blendeará con la plantilla.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Sliders and Selects */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Opacity */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[9px] text-white/40 uppercase tracking-widest font-black">
+                        <span>Opacidad</span>
+                        <span className="text-amber-honey font-mono">{Math.round(campBgOpacity * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.05"
+                        value={campBgOpacity}
+                        onChange={e => setCampBgOpacity(parseFloat(e.target.value))}
+                        className="w-full h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                      />
+                    </div>
+
+                    {/* Saturation */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[9px] text-white/40 uppercase tracking-widest font-black">
+                        <span>Saturación</span>
+                        <span className="text-amber-honey font-mono">{campBgSaturation}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="200"
+                        step="10"
+                        value={campBgSaturation}
+                        onChange={e => setCampBgSaturation(parseInt(e.target.value))}
+                        className="w-full h-1 bg-white/5 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                      />
+                    </div>
+
+                    {/* Position */}
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block">Posición del Fondo</label>
+                      <select
+                        value={campBgPosition}
+                        onChange={e => setCampBgPosition(e.target.value)}
+                        className="w-full bg-[#080808] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-500 transition-all font-semibold uppercase tracking-wider text-white"
+                      >
+                        <option value="center">Centro</option>
+                        <option value="top">Superior</option>
+                        <option value="bottom">Inferior</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Call To Action settings */}
+                <div className="bg-white/[0.02] border border-white/5 p-5 rounded-3xl space-y-4">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
+                    🎯 Botón de Llamada a la Acción (CTA)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block pl-1">Texto del Botón</label>
+                      <input
+                        type="text"
+                        value={campCtaText}
+                        onChange={e => setCampCtaText(e.target.value)}
+                        placeholder="Ej. Escuchar Single"
+                        className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-white/40 uppercase tracking-widest font-black block pl-1">Enlace del Botón (URL)</label>
+                      <input
+                        type="url"
+                        value={campCtaLink}
+                        onChange={e => setCampCtaLink(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full bg-white/5 text-white border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4 justify-end pt-4 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setIsCampaignModalOpen(false)}
+                    className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={campLoading}
+                    className="px-8 py-3 bg-amber-honey text-black rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/15 disabled:opacity-50 transition-all"
+                  >
+                    {campLoading ? 'Procesando...' : campId ? 'Actualizar Campaña' : 'Crear Campaña'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Simulated Email Client Live Preview Modal */}
+        {previewCampaign && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-[#0b0c10] border border-white/10 w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative flex flex-col max-h-[90vh]"
+            >
+              <button
+                onClick={() => setPreviewCampaign(null)}
+                className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-white/40 hover:text-white flex items-center justify-center transition-all hover:bg-white/5"
+              >
+                <X size={16} />
+              </button>
+
+              <div>
+                <h3 className="text-xl font-black uppercase italic tracking-tight">Previsualización de Correo</h3>
+                <p className="text-[9px] text-white/40 uppercase tracking-widest font-bold mt-1">Simulación de bandeja de entrada</p>
+              </div>
+
+              {/* Simulated Email Client Frame */}
+              <div className="border border-white/10 rounded-2xl overflow-hidden flex flex-col flex-1 bg-black/40">
+                {/* Email header bar */}
+                <div className="bg-black/80 border-b border-white/5 px-6 py-4 space-y-1.5 text-xs text-white/60">
+                  <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">De:</span> MS AMBAR &lt;escribe@msambar.dev&gt;</div>
+                  <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
+                  <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-white font-semibold">{previewCampaign.subject}</span></div>
+                </div>
+                
+                {/* Email body simulation */}
+                <div className="flex-1 overflow-y-auto p-8 custom-scroll" style={{
+                  backgroundColor: 
+                    previewCampaign.template_type === 'moss' ? '#0b130e' :
+                    previewCampaign.template_type === 'cosmic' ? '#05050f' :
+                    previewCampaign.template_type === 'glow' ? '#0f0b07' :
+                    previewCampaign.template_type === 'mist' ? '#0f1115' : '#06070b'
+                }}>
+                  <div style={{
+                    maxWidth: '500px',
+                    margin: '0 auto',
+                    backgroundColor:
+                      previewCampaign.template_type === 'moss' ? '#122017' :
+                      previewCampaign.template_type === 'cosmic' ? '#0c0a1a' :
+                      previewCampaign.template_type === 'glow' ? '#1a130c' :
+                      previewCampaign.template_type === 'mist' ? '#181b22' : '#0c0d13',
+                    border:
+                      previewCampaign.template_type === 'moss' ? '1px solid #2e4d38' :
+                      previewCampaign.template_type === 'cosmic' ? '1px solid #4a154b' :
+                      previewCampaign.template_type === 'glow' ? '1px solid #d97706' :
+                      previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
+                    padding: '30px',
+                    borderRadius: '20px',
+                    fontFamily: 'Georgia, serif',
+                    textAlign: 'left',
+                    // Background Image Overlay & blending simulation
+                    ...(previewCampaign.bg_image ? {
+                      backgroundImage: `linear-gradient(rgba(${
+                        previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                        previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                        previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                        previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                      }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${
+                        previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                        previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                        previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                        previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                      }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))})) , url(${previewCampaign.bg_image})`,
+                      backgroundPosition: previewCampaign.bg_position || 'center',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundSize: 'cover',
+                      filter: `saturate(${previewCampaign.bg_saturation ?? 100}%)`,
+                    } : {})
+                  }}>
+                    {/* Logo header */}
+                    <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                      <div style={{
+                        display: 'inline-block',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor:
+                          previewCampaign.template_type === 'moss' ? '#82c99b' :
+                          previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                          previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                        color: '#030303',
+                        lineHeight: '40px',
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                        fontSize: '20px'
+                      }}>A</div>
+                      <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>MS AMBAR</h4>
+                      <p style={{
+                        color:
+                          previewCampaign.template_type === 'moss' ? '#82c99b' :
+                          previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                          previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                        fontSize: '8px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '2px',
+                        margin: '2px 0 0 0'
+                      }}>Ambar Te Escribe • Poesía</p>
+                    </div>
+
+                    {/* Optional cover image */}
+                    {previewCampaign.image && (
+                      <div style={{
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        marginBottom: '20px',
+                        border: '1px solid rgba(255,255,255,0.05)'
+                      }}>
+                        <img src={previewCampaign.image} style={{ width: '100%', height: 'auto', display: 'block' }} alt="Cover" />
+                      </div>
+                    )}
+
+                    {/* Subject as title inside email */}
+                    <h3 style={{
+                      color: '#ffffff',
+                      fontSize: '20px',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      fontStyle: 'italic',
+                      marginBottom: '25px'
+                    }}>{previewCampaign.subject}</h3>
+
+                    {/* Poem body */}
+                    <div style={{
+                      color: 
+                        previewCampaign.template_type === 'moss' ? '#f5fbf7' :
+                        previewCampaign.template_type === 'cosmic' ? '#ffffff' :
+                        previewCampaign.template_type === 'glow' ? '#fffdfa' :
+                        previewCampaign.template_type === 'mist' ? '#f3f4f6' : '#ffffff',
+                      fontSize: '14px',
+                      lineHeight: '1.8',
+                      textAlign: 'center',
+                      fontStyle: 'italic',
+                      opacity: 0.95
+                    }}>
+                      {previewCampaign.poem_text.split('\n').map((line: string, idx: number) => (
+                        line.trim() ? (
+                          <p key={idx} style={{ margin: '0 0 12px 0' }}>{line}</p>
+                        ) : (
+                          <div key={idx} style={{ height: '12px' }} />
+                        )
+                      ))}
+                    </div>
+
+                    {/* Dynamic CTA Button */}
+                    {previewCampaign.cta_text && previewCampaign.cta_link && (
+                      <div style={{ textAlign: 'center', marginTop: '30px', marginBottom: '20px' }}>
+                        <a 
+                          href={previewCampaign.cta_link} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{
+                            backgroundColor:
+                              previewCampaign.template_type === 'moss' ? '#82c99b' :
+                              previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                              previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                              previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                            color: '#030303',
+                            padding: '14px 28px',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            fontWeight: 'bold',
+                            textDecoration: 'none',
+                            display: 'inline-block',
+                            letterSpacing: '1px',
+                            textTransform: 'uppercase',
+                            boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+                          }}
+                        >
+                          {previewCampaign.cta_text}
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Footer */}
+                    <div style={{
+                      textAlign: 'center',
+                      borderTop: '1px solid rgba(255,255,255,0.05)',
+                      paddingTop: '15px',
+                      marginTop: '30px',
+                      color: 'rgba(255,255,255,0.3)',
+                      fontSize: '9px',
+                      lineHeight: '1.4'
+                    }}>
+                      <p style={{ margin: '0 0 8px 0' }}>Recibiste este poema porque eres parte del círculo de MS AMBAR.</p>
+                      <p style={{ margin: '0' }}>
+                        <span style={{
+                          color:
+                            previewCampaign.template_type === 'moss' ? '#82c99b' :
+                            previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                            previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                            previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                          textDecoration: 'underline',
+                          cursor: 'pointer'
+                        }}>Desuscribirse del boletín</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setPreviewCampaign(null)}
+                  className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                >
+                  Cerrar Vista Previa
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
       </div>
     </div>

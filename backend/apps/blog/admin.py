@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Post, NewsletterSubscriber
+from .models import Category, Post, NewsletterSubscriber, EmailCampaign
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -18,4 +18,10 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
     list_display = ('email', 'created_at', 'is_active')
     search_fields = ('email',)
     list_filter = ('created_at', 'is_active')
+
+@admin.register(EmailCampaign)
+class EmailCampaignAdmin(admin.ModelAdmin):
+    list_display = ('subject', 'template_type', 'is_sent', 'sent_at', 'created_at')
+    list_filter = ('template_type', 'is_sent')
+    search_fields = ('subject', 'poem_text')
 

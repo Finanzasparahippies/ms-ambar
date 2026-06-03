@@ -1,34 +1,47 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <title>{% block email_title %}MS AMBAR{% endblock %}</title>
-  </head>
-  <body style="background-color: #06070b; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px 20px; margin: 0; -webkit-font-smoothing: antialiased;">
-    <div style="max-width: 600px; margin: 0 auto; background: #0c0d13; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
-      
-      <!-- Header/Logo -->
-      <div style="text-align: center; margin-bottom: 40px;">
-        <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">A</div>
-        <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">MS AMBAR</h1>
-        <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">{% block subtitle %}Bitácora de Luz & Sonido{% endblock %}</p>
-      </div>
-      
-      <!-- Content Area -->
-      {% block content %}
-      {% endblock %}
-      
-      <!-- Footer -->
-      <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px; line-height: 1.5;">
-        <p style="margin: 0 0 10px 0;">Este es un mensaje automático de la plataforma oficial de MS AMBAR.</p>
-        <p style="margin: 0;">
-          {% block footer_links %}
-          <a href="{{ frontend_url }}" style="color: #f59e0b; text-decoration: underline; margin: 0 10px;">Sitio Web</a>
-          <a href="{{ frontend_url }}/blog" style="color: #f59e0b; text-decoration: underline; margin: 0 10px;">Journal</a>
-          {% endblock %}
-        </p>
-      </div>
-      
+
+<head>
+  <meta charset="utf-8">
+  <title>{% block email_title %}MS AMBAR{% endblock %}</title>
+</head>
+
+<body
+  style="background-color: #06070b; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+  <div
+    style="max-width: 600px; margin: 0 auto; background: #0c0d13; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+
+    <!-- Header/Logo -->
+    <div style="text-align: center; margin-bottom: 40px;">
+      <div
+        style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+        A</div>
+      <h1
+        style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">
+        MS AMBAR</h1>
+      <p
+        style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">
+        {% block subtitle %}Cartas desde el escenario{% endblock %}</p>
     </div>
-  </body>
+
+    <!-- Content Area -->
+    {% block content %}
+    {% endblock %}
+
+    <!-- Footer -->
+    <div
+      style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px; line-height: 1.5;">
+      <p style="margin: 0 0 10px 0;">Este es un mensaje automático de la plataforma oficial de MS AMBAR.</p>
+      <p style="margin: 0;">
+        {% block footer_links %}
+        <a href="{{ frontend_url }}" style="color: #f59e0b; text-decoration: underline; margin: 0 10px;">Sitio Web</a>
+        <a href="{{ frontend_url }}/blog"
+          style="color: #f59e0b; text-decoration: underline; margin: 0 10px;">Journal</a>
+        {% endblock %}
+      </p>
+    </div>
+
+  </div>
+</body>
+
 </html>

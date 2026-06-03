@@ -55,10 +55,12 @@ const Layout = ({ children }: LayoutProps) => {
             <h4 className="text-xs font-black uppercase tracking-widest mb-6 text-amber-honey">Navegación</h4>
             <ul className="space-y-4 text-xs font-bold opacity-60">
               <li><a href="/" className="hover:text-amber-honey">Inicio</a></li>
-              <li><a href="/tour" className="hover:text-amber-honey">Tour</a></li>
-              <li><a href="/music" className="hover:text-amber-honey">Música</a></li>
-              <li><a href="/gallery" className="hover:text-amber-honey">Galería</a></li>
-              <li><a href="/merch" className="hover:text-amber-honey">Shop</a></li>
+              <li><a href="/comprar-boletos" className="hover:text-amber-honey">Accesos</a></li>
+              <li><a href="/musica" className="hover:text-amber-honey">Música</a></li>
+              <li><a href="/galleria" className="hover:text-amber-honey">Galería</a></li>
+              <li><a href="/tienda" className="hover:text-amber-honey">Tienda</a></li>
+              <li><a href="/ambar-te-escribe" className="hover:text-amber-honey">Ambar Te Escribe</a></li>
+              <li><a href="/contacto" className="hover:text-amber-honey">Contacto</a></li>
             </ul>
           </div>
           <div>

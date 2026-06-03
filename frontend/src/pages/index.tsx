@@ -797,7 +797,7 @@ const Home = () => {
     setNewsletterErrorMessage('');
 
     try {
-      await axios.post(`${API_URL}/blog/subscribers/`, { 
+      await axios.post(`${API_URL}/blog/subscribers/`, {
         email: newsletterEmail,
         name: newsletterName
       });
@@ -885,13 +885,13 @@ const Home = () => {
             className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-6"
           >
             <Link
-              href="/tour"
+              href="/comprar-boletos"
               className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/20 hover:scale-105 hover:shadow-amber-honey/40 transition-all flex items-center gap-3"
             >
               <Ticket size={14} /> Adquirir Boletos
             </Link>
             <Link
-              href="/contact"
+              href="/contacto"
               className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all flex items-center gap-3"
             >
               Proponer Booking <ArrowRight size={14} />
@@ -908,7 +908,7 @@ const Home = () => {
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Lanzamientos Recientes</span>
               <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tight mt-2">Música & Producción</h3>
             </div>
-            <Link href="/music" className="text-xs font-bold uppercase tracking-widest text-white/40 hover:text-amber-honey transition-colors flex items-center gap-2 mt-4 md:mt-0">
+            <Link href="/musica" className="text-xs font-bold uppercase tracking-widest text-white/40 hover:text-amber-honey transition-colors flex items-center gap-2 mt-4 md:mt-0">
               Escuchar Discografía Completa <ChevronRight size={14} />
             </Link>
           </div>
@@ -923,7 +923,7 @@ const Home = () => {
                 <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-6 border border-white/5">
                   <img src={track.img} alt={track.title} className="object-cover w-full h-full grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Link href="/music" className="w-16 h-16 rounded-full bg-amber-honey text-black flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                    <Link href="/musica" className="w-16 h-16 rounded-full bg-amber-honey text-black flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
                       <Play size={24} className="fill-current ml-1" />
                     </Link>
                   </div>
@@ -941,7 +941,7 @@ const Home = () => {
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
       <section className="py-32 border-t border-white/5 relative overflow-hidden bg-black/10">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
-        
+
         <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-forest-green border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
           <div className="space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Boletín Oficial</span>
@@ -950,11 +950,11 @@ const Home = () => {
               Regístrate con tu nombre y correo electrónico para recibir crónicas, novedades y preventas exclusivas.
             </p>
           </div>
-          
+
           <div className="pt-2">
             <AnimatePresence mode="wait">
               {newsletterStatus === 'success' ? (
-                <motion.div 
+                <motion.div
                   key="success"
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -971,9 +971,9 @@ const Home = () => {
                 </motion.div>
               ) : (
                 <div className="space-y-4">
-                  <motion.form 
+                  <motion.form
                     key="form"
-                    onSubmit={handleSubscribe} 
+                    onSubmit={handleSubscribe}
                     className="flex flex-col gap-3 text-left"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -1005,10 +1005,19 @@ const Home = () => {
 
                     <button
                       type="submit"
-                      className="w-full bg-amber-honey hover:bg-amber-butterscotch active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.2em] py-4.5 rounded-xl transition-all shadow-lg shadow-amber-honey/15 whitespace-nowrap"
+                      className="w-full bg-gradient-to-r from-amber-honey via-amber-gold to-amber-500 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
                       disabled={newsletterStatus === 'submitting'}
                     >
-                      {newsletterStatus === 'submitting' ? 'Procesando...' : 'Suscribirse'}
+                      {newsletterStatus === 'submitting' ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />
+                          Procesando...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          Suscribirse al Círculo <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
+                        </span>
+                      )}
                     </button>
 
                     <p className="text-[9px] text-white/40 tracking-wider text-center pt-2">
@@ -1029,13 +1038,13 @@ const Home = () => {
               )}
             </AnimatePresence>
           </div>
-          
+
           <div className="pt-2">
             <Link
-              href="/blog"
+              href="/ambar-te-escribe"
               className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30 hover:text-amber-honey transition-colors"
             >
-              Visitar Bitácora de MS Ambar <ChevronRight size={12} />
+              Leer las Cartas <ChevronRight size={12} />
             </Link>
           </div>
         </div>

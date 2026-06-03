@@ -70,12 +70,12 @@ const Navbar = () => {
   // Public navigation links — Designer is intentionally excluded (admin-only)
   const navLinks = [
     { name: 'Inicio', href: '/' },
-    { name: 'Tour', href: '/tour' },
-    { name: 'Galería', href: '/gallery' },
-    { name: 'Música', href: '/music' },
-    { name: 'Shop', href: '/merch' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'Booking', href: '/contact' },
+    { name: 'Accesos', href: '/comprar-boletos' },
+    { name: 'Galería', href: '/galleria' },
+    { name: 'Música', href: '/musica' },
+    { name: 'Tienda', href: '/tienda' },
+    { name: 'Ambar Te Escribe', href: '/ambar-te-escribe' },
+    { name: 'Contacto', href: '/contacto' },
     // { name: 'Entretenimiento', href: '/entretenimiento' }, // Oculto por el momento
   ];
 
@@ -95,9 +95,8 @@ const Navbar = () => {
             <Link
               key={link.name}
               href={link.href}
-              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey ${
-                router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
-              }`}
+              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+                }`}
             >
               {link.name}
             </Link>
@@ -112,11 +111,10 @@ const Navbar = () => {
                   {/* Nectar Studio Designer — admins only */}
                   <Link
                     href="/designer"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
-                      router.pathname === '/designer'
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                    }`}
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/designer'
+                      ? 'bg-amber-honey text-nature-night border-amber-honey'
+                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      }`}
                     title="Nectar Studio Designer — Solo Admins"
                   >
                     <Layers size={10} /> Studio
@@ -124,11 +122,10 @@ const Navbar = () => {
                   {/* Admin Dashboard */}
                   <Link
                     href="/dashboard"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
-                      router.pathname.startsWith('/dashboard')
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                    }`}
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard')
+                      ? 'bg-amber-honey text-nature-night border-amber-honey'
+                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      }`}
                   >
                     <Shield size={10} /> Admin
                   </Link>
@@ -183,9 +180,8 @@ const Navbar = () => {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-[11px] uppercase font-bold tracking-[0.25em] transition-all hover:text-amber-honey py-2 border-b border-white/[0.03] ${
-                    router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
-                  }`}
+                  className={`text-[11px] uppercase font-bold tracking-[0.25em] transition-all hover:text-amber-honey py-2 border-b border-white/[0.03] ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -199,21 +195,19 @@ const Navbar = () => {
                   <div className="flex gap-3">
                     <Link
                       href="/designer"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
-                        router.pathname === '/designer'
-                          ? 'bg-amber-honey text-nature-night border-amber-honey'
-                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                      }`}
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname === '/designer'
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                        }`}
                     >
                       <Layers size={12} /> Studio
                     </Link>
                     <Link
                       href="/dashboard"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
-                        router.pathname.startsWith('/dashboard')
-                          ? 'bg-amber-honey text-nature-night border-amber-honey'
-                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                      }`}
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname.startsWith('/dashboard')
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                        }`}
                     >
                       <Shield size={12} /> Admin
                     </Link>

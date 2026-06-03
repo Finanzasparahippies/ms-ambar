@@ -75,7 +75,7 @@ export default function TicketPage() {
       {/* Back Button */}
       <div className="w-full max-w-md mb-6 z-10">
         <Link 
-          href="/tour" 
+          href="/comprar-boletos" 
           className="inline-flex items-center text-xs text-neutral-400 hover:text-amber-500 transition-colors duration-200 group"
         >
           <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-0.5 transition-transform duration-200" />
@@ -107,7 +107,7 @@ export default function TicketPage() {
             <h2 className="text-lg font-bold text-white mb-2">Boleto no encontrado</h2>
             <p className="text-sm text-neutral-400 mb-6">{error}</p>
             <Link 
-              href="/tour" 
+              href="/comprar-boletos" 
               className="inline-block bg-neutral-800 hover:bg-neutral-700 text-white font-medium text-xs px-6 py-3 rounded-xl transition-all duration-200"
             >
               Ir al Tour
