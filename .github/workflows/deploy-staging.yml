@@ -1,0 +1,45 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          script: |
+            echo "=== Iniciando despliegue en Staging VPS ==="
+            cd ~/ms-ambar
+            
+            echo "1. Trayendo los últimos cambios de GitHub..."
+            git pull origin main
+            
+            echo "2. Comprobando estado de los contenedores de Staging..."
+            if [ -z "$(docker compose --env-file .env.staging -f docker-compose.staging.yml ps --services --filter "status=running" | grep '^backend-staging$')" ]; then
+              echo "Staging no está corriendo. Iniciando contenedores..."
+              ./nectar.sh up-staging
+            else
+              echo "Staging ya está corriendo. Los cambios de código se actualizarán en caliente por los volúmenes."
+            fi
+            
+            echo "3. Ejecutando migraciones de base de datos en Staging..."
+            ./nectar.sh migrate-staging
+            
+            echo "4. Compilando archivos estáticos en Staging..."
+            ./nectar.sh collectstatic-staging
+            
+            echo "=== Despliegue completado con éxito ==="

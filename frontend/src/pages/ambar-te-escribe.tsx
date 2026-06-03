@@ -485,7 +485,7 @@ export default function AmbarTeEscribePage() {
                 <Lock size={28} className="animate-pulse" />
               </div>
 
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Círculo Exclusivo</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Cartas Exclusivas</span>
               <h2 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te Escribe</h2>
               <p className="text-white/60 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
                 Las crónicas y bitácoras de MS AMBAR están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido de las cartas y recibir poemas exclusivos en tu bandeja.
@@ -710,7 +710,7 @@ export default function AmbarTeEscribePage() {
               <div className="w-12 h-12 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mx-auto mb-6 text-amber-honey">
                 <Check size={20} />
               </div>
-              <h3 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Miembro del Círculo</h3>
+              <h3 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Miembro de las Cartas</h3>
               <p className="text-white/60 mb-6 max-w-md mx-auto text-xs leading-relaxed">
                 Estás registrado correctamente. Recibirás de manera directa y en exclusiva los poemas y lanzamientos de MS AMBAR.
               </p>
@@ -722,7 +722,7 @@ export default function AmbarTeEscribePage() {
                 }}
                 className="text-[9px] font-black text-red-400 hover:text-red-300 uppercase tracking-widest hover:underline"
               >
-                Salir del Círculo (Cerrar Sesión)
+                Salir de las cartas (Cerrar Sesión)
               </button>
             </div>
           </motion.div>

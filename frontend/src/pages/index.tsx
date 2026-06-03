@@ -810,7 +810,7 @@ const Home = () => {
       setNewsletterStatus('error');
       const backendErr = err.response?.data?.email?.[0] || '';
       if (backendErr.includes('exists') || backendErr.includes('already exists') || backendErr.includes('existe')) {
-        setNewsletterErrorMessage('Este correo electrónico ya está registrado en nuestro círculo.');
+        setNewsletterErrorMessage('Este correo electrónico ya está registrado a las cartas.');
       } else if (err.response?.data?.email) {
         setNewsletterErrorMessage('Por favor, ingresa un correo electrónico válido.');
       } else {
@@ -966,7 +966,7 @@ const Home = () => {
                   </div>
                   <h4 className="font-bold uppercase tracking-wider text-[11px] mt-2">¡Suscripción Completada!</h4>
                   <p className="text-[10px] text-white/80 leading-relaxed">
-                    Te has unido con éxito al círculo de MS AMBAR.
+                    Te has unido con éxito a las cartas de MS AMBAR.
                   </p>
                 </motion.div>
               ) : (
@@ -1015,7 +1015,7 @@ const Home = () => {
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Suscribirse al Círculo <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
+                          Suscribirse a las Cartas <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
                         </span>
                       )}
                     </button>

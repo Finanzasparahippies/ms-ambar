@@ -69,7 +69,7 @@ def send_newsletter_email(post):
               
               <!-- Footer -->
               <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-                <p style="margin: 0 0 10px 0;">Recibiste este correo porque estás suscrito al círculo de MS AMBAR.</p>
+                <p style="margin: 0 0 10px 0;">Recibiste este correo porque estás suscrito a las cartas de MS AMBAR.</p>
                 <p style="margin: 0;"><a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub.email}" style="color: #f59e0b; text-decoration: underline;">Desuscribirse</a></p>
               </div>
               
@@ -496,7 +496,7 @@ def get_campaign_html_template(campaign, sub_email):
           
           <!-- Footer -->
           <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-            <p style="margin: 0 0 10px 0;">Recibiste este poema porque eres parte del círculo de MS AMBAR.</p>
+            <p style="margin: 0 0 10px 0;">Recibiste este poema porque eres parte de las cartas de MS AMBAR.</p>
             <p style="margin: 0;"><a href="{unsubscribe_url}" style="color: {accent_color}; text-decoration: underline;">Desuscribirse del boletín</a></p>
           </div>
           

@@ -3,21 +3,21 @@ import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  DollarSign, 
-  Ticket, 
-  ShoppingBag, 
-  Users, 
-  Activity, 
-  Database, 
-  Cpu, 
-  HardDrive, 
-  Layers, 
-  ChevronRight, 
-  TrendingUp, 
-  TrendingDown, 
-  AlertTriangle, 
-  Gauge, 
+import {
+  DollarSign,
+  Ticket,
+  ShoppingBag,
+  Users,
+  Activity,
+  Database,
+  Cpu,
+  HardDrive,
+  Layers,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
+  Gauge,
   ExternalLink,
   Truck,
   Package,
@@ -45,11 +45,11 @@ export default function AdminDashboard() {
   const [sysMetrics, setSysMetrics] = useState<any>(null);
   const [orders, setOrders] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
-  
+
   // Dashboard Navigation State
   const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns'>('summary');
   const [contracts, setContracts] = useState<any[]>([]);
@@ -67,7 +67,7 @@ export default function AdminDashboard() {
   const [campTemplateType, setCampTemplateType] = useState('minimalist');
   const [campImageFile, setCampImageFile] = useState<File | null>(null);
   const [campImagePreview, setCampImagePreview] = useState<string | null>(null);
-  
+
   // Custom Background and CTA settings
   const [campBgImageFile, setCampBgImageFile] = useState<File | null>(null);
   const [campBgImagePreview, setCampBgImagePreview] = useState<string | null>(null);
@@ -261,7 +261,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     if (!campSubject.trim()) { setCampErrorMsg('El asunto es obligatorio.'); return; }
     if (!campPoemText.trim()) { setCampErrorMsg('El texto del poema es obligatorio.'); return; }
-    
+
     setCampLoading(true);
     setCampErrorMsg(null);
     setCampSuccessMsg(null);
@@ -342,7 +342,7 @@ export default function AdminDashboard() {
     setImportCsvError(null);
     setImportCsvSuccess(null);
     const token = localStorage.getItem('token');
-    const headers = { 
+    const headers = {
       Authorization: `Bearer ${token}`
     };
     const formData = new FormData();
@@ -432,7 +432,7 @@ export default function AdminDashboard() {
       // Trigger Shipment Simulation sequence
       setShippingOrderId(orderId);
       setShippingStep('contacting');
-      
+
       setTimeout(() => {
         setShippingStep('generating');
       }, 1000);
@@ -440,13 +440,13 @@ export default function AdminDashboard() {
       setTimeout(async () => {
         const trackingNum = `DHL-MSAMBAR-${Math.floor(100000 + Math.random() * 900000)}`;
         setSimulatedTracking(trackingNum);
-        
+
         try {
           await axios.patch(`${API_URL}/dashboard/orders/`, {
             order_id: orderId,
             status: 'shipped'
           }, { headers });
-          
+
           setShippingStep('success');
           fetchDashboardData();
         } catch (e) {
@@ -540,7 +540,7 @@ export default function AdminDashboard() {
     setCatalogSuccessMsg(null);
 
     const token = localStorage.getItem('token');
-    const headers = { 
+    const headers = {
       Authorization: `Bearer ${token}`
     };
 
@@ -578,7 +578,7 @@ export default function AdminDashboard() {
     if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
     setCatalogLoading(true);
     setCatalogErrorMsg(null);
-    
+
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -636,7 +636,7 @@ export default function AdminDashboard() {
     setCatalogSuccessMsg(null);
 
     const token = localStorage.getItem('token');
-    const headers = { 
+    const headers = {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
     };
@@ -666,7 +666,7 @@ export default function AdminDashboard() {
     if (!confirm('¿Estás seguro de que deseas eliminar esta categoría? Si la eliminas, todos los productos en ella quedarán sin categoría.')) return;
     setCatalogLoading(true);
     setCatalogErrorMsg(null);
-    
+
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -694,7 +694,7 @@ export default function AdminDashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#030303] text-white flex items-center justify-center p-8">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="max-w-md w-full bg-white/5 border border-white/10 p-8 rounded-[2rem] text-center backdrop-blur-xl amber-glass"
@@ -704,9 +704,9 @@ export default function AdminDashboard() {
           <p className="text-white/60 text-sm mb-6 leading-relaxed">
             {error}. Se requiere una cuenta de administrador registrada en el sistema.
           </p>
-          <a 
-            href="/admin/" 
-            target="_blank" 
+          <a
+            href="/admin/"
+            target="_blank"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-gold hover:from-amber-gold hover:to-amber-500 text-black font-black uppercase tracking-widest text-xs px-6 py-4 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.2)]"
           >
             Django Admin <ExternalLink size={14} />
@@ -740,7 +740,7 @@ export default function AdminDashboard() {
     return { x, y, data: d };
   });
 
-  const linePath = points.length > 0 
+  const linePath = points.length > 0
     ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map((p: any) => `L ${p.x} ${p.y}`).join(' ')
     : '';
 
@@ -753,10 +753,10 @@ export default function AdminDashboard() {
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const viewBoxX = (mouseX / rect.width) * chartWidth;
-    
+
     let closestPoint = points[0];
     let minDiff = Math.abs(points[0].x - viewBoxX);
-    
+
     for (let i = 1; i < points.length; i++) {
       const diff = Math.abs(points[i].x - viewBoxX);
       if (diff < minDiff) {
@@ -764,7 +764,7 @@ export default function AdminDashboard() {
         closestPoint = points[i];
       }
     }
-    
+
     if (viewBoxX >= paddingLeft - 20 && viewBoxX <= chartWidth - paddingRight + 20) {
       setHoveredPoint({
         ...closestPoint.data,
@@ -804,17 +804,17 @@ export default function AdminDashboard() {
             Métricas de Ventas, Taquilla, Logística y Salud de Servidores de MS AMBAR
           </p>
         </div>
-        
+
         <div className="flex gap-4">
-          <Link 
+          <Link
             href="/dashboard/performance"
             className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-3 rounded-xl transition-all text-xs font-bold uppercase tracking-widest"
           >
             <Activity size={14} className="text-amber-400" /> Rendimiento
           </Link>
-          <a 
-            href="/admin/" 
-            target="_blank" 
+          <a
+            href="/admin/"
+            target="_blank"
             className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
           >
             Django <ExternalLink size={14} />
@@ -826,21 +826,19 @@ export default function AdminDashboard() {
       <div className="flex gap-4 mb-8 bg-white/[0.02] border border-white/5 p-2 rounded-2xl w-fit relative z-10 backdrop-blur-xl">
         <button
           onClick={() => setActiveTab('summary')}
-          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            activeTab === 'summary' 
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20' 
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'summary'
+              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           📊 Resumen General
         </button>
         <button
           onClick={() => setActiveTab('orders')}
-          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-            activeTab === 'orders' 
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20' 
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'orders'
+              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           📦 Despacho de Pedidos
           {pendingOrdersCount > 0 && (
@@ -851,41 +849,37 @@ export default function AdminDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('expenses')}
-          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            activeTab === 'expenses' 
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20' 
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'expenses'
+              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           💸 Control de Gastos
         </button>
         <button
           onClick={() => setActiveTab('catalog')}
-          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            activeTab === 'catalog' 
-              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20' 
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'catalog'
+              ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           🛍️ Catálogo de Tienda
         </button>
         <button
           onClick={() => setActiveTab('theaters')}
-          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-            activeTab === 'theaters'
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'theaters'
               ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           🎭 Teatros
         </button>
         <button
           onClick={() => setActiveTab('contracts')}
-          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-            activeTab === 'contracts'
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'contracts'
               ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           ✍️ Contratos
           {contracts.filter(c => !c.is_fully_signed).length > 0 && (
@@ -896,11 +890,10 @@ export default function AdminDashboard() {
         </button>
         <button
           onClick={() => setActiveTab('campaigns')}
-          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${
-            activeTab === 'campaigns'
+          className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'campaigns'
               ? 'bg-amber-honey text-black shadow-lg shadow-amber-honey/20'
               : 'text-white/60 hover:text-white hover:bg-white/5'
-          }`}
+            }`}
         >
           📧 Campañas de Poemas
         </button>
@@ -909,7 +902,7 @@ export default function AdminDashboard() {
       {/* Main Administrative Views Context */}
       <div className="relative z-10">
         <AnimatePresence mode="wait">
-          
+
           {/* TAB 1: SUMMARY DASHBOARD */}
           {activeTab === 'summary' && (
             <motion.div
@@ -922,43 +915,43 @@ export default function AdminDashboard() {
             >
               {/* stat cards (3x2 Grid) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <StatCard 
-                  title="Ingresos Totales" 
+                <StatCard
+                  title="Ingresos Totales"
                   value={`$${financials?.gross_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   icon={<DollarSign className="text-amber-400" />}
                   color="amber"
                   detail="Combinado: Taquilla + Tienda"
                 />
-                <StatCard 
-                  title="Ventas de Tickets" 
+                <StatCard
+                  title="Ventas de Tickets"
                   value={`$${financials?.ticket_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   icon={<Ticket className="text-amber-300" />}
                   color="gold"
                   detail={`Boletos: ${tickets?.total_sold} vendidos`}
                 />
-                <StatCard 
-                  title="Ventas de Tienda" 
+                <StatCard
+                  title="Ventas de Tienda"
                   value={`$${financials?.shop_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   icon={<ShoppingBag className="text-amber-500" />}
                   color="honey"
                   detail={`Pedidos: ${shop?.total_orders} completados`}
                 />
-                <StatCard 
-                  title="Gastos Operativos" 
+                <StatCard
+                  title="Gastos Operativos"
                   value={`$${financials?.total_expenses?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   icon={<TrendingDown className="text-red-400" />}
                   color="honey"
                   detail="Pérdidas, Envíos & Producción"
                 />
-                <StatCard 
-                  title="Beneficio Neto Real" 
+                <StatCard
+                  title="Beneficio Neto Real"
                   value={`$${financials?.net_profit?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   icon={<Landmark className="text-green-400" />}
                   color="amber"
                   detail="Ingresos libres de gastos"
                 />
-                <StatCard 
-                  title="Upgrades M&G" 
+                <StatCard
+                  title="Upgrades M&G"
                   value={tickets?.mg_upgrades}
                   icon={<Users className="text-yellow-400" />}
                   color="yellow"
@@ -968,7 +961,7 @@ export default function AdminDashboard() {
 
               {/* Charts and Operations grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
+
                 {/* SVG Interactive Area Chart */}
                 <div className="lg:col-span-2 bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] backdrop-blur-xl amber-glass flex flex-col justify-between">
                   <div className="flex justify-between items-start mb-6">
@@ -993,16 +986,16 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="relative w-full h-[220px]">
-                    <svg 
-                      viewBox={`0 0 ${chartWidth} ${chartHeight}`} 
+                    <svg
+                      viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                       className="w-full h-full overflow-visible select-none cursor-crosshair"
                       onMouseMove={handleMouseMove}
                       onMouseLeave={() => setHoveredPoint(null)}
                     >
                       <defs>
                         <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.25"/>
-                          <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.00"/>
+                          <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.00" />
                         </linearGradient>
                       </defs>
                       {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
@@ -1015,42 +1008,42 @@ export default function AdminDashboard() {
                           </g>
                         );
                       })}
-                      
+
                       {/* X-Axis labels with explicit and styled label for the current day (Hoy) */}
                       {points.filter((_: any, idx: number) => idx % 5 === 0 || idx === points.length - 1).map((p: any, idx: number) => {
                         const isLast = p.data.date === points[points.length - 1]?.data?.date;
                         return (
-                          <text 
-                            key={idx} 
-                            x={p.x} 
-                            y={paddingTop + innerHeight + 18} 
-                            fill={isLast ? "#F59E0B" : "#ffffff"} 
-                            fillOpacity={isLast ? "0.9" : "0.2"} 
-                            fontSize="9" 
-                            fontWeight={isLast ? "black" : "bold"} 
+                          <text
+                            key={idx}
+                            x={p.x}
+                            y={paddingTop + innerHeight + 18}
+                            fill={isLast ? "#F59E0B" : "#ffffff"}
+                            fillOpacity={isLast ? "0.9" : "0.2"}
+                            fontSize="9"
+                            fontWeight={isLast ? "black" : "bold"}
                             textAnchor="middle"
                           >
                             {isLast ? "Hoy" : p.data.date}
                           </text>
                         );
                       })}
-                      
+
                       {areaPath && <path d={areaPath} fill="url(#salesGradient)" />}
                       {linePath && <path d={linePath} fill="none" stroke="#F59E0B" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
-                      
+
                       {/* Premium Proximity Guide Line and Glowing Dot */}
                       {activePoint && (
                         <g>
                           {/* Vertical guide line */}
-                          <line 
-                            x1={activePoint.x} 
-                            y1={paddingTop} 
-                            x2={activePoint.x} 
-                            y2={paddingTop + innerHeight} 
-                            stroke="#F59E0B" 
-                            strokeOpacity="0.2" 
-                            strokeDasharray="4 4" 
-                            strokeWidth="1.5" 
+                          <line
+                            x1={activePoint.x}
+                            y1={paddingTop}
+                            x2={activePoint.x}
+                            y2={paddingTop + innerHeight}
+                            stroke="#F59E0B"
+                            strokeOpacity="0.2"
+                            strokeDasharray="4 4"
+                            strokeWidth="1.5"
                           />
                           {/* Concentric glowing indicator */}
                           <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="#F59E0B" fillOpacity="0.35" className="animate-pulse" />
@@ -1229,11 +1222,10 @@ export default function AdminDashboard() {
                   <button
                     key={filter}
                     onClick={() => setOrderFilter(filter as any)}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                      orderFilter === filter 
-                        ? 'bg-white/10 text-white' 
+                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${orderFilter === filter
+                        ? 'bg-white/10 text-white'
                         : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     {filter === 'all' && 'Todos'}
                     {filter === 'paid' && 'Pendientes Despacho'}
@@ -1246,7 +1238,7 @@ export default function AdminDashboard() {
               {/* Simulated Shipping Modal Overlay */}
               {shippingOrderId && shippingStep !== 'idle' && (
                 <div className="fixed inset-0 bg-black/80 z-[110] flex items-center justify-center p-6 backdrop-blur-md">
-                  <motion.div 
+                  <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     className="max-w-md w-full bg-[#080808] border border-white/10 p-8 rounded-[2.5rem] text-center shadow-2xl"
@@ -1278,7 +1270,7 @@ export default function AdminDashboard() {
                           <span className="text-[9px] text-white/30 uppercase tracking-widest font-black block">Código de Seguimiento</span>
                           <span className="text-xs font-mono font-bold text-amber-honey">{simulatedTracking}</span>
                         </div>
-                        <button 
+                        <button
                           onClick={() => {
                             setShippingOrderId(null);
                             setShippingStep('idle');
@@ -1298,100 +1290,99 @@ export default function AdminDashboard() {
                 {orders
                   .filter((o) => orderFilter === 'all' ? true : o.status === orderFilter)
                   .length === 0 ? (
-                    <div className="bg-white/[0.02] border border-white/5 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4">
-                      <Package size={48} className="text-white/10" />
-                      <p className="text-xs uppercase tracking-widest font-black text-white/30">No se encontraron pedidos en esta categoría</p>
-                    </div>
-                  ) : (
-                    orders
-                      .filter((o) => orderFilter === 'all' ? true : o.status === orderFilter)
-                      .map((order) => (
-                        <div key={order.id} className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] hover:border-white/10 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden group">
-                          {/* Left Info: Meta, address, items */}
-                          <div className="space-y-4 flex-1">
-                            <div className="flex flex-wrap items-center gap-3">
-                              <span className="text-xs font-black text-white/80">Orden #{order.id}</span>
-                              <span className="text-[9px] opacity-40 font-bold uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> {new Date(order.created_at).toLocaleString()}</span>
-                              <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${
-                                order.status === 'paid' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 animate-pulse' :
+                  <div className="bg-white/[0.02] border border-white/5 p-16 rounded-[2.5rem] text-center flex flex-col items-center justify-center gap-4">
+                    <Package size={48} className="text-white/10" />
+                    <p className="text-xs uppercase tracking-widest font-black text-white/30">No se encontraron pedidos en esta categoría</p>
+                  </div>
+                ) : (
+                  orders
+                    .filter((o) => orderFilter === 'all' ? true : o.status === orderFilter)
+                    .map((order) => (
+                      <div key={order.id} className="bg-white/[0.02] border border-white/5 p-6 rounded-[2rem] hover:border-white/10 transition-all flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative overflow-hidden group">
+                        {/* Left Info: Meta, address, items */}
+                        <div className="space-y-4 flex-1">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="text-xs font-black text-white/80">Orden #{order.id}</span>
+                            <span className="text-[9px] opacity-40 font-bold uppercase tracking-wider flex items-center gap-1"><Calendar size={10} /> {new Date(order.created_at).toLocaleString()}</span>
+                            <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full border ${order.status === 'paid' ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 animate-pulse' :
                                 order.status === 'shipped' ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' :
-                                'bg-green-500/10 border-green-500/30 text-green-400'
+                                  'bg-green-500/10 border-green-500/30 text-green-400'
                               }`}>
-                                {order.status === 'paid' ? 'Pendiente Envío (Pagado)' :
-                                 order.status === 'shipped' ? 'En Tránsito (Shipped)' :
-                                 'Entregado'}
-                              </span>
-                            </div>
+                              {order.status === 'paid' ? 'Pendiente Envío (Pagado)' :
+                                order.status === 'shipped' ? 'En Tránsito (Shipped)' :
+                                  'Entregado'}
+                            </span>
+                          </div>
 
-                            {/* Recipient card details */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/[0.01] border border-white/[0.03] p-4 rounded-xl">
-                              <div className="space-y-1.5">
-                                <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Información del Cliente</span>
-                                <div className="text-xs font-black flex items-center gap-1.5"><User size={12} className="text-white/40" /> {order.full_name}</div>
-                                <div className="text-[10px] text-white/60 flex items-center gap-1.5"><Mail size={12} className="text-white/40" /> {order.user_email}</div>
-                              </div>
-                              <div className="space-y-1.5">
-                                <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Dirección de Despacho</span>
-                                <div className="text-xs font-black flex items-center gap-1.5"><MapPin size={12} className="text-white/40" /> {order.address}</div>
-                                <div className="text-[10px] text-white/60 pl-4">{order.city}, {order.country}</div>
-                              </div>
-                            </div>
-
-                            {/* Items table list */}
+                          {/* Recipient card details */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/[0.01] border border-white/[0.03] p-4 rounded-xl">
                             <div className="space-y-1.5">
-                              <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Artículos a Enviar</span>
-                              <div className="flex flex-wrap gap-2">
-                                {order.items.map((item: any, idx: number) => (
-                                  <span key={idx} className="bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white/80">
-                                    {item.quantity}x <span className="text-amber-honey font-black uppercase tracking-wider">{item.product_name}</span> (${item.price})
-                                  </span>
-                                ))}
-                              </div>
+                              <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Información del Cliente</span>
+                              <div className="text-xs font-black flex items-center gap-1.5"><User size={12} className="text-white/40" /> {order.full_name}</div>
+                              <div className="text-[10px] text-white/60 flex items-center gap-1.5"><Mail size={12} className="text-white/40" /> {order.user_email}</div>
+                            </div>
+                            <div className="space-y-1.5">
+                              <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Dirección de Despacho</span>
+                              <div className="text-xs font-black flex items-center gap-1.5"><MapPin size={12} className="text-white/40" /> {order.address}</div>
+                              <div className="text-[10px] text-white/60 pl-4">{order.city}, {order.country}</div>
                             </div>
                           </div>
 
-                          {/* Right actions: Total & Shipping Buttons */}
-                          <div className="flex flex-col items-end gap-3 shrink-0 self-stretch lg:self-center justify-between border-t lg:border-t-0 border-white/5 pt-4 lg:pt-0">
-                            <div className="text-right">
-                              <span className="text-[9px] uppercase tracking-widest text-white/30 font-black block mb-0.5">Total Abonado</span>
-                              <span className="text-lg font-black text-amber-honey">${order.total_amount}</span>
+                          {/* Items table list */}
+                          <div className="space-y-1.5">
+                            <span className="text-[8px] text-white/30 uppercase tracking-widest font-black block">Artículos a Enviar</span>
+                            <div className="flex flex-wrap gap-2">
+                              {order.items.map((item: any, idx: number) => (
+                                <span key={idx} className="bg-white/5 border border-white/5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-white/80">
+                                  {item.quantity}x <span className="text-amber-honey font-black uppercase tracking-wider">{item.product_name}</span> (${item.price})
+                                </span>
+                              ))}
                             </div>
+                          </div>
+                        </div>
 
-                            {order.status === 'paid' && (
+                        {/* Right actions: Total & Shipping Buttons */}
+                        <div className="flex flex-col items-end gap-3 shrink-0 self-stretch lg:self-center justify-between border-t lg:border-t-0 border-white/5 pt-4 lg:pt-0">
+                          <div className="text-right">
+                            <span className="text-[9px] uppercase tracking-widest text-white/30 font-black block mb-0.5">Total Abonado</span>
+                            <span className="text-lg font-black text-amber-honey">${order.total_amount}</span>
+                          </div>
+
+                          {order.status === 'paid' && (
+                            <motion.button
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
+                              className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] px-5 py-3.5 rounded-xl transition-all shadow-[0_2px_15px_rgba(245,158,11,0.15)] flex items-center gap-1.5"
+                            >
+                              <Truck size={12} /> Generar Guía y Despachar
+                            </motion.button>
+                          )}
+
+                          {order.status === 'shipped' && (
+                            <div className="flex flex-col gap-2 w-full">
+                              <div className="p-2 bg-blue-500/5 border border-blue-500/10 rounded-lg text-[9px] text-blue-400 font-mono text-center font-bold">
+                                En Tránsito
+                              </div>
                               <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
-                                onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
-                                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] px-5 py-3.5 rounded-xl transition-all shadow-[0_2px_15px_rgba(245,158,11,0.15)] flex items-center gap-1.5"
+                                onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}
+                                className="border border-green-500/30 bg-green-500/10 text-green-400 font-black uppercase tracking-widest text-[9px] px-5 py-3 rounded-xl hover:bg-green-500/25 transition-all flex items-center justify-center gap-1"
                               >
-                                <Truck size={12} /> Generar Guía y Despachar
+                                <Check size={12} /> Confirmar Entrega
                               </motion.button>
-                            )}
+                            </div>
+                          )}
 
-                            {order.status === 'shipped' && (
-                              <div className="flex flex-col gap-2 w-full">
-                                <div className="p-2 bg-blue-500/5 border border-blue-500/10 rounded-lg text-[9px] text-blue-400 font-mono text-center font-bold">
-                                  En Tránsito
-                                </div>
-                                <motion.button
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}
-                                  className="border border-green-500/30 bg-green-500/10 text-green-400 font-black uppercase tracking-widest text-[9px] px-5 py-3 rounded-xl hover:bg-green-500/25 transition-all flex items-center justify-center gap-1"
-                                >
-                                  <Check size={12} /> Confirmar Entrega
-                                </motion.button>
-                              </div>
-                            )}
-
-                            {order.status === 'delivered' && (
-                              <div className="flex items-center gap-1 text-green-400 text-xs font-black uppercase tracking-widest border border-green-500/25 bg-green-500/5 px-4 py-2 rounded-xl">
-                                <Check size={14} /> Entregado
-                              </div>
-                            )}
-                          </div>
+                          {order.status === 'delivered' && (
+                            <div className="flex items-center gap-1 text-green-400 text-xs font-black uppercase tracking-widest border border-green-500/25 bg-green-500/5 px-4 py-2 rounded-xl">
+                              <Check size={14} /> Entregado
+                            </div>
+                          )}
                         </div>
-                      ))
+                      </div>
+                    ))
                 )}
               </div>
             </motion.div>
@@ -1451,7 +1442,7 @@ export default function AdminDashboard() {
 
                 <form onSubmit={handleAddExpense} className="space-y-4">
                   {expenseSuccess && (
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0.95, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       className="p-3.5 bg-green-500/10 border border-green-500/25 text-green-400 rounded-xl text-xs font-bold uppercase tracking-wider text-center"
@@ -1565,21 +1556,19 @@ export default function AdminDashboard() {
                 <div className="flex gap-2 bg-white/[0.02] border border-white/5 p-1 rounded-xl">
                   <button
                     onClick={() => setCatalogSubTab('products')}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                      catalogSubTab === 'products' 
-                        ? 'bg-white/10 text-white' 
+                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${catalogSubTab === 'products'
+                        ? 'bg-white/10 text-white'
                         : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     🛍️ Productos ({products.length})
                   </button>
                   <button
                     onClick={() => setCatalogSubTab('categories')}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                      catalogSubTab === 'categories' 
-                        ? 'bg-white/10 text-white' 
+                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${catalogSubTab === 'categories'
+                        ? 'bg-white/10 text-white'
                         : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     🏷️ Categorías ({categories.length})
                   </button>
@@ -1618,11 +1607,10 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => handleProductToggleActive(product)}
                             title={product.is_active ? "Desactivar" : "Activar"}
-                            className={`p-2 rounded-xl border backdrop-blur-md transition-all ${
-                              product.is_active 
-                                ? 'bg-green-500/10 border-green-500/25 text-green-400' 
+                            className={`p-2 rounded-xl border backdrop-blur-md transition-all ${product.is_active
+                                ? 'bg-green-500/10 border-green-500/25 text-green-400'
                                 : 'bg-red-500/10 border-red-500/25 text-red-400'
-                            }`}
+                              }`}
                           >
                             {product.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
                           </button>
@@ -1632,9 +1620,9 @@ export default function AdminDashboard() {
                           {/* Image Preview Container */}
                           <div className="w-full h-40 bg-white/[0.01] border border-white/5 rounded-2xl mb-4 overflow-hidden relative flex items-center justify-center">
                             {product.image ? (
-                              <img 
-                                src={product.image} 
-                                alt={product.name} 
+                              <img
+                                src={product.image}
+                                alt={product.name}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               />
                             ) : (
@@ -1702,7 +1690,7 @@ export default function AdminDashboard() {
                           <h4 className="text-xs font-black uppercase tracking-wider text-white">{category.name}</h4>
                           <p className="text-[10px] text-amber-honey/60 font-mono font-bold mt-0.5">slug: {category.slug}</p>
                         </div>
-                        
+
                         <div className="flex gap-2">
                           <button
                             onClick={() => openCategoryEditModal(category)}
@@ -1726,12 +1714,12 @@ export default function AdminDashboard() {
               {/* PRODUCT CREATION/EDIT MODAL OVERLAY */}
               {isProductModalOpen && (
                 <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm">
-                  <motion.div 
+                  <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     className="max-w-xl w-full bg-[#080808] border border-white/10 p-8 rounded-[2.5rem] shadow-2xl relative my-8"
                   >
-                    <button 
+                    <button
                       onClick={() => setIsProductModalOpen(false)}
                       className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-all"
                     >
@@ -1885,12 +1873,12 @@ export default function AdminDashboard() {
               {/* CATEGORY CREATION/EDIT MODAL OVERLAY */}
               {isCategoryModalOpen && (
                 <div className="fixed inset-0 bg-black/85 z-[120] flex items-center justify-center p-4 backdrop-blur-sm">
-                  <motion.div 
+                  <motion.div
                     initial={{ scale: 0.95, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     className="max-w-md w-full bg-[#080808] border border-white/10 p-8 rounded-[2.5rem] shadow-2xl relative"
                   >
-                    <button 
+                    <button
                       onClick={() => setIsCategoryModalOpen(false)}
                       className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-white/50 hover:text-white transition-all"
                     >
@@ -2057,16 +2045,15 @@ export default function AdminDashboard() {
                           <button
                             onClick={() => handleTheaterSync(theater.id)}
                             disabled={syncSt === 'loading'}
-                            className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${
-                              syncSt === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-                              syncSt === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                              'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
-                            }`}
+                            className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${syncSt === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+                                syncSt === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                                  'bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white'
+                              }`}
                           >
                             {syncSt === 'loading' ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> :
-                             syncSt === 'success' ? <Check size={12} /> :
-                             syncSt === 'error' ? <AlertTriangle size={12} /> :
-                             <Layers size={12} />}
+                              syncSt === 'success' ? <Check size={12} /> :
+                                syncSt === 'error' ? <AlertTriangle size={12} /> :
+                                  <Layers size={12} />}
                             {syncSt === 'success' ? 'Asientos Sincronizados' : syncSt === 'error' ? 'Error al Sincronizar' : 'Sincronizar Asientos'}
                           </button>
 
@@ -2074,7 +2061,7 @@ export default function AdminDashboard() {
                           <div className="grid grid-cols-3 gap-2">
                             <Link
                               href="/designer"
-                              onClick={() => {}}
+                              onClick={() => { }}
                               className="py-2.5 rounded-xl text-[8px] font-black uppercase tracking-wider text-center bg-amber-honey/10 border border-amber-honey/20 text-amber-honey hover:bg-amber-honey hover:text-nature-night transition-all flex items-center justify-center gap-1"
                             >
                               <Layers size={11} /> Diseñar
@@ -2205,7 +2192,7 @@ export default function AdminDashboard() {
 
               {/* Pipeline Kanban Columns */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                
+
                 {/* Column 1: Generated/Pending Client Signature */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between px-3 pb-2 border-b border-white/5">
@@ -2376,21 +2363,19 @@ export default function AdminDashboard() {
                 <div className="flex gap-2 bg-white/[0.02] border border-white/5 p-1 rounded-xl">
                   <button
                     onClick={() => setCampaignSubTab('campaigns')}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                      campaignSubTab === 'campaigns' 
-                        ? 'bg-white/10 text-white' 
+                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'campaigns'
+                        ? 'bg-white/10 text-white'
                         : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     📧 Campañas de Poemas ({campaigns.length})
                   </button>
                   <button
                     onClick={() => setCampaignSubTab('subscribers')}
-                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                      campaignSubTab === 'subscribers' 
-                        ? 'bg-white/10 text-white' 
+                    className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'subscribers'
+                        ? 'bg-white/10 text-white'
                         : 'text-white/40 hover:text-white hover:bg-white/5'
-                    }`}
+                      }`}
                   >
                     👥 Lista de Suscriptores ({subscribers.length})
                   </button>
@@ -2421,20 +2406,19 @@ export default function AdminDashboard() {
                       <div key={c.id} className="p-6 rounded-[2rem] border border-white/5 bg-white/[0.02] space-y-4 hover:border-amber-honey/20 transition-all flex flex-col justify-between">
                         <div className="space-y-3">
                           <div className="flex justify-between items-start">
-                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
-                              c.template_type === 'moss' ? 'bg-green-950 text-green-300 border border-green-800' :
-                              c.template_type === 'cosmic' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
-                              c.template_type === 'glow' ? 'bg-yellow-950 text-yellow-300 border border-yellow-800' :
-                              c.template_type === 'mist' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' :
-                              'bg-neutral-900 text-neutral-300 border border-neutral-700'
-                            }`}>
+                            <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${c.template_type === 'moss' ? 'bg-green-950 text-green-300 border border-green-800' :
+                                c.template_type === 'cosmic' ? 'bg-purple-950 text-purple-300 border border-purple-800' :
+                                  c.template_type === 'glow' ? 'bg-yellow-950 text-yellow-300 border border-yellow-800' :
+                                    c.template_type === 'mist' ? 'bg-cyan-950 text-cyan-300 border border-cyan-800' :
+                                      'bg-neutral-900 text-neutral-300 border border-neutral-700'
+                              }`}>
                               {c.template_type === 'minimalist' ? 'Minimalist Carbon' :
-                               c.template_type === 'moss' ? 'Moss Green' :
-                               c.template_type === 'cosmic' ? 'Cosmic Night' :
-                               c.template_type === 'glow' ? 'Amber Glow' :
-                               c.template_type === 'mist' ? 'Mystic Mist' : c.template_type}
+                                c.template_type === 'moss' ? 'Moss Green' :
+                                  c.template_type === 'cosmic' ? 'Cosmic Night' :
+                                    c.template_type === 'glow' ? 'Amber Glow' :
+                                      c.template_type === 'mist' ? 'Mystic Mist' : c.template_type}
                             </span>
-                            
+
                             {c.is_sent ? (
                               <span className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest">
                                 Enviada
@@ -2470,7 +2454,7 @@ export default function AdminDashboard() {
                           >
                             <Eye size={12} /> Previsualizar
                           </button>
-                          
+
                           {!c.is_sent && (
                             <>
                               <button
@@ -2617,16 +2601,14 @@ export default function AdminDashboard() {
                                   )}
                                 </td>
                                 <td className="py-3 text-center">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                    s.is_active ? 'bg-green-500/10 border border-green-500/25 text-green-400' : 'bg-red-500/10 border border-red-500/25 text-red-400'
-                                  }`}>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_active ? 'bg-green-500/10 border border-green-500/25 text-green-400' : 'bg-red-500/10 border border-red-500/25 text-red-400'
+                                    }`}>
                                     {s.is_active ? 'Activo' : 'Inactivo'}
                                   </span>
                                 </td>
                                 <td className="py-3 text-center">
-                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${
-                                    s.is_premium ? 'bg-amber-honey/20 border border-amber-honey/30 text-amber-honey' : 'bg-white/5 border border-white/10 text-white/30'
-                                  }`}>
+                                  <span className={`px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${s.is_premium ? 'bg-amber-honey/20 border border-amber-honey/30 text-amber-honey' : 'bg-white/5 border border-white/10 text-white/30'
+                                    }`}>
                                     {s.is_premium ? 'Premium' : 'Estándar'}
                                   </span>
                                 </td>
@@ -2702,9 +2684,8 @@ export default function AdminDashboard() {
                       <div
                         key={t.id}
                         onClick={() => setCampTemplateType(t.id)}
-                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${t.class} ${
-                          campTemplateType === t.id ? 'ring-2 ring-amber-honey border-transparent' : 'opacity-65 hover:opacity-100'
-                        }`}
+                        className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${t.class} ${campTemplateType === t.id ? 'ring-2 ring-amber-honey border-transparent' : 'opacity-65 hover:opacity-100'
+                          }`}
                       >
                         <span className="text-[10px] font-black uppercase tracking-wider">{t.name}</span>
                         <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t.desc}</span>
@@ -2921,45 +2902,43 @@ export default function AdminDashboard() {
                   <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
                   <div><span className="font-bold text-white/40 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-white font-semibold">{previewCampaign.subject}</span></div>
                 </div>
-                
+
                 {/* Email body simulation */}
                 <div className="flex-1 overflow-y-auto p-8 custom-scroll" style={{
-                  backgroundColor: 
+                  backgroundColor:
                     previewCampaign.template_type === 'moss' ? '#0b130e' :
-                    previewCampaign.template_type === 'cosmic' ? '#05050f' :
-                    previewCampaign.template_type === 'glow' ? '#0f0b07' :
-                    previewCampaign.template_type === 'mist' ? '#0f1115' : '#06070b'
+                      previewCampaign.template_type === 'cosmic' ? '#05050f' :
+                        previewCampaign.template_type === 'glow' ? '#0f0b07' :
+                          previewCampaign.template_type === 'mist' ? '#0f1115' : '#06070b'
                 }}>
                   <div style={{
                     maxWidth: '500px',
                     margin: '0 auto',
                     backgroundColor:
                       previewCampaign.template_type === 'moss' ? '#122017' :
-                      previewCampaign.template_type === 'cosmic' ? '#0c0a1a' :
-                      previewCampaign.template_type === 'glow' ? '#1a130c' :
-                      previewCampaign.template_type === 'mist' ? '#181b22' : '#0c0d13',
+                        previewCampaign.template_type === 'cosmic' ? '#0c0a1a' :
+                          previewCampaign.template_type === 'glow' ? '#1a130c' :
+                            previewCampaign.template_type === 'mist' ? '#181b22' : '#0c0d13',
                     border:
                       previewCampaign.template_type === 'moss' ? '1px solid #2e4d38' :
-                      previewCampaign.template_type === 'cosmic' ? '1px solid #4a154b' :
-                      previewCampaign.template_type === 'glow' ? '1px solid #d97706' :
-                      previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
+                        previewCampaign.template_type === 'cosmic' ? '1px solid #4a154b' :
+                          previewCampaign.template_type === 'glow' ? '1px solid #d97706' :
+                            previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
                     padding: '30px',
                     borderRadius: '20px',
                     fontFamily: 'Georgia, serif',
                     textAlign: 'left',
                     // Background Image Overlay & blending simulation
                     ...(previewCampaign.bg_image ? {
-                      backgroundImage: `linear-gradient(rgba(${
-                        previewCampaign.template_type === 'moss' ? '18, 32, 23' :
-                        previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
-                        previewCampaign.template_type === 'glow' ? '26, 19, 12' :
-                        previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
-                      }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${
-                        previewCampaign.template_type === 'moss' ? '18, 32, 23' :
-                        previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
-                        previewCampaign.template_type === 'glow' ? '26, 19, 12' :
-                        previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
-                      }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))})) , url(${previewCampaign.bg_image})`,
+                      backgroundImage: `linear-gradient(rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                          previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                            previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                              previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                        }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                          previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                            previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                              previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                        }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))})) , url(${previewCampaign.bg_image})`,
                       backgroundPosition: previewCampaign.bg_position || 'center',
                       backgroundRepeat: 'no-repeat',
                       backgroundSize: 'cover',
@@ -2975,9 +2954,9 @@ export default function AdminDashboard() {
                         borderRadius: '50%',
                         backgroundColor:
                           previewCampaign.template_type === 'moss' ? '#82c99b' :
-                          previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                          previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                            previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                              previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
                         color: '#030303',
                         lineHeight: '40px',
                         textAlign: 'center',
@@ -2988,9 +2967,9 @@ export default function AdminDashboard() {
                       <p style={{
                         color:
                           previewCampaign.template_type === 'moss' ? '#82c99b' :
-                          previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                          previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                            previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                              previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
                         fontSize: '8px',
                         textTransform: 'uppercase',
                         letterSpacing: '2px',
@@ -3022,11 +3001,11 @@ export default function AdminDashboard() {
 
                     {/* Poem body */}
                     <div style={{
-                      color: 
+                      color:
                         previewCampaign.template_type === 'moss' ? '#f5fbf7' :
-                        previewCampaign.template_type === 'cosmic' ? '#ffffff' :
-                        previewCampaign.template_type === 'glow' ? '#fffdfa' :
-                        previewCampaign.template_type === 'mist' ? '#f3f4f6' : '#ffffff',
+                          previewCampaign.template_type === 'cosmic' ? '#ffffff' :
+                            previewCampaign.template_type === 'glow' ? '#fffdfa' :
+                              previewCampaign.template_type === 'mist' ? '#f3f4f6' : '#ffffff',
                       fontSize: '14px',
                       lineHeight: '1.8',
                       textAlign: 'center',
@@ -3045,16 +3024,16 @@ export default function AdminDashboard() {
                     {/* Dynamic CTA Button */}
                     {previewCampaign.cta_text && previewCampaign.cta_link && (
                       <div style={{ textAlign: 'center', marginTop: '30px', marginBottom: '20px' }}>
-                        <a 
-                          href={previewCampaign.cta_link} 
-                          target="_blank" 
+                        <a
+                          href={previewCampaign.cta_link}
+                          target="_blank"
                           rel="noopener noreferrer"
                           style={{
                             backgroundColor:
                               previewCampaign.template_type === 'moss' ? '#82c99b' :
-                              previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                              previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                              previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                                previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                  previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                    previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
                             color: '#030303',
                             padding: '14px 28px',
                             borderRadius: '12px',
@@ -3082,14 +3061,14 @@ export default function AdminDashboard() {
                       fontSize: '9px',
                       lineHeight: '1.4'
                     }}>
-                      <p style={{ margin: '0 0 8px 0' }}>Recibiste este poema porque eres parte del círculo de MS AMBAR.</p>
+                      <p style={{ margin: '0 0 8px 0' }}>Recibiste este poema porque eres parte de las Cartas de MS AMBAR.</p>
                       <p style={{ margin: '0' }}>
                         <span style={{
                           color:
                             previewCampaign.template_type === 'moss' ? '#82c99b' :
-                            previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                            previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                            previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                              previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                  previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
                           textDecoration: 'underline',
                           cursor: 'pointer'
                         }}>Desuscribirse del boletín</span>
@@ -3126,7 +3105,7 @@ const StatCard = ({ icon, title, value, detail, color }: any) => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       whileHover={{ y: -4 }}
       className={`bg-white/[0.02] border rounded-[2rem] p-6 backdrop-blur-xl transition-all duration-300 relative group overflow-hidden ${glowColors[color]}`}
     >
