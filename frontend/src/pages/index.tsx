@@ -893,7 +893,7 @@ const Home = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="text-6xl md:text-9xl font-black tracking-tight leading-tight uppercase italic text-glow px-4 md:px-8 py-2 md:py-4"
+            className="text-6xl md:text-9xl font-black tracking-tight leading-tight italic text-glow px-4 md:px-8 py-2 md:py-4"
           >
             Ms <span className="text-gradient bg-gradient-to-r from-amber-300 via-amber-honey to-amber-600 bg-clip-text text-transparent px-2">Ambar</span>
           </motion.h1>
@@ -983,7 +983,7 @@ const Home = () => {
         <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-forest-green border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
           <div className="space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Boletín Oficial</span>
-            <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te Escribe</h3>
+            <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
             <p className="text-white/60 text-xs max-w-sm mx-auto leading-relaxed">
               Regístrate con tu nombre y correo electrónico para recibir crónicas, novedades y preventas exclusivas.
             </p>
