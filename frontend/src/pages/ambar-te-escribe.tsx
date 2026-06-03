@@ -378,7 +378,7 @@ export default function AmbarTeEscribePage() {
   return (
     <div className="selection:bg-amber-honey/30 min-h-screen text-white relative">
       <Head>
-        <title>Ms Ambar | Ambar Te Escribe</title>
+        <title>Ms Ambar | Ambar te escribe</title>
         <style>{`
           .rich-text-content h2 {
             font-size: 1.875rem;
@@ -547,7 +547,7 @@ export default function AmbarTeEscribePage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-5xl md:text-7xl font-black tracking-tighter"
                   >
-                    AMBAR TE ESCRIBE
+                    Ambar te escribe
                   </motion.h1>
                   {isAdmin && (
                     <motion.button

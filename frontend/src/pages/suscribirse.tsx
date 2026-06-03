@@ -100,9 +100,9 @@ export default function Suscribirse() {
             </div>
 
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Cartas Oficiales</span>
-            <h2 className="text-3xl font-serif text-nature-night mb-4 tracking-tight italic font-normal">Ambar te Escribe</h2>
+            <h2 className="text-3xl font-serif text-nature-night mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
             <p className="text-nature-night/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
-              Únete al círculo exclusivo de Ms Ambar para recibir bitácoras de viaje, adelantos de producción y poemas íntimos directamente en tu bandeja de entrada.
+              Únete al club exclusivo de Ms Ambar para recibir contenido de viajes, adelantos de producción y poemas íntimos directamente en tu bandeja de entrada.
             </p>
 
             <form className="flex flex-col gap-3 text-left" onSubmit={handleSubscribe}>

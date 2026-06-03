@@ -73,7 +73,7 @@ const Navbar = () => {
     // { name: 'Galería', href: '/galleria' }, // TODO: Habilitar cuando esté completado
     // { name: 'Música', href: '/musica' }, // TODO: Habilitar cuando esté completado
     { name: 'Tienda', href: '/tienda' },
-    { name: 'Ambar Te Escribe', href: '/ambar-te-escribe' },
+    { name: 'Ambar te escribe', href: '/ambar-te-escribe' },
     { name: 'Contacto', href: '/contacto' },
     // { name: 'Entretenimiento', href: '/entretenimiento' }, // TODO: Habilitar cuando esté completado
   ];

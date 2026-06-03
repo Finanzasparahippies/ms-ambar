@@ -59,7 +59,7 @@ const Layout = ({ children }: LayoutProps) => {
               <li><a href="/" className="hover:text-amber-honey">Inicio</a></li>
               <li><a href="/comprar-boletos" className="hover:text-amber-honey">Accesos</a></li>
               <li><a href="/tienda" className="hover:text-amber-honey">Tienda</a></li>
-              <li><a href="/ambar-te-escribe" className="hover:text-amber-honey">Ambar Te Escribe</a></li>
+              <li><a href="/ambar-te-escribe" className="hover:text-amber-honey">Ambar Te escribe</a></li>
               <li><a href="/contacto" className="hover:text-amber-honey">Contacto</a></li>
             </ul>
           </div>
