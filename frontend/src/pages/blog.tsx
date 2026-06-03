@@ -99,7 +99,7 @@ export default function BlogPage() {
     if (!newsletterEmail.trim()) return;
     setNewsletterSubmitting(true);
     try {
-      await axios.post(`${API_URL}/blog/subscribers/`, { 
+      await axios.post(`${API_URL}/blog/subscribers/`, {
         email: newsletterEmail,
         name: newsletterName
       });
@@ -469,7 +469,7 @@ export default function BlogPage() {
               )}
             </div>
             <p className="opacity-40 mt-4 text-sm font-bold uppercase tracking-[0.4em] text-glow text-amber-honey">
-              Bitácora de Luz & Sonido
+              Cartas desde el escenario
             </p>
           </div>
 
@@ -653,7 +653,7 @@ export default function BlogPage() {
               >
                 {newsletterSubmitting ? 'Procesando...' : 'Suscribirse'}
               </button>
-              
+
               <p className="text-[9px] text-white/40 tracking-wider text-center pt-2">
                 Respetamos tu privacidad.
               </p>

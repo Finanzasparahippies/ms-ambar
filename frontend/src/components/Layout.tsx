@@ -9,12 +9,12 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  
+
   // Exclude marketing navbar and footer on auth screens and admin panels
-  const isAuthOrAdmin = 
-    router.pathname.startsWith('/login') || 
-    router.pathname.startsWith('/signup') || 
-    router.pathname.startsWith('/forgot-password') || 
+  const isAuthOrAdmin =
+    router.pathname.startsWith('/login') ||
+    router.pathname.startsWith('/signup') ||
+    router.pathname.startsWith('/forgot-password') ||
     router.pathname.startsWith('/reset-password') ||
     router.pathname.startsWith('/admin') ||
     router.pathname.startsWith('/dashboard') ||
@@ -33,7 +33,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative">
       <Navbar />
-      
+
       {/* Decorative Nature Elements (Static Background) */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-honey/10 blur-[120px] rounded-full" />
@@ -58,8 +58,6 @@ const Layout = ({ children }: LayoutProps) => {
             <ul className="space-y-4 text-xs font-bold opacity-60">
               <li><a href="/" className="hover:text-amber-honey">Inicio</a></li>
               <li><a href="/comprar-boletos" className="hover:text-amber-honey">Accesos</a></li>
-              {/* <li><a href="/musica" className="hover:text-amber-honey">Música</a></li> */} {/* TODO: Habilitar cuando esté completado */}
-              {/* <li><a href="/galleria" className="hover:text-amber-honey">Galería</a></li> */} {/* TODO: Habilitar cuando esté completado */}
               <li><a href="/tienda" className="hover:text-amber-honey">Tienda</a></li>
               <li><a href="/ambar-te-escribe" className="hover:text-amber-honey">Ambar Te Escribe</a></li>
               <li><a href="/contacto" className="hover:text-amber-honey">Contacto</a></li>
