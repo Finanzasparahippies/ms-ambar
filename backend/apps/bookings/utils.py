@@ -19,7 +19,7 @@ class BookingContractPDF(FPDF):
         
         self.set_font('helvetica', 'B', 11)
         self.set_text_color(245, 158, 11) # Amber Gold (#f59e0b)
-        self.cell(0, 8, 'MS AMBAR - ACUERDO DE BOOKING OFICIAL', new_x="LMARGIN", new_y="NEXT", align='C')
+        self.cell(0, 8, 'Ms Ambar - ACUERDO DE BOOKING OFICIAL', new_x="LMARGIN", new_y="NEXT", align='C')
         self.ln(8)
 
     def footer(self):
@@ -53,7 +53,7 @@ def generate_booking_contract_pdf(contract):
         pdf.set_font('helvetica', 'B', 11)
         pdf.cell(0, 10, 'HONORARIOS Y PAGOS', new_x="LMARGIN", new_y="NEXT")
         pdf.set_font('helvetica', '', 10)
-        pdf.multi_cell(0, 6, f'Se acuerda un honorario total de ${contract.fee} MXN por la presentación artística de MS AMBAR. El organizador se compromete a liquidar el 50% para reservar la fecha y el 50% restante antes de subir al escenario.')
+        pdf.multi_cell(0, 6, f'Se acuerda un honorario total de ${contract.fee} MXN por la presentación artística de Ms Ambar. El organizador se compromete a liquidar el 50% para reservar la fecha y el 50% restante antes de subir al escenario.')
         pdf.ln(4)
 
         # Clauses
@@ -114,7 +114,7 @@ def generate_booking_contract_pdf(contract):
         pdf.set_xy(110, y_before_sig + 16)
         pdf.cell(80, 8, 'Representante Autorizado', align='C', new_x="LMARGIN", new_y="NEXT")
         pdf.set_font('helvetica', 'I', 8)
-        pdf.cell(80, 5, 'REPRESENTANTE (MS AMBAR)', align='C')
+        pdf.cell(80, 5, 'REPRESENTANTE (Ms Ambar)', align='C')
 
         # Save PDF
         output = pdf.output()
@@ -131,7 +131,7 @@ def send_booking_contract_emails(contract):
         
         if not contract.is_fully_signed:
             # Stage 1: Proposal sent to Client, notify Manager to track it
-            client_subject = "✨ Propuesta de Contrato de Booking - MS AMBAR"
+            client_subject = "✨ Propuesta de Contrato de Booking - Ms Ambar"
             sign_url = f"{settings.FRONTEND_URL}/bookings/sign/{contract.id}"
             
             client_context = {

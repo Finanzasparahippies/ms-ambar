@@ -39,7 +39,7 @@ else:
 concert, created = Event.objects.get_or_create(
     title="Sinfonía Ámbar 2026 - Concierto Acústico",
     defaults={
-        "artist": "MS AMBAR",
+        "artist": "Ms Ambar",
         "date": timezone.now() + timezone.timedelta(days=30),
         "theater": theater,
         "event_type": "concert",
@@ -58,7 +58,7 @@ else:
 meet_greet, created = Event.objects.get_or_create(
     title="Convivencia Mística VIP - Hermosillo",
     defaults={
-        "artist": "MS AMBAR",
+        "artist": "Ms Ambar",
         "date": timezone.now() + timezone.timedelta(days=15),
         "theater": None,
         "event_type": "meet_greet",

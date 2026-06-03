@@ -30,7 +30,7 @@ def send_ticket_email(ticket):
     """
     Sends the ticket via email with the QR code embedded inline and attached.
     """
-    subject = f"✨ Tu boleto para {ticket.event.title} - MS AMBAR"
+    subject = f"✨ Tu boleto para {ticket.event.title} - Ms Ambar"
     
     context = {
         'ticket': ticket,
@@ -63,7 +63,7 @@ def send_ticket_email(ticket):
         f"Puedes ver tu boleto digital en el siguiente enlace:\n"
         f"{settings.FRONTEND_URL}/tickets/{ticket.token}\n\n"
         f"Presenta el código QR adjunto en la entrada.\n"
-        f"¡Disfruta del evento!\n\nAtentamente,\nEl equipo de MS AMBAR"
+        f"¡Disfruta del evento!\n\nAtentamente,\nEl equipo de Ms Ambar"
     )
     
     email = EmailMultiAlternatives(

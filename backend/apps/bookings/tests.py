@@ -24,7 +24,7 @@ class BookingsAppTests(APITestCase):
             'company': 'Festival del Sol',
             'date': '2026-10-15',
             'venue_type': 'festival',
-            'message': 'Queremos contratar a MS AMBAR para el festival principal.'
+            'message': 'Queremos contratar a Ms Ambar para el festival principal.'
         }
 
     @patch('apps.bookings.views.generate_booking_contract_pdf')

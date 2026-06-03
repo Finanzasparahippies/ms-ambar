@@ -486,7 +486,7 @@ export default function AmbarTeEscribePage() {
               </div>
 
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Cartas Exclusivas</span>
-              <h2 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te Escribe</h2>
+              <h2 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
               <p className="text-white/60 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
                 Las crónicas y bitácoras de Ms Ambar están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido de las cartas y recibir poemas exclusivos en tu bandeja.
               </p>

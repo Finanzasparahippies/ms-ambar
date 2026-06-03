@@ -24,7 +24,7 @@ def send_newsletter_email(post):
     if not subscribers.exists():
         return
         
-    subject = f"✨ Nueva Crónica: {post.title} - MS AMBAR"
+    subject = f"✨ Nueva Crónica: {post.title} - Ms Ambar"
     
     # Generate full absolute URL for image if present
     image_url = ""
@@ -46,7 +46,7 @@ def send_newsletter_email(post):
               <!-- Header/Logo -->
               <div style="text-align: center; margin-bottom: 40px;">
                 <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
-                <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">MS AMBAR</h1>
+                <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
                 <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Cartas desde el escenario</p>
               </div>
               
@@ -69,7 +69,7 @@ def send_newsletter_email(post):
               
               <!-- Footer -->
               <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-                <p style="margin: 0 0 10px 0;">Recibiste este correo porque estás suscrito a las cartas de MS AMBAR.</p>
+                <p style="margin: 0 0 10px 0;">Recibiste este correo porque estás suscrito a las cartas de Ms Ambar.</p>
                 <p style="margin: 0;"><a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub.email}" style="color: #f59e0b; text-decoration: underline;">Desuscribirse</a></p>
               </div>
               
@@ -84,7 +84,7 @@ def send_newsletter_email(post):
             logger.error(f"Error sending newsletter email to {sub.email} via all failover providers: {e}")
 
 def send_welcome_email(subscriber):
-    subject = "✨ Bienvenido al Newsletter de MS AMBAR"
+    subject = "✨ Bienvenido al Newsletter de Ms Ambar"
     
     # Beautiful HTML layout matching ms-ambar aesthetics
     html_content = f"""
@@ -95,7 +95,7 @@ def send_welcome_email(subscriber):
           <!-- Header/Logo -->
           <div style="text-align: center; margin-bottom: 40px;">
             <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
-            <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">MS AMBAR</h1>
+            <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
             <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Cartas desde el escenario</p>
           </div>
           
@@ -105,7 +105,7 @@ def send_welcome_email(subscriber):
           </h2>
           
           <div style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
-            {f"Gracias por unirte a nuestro viaje. " if subscriber.name else ""}A partir de ahora, recibirás antes que nadie nuestras crónicas, fechas de presentaciones, sets exclusivos y actualizaciones del universo sonoro y visual de MS AMBAR.
+            {f"Gracias por unirte a nuestro viaje. " if subscriber.name else ""}A partir de ahora, recibirás antes que nadie nuestras crónicas, fechas de presentaciones, sets exclusivos y actualizaciones del universo sonoro y visual de Ms Ambar.
           </div>
           
           <!-- Button link -->
@@ -185,7 +185,7 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
             subscriber = NewsletterSubscriber.objects.get(email=email)
             subscriber.is_active = False
             subscriber.save()
-            return Response({"message": "Te has desuscrito con éxito del newsletter de MS AMBAR."}, status=status.HTTP_200_OK)
+            return Response({"message": "Te has desuscrito con éxito del newsletter de Ms Ambar."}, status=status.HTTP_200_OK)
         except NewsletterSubscriber.DoesNotExist:
             return Response({"error": "Este correo no se encuentra registrado."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -510,8 +510,8 @@ def get_campaign_html_template(campaign, sub_email):
           <!-- Header/Logo -->
           <div style="text-align: center; margin-bottom: 40px;">
             <div style="display: inline-block; width: 50px; height: 50px; background-color: {accent_color}; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
-            <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">MS AMBAR</h1>
-            <p style="color: {accent_color}; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Ambar Te Escribe • Poesía</p>
+            <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
+            <p style="color: {accent_color}; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Ambar te escribe • Poesía</p>
           </div>
           
           <!-- Cover image if exists -->
@@ -532,7 +532,7 @@ def get_campaign_html_template(campaign, sub_email):
           
           <!-- Footer -->
           <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-            <p style="margin: 0 0 10px 0;">Recibiste este poema porque eres parte de las cartas de MS AMBAR.</p>
+            <p style="margin: 0 0 10px 0;">Recibiste este poema porque eres parte de las cartas de Ms Ambar.</p>
             <p style="margin: 0;"><a href="{unsubscribe_url}" style="color: {accent_color}; text-decoration: underline;">Desuscribirse del boletín</a></p>
           </div>
           

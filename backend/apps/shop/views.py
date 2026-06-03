@@ -147,7 +147,7 @@ def send_order_confirmation_email(order):
             'items': items,
             'frontend_url': settings.FRONTEND_URL,
         }
-        subject = f"🛒 Confirmación de Pedido #{order.id} - MS AMBAR"
+        subject = f"🛒 Confirmación de Pedido #{order.id} - Ms Ambar"
         html_content = render_to_string('shop/emails/order_confirmation.html', context)
         text_content = (
             f"¡Gracias por tu compra, {order.full_name}!\n\n"
@@ -156,7 +156,7 @@ def send_order_confirmation_email(order):
             f"Dirección de Envío:\n"
             f"{order.address}\n"
             f"{order.city}, {order.country}\n\n"
-            f"Atentamente,\nEl equipo de MS AMBAR"
+            f"Atentamente,\nEl equipo de Ms Ambar"
         )
         
         email = EmailMultiAlternatives(
