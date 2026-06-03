@@ -895,7 +895,7 @@ const Home = () => {
             transition={{ duration: 0.8, delay: 0.1 }}
             className="text-6xl md:text-9xl font-black tracking-tight leading-tight uppercase italic text-glow px-4 md:px-8 py-2 md:py-4"
           >
-            MS <span className="text-gradient bg-gradient-to-r from-amber-300 via-amber-honey to-amber-600 bg-clip-text text-transparent px-2">AMBAR</span>
+            Ms <span className="text-gradient bg-gradient-to-r from-amber-300 via-amber-honey to-amber-600 bg-clip-text text-transparent px-2">Ambar</span>
           </motion.h1>
 
           <motion.p

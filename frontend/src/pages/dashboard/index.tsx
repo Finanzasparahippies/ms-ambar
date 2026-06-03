@@ -690,7 +690,7 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen text-nature-night flex flex-col items-center justify-center gap-4">
         <div className="w-12 h-12 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-        <p className="text-nature-night/60 tracking-widest font-black uppercase text-xs">Cargando Bóveda MS AMBAR...</p>
+        <p className="text-nature-night/60 tracking-widest font-black uppercase text-xs">Cargando Bóveda Ms Ambar...</p>
       </div>
     );
   }
@@ -1744,7 +1744,7 @@ export default function AdminDashboard() {
                           required
                           value={prodName}
                           onChange={(e) => setProdName(e.target.value)}
-                          placeholder="Ej: Remera MS AMBAR Premium Black"
+                          placeholder="Ej: Remera Ms Ambar Premium Black"
                           className="w-full bg-white border border-nature-night/15 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold text-nature-night placeholder-nature-night/30"
                         />
                       </div>
@@ -2669,7 +2669,7 @@ export default function AdminDashboard() {
                     type="text"
                     value={campSubject}
                     onChange={e => setCampSubject(e.target.value)}
-                    placeholder="Ej. Susurros del Desierto - Un poema de MS AMBAR"
+                    placeholder="Ej. Susurros del Desierto - Un poema de Ms Ambar"
                     required
                     className="w-full bg-white text-nature-night border border-nature-night/15 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-nature-night/30"
                   />
@@ -2880,8 +2880,8 @@ export default function AdminDashboard() {
                         key={f.id}
                         onClick={() => setCampFontFamily(f.id)}
                         className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${campFontFamily === f.id
-                            ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
-                            : 'bg-white border border-nature-night/10 text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
+                          ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
+                          : 'bg-white border border-nature-night/10 text-nature-night/60 hover:text-nature-night hover:bg-nature-night/5'
                           }`}
                       >
                         <span
@@ -2941,7 +2941,7 @@ export default function AdminDashboard() {
               <div className="border border-nature-night/15 rounded-2xl overflow-hidden flex flex-col flex-1 bg-nature-night/5">
                 {/* Email header bar */}
                 <div className="bg-nature-night/5 border-b border-nature-night/10 px-6 py-4 space-y-1.5 text-xs text-nature-night/70">
-                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">De:</span> MS AMBAR &lt;escribe@msambar.dev&gt;</div>
+                  <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">De:</span> Ms Ambar &lt;escribe@msambar.dev&gt;</div>
                   <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
                   <div><span className="font-bold text-nature-night/45 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-nature-night font-semibold">{previewCampaign.subject}</span></div>
                 </div>
@@ -3012,7 +3012,7 @@ export default function AdminDashboard() {
                         fontWeight: 'bold',
                         fontSize: '20px'
                       }}>A</div>
-                      <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>MS AMBAR</h4>
+                      <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>Ms Ambar</h4>
                       <p style={{
                         color:
                           previewCampaign.template_type === 'moss' ? '#82c99b' :
@@ -3110,7 +3110,7 @@ export default function AdminDashboard() {
                       fontSize: '9px',
                       lineHeight: '1.4'
                     }}>
-                      <p style={{ margin: '0 0 8px 0' }}>Recibiste este poema porque eres parte de las Cartas de MS AMBAR.</p>
+                      <p style={{ margin: '0 0 8px 0' }}>Recibiste este poema porque eres parte de las Cartas de Ms Ambar.</p>
                       <p style={{ margin: '0' }}>
                         <span style={{
                           color:
