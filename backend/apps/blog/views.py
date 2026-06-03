@@ -205,25 +205,24 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
             csv_data = file.read().decode('utf-8-sig')
             csv_file = io.StringIO(csv_data)
             # Support comma, semicolon, or tab separation if needed, but csv.DictReader is standard
-            # We can sniff dialect or default to comma (or check if it has tabs)
+            # We can sniff delimiter or default to comma
             sample = csv_data[:1024]
-            dialect = csv.excel
+            delimiter = ','
             if '\t' in sample:
-                dialect = csv.excel_tab
+                delimiter = '\t'
             elif ';' in sample and ',' not in sample:
-                dialect = csv.excel
-                dialect.delimiter = ';'
+                delimiter = ';'
             
             csv_file.seek(0)
-            reader = csv.DictReader(csv_file, dialect=dialect)
+            reader = csv.DictReader(csv_file, delimiter=delimiter)
         except Exception as e:
             return Response({"error": f"Error al leer el archivo: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
         imported_count = 0
         errors = []
         for row in reader:
-            # Clean keys by stripping whitespace
-            row = { (k.strip() if k else ''): (v.strip() if v else '') for k, v in row.items() }
+            # Clean keys by stripping whitespace, ignoring None keys, and preventing strip errors on lists/None values
+            row = { k.strip(): (v.strip() if isinstance(v, str) else '') for k, v in row.items() if k }
             
             email = row.get('email')
             if not email:

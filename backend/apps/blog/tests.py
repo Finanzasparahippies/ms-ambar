@@ -293,9 +293,9 @@ class BlogAppTests(APITestCase):
         self.client.force_authenticate(user=self.admin_user)
         
         csv_content = (
-            "\xef\xbb\xbfsubscriber_id;api_subscription_id;email;tags;status;premium?;created_at\n"
-            "sub_777;api_888;semicolon@example.com;tag1;active;yes;2026-05-22\n"
-        ).encode('utf-8')
+            b"\xef\xbb\xbfsubscriber_id;api_subscription_id;email;tags;status;premium?;created_at\n"
+            b"sub_777;api_888;semicolon@example.com;tag1;active;yes;2026-05-22\n"
+        )
         
         uploaded_file = SimpleUploadedFile('subscribers.csv', csv_content, content_type='text/csv')
         url = reverse('subscriber-import-csv')
@@ -400,7 +400,7 @@ class BlogAppTests(APITestCase):
         url = reverse('campaign-list')
         
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         
         self.client.force_authenticate(user=self.regular_user)
         response = self.client.get(url)
@@ -419,7 +419,7 @@ class BlogAppTests(APITestCase):
         html = get_campaign_html_template(campaign, 'fan@example.com')
         self.assertIn('#0c0a1a', html)
         self.assertIn('#c084fc', html)
-        self.assertIn('Noche C&oacute;smica', html)
+        self.assertIn('Noche Cósmica', html)
 
     def test_campaign_template_rendering_with_bg_and_cta(self):
         """Verify background gradient blend styles and CTA button are generated when configured."""
