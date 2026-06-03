@@ -894,7 +894,7 @@ const Home = () => {
               href="/contacto"
               className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all flex items-center gap-3"
             >
-              Proponer Booking <ArrowRight size={14} />
+              Contacto <ArrowRight size={14} />
             </Link>
           </motion.div>
         </div>
