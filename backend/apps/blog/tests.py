@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from apps.blog.models import Category, Post, NewsletterSubscriber
+from apps.blog.models import Category, Post, NewsletterSubscriber, EmailCampaign
 from unittest.mock import patch
 
 User = get_user_model()
@@ -251,4 +251,253 @@ class BlogAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         sub_complaint.refresh_from_db()
         self.assertFalse(sub_complaint.is_active)
+
+    # --- New Tests for CSV Import, Campaigns and Templates ---
+
+    def test_import_csv_success(self):
+        """Verify successful CSV import with custom headers and formats."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.force_authenticate(user=self.admin_user)
+        
+        csv_content = (
+            "subscriber_id,api_subscription_id,email,tags,status,premium?,created_at\n"
+            "sub_123,api_999,new_fan@example.com,concierto;vip,active,true,2026-05-20 14:30:00\n"
+            "sub_124,api_1000,another_fan@example.com,tour,inactive,false,2026-05-21 15:00:00\n"
+        ).encode('utf-8')
+        
+        uploaded_file = SimpleUploadedFile('subscribers.csv', csv_content, content_type='text/csv')
+        url = reverse('subscriber-import-csv')
+        response = self.client.post(url, {'file': uploaded_file}, format='multipart')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("Se procesaron 2 suscriptores con éxito", response.data['message'])
+        
+        sub1 = NewsletterSubscriber.objects.get(email='new_fan@example.com')
+        self.assertEqual(sub1.subscriber_id, 'sub_123')
+        self.assertEqual(sub1.api_subscription_id, 'api_999')
+        self.assertEqual(sub1.tags, 'concierto;vip')
+        self.assertTrue(sub1.is_premium)
+        self.assertTrue(sub1.is_active)
+        self.assertEqual(sub1.created_at.strftime('%Y-%m-%d %H:%M:%S'), '2026-05-20 14:30:00')
+        
+        sub2 = NewsletterSubscriber.objects.get(email='another_fan@example.com')
+        self.assertEqual(sub2.subscriber_id, 'sub_124')
+        self.assertEqual(sub2.api_subscription_id, 'api_1000')
+        self.assertEqual(sub2.tags, 'tour')
+        self.assertFalse(sub2.is_premium)
+        self.assertFalse(sub2.is_active)
+
+    def test_import_csv_alternative_delimiters_and_bom(self):
+        """Verify support for semicolon and tab delimiters, and UTF-8 BOM encoding."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.force_authenticate(user=self.admin_user)
+        
+        csv_content = (
+            "\xef\xbb\xbfsubscriber_id;api_subscription_id;email;tags;status;premium?;created_at\n"
+            "sub_777;api_888;semicolon@example.com;tag1;active;yes;2026-05-22\n"
+        ).encode('utf-8')
+        
+        uploaded_file = SimpleUploadedFile('subscribers.csv', csv_content, content_type='text/csv')
+        url = reverse('subscriber-import-csv')
+        response = self.client.post(url, {'file': uploaded_file}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        sub = NewsletterSubscriber.objects.get(email='semicolon@example.com')
+        self.assertEqual(sub.subscriber_id, 'sub_777')
+        self.assertTrue(sub.is_premium)
+        
+        csv_tab_content = (
+            "subscriber_id\tapi_subscription_id\temail\ttags\tstatus\tpremium?\tcreated_at\n"
+            "sub_111\tapi_222\ttab@example.com\ttag2\tactive\t1\t2026-05-23T10:00:00Z\n"
+        ).encode('utf-8')
+        uploaded_tab_file = SimpleUploadedFile('subscribers.csv', csv_tab_content, content_type='text/csv')
+        response = self.client.post(url, {'file': uploaded_tab_file}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        sub_tab = NewsletterSubscriber.objects.get(email='tab@example.com')
+        self.assertEqual(sub_tab.subscriber_id, 'sub_111')
+        self.assertTrue(sub_tab.is_premium)
+
+    def test_import_csv_upsert_existing_subscriber(self):
+        """Verify that importing an existing email merges fields and doesn't duplicate."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.force_authenticate(user=self.admin_user)
+        
+        NewsletterSubscriber.objects.create(
+            email='existing@example.com',
+            name='Original Name',
+            subscriber_id='old_sub',
+            is_premium=False,
+            is_active=False
+        )
+        
+        csv_content = (
+            "email,name,tags,premium?,status,subscriber_id\n"
+            "existing@example.com,New Name,new_tag,true,active,new_sub_id\n"
+        ).encode('utf-8')
+        
+        uploaded_file = SimpleUploadedFile('subscribers.csv', csv_content, content_type='text/csv')
+        url = reverse('subscriber-import-csv')
+        response = self.client.post(url, {'file': uploaded_file}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        sub = NewsletterSubscriber.objects.get(email='existing@example.com')
+        self.assertEqual(sub.name, 'New Name')
+        self.assertEqual(sub.subscriber_id, 'new_sub_id')
+        self.assertEqual(sub.tags, 'new_tag')
+        self.assertTrue(sub.is_premium)
+        self.assertTrue(sub.is_active)
+        self.assertEqual(NewsletterSubscriber.objects.filter(email='existing@example.com').count(), 1)
+
+    def test_import_csv_missing_email_or_file(self):
+        """Verify errors are handled for missing file or rows without email."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('subscriber-import-csv')
+        
+        response = self.client.post(url, {}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+        
+        csv_content = (
+            "subscriber_id,email,tags\n"
+            "sub_no_email,,tag1\n"
+        ).encode('utf-8')
+        uploaded_file = SimpleUploadedFile('subscribers.csv', csv_content, content_type='text/csv')
+        response = self.client.post(url, {'file': uploaded_file}, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("Se procesaron 0 suscriptores con éxito", response.data['message'])
+
+    def test_campaign_create_by_admin(self):
+        """Verify that admins can create an EmailCampaign with background and CTA properties."""
+        url = reverse('campaign-list')
+        self.client.force_authenticate(user=self.admin_user)
+        
+        data = {
+            'subject': 'Poema de Otoño',
+            'poem_text': 'Hojas que caen\nsilenciosamente...',
+            'template_type': 'moss',
+            'bg_opacity': 0.8,
+            'bg_saturation': 120,
+            'bg_position': 'top',
+            'cta_text': 'Escuchar Set',
+            'cta_link': 'https://soundcloud.com/ms-ambar'
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        campaign = EmailCampaign.objects.get(subject='Poema de Otoño')
+        self.assertEqual(campaign.template_type, 'moss')
+        self.assertEqual(campaign.bg_opacity, 0.8)
+        self.assertEqual(campaign.bg_saturation, 120)
+        self.assertEqual(campaign.bg_position, 'top')
+        self.assertEqual(campaign.cta_text, 'Escuchar Set')
+        self.assertEqual(campaign.cta_link, 'https://soundcloud.com/ms-ambar')
+        self.assertFalse(campaign.is_sent)
+
+    def test_campaign_permissions_denied_for_regular_user(self):
+        """Verify that regular/non-staff users cannot create or list campaigns."""
+        url = reverse('campaign-list')
+        
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        
+        self.client.force_authenticate(user=self.regular_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_campaign_template_rendering_styles(self):
+        """Verify get_campaign_html_template applies correct styles based on choices."""
+        from apps.blog.views import get_campaign_html_template
+        
+        campaign = EmailCampaign.objects.create(
+            subject='Noche Cósmica',
+            poem_text='Estrellas fugaces\nen el infinito...',
+            template_type='cosmic'
+        )
+        
+        html = get_campaign_html_template(campaign, 'fan@example.com')
+        self.assertIn('#0c0a1a', html)
+        self.assertIn('#c084fc', html)
+        self.assertIn('Noche C&oacute;smica', html)
+
+    def test_campaign_template_rendering_with_bg_and_cta(self):
+        """Verify background gradient blend styles and CTA button are generated when configured."""
+        from apps.blog.views import get_campaign_html_template
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        
+        bg_image = SimpleUploadedFile('bg.jpg', b'dummy_img_data', content_type='image/jpeg')
+        campaign = EmailCampaign.objects.create(
+            subject='Glow Poem',
+            poem_text='Bajo la luz del ámbar...',
+            template_type='glow',
+            bg_image=bg_image,
+            bg_opacity=0.6,
+            bg_saturation=150,
+            bg_position='bottom',
+            cta_text='Comprar Boletos',
+            cta_link='https://msambar.com/tickets'
+        )
+        
+        html = get_campaign_html_template(campaign, 'fan@example.com')
+        self.assertIn('linear-gradient(rgba(26, 19, 12, 0.4), rgba(26, 19, 12, 0.4))', html)
+        self.assertIn('filter: saturate(150%)', html)
+        self.assertIn('background-position: bottom', html)
+        self.assertIn('href="https://msambar.com/tickets"', html)
+        self.assertIn('Comprar Boletos', html)
+
+    @patch('apps.blog.views.send_failover_email')
+    def test_send_campaign_success(self, mock_send_email):
+        """Verify sending a campaign triggers dispatch to active subscribers."""
+        NewsletterSubscriber.objects.create(email='active1@example.com', is_active=True)
+        NewsletterSubscriber.objects.create(email='active2@example.com', is_active=True)
+        NewsletterSubscriber.objects.create(email='inactive@example.com', is_active=False)
+        
+        campaign = EmailCampaign.objects.create(
+            subject='Campaña Especial',
+            poem_text='Letras sonoras...',
+            template_type='minimalist'
+        )
+        
+        url = reverse('campaign-send-campaign', kwargs={'pk': campaign.pk})
+        self.client.force_authenticate(user=self.admin_user)
+        
+        class FakeThread:
+            def __init__(self, target, args=(), kwargs=None, daemon=True):
+                self.target = target
+                self.args = args
+                self.kwargs = kwargs or {}
+            def start(self):
+                self.target(*self.args, **self.kwargs)
+
+        with patch('apps.blog.views.threading.Thread', FakeThread):
+            response = self.client.post(url)
+            
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        campaign.refresh_from_db()
+        self.assertTrue(campaign.is_sent)
+        self.assertIsNotNone(campaign.sent_at)
+        
+        self.assertEqual(mock_send_email.call_count, 2)
+        called_emails = [call[0][3][0] for call in mock_send_email.call_args_list]
+        self.assertIn('active1@example.com', called_emails)
+        self.assertIn('active2@example.com', called_emails)
+        self.assertNotIn('inactive@example.com', called_emails)
+
+    def test_send_campaign_already_sent_fails(self):
+        """Verify that a campaign cannot be sent twice."""
+        campaign = EmailCampaign.objects.create(
+            subject='Campaña Antigua',
+            poem_text='Ya enviado...',
+            is_sent=True
+        )
+        
+        url = reverse('campaign-send-campaign', kwargs={'pk': campaign.pk})
+        self.client.force_authenticate(user=self.admin_user)
+        
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['error'], 'Esta campaña ya ha sido enviada anteriormente.')
+
 
