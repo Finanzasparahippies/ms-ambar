@@ -1,19 +1,5 @@
 name: ms-ambar-prod
 services:
-  db:
-    container_name: ambar_db
-    image: postgres:16-alpine
-    volumes:
-      - postgres_data_prod:/var/lib/postgresql/data/:Z
-    environment:
-      - POSTGRES_DB=${DB_NAME:-msambar}
-      - POSTGRES_USER=${DB_USER:-postgres}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
-    ports:
-      - "5435:5432"
-    networks:
-      - default
-
   backend:
     container_name: ambar_backend
     build:
@@ -27,8 +13,6 @@ services:
       - MEDIA_ROOT=/media_files
     env_file:
       - .env
-    depends_on:
-      - db
     restart: always
     networks:
       - default
@@ -49,8 +33,6 @@ services:
       - prod_network
 
 volumes:
-  postgres_data_prod:
-    name: ambar_postgres_data
   static_volume:
     name: ambar_static_volume
   media_volume:
