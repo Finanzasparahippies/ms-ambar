@@ -42,7 +42,7 @@ services:
 
   nginx-staging:
     container_name: ambar_staging_nginx
-    image: nginx:alpine
+    image: ms-ambar-nginx:staging
     build:
       context: ./docker/nginx
       dockerfile: Dockerfile
