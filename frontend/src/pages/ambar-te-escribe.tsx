@@ -461,7 +461,8 @@ export default function AmbarTeEscribePage() {
             display: block;
           }
         `}</style>
-           <AnimatePresence mode="wait">
+      </Head>
+      <AnimatePresence mode="wait">
         {checkingSub ? (
           <div className="min-h-screen bg-gradient-to-br from-[#121915] to-[#080C0A] text-[#F4F6F0] flex flex-col items-center justify-center gap-4">
             <div className="w-10 h-10 border-4 border-amber-honey/20 border-t-amber-honey rounded-full animate-spin" />
@@ -515,7 +516,7 @@ export default function AmbarTeEscribePage() {
                 >
                   {newsletterSubmitting ? (
                     <span className="flex items-center gap-2">
-                      <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />imate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />
                       Verificando...
                     </span>
                   ) : (
