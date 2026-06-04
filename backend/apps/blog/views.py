@@ -49,7 +49,7 @@ def send_newsletter_email(post):
                   <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
                 </div>
                 <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
-                <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Cartas desde el escenario</p>
+                <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Club Exclusivo</p>
               </div>
               
               <!-- Post cover image if exists -->
@@ -100,7 +100,7 @@ def send_welcome_email(subscriber):
               <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
             </div>
             <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
-            <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Cartas desde el escenario</p>
+            <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Club Exclusivo</p>
           </div>
           
           <!-- Content -->

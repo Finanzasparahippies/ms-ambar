@@ -563,7 +563,7 @@ export default function AmbarTeEscribePage() {
                   )}
                 </div>
                 <p className="opacity-40 mt-4 text-sm font-bold uppercase tracking-[0.4em] text-glow text-amber-honey">
-                  Cartas desde el escenario
+                  Club Exclusivo
                 </p>
               </div>
               {/* Categories bar */}
