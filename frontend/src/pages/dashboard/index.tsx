@@ -146,6 +146,7 @@ export default function AdminDashboard() {
   const [isBgSectionOpen, setIsBgSectionOpen] = useState(false);
   const [isCtaSectionOpen, setIsCtaSectionOpen] = useState(false);
   const campaignEditorRef = React.useRef<HTMLDivElement>(null);
+  const isDraftPending = React.useRef(false);
 
   // Client Dashboard & Profile states
   const [isStaff, setIsStaff] = useState(false);
@@ -426,25 +427,9 @@ export default function AdminDashboard() {
     };
   }, [isStaff]);
 
-  // Draft Campaign Auto-Saver and Recovery System
+  // Draft Campaign Auto-Saver System
   useEffect(() => {
-    if (typeof window !== 'undefined' && isCampaignModalOpen) {
-      const draftStr = localStorage.getItem('ms_ambar_campaign_draft');
-      if (draftStr) {
-        try {
-          const draft = JSON.parse(draftStr);
-          if (draft.campSubject || draft.campPoemText || draft.campEmailTitle) {
-            setHasDraft(true);
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-    }
-  }, [isCampaignModalOpen]);
-
-  useEffect(() => {
-    if (isCampaignModalOpen) {
+    if (isCampaignModalOpen && !isDraftPending.current) {
       const draft = {
         campId,
         campSubject,
@@ -573,6 +558,7 @@ export default function AdminDashboard() {
         }
       }, 100);
 
+      isDraftPending.current = false;
       setHasDraft(false);
     } catch (e) {
       // ignore
@@ -581,16 +567,34 @@ export default function AdminDashboard() {
 
   const discardDraft = () => {
     localStorage.removeItem('ms_ambar_campaign_draft');
+    isDraftPending.current = false;
     setHasDraft(false);
   };
 
   // ════ Campaign CRUD Handlers ════
   const openCampaignCreateModal = () => {
+    isDraftPending.current = false;
+    setHasDraft(false);
+
+    if (typeof window !== 'undefined') {
+      const draftStr = localStorage.getItem('ms_ambar_campaign_draft');
+      if (draftStr) {
+        try {
+          const draft = JSON.parse(draftStr);
+          if (!draft.campId && (draft.campSubject || draft.campPoemText || draft.campEmailTitle)) {
+            isDraftPending.current = true;
+            setHasDraft(true);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
     setEditingCampaign(null);
     setCampId(null);
     setCampSubject('');
     setCampSenderName('Ms Ambar');
-    setHasDraft(false);
     setCampPoemText('');
     setCampTemplateType('minimalist');
     setCampImageFile(null);
@@ -645,6 +649,24 @@ export default function AdminDashboard() {
   };
 
   const openCampaignEditModal = (campaign: any) => {
+    isDraftPending.current = false;
+    setHasDraft(false);
+
+    if (typeof window !== 'undefined') {
+      const draftStr = localStorage.getItem('ms_ambar_campaign_draft');
+      if (draftStr) {
+        try {
+          const draft = JSON.parse(draftStr);
+          if (draft.campId === campaign.id && (draft.campSubject || draft.campPoemText || draft.campEmailTitle)) {
+            isDraftPending.current = true;
+            setHasDraft(true);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
     setEditingCampaign(campaign);
     setCampId(campaign.id);
     setCampSubject(campaign.subject);
@@ -671,7 +693,6 @@ export default function AdminDashboard() {
 
     const styles = campaign.custom_styles || {};
     setCampSenderName(styles.sender_name || 'Ms Ambar');
-    setHasDraft(false);
     setCampTitleTextColor(styles.title_color || '#ffffff');
     setCampTitleBgColor(styles.title_bg_color || 'transparent');
     setCampTitleBgImage(styles.title_bg_image || '');
