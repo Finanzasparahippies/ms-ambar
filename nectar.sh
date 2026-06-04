@@ -189,11 +189,11 @@ case $COMMAND in
         ;;
     typecheck-staging)
         echo "Running TypeScript type-check for Staging frontend..."
-        docker compose run --rm frontend npx tsc --noEmit "$@"
+        docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npx tsc --noEmit "$@"
         ;;
     buildcheck-staging)
         echo "Running Next.js build-check for Staging frontend..."
-        docker compose run --rm frontend npm run build "$@"
+        docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npm run build "$@"
         ;;
     build)
         echo "Building MS AMBAR Production Images..."
