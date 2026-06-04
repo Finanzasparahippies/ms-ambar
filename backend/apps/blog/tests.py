@@ -638,7 +638,6 @@ class BlogAppTests(APITestCase):
             },
             {
                 'text': 'CTA 2',
-                'link': 'https://link2.com',
                 'bg_color': '#00ff55',
                 'text_color': '#000000',
                 'radius': '10px'
@@ -675,7 +674,7 @@ class BlogAppTests(APITestCase):
         self.assertIn('border: 2px solid #000000', html)
         self.assertIn('display: block', html) # is_full_width: True
 
-        self.assertIn('href="https://link2.com"', html)
+        self.assertIn('href="#"', html)
         self.assertIn('CTA 2', html)
         self.assertIn('background-color: #00ff55', html)
         self.assertIn('color: #000000', html)

@@ -51,10 +51,20 @@ import {
   Palette,
   Monitor,
   Tablet,
-  Smartphone
+  Smartphone,
+  Smile
 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+const resolveMediaUrl = (url: string | null | undefined) => {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url;
+  }
+  const backendRoot = API_URL.replace(/\/api$/, '');
+  return `${backendRoot}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 export default function AdminDashboard() {
   const resolveFontStack = (fontKey: string) => {
@@ -201,6 +211,56 @@ export default function AdminDashboard() {
   const [isCtaSectionOpen, setIsCtaSectionOpen] = useState(false);
   const campaignEditorRef = React.useRef<HTMLDivElement>(null);
   const isDraftPending = React.useRef(false);
+
+  const [modalPreviewViewport, setModalPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [emojiPopoverTarget, setEmojiPopoverTarget] = useState<'subject' | 'editor' | null>(null);
+
+  const CURATED_EMOJIS = [
+    '😊', '😂', '🤣', '🥰', '😍', '😘', '😜', '🤔', '🙄', '😬', '😭', '😱', '🤫', '😴', '🤯', '🥳', '😇', '🤠', '🤡',
+    '❤️', '💖', '💗', '💓', '💞', '💕', '💘', '💔', '⭐', '🌟', '✨', '⚡', '🔥', '💥', '🌈', '🌊', '❄️', '🌀',
+    '🌹', '🌸', '🍃', '🍂', '🍁', '🍄', '🌵', '🐫', '🐪', '🏜️', '🌴', '🍷', '🕯️', '🎭', '🎨', '🎤', '🎧', '🎸', '🎹',
+    '🔮', '📜', '✍️', '✒️', '📖', '🎟️', '🛎️', '🗝️', '🔒', '🔓', '🖤', '👑', '💎', '🏆', '🎁', '🎈', '🎉', '🎊'
+  ];
+
+  const insertEmojiToSubject = (emoji: string) => {
+    const input = document.getElementById('camp-subject-input') as HTMLInputElement;
+    if (input) {
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const text = campSubject;
+      const newValue = text.substring(0, start) + emoji + text.substring(end);
+      setCampSubject(newValue);
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + emoji.length, start + emoji.length);
+      }, 10);
+    } else {
+      setCampSubject(campSubject + emoji);
+    }
+  };
+
+  const insertEmojiToEditor = (emoji: string) => {
+    if (campaignEditorRef.current) {
+      campaignEditorRef.current.focus();
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(emoji);
+        range.insertNode(textNode);
+        range.setStartAfter(textNode);
+        range.setEndAfter(textNode);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        campaignEditorRef.current.innerHTML += emoji;
+      }
+      const html = campaignEditorRef.current.innerHTML;
+      if (editorActiveTab === 'body') setCampPoemText(html);
+      else if (editorActiveTab === 'title') setCampEmailTitle(html);
+      else if (editorActiveTab === 'footer') setCampFooterText(html);
+    }
+  };
 
   // Client Dashboard & Profile states
   const [isStaff, setIsStaff] = useState(false);
@@ -495,6 +555,12 @@ export default function AdminDashboard() {
       }
     }
   }, [editorActiveTab]);
+
+  useEffect(() => {
+    if (previewCampaign) {
+      setModalPreviewViewport('desktop');
+    }
+  }, [previewCampaign]);
 
   useEffect(() => {
     let interval: any;
@@ -3957,9 +4023,19 @@ export default function AdminDashboard() {
                       {settingsTab === 'content' && (
                         <div className="space-y-6">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Asunto del Correo</label>
+                            <div className="space-y-2 relative">
+                              <div className="flex justify-between items-center">
+                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Asunto del Correo</label>
+                                <button
+                                  type="button"
+                                  onClick={() => setEmojiPopoverTarget(emojiPopoverTarget === 'subject' ? null : 'subject')}
+                                  className="text-[9px] text-[#F4F6F0]/50 hover:text-amber-honey transition-all flex items-center gap-1 font-black uppercase tracking-wider"
+                                >
+                                  <Smile size={10} /> Emojis
+                                </button>
+                              </div>
                               <input
+                                id="camp-subject-input"
                                 type="text"
                                 value={campSubject}
                                 onChange={e => setCampSubject(e.target.value)}
@@ -3967,6 +4043,23 @@ export default function AdminDashboard() {
                                 required
                                 className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
                               />
+                              {emojiPopoverTarget === 'subject' && (
+                                <div className="absolute right-0 top-[60px] z-[100] bg-[#0c0f0d] border border-white/10 rounded-2xl p-3 shadow-2xl w-60 grid grid-cols-6 gap-2">
+                                  {CURATED_EMOJIS.map(em => (
+                                    <button
+                                      key={em}
+                                      type="button"
+                                      onClick={() => {
+                                        insertEmojiToSubject(em);
+                                        setEmojiPopoverTarget(null);
+                                      }}
+                                      className="text-lg hover:bg-white/5 p-1 rounded transition-all text-center"
+                                    >
+                                      {em}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             <div className="space-y-2">
                               <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Nombre del Remitente (Header)</label>
@@ -4109,6 +4202,33 @@ export default function AdminDashboard() {
                               >
                                 <Link2 size={14} />
                               </button>
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setEmojiPopoverTarget(emojiPopoverTarget === 'editor' ? null : 'editor')}
+                                  className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                  title="Insertar Emoji"
+                                >
+                                  <Smile size={14} />
+                                </button>
+                                {emojiPopoverTarget === 'editor' && (
+                                  <div className="absolute left-0 top-10 z-[100] bg-[#0c0f0d] border border-white/10 rounded-2xl p-3 shadow-2xl w-60 grid grid-cols-6 gap-2">
+                                    {CURATED_EMOJIS.map(em => (
+                                      <button
+                                        key={em}
+                                        type="button"
+                                        onClick={() => {
+                                          insertEmojiToEditor(em);
+                                          setEmojiPopoverTarget(null);
+                                        }}
+                                        className="text-lg hover:bg-white/5 p-1 rounded transition-all text-center"
+                                      >
+                                        {em}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => executeCommand('removeFormat')}
@@ -4218,7 +4338,7 @@ export default function AdminDashboard() {
                             <div className="flex gap-4 items-center bg-white/5 border border-white/10 p-4 rounded-xl">
                               <div className="w-16 h-16 bg-white/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
                                 {campBgImagePreview ? (
-                                  <img src={campBgImagePreview} alt="Background Preview" className="w-full h-full object-cover" />
+                                  <img src={resolveMediaUrl(campBgImagePreview)} alt="Background Preview" className="w-full h-full object-cover" />
                                 ) : (
                                   <Eye size={20} className="text-[#F4F6F0]/20" />
                                 )}
@@ -5536,7 +5656,7 @@ export default function AdminDashboard() {
                                 campTemplateType === 'cosmic' ? '12, 10, 26' :
                                   campTemplateType === 'glow' ? '26, 19, 12' :
                                     campTemplateType === 'mist' ? '24, 27, 34' : '12, 13, 19'
-                              }, ${Math.max(0, Math.min(1, 1 - campBgOpacity))})) , url(${campBgImagePreview})`,
+                              }, ${Math.max(0, Math.min(1, 1 - campBgOpacity))})) , url(${resolveMediaUrl(campBgImagePreview)})`,
                             backgroundPosition: campBgPosition,
                             backgroundRepeat: 'no-repeat',
                             backgroundSize: 'cover',
@@ -5570,13 +5690,13 @@ export default function AdminDashboard() {
                           {campImagePreview && (
                             <div style={{
                               textAlign: (
-                                (previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'left' ? 'left' :
-                                (previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'right' ? 'right' : 'center'
-                              ) as any,
+                                ((previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'left' ? 'left' :
+                                (previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'right' ? 'right' : 'center') as any
+                              ),
                               marginBottom: '15px'
                             }}>
                               <img
-                                src={campImagePreview}
+                                src={resolveMediaUrl(campImagePreview)}
                                 style={{
                                   width: previewViewport === 'mobile' ? campImageWidthMobile : previewViewport === 'tablet' ? campImageWidthTablet : campImageWidth || '100%',
                                   maxWidth: '100%',
@@ -5594,7 +5714,7 @@ export default function AdminDashboard() {
                           <h4 style={{
                             color: campTitleTextColor,
                             backgroundColor: campTitleBgColor,
-                            backgroundImage: campTitleBgImage ? `url(${campTitleBgImage})` : undefined,
+                            backgroundImage: campTitleBgImage ? `url(${resolveMediaUrl(campTitleBgImage)})` : undefined,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             padding: previewViewport === 'mobile' ? campTitlePaddingMobile : previewViewport === 'tablet' ? campTitlePaddingTablet : campTitlePadding,
@@ -5626,7 +5746,7 @@ export default function AdminDashboard() {
                                         campTemplateType === 'mist' ? '#f3f4f6' : '#ffffff'
                                 ),
                                 backgroundColor: campBodyBgColor,
-                                backgroundImage: campBodyBgImage ? `url(${campBodyBgImage})` : undefined,
+                                backgroundImage: campBodyBgImage ? `url(${resolveMediaUrl(campBodyBgImage)})` : undefined,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 padding: previewViewport === 'mobile' ? campBodyPaddingMobile : previewViewport === 'tablet' ? campBodyPaddingTablet : campBodyPadding,
@@ -5718,7 +5838,7 @@ export default function AdminDashboard() {
                             marginTop: '20px',
                             color: campFooterTextColor || 'rgba(255,255,255,0.3)',
                             backgroundColor: campFooterBgColor,
-                            backgroundImage: campFooterBgImage ? `url(${campFooterBgImage})` : undefined,
+                            backgroundImage: campFooterBgImage ? `url(${resolveMediaUrl(campFooterBgImage)})` : undefined,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             padding: previewViewport === 'mobile' ? campFooterPaddingMobile : previewViewport === 'tablet' ? campFooterPaddingTablet : campFooterPadding,
@@ -5744,350 +5864,416 @@ export default function AdminDashboard() {
             )}
 
             {/* Simulated Email Client Live Preview Modal */}
-            {previewCampaign && (
-              <div
-                onClick={() => setPreviewCampaign(null)}
-                className="fixed inset-0 bg-black/70 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto"
-              >
-                <motion.div
-                  onClick={e => e.stopPropagation()}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="amber-glass w-full max-w-2xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden"
+            {previewCampaign && (() => {
+              const styles = typeof previewCampaign.custom_styles === 'string'
+                ? JSON.parse(previewCampaign.custom_styles)
+                : (previewCampaign.custom_styles || {});
+
+              const activeCardPadding =
+                modalPreviewViewport === 'mobile' ? (styles.card_padding_mobile || '16px') :
+                modalPreviewViewport === 'tablet' ? (styles.card_padding_tablet || '32px') :
+                (styles.card_padding_desktop || styles.card_padding || '40px');
+
+              const activeTitlePadding =
+                modalPreviewViewport === 'mobile' ? (styles.title_padding_mobile || styles.title_padding || '0px') :
+                modalPreviewViewport === 'tablet' ? (styles.title_padding_tablet || styles.title_padding || '0px') :
+                (styles.title_padding || '0px');
+
+              const activeTitleRadius =
+                modalPreviewViewport === 'mobile' ? (styles.title_radius_mobile || styles.title_radius || '0px') :
+                modalPreviewViewport === 'tablet' ? (styles.title_radius_tablet || styles.title_radius || '0px') :
+                (styles.title_radius || '0px');
+
+              const activeTitleFontSize =
+                modalPreviewViewport === 'mobile' ? (styles.title_font_size_mobile || '20px') :
+                modalPreviewViewport === 'tablet' ? (styles.title_font_size_tablet || '24px') :
+                (styles.title_font_size_desktop || '26px');
+
+              const activeBodyPadding =
+                modalPreviewViewport === 'mobile' ? (styles.body_padding_mobile || styles.body_padding || '0px') :
+                modalPreviewViewport === 'tablet' ? (styles.body_padding_tablet || styles.body_padding || '0px') :
+                (styles.body_padding || '0px');
+
+              const activeBodyRadius =
+                modalPreviewViewport === 'mobile' ? (styles.body_radius_mobile || styles.body_radius || '0px') :
+                modalPreviewViewport === 'tablet' ? (styles.body_radius_tablet || styles.body_radius || '0px') :
+                (styles.body_radius || '0px');
+
+              const activeBodyFontSize =
+                modalPreviewViewport === 'mobile' ? (styles.body_font_size_mobile || '14px') :
+                modalPreviewViewport === 'tablet' ? (styles.body_font_size_tablet || '15px') :
+                (styles.body_font_size_desktop || '16px');
+
+              const activeBodyAlignment =
+                modalPreviewViewport === 'mobile' ? (styles.body_alignment_mobile || styles.body_alignment || 'center') :
+                modalPreviewViewport === 'tablet' ? (styles.body_alignment_tablet || styles.body_alignment || 'center') :
+                (styles.body_alignment || 'center');
+
+              const activeImageWidth =
+                modalPreviewViewport === 'mobile' ? (styles.image_width_mobile || '100%') :
+                modalPreviewViewport === 'tablet' ? (styles.image_width_tablet || '100%') :
+                (styles.image_width || previewCampaign.image_style?.width || '100%');
+
+              const activeImageAlign =
+                modalPreviewViewport === 'mobile' ? (styles.image_align_mobile || 'center') :
+                modalPreviewViewport === 'tablet' ? (styles.image_align_tablet || 'center') :
+                (styles.image_align || previewCampaign.image_style?.align || 'center');
+
+              const activeImageRadius =
+                styles.image_radius || previewCampaign.image_style?.radius || '20px';
+
+              const activeCtaAlign =
+                modalPreviewViewport === 'mobile' ? (styles.cta_alignment_mobile || 'center') :
+                modalPreviewViewport === 'tablet' ? (styles.cta_alignment_tablet || 'center') :
+                (styles.cta_alignment || 'center');
+
+              const activeFooterPadding =
+                modalPreviewViewport === 'mobile' ? (styles.footer_padding_mobile || styles.footer_padding || '0px') :
+                modalPreviewViewport === 'tablet' ? (styles.footer_padding_tablet || styles.footer_padding || '0px') :
+                (styles.footer_padding || '0px');
+
+              const activeFooterRadius =
+                modalPreviewViewport === 'mobile' ? (styles.footer_radius_mobile || styles.footer_radius || '0px') :
+                modalPreviewViewport === 'tablet' ? (styles.footer_radius_tablet || styles.footer_radius || '0px') :
+                (styles.footer_radius || '0px');
+
+              const titleBgStyle: any = styles.title_bg_color && styles.title_bg_color !== 'transparent'
+                ? { backgroundColor: styles.title_bg_color }
+                : {};
+              if (styles.title_bg_image) {
+                titleBgStyle.backgroundImage = `url(${resolveMediaUrl(styles.title_bg_image)})`;
+                titleBgStyle.backgroundSize = 'cover';
+                titleBgStyle.backgroundPosition = 'center';
+              }
+
+              const bodyBgStyle: any = styles.body_bg_color && styles.body_bg_color !== 'transparent'
+                ? { backgroundColor: styles.body_bg_color }
+                : {};
+              if (styles.body_bg_image) {
+                bodyBgStyle.backgroundImage = `url(${resolveMediaUrl(styles.body_bg_image)})`;
+                bodyBgStyle.backgroundSize = 'cover';
+                bodyBgStyle.backgroundPosition = 'center';
+              }
+
+              const footerBgStyle: any = styles.footer_bg_color && styles.footer_bg_color !== 'transparent'
+                ? { backgroundColor: styles.footer_bg_color }
+                : {};
+              if (styles.footer_bg_image) {
+                footerBgStyle.backgroundImage = `url(${resolveMediaUrl(styles.footer_bg_image)})`;
+                footerBgStyle.backgroundSize = 'cover';
+                footerBgStyle.backgroundPosition = 'center';
+              }
+
+              return (
+                <div
+                  onClick={() => setPreviewCampaign(null)}
+                  className="fixed inset-0 bg-black/70 backdrop-blur-md z-[200] flex items-center justify-center p-6 overflow-y-auto"
                 >
-                  <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent" />
-                  <button
-                    onClick={() => setPreviewCampaign(null)}
-                    className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-[#F4F6F0]/40 hover:text-[#F4F6F0] flex items-center justify-center transition-all hover:bg-white/5"
+                  <motion.div
+                    onClick={e => e.stopPropagation()}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="amber-glass w-full max-w-5xl rounded-[2.5rem] p-8 space-y-6 shadow-2xl relative flex flex-col max-h-[90vh] overflow-hidden"
                   >
-                    <X size={16} />
-                  </button>
+                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent" />
+                    <button
+                      onClick={() => setPreviewCampaign(null)}
+                      className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-[#F4F6F0]/40 hover:text-[#F4F6F0] flex items-center justify-center transition-all hover:bg-white/5"
+                    >
+                      <X size={16} />
+                    </button>
 
-                  <div>
-                    <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">Previsualización de Correo</h3>
-                    <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-1">Simulación de bandeja de entrada</p>
-                  </div>
+                    <div className="flex justify-between items-center flex-wrap gap-2 pr-12">
+                      <div>
+                        <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">Previsualización de Correo</h3>
+                        <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-1">Simulación de bandeja de entrada</p>
+                      </div>
 
-                  {/* Simulated Email Client Frame */}
-                  <div className="border border-white/10 rounded-2xl overflow-hidden flex flex-col flex-1 bg-[#080C0A]">
-                    {/* Email header bar */}
-                    <div className="bg-white/5 border-b border-white/10 px-6 py-4 space-y-1.5 text-xs text-[#F4F6F0]/70">
-                      <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">De:</span> Ms Ambar &lt;hola@msambar.com&gt;</div>
-                      <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
-                      <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-[#F4F6F0] font-semibold">{previewCampaign.subject}</span></div>
+                      <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1">
+                        {[
+                          { id: 'desktop', label: 'Escritorio', icon: <Monitor size={10} /> },
+                          { id: 'tablet', label: 'Tablet', icon: <Tablet size={10} /> },
+                          { id: 'mobile', label: 'Móvil', icon: <Smartphone size={10} /> },
+                        ].map(vp => (
+                          <button
+                            key={vp.id}
+                            type="button"
+                            onClick={() => setModalPreviewViewport(vp.id as any)}
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all duration-200 ${
+                              modalPreviewViewport === vp.id
+                                ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
+                                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                            }`}
+                          >
+                            {vp.icon}
+                            <span>{vp.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Email body simulation */}
-                    <div className="flex-1 overflow-y-auto custom-scroll" style={{
-                      padding: '12px 8px',
-                      backgroundColor:
-                        previewCampaign.template_type === 'moss' ? '#0b130e' :
-                          previewCampaign.template_type === 'cosmic' ? '#05050f' :
-                            previewCampaign.template_type === 'glow' ? '#0f0b07' :
-                              previewCampaign.template_type === 'mist' ? '#0f1115' : '#06070b'
-                    }}>
-                      <div style={{
-                        maxWidth: '500px',
-                        width: '100%',
-                        minWidth: '300px',
-                        boxSizing: 'border-box',
-                        margin: '0 auto',
+                    {/* Simulated Email Client Frame */}
+                    <div className="border border-white/10 rounded-2xl overflow-hidden flex flex-col flex-1 bg-[#080C0A]">
+                      {/* Email header bar */}
+                      <div className="bg-white/5 border-b border-white/10 px-6 py-4 space-y-1.5 text-xs text-[#F4F6F0]/70">
+                        <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">De:</span> Ms Ambar &lt;hola@msambar.com&gt;</div>
+                        <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">Para:</span> suscriptor@ejemplo.com</div>
+                        <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[9px] tracking-wider">Asunto:</span> <span className="text-[#F4F6F0] font-semibold">{previewCampaign.subject}</span></div>
+                      </div>
+
+                      {/* Email body simulation */}
+                      <div className="flex-1 overflow-y-auto custom-scroll" style={{
+                        padding: modalPreviewViewport === 'mobile' ? '12px 8px' : '20px',
                         backgroundColor:
-                          previewCampaign.template_type === 'moss' ? '#122017' :
-                            previewCampaign.template_type === 'cosmic' ? '#0c0a1a' :
-                              previewCampaign.template_type === 'glow' ? '#1a130c' :
-                                previewCampaign.template_type === 'mist' ? '#181b22' : '#0c0d13',
-                        border:
-                          previewCampaign.template_type === 'moss' ? '1px solid #2e4d38' :
-                            previewCampaign.template_type === 'cosmic' ? '1px solid #4a154b' :
-                              previewCampaign.template_type === 'glow' ? '1px solid #d97706' :
-                                previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
-                        padding: '30px',
-                        borderRadius: '20px',
-                        fontFamily:
-                          previewCampaign.font_family === 'playfair' ? "'Playfair Display', Georgia, serif" :
-                            previewCampaign.font_family === 'cinzel' ? "'Cinzel', Georgia, serif" :
-                              previewCampaign.font_family === 'garamond' ? "'Cormorant Garamond', 'Times New Roman', serif" :
-                                previewCampaign.font_family === 'montserrat' ? "'Montserrat', Helvetica, sans-serif" :
-                                  previewCampaign.font_family === 'pinyon' ? "'Pinyon Script', cursive" :
-                                    'Georgia, serif',
-                        textAlign: 'left',
-                        // Background Image Overlay & blending simulation
-                        ...(previewCampaign.bg_image ? {
-                          backgroundImage: `linear-gradient(rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
-                            previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
-                              previewCampaign.template_type === 'glow' ? '26, 19, 12' :
-                                previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
-                            }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                          previewCampaign.template_type === 'moss' ? '#0b130e' :
+                            previewCampaign.template_type === 'cosmic' ? '#05050f' :
+                              previewCampaign.template_type === 'glow' ? '#0f0b07' :
+                                previewCampaign.template_type === 'mist' ? '#0f1115' : '#06070b'
+                      }}>
+                        <div style={{
+                          width: modalPreviewViewport === 'mobile' ? '375px' : modalPreviewViewport === 'tablet' ? '768px' : '100%',
+                          maxWidth: modalPreviewViewport === 'mobile' ? '100%' : modalPreviewViewport === 'tablet' ? '100%' : (styles.card_max_width_desktop || '680px'),
+                          minWidth: '300px',
+                          boxSizing: 'border-box',
+                          margin: '0 auto',
+                          backgroundColor:
+                            previewCampaign.template_type === 'moss' ? '#122017' :
+                              previewCampaign.template_type === 'cosmic' ? '#0c0a1a' :
+                                previewCampaign.template_type === 'glow' ? '#1a130c' :
+                                  previewCampaign.template_type === 'mist' ? '#181b22' : '#0c0d13',
+                          border:
+                            previewCampaign.template_type === 'moss' ? '1px solid #2e4d38' :
+                              previewCampaign.template_type === 'cosmic' ? '1px solid #4a154b' :
+                                previewCampaign.template_type === 'glow' ? '1px solid #d97706' :
+                                  previewCampaign.template_type === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
+                          padding: activeCardPadding,
+                          borderRadius: '20px',
+                          fontFamily:
+                            previewCampaign.font_family === 'playfair' ? "'Playfair Display', Georgia, serif" :
+                              previewCampaign.font_family === 'cinzel' ? "'Cinzel', Georgia, serif" :
+                                previewCampaign.font_family === 'garamond' ? "'Cormorant Garamond', 'Times New Roman', serif" :
+                                  previewCampaign.font_family === 'montserrat' ? "'Montserrat', Helvetica, sans-serif" :
+                                    previewCampaign.font_family === 'pinyon' ? "'Pinyon Script', cursive" :
+                                      'Georgia, serif',
+                          textAlign: 'left',
+                          // Background Image Overlay & blending simulation
+                          ...(previewCampaign.bg_image ? {
+                            backgroundImage: `linear-gradient(rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
                               previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
                                 previewCampaign.template_type === 'glow' ? '26, 19, 12' :
                                   previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
-                            }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))})) , url(${previewCampaign.bg_image})`,
-                          backgroundPosition: previewCampaign.bg_position || 'center',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundSize: 'cover',
-                          filter: `saturate(${previewCampaign.bg_saturation ?? 100}%)`,
-                        } : {})
-                      }}>
-                        {/* Logo header */}
-                        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-                          <div style={{
-                            display: 'inline-block',
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '50%',
-                            backgroundColor:
-                              previewCampaign.template_type === 'moss' ? '#82c99b' :
-                                previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                                  previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                    previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                            color: '#030303',
-                            lineHeight: '40px',
-                            textAlign: 'center',
+                              }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))}), rgba(${previewCampaign.template_type === 'moss' ? '18, 32, 23' :
+                                previewCampaign.template_type === 'cosmic' ? '12, 10, 26' :
+                                  previewCampaign.template_type === 'glow' ? '26, 19, 12' :
+                                    previewCampaign.template_type === 'mist' ? '24, 27, 34' : '12, 13, 19'
+                              }, ${Math.max(0, Math.min(1, 1 - (previewCampaign.bg_opacity ?? 1.0)))})) , url(${resolveMediaUrl(previewCampaign.bg_image)})`,
+                            backgroundPosition: previewCampaign.bg_position || 'center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: 'cover',
+                            filter: `saturate(${previewCampaign.bg_saturation ?? 100}%)`,
+                          } : {})
+                        }}>
+                          {/* Logo header */}
+                          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                            <div style={{
+                              display: 'inline-block',
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              backgroundColor:
+                                previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                  previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                    previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                      previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                              color: '#030303',
+                              lineHeight: '40px',
+                              textAlign: 'center',
+                              fontWeight: 'bold',
+                              fontSize: '20px'
+                            }}>
+                              <img src="/logos/ms_ambar_monograma_n.png" alt="A" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', padding: '4px', boxSizing: 'border-box' }} />
+                            </div>
+                            <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>
+                              {styles.sender_name || 'Ms Ambar'}
+                            </h4>
+                            <p style={{
+                              color:
+                                previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                  previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                    previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                      previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                              fontSize: '8px',
+                              textTransform: 'uppercase',
+                              letterSpacing: '2px',
+                              margin: '2px 0 0 0'
+                            }}>Ambar te escribe • Club Exclusivo</p>
+                          </div>
+
+                          {/* Optional cover image */}
+                          {previewCampaign.image && (
+                            <div style={{
+                              textAlign: (activeImageAlign === 'left' ? 'left' :
+                                activeImageAlign === 'right' ? 'right' : 'center') as any,
+                              marginBottom: '20px'
+                            }}>
+                              <img
+                                src={resolveMediaUrl(previewCampaign.image)}
+                                style={{
+                                  width: activeImageWidth,
+                                  maxWidth: '100%',
+                                  height: 'auto',
+                                  borderRadius: activeImageRadius,
+                                  border: '1px solid rgba(255,255,255,0.05)',
+                                  display: 'inline-block'
+                                }}
+                                alt="Cover"
+                              />
+                            </div>
+                          )}
+
+                          {/* Subject as title inside email */}
+                          <h3 style={{
+                            color: styles.title_color || '#ffffff',
+                            ...titleBgStyle,
+                            padding: activeTitlePadding,
+                            borderRadius: activeTitleRadius,
+                            fontSize: activeTitleFontSize,
                             fontWeight: 'bold',
-                            fontSize: '20px'
+                            textAlign: 'center',
+                            fontStyle: 'italic',
+                            marginBottom: '25px',
+                            fontFamily: resolveFontStack(previewCampaign.title_font_family),
+                            boxSizing: 'border-box'
                           }}>
-                            <img src="/logos/ms_ambar_monograma_n.png" alt="A" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', padding: '4px', boxSizing: 'border-box' }} />
-                          </div>
-                          <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>
-                            {(() => {
-                              const styles = typeof previewCampaign.custom_styles === 'string'
-                                ? JSON.parse(previewCampaign.custom_styles)
-                                : (previewCampaign.custom_styles || {});
-                              return styles.sender_name || 'Ms Ambar';
-                            })()}
-                          </h4>
-                          <p style={{
-                            color:
-                              previewCampaign.template_type === 'moss' ? '#82c99b' :
-                                previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                                  previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                    previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                            fontSize: '8px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '2px',
-                            margin: '2px 0 0 0'
-                          }}>Ambar te escribe • Club Exclusivo</p>
-                        </div>
+                            {previewCampaign.email_title ? (
+                              <span dangerouslySetInnerHTML={{ __html: previewCampaign.email_title }} />
+                            ) : (
+                              previewCampaign.subject
+                            )}
+                          </h3>
 
-                        {/* Optional cover image */}
-                        {previewCampaign.image && (
+                          {/* Poem body */}
                           <div style={{
-                            textAlign: (previewCampaign.image_style?.align === 'left' ? 'left' :
-                              previewCampaign.image_style?.align === 'right' ? 'right' : 'center') as any,
-                            marginBottom: '20px'
+                            color: styles.body_color || (
+                              previewCampaign.template_type === 'moss' ? '#f5fbf7' :
+                                previewCampaign.template_type === 'cosmic' ? '#ffffff' :
+                                  previewCampaign.template_type === 'glow' ? '#fffdfa' :
+                                    previewCampaign.template_type === 'mist' ? '#f3f4f6' : '#ffffff'
+                            ),
+                            ...bodyBgStyle,
+                            padding: activeBodyPadding,
+                            borderRadius: activeBodyRadius,
+                            fontSize: activeBodyFontSize,
+                            lineHeight: '1.8',
+                            textAlign: activeBodyAlignment as any,
+                            fontStyle: 'italic',
+                            opacity: 0.95,
+                            fontFamily: resolveFontStack(previewCampaign.font_family),
+                            boxSizing: 'border-box',
+                            marginBottom: '30px'
                           }}>
-                            <img
-                              src={previewCampaign.image}
-                              style={{
-                                width: previewCampaign.image_style?.width || '100%',
-                                maxWidth: '100%',
-                                height: 'auto',
-                                borderRadius: previewCampaign.image_style?.radius || '20px',
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                display: 'inline-block'
-                              }}
-                              alt="Cover"
-                            />
+                            {(previewCampaign.poem_text || '').includes('<p') || (previewCampaign.poem_text || '').includes('<br') || (previewCampaign.poem_text || '').includes('<div') ? (
+                              <div dangerouslySetInnerHTML={{ __html: previewCampaign.poem_text }} />
+                            ) : (
+                              (previewCampaign.poem_text || '').split('\n').map((line: string, idx: number) => (
+                                line.trim() ? (
+                                  <p key={idx} style={{ margin: '0 0 12px 0' }}>{line}</p>
+                                ) : (
+                                  <div key={idx} style={{ height: '12px' }} />
+                                )
+                              ))
+                            )}
                           </div>
-                        )}
 
-                        {(() => {
-                          const styles = typeof previewCampaign.custom_styles === 'string'
-                            ? JSON.parse(previewCampaign.custom_styles)
-                            : (previewCampaign.custom_styles || {});
-
-                          const titleBgStyle: any = styles.title_bg_color && styles.title_bg_color !== 'transparent'
-                            ? { backgroundColor: styles.title_bg_color }
-                            : {};
-                          if (styles.title_bg_image) {
-                            titleBgStyle.backgroundImage = `url(${styles.title_bg_image})`;
-                            titleBgStyle.backgroundSize = 'cover';
-                            titleBgStyle.backgroundPosition = 'center';
-                          }
-
-                          const bodyBgStyle: any = styles.body_bg_color && styles.body_bg_color !== 'transparent'
-                            ? { backgroundColor: styles.body_bg_color }
-                            : {};
-                          if (styles.body_bg_image) {
-                            bodyBgStyle.backgroundImage = `url(${styles.body_bg_image})`;
-                            bodyBgStyle.backgroundSize = 'cover';
-                            bodyBgStyle.backgroundPosition = 'center';
-                          }
-
-                          return (
-                            <>
-                              {/* Subject as title inside email */}
-                              <h3 style={{
-                                color: styles.title_color || '#ffffff',
-                                ...titleBgStyle,
-                                padding: styles.title_padding || '0px',
-                                borderRadius: styles.title_radius || '0px',
-                                fontSize: '20px',
-                                fontWeight: 'bold',
-                                textAlign: 'center',
-                                fontStyle: 'italic',
-                                marginBottom: '25px',
-                                fontFamily: resolveFontStack(previewCampaign.title_font_family),
-                                boxSizing: 'border-box'
-                              }}>
-                                {previewCampaign.email_title ? (
-                                  <span dangerouslySetInnerHTML={{ __html: previewCampaign.email_title }} />
-                                ) : (
-                                  previewCampaign.subject
-                                )}
-                              </h3>
-
-                              {/* Poem body */}
-                              <div style={{
-                                color: styles.body_color || (
-                                  previewCampaign.template_type === 'moss' ? '#f5fbf7' :
-                                    previewCampaign.template_type === 'cosmic' ? '#ffffff' :
-                                      previewCampaign.template_type === 'glow' ? '#fffdfa' :
-                                        previewCampaign.template_type === 'mist' ? '#f3f4f6' : '#ffffff'
-                                ),
-                                ...bodyBgStyle,
-                                padding: styles.body_padding || '0px',
-                                borderRadius: styles.body_radius || '0px',
-                                fontSize: '14px',
-                                lineHeight: '1.8',
-                                textAlign: 'center',
-                                fontStyle: 'italic',
-                                opacity: 0.95,
-                                fontFamily: resolveFontStack(previewCampaign.font_family),
-                                boxSizing: 'border-box',
-                                marginBottom: '30px'
-                              }}>
-                                {(previewCampaign.poem_text || '').includes('<p') || (previewCampaign.poem_text || '').includes('<br') || (previewCampaign.poem_text || '').includes('<div') ? (
-                                  <div dangerouslySetInnerHTML={{ __html: previewCampaign.poem_text }} />
-                                ) : (
-                                  (previewCampaign.poem_text || '').split('\n').map((line: string, idx: number) => (
-                                    line.trim() ? (
-                                      <p key={idx} style={{ margin: '0 0 12px 0' }}>{line}</p>
-                                    ) : (
-                                      <div key={idx} style={{ height: '12px' }} />
-                                    )
-                                  ))
-                                )}
-                              </div>
-                            </>
-                          );
-                        })()}
-
-                        {/* Dynamic CTA Buttons */}
-                        {previewCampaign.ctas && previewCampaign.ctas.length > 0 ? (
-                          <div style={{ textAlign: 'center', marginTop: '30px', marginBottom: '20px' }}>
-                            {previewCampaign.ctas.map((cta: any, cidx: number) => (
+                          {/* Dynamic CTA Buttons */}
+                          {previewCampaign.ctas && previewCampaign.ctas.length > 0 ? (
+                            <div style={{ textAlign: activeCtaAlign as any, marginTop: '30px', marginBottom: '20px' }}>
+                              {previewCampaign.ctas.map((cta: any, cidx: number) => (
+                                <a
+                                  key={cidx}
+                                  href={cta.link || '#'}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    backgroundColor: cta.bg_color || (
+                                      previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                        previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                          previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                            previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b'
+                                    ),
+                                    color: cta.text_color || '#030303',
+                                    padding: '14px 28px',
+                                    borderRadius: cta.radius || '12px',
+                                    fontSize: '13px',
+                                    fontWeight: 'bold',
+                                    textDecoration: 'none',
+                                    display: cta.is_full_width ? 'block' : 'inline-block',
+                                    margin: cta.is_full_width ? '10px auto' : '5px 10px',
+                                    letterSpacing: '1px',
+                                    textTransform: 'uppercase',
+                                    boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
+                                  }}
+                                >
+                                  {cta.text}
+                                </a>
+                              ))}
+                            </div>
+                          ) : previewCampaign.cta_text ? (
+                            <div style={{ textAlign: activeCtaAlign as any, marginTop: '30px', marginBottom: '20px' }}>
                               <a
-                                key={cidx}
-                                href={cta.link}
+                                href={previewCampaign.cta_link || '#'}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 style={{
-                                  backgroundColor: cta.bg_color || (
+                                  backgroundColor:
                                     previewCampaign.template_type === 'moss' ? '#82c99b' :
                                       previewCampaign.template_type === 'cosmic' ? '#c084fc' :
                                         previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b'
-                                  ),
-                                  color: cta.text_color || '#030303',
+                                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                                  color: '#030303',
                                   padding: '14px 28px',
-                                  borderRadius: cta.radius || '12px',
+                                  borderRadius: '12px',
                                   fontSize: '13px',
                                   fontWeight: 'bold',
                                   textDecoration: 'none',
                                   display: 'inline-block',
-                                  margin: '5px 10px',
                                   letterSpacing: '1px',
                                   textTransform: 'uppercase',
                                   boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
                                 }}
                               >
-                                {cta.text}
+                                {previewCampaign.cta_text}
                               </a>
-                            ))}
-                          </div>
-                        ) : previewCampaign.cta_text && previewCampaign.cta_link ? (
-                          <div style={{ textAlign: 'center', marginTop: '30px', marginBottom: '20px' }}>
-                            <a
-                              href={previewCampaign.cta_link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                backgroundColor:
+                            </div>
+                          ) : null}
+
+                          {/* Footer */}
+                          <div style={{
+                            textAlign: 'center',
+                            borderTop: '1px solid rgba(255,255,255,0.05)',
+                            paddingTop: activeFooterPadding !== '0px' ? activeFooterPadding : '15px',
+                            marginTop: '30px',
+                            color: styles.footer_color || 'rgba(255,255,255,0.3)',
+                            ...footerBgStyle,
+                            padding: activeFooterPadding || '0px',
+                            borderRadius: activeFooterRadius || '0px',
+                            fontSize: '9px',
+                            lineHeight: '1.4',
+                            fontFamily: resolveFontStack(previewCampaign.footer_font_family),
+                            boxSizing: 'border-box'
+                          }}>
+                            {previewCampaign.footer_text ? (
+                              <div style={{ margin: '0 0 8px 0' }} dangerouslySetInnerHTML={{ __html: previewCampaign.footer_text }} />
+                            ) : (
+                              <p style={{ margin: '0 0 8px 0' }}>Recibiste este correo porque eres parte del club de Ms Ambar.</p>
+                            )}
+                            <p style={{ margin: '0' }}>
+                              <span style={{
+                                color:
                                   previewCampaign.template_type === 'moss' ? '#82c99b' :
                                     previewCampaign.template_type === 'cosmic' ? '#c084fc' :
                                       previewCampaign.template_type === 'glow' ? '#f59e0b' :
                                         previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                                color: '#030303',
-                                padding: '14px 28px',
-                                borderRadius: '12px',
-                                fontSize: '13px',
-                                fontWeight: 'bold',
-                                textDecoration: 'none',
-                                display: 'inline-block',
-                                letterSpacing: '1px',
-                                textTransform: 'uppercase',
-                                boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
-                              }}
-                            >
-                              {previewCampaign.cta_text}
-                            </a>
-                          </div>
-                        ) : null}
-
-                        {/* Footer */}
-                        {(() => {
-                          const styles = typeof previewCampaign.custom_styles === 'string'
-                            ? JSON.parse(previewCampaign.custom_styles)
-                            : (previewCampaign.custom_styles || {});
-
-                          const footerBgStyle: any = styles.footer_bg_color && styles.footer_bg_color !== 'transparent'
-                            ? { backgroundColor: styles.footer_bg_color }
-                            : {};
-                          if (styles.footer_bg_image) {
-                            footerBgStyle.backgroundImage = `url(${styles.footer_bg_image})`;
-                            footerBgStyle.backgroundSize = 'cover';
-                            footerBgStyle.backgroundPosition = 'center';
-                          }
-
-                          return (
-                            <div style={{
-                              textAlign: 'center',
-                              borderTop: '1px solid rgba(255,255,255,0.05)',
-                              paddingTop: styles.footer_padding !== '0px' ? styles.footer_padding : '15px',
-                              marginTop: '30px',
-                              color: styles.footer_color || 'rgba(255,255,255,0.3)',
-                              ...footerBgStyle,
-                              padding: styles.footer_padding || '0px',
-                              borderRadius: styles.footer_radius || '0px',
-                              fontSize: '9px',
-                              lineHeight: '1.4',
-                              fontFamily: resolveFontStack(previewCampaign.footer_font_family),
-                              boxSizing: 'border-box'
-                            }}>
-                              {previewCampaign.footer_text ? (
-                                <div style={{ margin: '0 0 8px 0' }} dangerouslySetInnerHTML={{ __html: previewCampaign.footer_text }} />
-                              ) : (
-                                <p style={{ margin: '0 0 8px 0' }}>Recibiste este correo porque eres parte del club de Ms Ambar.</p>
-                              )}
-                              <p style={{ margin: '0' }}>
-                                <span style={{
-                                  color:
-                                    previewCampaign.template_type === 'moss' ? '#82c99b' :
-                                      previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                                        previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                                  textDecoration: 'underline',
-                                  cursor: 'pointer'
-                                }}>Desuscribirse del boletín</span>
-                              </p>
-                            </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
-                  </div>
 
                   <div className="flex justify-end pt-2">
                     <button

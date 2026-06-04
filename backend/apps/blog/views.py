@@ -468,6 +468,22 @@ class SESIdentityVerificationViewSet(viewsets.ModelViewSet):
 
 
 def get_campaign_html_template(campaign, sub_email):
+    import re
+    
+    api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
+    
+    def clean_media_url(url, api_url_val):
+        if not url:
+            return ""
+        if not url.startswith('http://') and not url.startswith('https://'):
+            if not url.startswith('/'):
+                url = '/' + url
+            return f"{api_url_val}{url}"
+        if "/media/" in url:
+            parts = url.split("/media/", 1)
+            return f"{api_url_val}/media/{parts[1]}"
+        return url
+
     style = campaign.template_type
     
     # Defaults (minimalist Carbon style)
@@ -557,15 +573,7 @@ def get_campaign_html_template(campaign, sub_email):
 
     bg_style = ""
     if campaign.bg_image:
-        bg_url = campaign.bg_image.url
-        api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
-        if not bg_url.startswith('http'):
-            bg_url = f"{api_url}{bg_url}"
-        else:
-            for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
-                if bg_url.startswith(local_host):
-                    bg_url = bg_url.replace(local_host, api_url)
-                    break
+        bg_url = clean_media_url(campaign.bg_image.url, api_url)
             
         overlay_alpha = round(1.0 - campaign.bg_opacity, 2)
         if overlay_alpha < 0: overlay_alpha = 0
@@ -626,15 +634,7 @@ def get_campaign_html_template(campaign, sub_email):
 
     image_html = ""
     if campaign.image:
-        image_url = campaign.image.url
-        api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
-        if not image_url.startswith('http'):
-            image_url = f"{api_url}{image_url}"
-        else:
-            for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
-                if image_url.startswith(local_host):
-                    image_url = image_url.replace(local_host, api_url)
-                    break
+        image_url = clean_media_url(campaign.image.url, api_url)
             
         wrapper_style = "margin-bottom: 30px;"
         if image_align_desktop == 'center':
@@ -694,15 +694,7 @@ def get_campaign_html_template(campaign, sub_email):
         if bg_col and bg_col != 'transparent':
             styles.append(f"background-color: {bg_col}")
         if bg_img:
-            img_url = bg_img
-            api_url_val = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
-            if not img_url.startswith('http'):
-                img_url = f"{api_url_val}{img_url}"
-            else:
-                for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
-                    if img_url.startswith(local_host):
-                        img_url = img_url.replace(local_host, api_url_val)
-                        break
+            img_url = clean_media_url(bg_img, api_url)
             styles.append(f"background-image: url('{img_url}')")
             styles.append("background-position: center")
             styles.append("background-repeat: no-repeat")
@@ -718,7 +710,7 @@ def get_campaign_html_template(campaign, sub_email):
         cta_buttons = []
         for cta in campaign.ctas:
             btn_text = cta.get('text', '')
-            btn_link = cta.get('link', '')
+            btn_link = cta.get('link', '') or '#'
             btn_bg = cta.get('bg_color') or accent_color
             btn_color = cta.get('text_color', '#080C0A')
             btn_radius = cta.get('radius', '12px')
@@ -755,7 +747,7 @@ def get_campaign_html_template(campaign, sub_email):
             btn_display = 'block' if cta.get('is_full_width', False) else 'inline-block'
             btn_margin = '10px auto' if cta.get('is_full_width', False) else '5px 10px'
             
-            if btn_text and btn_link:
+            if btn_text:
                 cta_buttons.append(f"""
                 <a href="{btn_link}" style="background-color: {btn_bg}; color: {btn_color}; padding: {btn_padding}; border-radius: {btn_radius}; font-size: 13px; font-weight: bold; text-decoration: none; display: {btn_display}; margin: {btn_margin}; letter-spacing: 1px; text-transform: uppercase; box-shadow: {btn_shadow}; border: {btn_border}; text-align: center;">
                     {btn_text}
@@ -769,12 +761,13 @@ def get_campaign_html_template(campaign, sub_email):
                 {"".join(cta_buttons)}
             </div>
             """
-    elif campaign.cta_text and campaign.cta_link:
+    elif campaign.cta_text:
+        cta_link = campaign.cta_link or '#'
         cta_margin_top = custom_styles.get('cta_margin_top', '35px')
         cta_margin_bottom = custom_styles.get('cta_margin_bottom', '25px')
         cta_html = f"""
         <div class="email-cta-box" style="text-align: {cta_alignment_desktop}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
-            <a href="{campaign.cta_link}" style="background-color: {accent_color}; color: #080C0A; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+            <a href="{cta_link}" style="background-color: {accent_color}; color: #080C0A; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
                 {campaign.cta_text}
             </a>
         </div>
@@ -796,15 +789,13 @@ def get_campaign_html_template(campaign, sub_email):
         poem_paragraphs = "".join(stanzas)
 
     # Determine absolute URL for media conversions
-    api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
     def make_urls_absolute(text):
         if not text:
             return ""
         text = text.replace('src="/media/', f'src="{api_url}/media/')
         text = text.replace("src='/media/", f"src='{api_url}/media/")
-        for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
-            text = text.replace(f'src="{local_host}/media/', f'src="{api_url}/media/')
-            text = text.replace(f"src='{local_host}/media/", f"src='{api_url}/media/")
+        pattern = r'(src=["\'])(https?://[^/]+)/media/'
+        text = re.sub(pattern, rf'\1{api_url}/media/', text)
         return text
 
     poem_paragraphs = make_urls_absolute(poem_paragraphs)
