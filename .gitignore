@@ -3,3 +3,4 @@
 !.env.staging.example
 node_modules/
 __pycache__/
+frontend/tsconfig.tsbuildinfo
