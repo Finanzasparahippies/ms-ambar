@@ -724,6 +724,8 @@ export default function AmbarTeEscribePage() {
             </div>
           </motion.div>
         )}
+      </AnimatePresence>
+
          {/* ─── BEEHIIV STYLE POST EDITOR OVERLAY (Admins Only) ─── */}
       <AnimatePresence>
         {isEditorOpen && (

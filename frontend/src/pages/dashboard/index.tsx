@@ -1934,6 +1934,14 @@ export default function AdminDashboard() {
                           disabled={catalogLoading}
                           className="w-1/2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] py-4 rounded-xl flex items-center justify-center gap-1.5 shadow-[0_2px_15px_rgba(245,158,11,0.15)] disabled:opacity-50"
                         >
+                          {catalogLoading ? 'Guardando...' : 'Guardar Categoría'}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                </div>
+              )}
+
                           {/* ══════ TAB 5: THEATERS MANAGEMENT ══════ */}
                           <AnimatePresence>
                             {activeTab === 'theaters' && (
