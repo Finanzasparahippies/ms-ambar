@@ -146,6 +146,9 @@ export default function AdminDashboard() {
   const [campImageAlign, setCampImageAlign] = useState('center');
   const [campImageRadius, setCampImageRadius] = useState('20px');
   const [campCtas, setCampCtas] = useState<any[]>([]);
+  const [campCtaAlignment, setCampCtaAlignment] = useState('center');
+  const [campCtaMarginTop, setCampCtaMarginTop] = useState('35px');
+  const [campCtaMarginBottom, setCampCtaMarginBottom] = useState('25px');
   // Accordion toggle states for Campaign Editor Modal settings
   const [isFontSectionOpen, setIsFontSectionOpen] = useState(false);
   const [isCoverSectionOpen, setIsCoverSectionOpen] = useState(false);
@@ -504,6 +507,9 @@ export default function AdminDashboard() {
         campImageAlign,
         campImageRadius,
         campCtas,
+        campCtaAlignment,
+        campCtaMarginTop,
+        campCtaMarginBottom,
         campBgOpacity,
         campBgSaturation,
         campBgPosition,
@@ -545,6 +551,9 @@ export default function AdminDashboard() {
     campImageAlign,
     campImageRadius,
     campCtas,
+    campCtaAlignment,
+    campCtaMarginTop,
+    campCtaMarginBottom,
     campBgOpacity,
     campBgSaturation,
     campBgPosition,
@@ -588,6 +597,9 @@ export default function AdminDashboard() {
       setCampImageAlign(draft.campImageAlign ?? 'center');
       setCampImageRadius(draft.campImageRadius ?? '20px');
       setCampCtas(draft.campCtas ?? []);
+      setCampCtaAlignment(draft.campCtaAlignment ?? 'center');
+      setCampCtaMarginTop(draft.campCtaMarginTop ?? '35px');
+      setCampCtaMarginBottom(draft.campCtaMarginBottom ?? '25px');
       setCampBgOpacity(draft.campBgOpacity ?? 1.0);
       setCampBgSaturation(draft.campBgSaturation ?? 100);
       setCampBgPosition(draft.campBgPosition ?? 'center');
@@ -655,6 +667,9 @@ export default function AdminDashboard() {
     setCampImageAlign('center');
     setCampImageRadius('20px');
     setCampCtas([]);
+    setCampCtaAlignment('center');
+    setCampCtaMarginTop('35px');
+    setCampCtaMarginBottom('25px');
     setEditorActiveTab('body');
     setCampEmailTitle('');
     setCampFooterText('');
@@ -735,6 +750,9 @@ export default function AdminDashboard() {
 
     const styles = campaign.custom_styles || {};
     setCampSenderName(styles.sender_name || 'Ms Ambar');
+    setCampCtaAlignment(styles.cta_alignment || 'center');
+    setCampCtaMarginTop(styles.cta_margin_top || '35px');
+    setCampCtaMarginBottom(styles.cta_margin_bottom || '25px');
     setCampTitleTextColor(styles.title_color || '#ffffff');
     setCampTitleBgColor(styles.title_bg_color || 'transparent');
     setCampTitleBgImage(styles.title_bg_image || '');
@@ -834,6 +852,9 @@ export default function AdminDashboard() {
 
     const customStyles = {
       sender_name: campSenderName,
+      cta_alignment: campCtaAlignment,
+      cta_margin_top: campCtaMarginTop,
+      cta_margin_bottom: campCtaMarginBottom,
       title_color: campTitleTextColor,
       title_bg_color: campTitleBgColor,
       title_bg_image: campTitleBgImage,
@@ -4425,6 +4446,51 @@ export default function AdminDashboard() {
                       {/* CATEGORY 5: CALL TO ACTIONS BUILDER */}
                       {settingsTab === 'ctas' && (
                         <div className="space-y-4">
+                          {/* GLOBAL CTA BLOCK SETTINGS */}
+                          <div className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3">
+                            <span className="text-[9px] text-amber-honey uppercase tracking-widest font-black block border-b border-white/5 pb-1">Distribución del Bloque de Botones</span>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="space-y-1">
+                                <label className="text-[8px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Alineación</label>
+                                <select
+                                  value={campCtaAlignment}
+                                  onChange={e => setCampCtaAlignment(e.target.value)}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] outline-none text-[#F4F6F0]"
+                                >
+                                  <option value="left">Izquierda</option>
+                                  <option value="center">Centro</option>
+                                  <option value="right">Derecha</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[8px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Margen Sup.</label>
+                                <select
+                                  value={campCtaMarginTop}
+                                  onChange={e => setCampCtaMarginTop(e.target.value)}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] outline-none text-[#F4F6F0]"
+                                >
+                                  <option value="15px">Pequeño (15px)</option>
+                                  <option value="25px">Medio (25px)</option>
+                                  <option value="35px">Elegante (35px)</option>
+                                  <option value="50px">Grande (50px)</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[8px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Margen Inf.</label>
+                                <select
+                                  value={campCtaMarginBottom}
+                                  onChange={e => setCampCtaMarginBottom(e.target.value)}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] outline-none text-[#F4F6F0]"
+                                >
+                                  <option value="10px">Pequeño (10px)</option>
+                                  <option value="20px">Medio (20px)</option>
+                                  <option value="25px">Estándar (25px)</option>
+                                  <option value="40px">Grande (40px)</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+
                           <div className="flex justify-between items-center pb-2 border-b border-white/5">
                             <span className="text-[10px] text-[#F4F6F0]/40 uppercase tracking-widest font-black">Lista de Acciones</span>
                             <button
@@ -4587,6 +4653,128 @@ export default function AdminDashboard() {
                                       </select>
                                     </div>
                                   </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1 border-t border-white/5">
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Tamaño / Relleno</label>
+                                      <select
+                                        value={cta.padding_size || 'medium'}
+                                        onChange={e => {
+                                          const newCtas = [...campCtas];
+                                          newCtas[idx].padding_size = e.target.value;
+                                          setCampCtas(newCtas);
+                                        }}
+                                        className="w-full bg-[#121915] border border-white/10 rounded-lg px-2 py-1 text-[10px] outline-none text-[#F4F6F0]"
+                                      >
+                                        <option value="small">Pequeño (S)</option>
+                                        <option value="medium">Mediano (M)</option>
+                                        <option value="large">Grande (L)</option>
+                                      </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Glow / Sombra</label>
+                                      <select
+                                        value={cta.shadow_style || 'default'}
+                                        onChange={e => {
+                                          const newCtas = [...campCtas];
+                                          newCtas[idx].shadow_style = e.target.value;
+                                          setCampCtas(newCtas);
+                                        }}
+                                        className="w-full bg-[#121915] border border-white/10 rounded-lg px-2 py-1 text-[10px] outline-none text-[#F4F6F0]"
+                                      >
+                                        <option value="none">Sin Sombra</option>
+                                        <option value="sutil">Sutil</option>
+                                        <option value="default">Estándar</option>
+                                        <option value="glow">Brillo Ámbar</option>
+                                        <option value="hard">Sólida Retro</option>
+                                      </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Grosor Borde</label>
+                                      <select
+                                        value={cta.border_width || '0px'}
+                                        onChange={e => {
+                                          const newCtas = [...campCtas];
+                                          newCtas[idx].border_width = e.target.value;
+                                          setCampCtas(newCtas);
+                                        }}
+                                        className="w-full bg-[#121915] border border-white/10 rounded-lg px-2 py-1 text-[10px] outline-none text-[#F4F6F0]"
+                                      >
+                                        <option value="0px">Sin Borde</option>
+                                        <option value="1px">Fino (1px)</option>
+                                        <option value="2px">Medio (2px)</option>
+                                        <option value="3px">Grueso (3px)</option>
+                                      </select>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Ancho Completo</label>
+                                      <div className="flex items-center h-7 pl-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={cta.is_full_width || false}
+                                          onChange={e => {
+                                            const newCtas = [...campCtas];
+                                            newCtas[idx].is_full_width = e.target.checked;
+                                            setCampCtas(newCtas);
+                                          }}
+                                          className="w-4 h-4 rounded border-white/10 bg-transparent text-amber-honey focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                                        />
+                                        <span className="text-[9px] text-[#F4F6F0]/50 uppercase font-black tracking-wider ml-2">Bloque</span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {cta.border_width && cta.border_width !== '0px' && (
+                                    <div className="grid grid-cols-2 gap-3 pt-1">
+                                      <div className="space-y-1">
+                                        <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Estilo de Borde</label>
+                                        <select
+                                          value={cta.border_style || 'solid'}
+                                          onChange={e => {
+                                            const newCtas = [...campCtas];
+                                            newCtas[idx].border_style = e.target.value;
+                                            setCampCtas(newCtas);
+                                          }}
+                                          className="w-full bg-[#121915] border border-white/10 rounded-lg px-2 py-1 text-[10px] outline-none text-[#F4F6F0]"
+                                        >
+                                          <option value="solid">Sólido</option>
+                                          <option value="dashed">Guiones</option>
+                                          <option value="dotted">Puntos</option>
+                                          <option value="double">Doble</option>
+                                        </select>
+                                      </div>
+
+                                      <div className="space-y-1">
+                                        <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Color del Borde</label>
+                                        <div className="flex gap-2 items-center">
+                                          <input
+                                            type="color"
+                                            value={cta.border_color || cta.bg_color || '#82c99b'}
+                                            onChange={e => {
+                                              const newCtas = [...campCtas];
+                                              newCtas[idx].border_color = e.target.value;
+                                              setCampCtas(newCtas);
+                                            }}
+                                            className="w-6 h-6 rounded-md bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                          />
+                                          <input
+                                            type="text"
+                                            value={cta.border_color || ''}
+                                            onChange={e => {
+                                              const newCtas = [...campCtas];
+                                              newCtas[idx].border_color = e.target.value;
+                                              setCampCtas(newCtas);
+                                            }}
+                                            placeholder="Igual a Fondo"
+                                            className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -4864,7 +5052,7 @@ export default function AdminDashboard() {
 
                           {/* CTAs list */}
                           {campCtas && campCtas.length > 0 ? (
-                            <div style={{ textAlign: 'center', marginTop: '20px', marginBottom: '10px' }}>
+                            <div style={{ textAlign: campCtaAlignment as any, marginTop: campCtaMarginTop, marginBottom: campCtaMarginBottom }}>
                               {campCtas.map((cta: any, cidx: number) => (
                                 <span
                                   key={cidx}
@@ -4876,15 +5064,16 @@ export default function AdminDashboard() {
                                             campTemplateType === 'mist' ? '#06b6d4' : '#f59e0b'
                                     ),
                                     color: cta.text_color || '#030303',
-                                    padding: '8px 16px',
+                                    padding: cta.padding_size === 'small' ? '6px 12px' : cta.padding_size === 'large' ? '12px 24px' : '8px 16px',
                                     borderRadius: cta.radius || '8px',
-                                    fontSize: '10px',
+                                    fontSize: cta.padding_size === 'large' ? '11px' : cta.padding_size === 'small' ? '9px' : '10px',
                                     fontWeight: 'bold',
-                                    display: 'inline-block',
-                                    margin: '4px 6px',
+                                    display: cta.is_full_width ? 'block' : 'inline-block',
+                                    margin: cta.is_full_width ? '10px auto' : '4px 6px',
                                     letterSpacing: '0.5px',
                                     textTransform: 'uppercase',
-                                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
+                                    border: cta.border_width && cta.border_width !== '0px' ? `${cta.border_width} ${cta.border_style || 'solid'} ${cta.border_color || cta.bg_color || '#82c99b'}` : 'none',
+                                    boxShadow: cta.shadow_style === 'none' ? 'none' : cta.shadow_style === 'sutil' ? '0 2px 5px rgba(0,0,0,0.1)' : cta.shadow_style === 'glow' ? `0 0 12px ${(cta.bg_color || '#82c99b')}88` : cta.shadow_style === 'hard' ? '3px 3px 0px rgba(0,0,0,0.3)' : '0 4px 10px rgba(0,0,0,0.2)'
                                   }}
                                 >
                                   {cta.text || 'Botón CTA'}
@@ -4892,7 +5081,7 @@ export default function AdminDashboard() {
                               ))}
                             </div>
                           ) : campCtaText ? (
-                            <div style={{ textAlign: 'center', marginTop: '20px', marginBottom: '10px' }}>
+                            <div style={{ textAlign: campCtaAlignment as any, marginTop: campCtaMarginTop, marginBottom: campCtaMarginBottom }}>
                               <span
                                 style={{
                                   backgroundColor:

@@ -696,14 +696,20 @@ def get_campaign_html_template(campaign, sub_email):
                 </a>
                 """)
         if cta_buttons:
+            cta_alignment = custom_styles.get('cta_alignment', 'center')
+            cta_margin_top = custom_styles.get('cta_margin_top', '35px')
+            cta_margin_bottom = custom_styles.get('cta_margin_bottom', '25px')
             cta_html = f"""
-            <div style="text-align: center; margin-top: 35px; margin-bottom: 25px;">
+            <div style="text-align: {cta_alignment}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
                 {"".join(cta_buttons)}
             </div>
             """
     elif campaign.cta_text and campaign.cta_link:
+        cta_alignment = custom_styles.get('cta_alignment', 'center')
+        cta_margin_top = custom_styles.get('cta_margin_top', '35px')
+        cta_margin_bottom = custom_styles.get('cta_margin_bottom', '25px')
         cta_html = f"""
-        <div style="text-align: center; margin-top: 35px; margin-bottom: 25px;">
+        <div style="text-align: {cta_alignment}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
             <a href="{campaign.cta_link}" style="background-color: {accent_color}; color: #080C0A; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
                 {campaign.cta_text}
             </a>
