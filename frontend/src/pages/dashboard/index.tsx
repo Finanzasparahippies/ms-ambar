@@ -66,6 +66,43 @@ const resolveMediaUrl = (url: string | null | undefined) => {
   return `${backendRoot}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
+const getHoverColor = (hex: string | null | undefined): string => {
+  if (!hex) return '#d97706';
+  let cleanHex = hex.replace('#', '');
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex[0] + cleanHex[0] + cleanHex[1] + cleanHex[1] + cleanHex[2] + cleanHex[2];
+  }
+  if (cleanHex.length !== 6) return hex;
+  try {
+    const r = parseInt(cleanHex.substring(0, 2), 16);
+    const g = parseInt(cleanHex.substring(2, 4), 16);
+    const b = parseInt(cleanHex.substring(4, 6), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    const factor = 0.15;
+
+    let newR, newG, newB;
+    if (luminance > 0.5) {
+      newR = Math.max(0, Math.floor(r * (1 - factor)));
+      newG = Math.max(0, Math.floor(g * (1 - factor)));
+      newB = Math.max(0, Math.floor(b * (1 - factor)));
+    } else {
+      newR = Math.min(255, Math.floor(r + (255 - r) * factor));
+      newG = Math.min(255, Math.floor(g + (255 - g) * factor));
+      newB = Math.min(255, Math.floor(b + (255 - b) * factor));
+    }
+
+    const toHex = (c: number) => {
+      const h = c.toString(16);
+      return h.length === 1 ? '0' + h : h;
+    };
+    return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+  } catch (e) {
+    return hex;
+  }
+};
+
 export default function AdminDashboard() {
   const resolveFontStack = (fontKey: string) => {
     switch (fontKey) {
@@ -89,7 +126,7 @@ export default function AdminDashboard() {
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
 
   // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events'>('summary');
   const [contracts, setContracts] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
 
@@ -443,6 +480,31 @@ export default function AdminDashboard() {
   const [catalogSuccessMsg, setCatalogSuccessMsg] = useState<string | null>(null);
   const [catalogErrorMsg, setCatalogErrorMsg] = useState<string | null>(null);
 
+  // ─── CTA Hover States ───
+  const [hoveredEditorCta, setHoveredEditorCta] = useState<number | null>(null);
+  const [hoveredModalCta, setHoveredModalCta] = useState<number | null>(null);
+  const [hoveredEditorSingleCta, setHoveredEditorSingleCta] = useState(false);
+  const [hoveredModalSingleCta, setHoveredModalSingleCta] = useState(false);
+
+  // ─── Events State ───
+  const [events, setEvents] = useState<any[]>([]);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<any | null>(null);
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventArtist, setEventArtist] = useState('');
+  const [eventDate, setEventDate] = useState('');
+  const [eventType, setEventType] = useState<'concert' | 'meet_greet'>('concert');
+  const [eventTheater, setEventTheater] = useState('');
+  const [eventMgPrice, setEventMgPrice] = useState('0');
+  const [eventMgLimit, setEventMgLimit] = useState('0');
+  const [eventPriceMultiplier, setEventPriceMultiplier] = useState('1.0');
+  const [eventIsActive, setEventIsActive] = useState(true);
+  const [eventImageFile, setEventImageFile] = useState<File | null>(null);
+  const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
+  const [eventLoading, setEventLoading] = useState(false);
+  const [eventSuccessMsg, setEventSuccessMsg] = useState<string | null>(null);
+  const [eventErrorMsg, setEventErrorMsg] = useState<string | null>(null);
+
   // ─── Theaters State (Nectar Pro) ───
   const [theaters, setTheaters] = useState<any[]>([]);
   const [isTheaterModalOpen, setIsTheaterModalOpen] = useState(false);
@@ -481,7 +543,7 @@ export default function AdminDashboard() {
     try {
       if (staffFlag) {
         // Staff/Admin Data Fetching
-        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes] = await Promise.all([
+        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes] = await Promise.all([
           axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
           axios.get(`${API_URL}/dashboard/system/`, { headers }).catch(err => {
             console.error("System metrics fetch failed, using fallback", err);
@@ -496,7 +558,8 @@ export default function AdminDashboard() {
           axios.get(`${API_URL}/blog/campaigns/`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_URL}/blog/subscribers/`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_URL}/users/profile/`, { headers }).catch(() => ({ data: null })),
-          axios.get(`${API_URL}/blog/campaign-template-images/`, { headers }).catch(() => ({ data: [] }))
+          axios.get(`${API_URL}/blog/campaign-template-images/`, { headers }).catch(() => ({ data: [] })),
+          axios.get(`${API_URL}/tickets/events/`, { headers }).catch(() => ({ data: [] }))
         ]);
 
         setStats(analyticsRes.data);
@@ -509,6 +572,7 @@ export default function AdminDashboard() {
         setCampaigns(Array.isArray(campaignsRes.data) ? campaignsRes.data : []);
         setSubscribers(Array.isArray(subscribersRes.data) ? subscribersRes.data : []);
         setTemplateImages(Array.isArray(templateImagesRes.data) ? templateImagesRes.data : []);
+        setEvents(Array.isArray(eventsRes.data) ? eventsRes.data : []);
         if (profileRes && profileRes.data) {
           setClientProfile(profileRes.data);
         }
@@ -1462,6 +1526,135 @@ export default function AdminDashboard() {
     }
   };
 
+  // ─── Events Form & Action Handlers ───
+  const openEventCreateModal = () => {
+    setEditingEvent(null);
+    setEventTitle('');
+    setEventArtist('');
+    setEventDate('');
+    setEventType('concert');
+    setEventTheater('');
+    setEventMgPrice('0');
+    setEventMgLimit('0');
+    setEventPriceMultiplier('1.0');
+    setEventIsActive(true);
+    setEventImageFile(null);
+    setEventImagePreview(null);
+    setEventErrorMsg(null);
+    setEventSuccessMsg(null);
+    setIsEventModalOpen(true);
+  };
+
+  const openEventEditModal = (event: any) => {
+    setEditingEvent(event);
+    setEventTitle(event.title);
+    setEventArtist(event.artist);
+    
+    let formattedDate = '';
+    if (event.date) {
+      const d = new Date(event.date);
+      const offset = d.getTimezoneOffset();
+      const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+      formattedDate = localDate.toISOString().slice(0, 16);
+    }
+    setEventDate(formattedDate);
+    setEventType(event.event_type || 'concert');
+    setEventTheater(event.theater ? String(event.theater) : '');
+    setEventMgPrice(String(event.mg_price || '0'));
+    setEventMgLimit(String(event.mg_limit || '0'));
+    setEventPriceMultiplier(String(event.price_multiplier || '1.0'));
+    setEventIsActive(event.is_active);
+    setEventImageFile(null);
+    setEventImagePreview(event.image ? resolveMediaUrl(event.image) : null);
+    setEventErrorMsg(null);
+    setEventSuccessMsg(null);
+    setIsEventModalOpen(true);
+  };
+
+  const handleEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventTitle.trim()) { setEventErrorMsg('El título es obligatorio.'); return; }
+    if (!eventArtist.trim()) { setEventErrorMsg('El artista es obligatorio.'); return; }
+    if (!eventDate) { setEventErrorMsg('La fecha es obligatoria.'); return; }
+    if (eventType === 'concert' && !eventTheater) { setEventErrorMsg('Debes seleccionar un teatro para un concierto.'); return; }
+    
+    if (eventType === 'meet_greet') {
+      if (!eventMgPrice || parseFloat(eventMgPrice) < 0) { setEventErrorMsg('El precio de la convivencia debe ser un valor válido.'); return; }
+      if (!eventMgLimit || parseInt(eventMgLimit) < 0) { setEventErrorMsg('El límite de boletos debe ser un valor válido.'); return; }
+    }
+
+    setEventLoading(true);
+    setEventErrorMsg(null);
+    setEventSuccessMsg(null);
+
+    const token = localStorage.getItem('token');
+    const headers = { 
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data'
+    };
+
+    const formData = new FormData();
+    formData.append('title', eventTitle);
+    formData.append('artist', eventArtist);
+    formData.append('date', eventDate);
+    formData.append('event_type', eventType);
+    formData.append('price_multiplier', eventPriceMultiplier);
+    formData.append('is_active', eventIsActive ? 'true' : 'false');
+    formData.append('mg_price', eventMgPrice || '0.00');
+    formData.append('mg_limit', eventMgLimit || '0');
+
+    if (eventType === 'concert') {
+      formData.append('theater', eventTheater);
+    } else {
+      formData.append('theater', '');
+    }
+
+    if (eventImageFile) {
+      formData.append('image', eventImageFile);
+    }
+
+    try {
+      if (editingEvent) {
+        await axios.patch(`${API_URL}/tickets/events/${editingEvent.id}/`, formData, { headers });
+        setEventSuccessMsg('¡Evento actualizado con éxito!');
+      } else {
+        await axios.post(`${API_URL}/tickets/events/`, formData, { headers });
+        setEventSuccessMsg('¡Evento creado con éxito!');
+      }
+      setIsEventModalOpen(false);
+      fetchDashboardData();
+    } catch (err: any) {
+      console.error(err);
+      setEventErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al guardar el evento.');
+    } finally {
+      setEventLoading(false);
+    }
+  };
+
+  const handleEventDelete = async (id: number, title: string) => {
+    const isConfirmed = await showConfirm(`¿Eliminar permanentemente "${title}"? Se borrarán todos los boletos asociados.`, "Eliminar Evento");
+    if (!isConfirmed) return;
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      await axios.delete(`${API_URL}/tickets/events/${id}/`, { headers });
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Error eliminando evento:', err);
+    }
+  };
+
+  const handleToggleEventActive = async (event: any) => {
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      await axios.patch(`${API_URL}/tickets/events/${event.id}/`, { is_active: !event.is_active }, { headers });
+      fetchDashboardData();
+    } catch (err) {
+      console.error('Error al cambiar estado del evento:', err);
+    }
+  };
+
 
   const handleUpdateOrderStatus = async (orderId: number, nextStatus: 'shipped' | 'delivered') => {
     const token = localStorage.getItem('token');
@@ -2167,6 +2360,15 @@ export default function AdminDashboard() {
                 }`}
             >
               📧 Campañas de Marketing
+            </button>
+            <button
+              onClick={() => setActiveTab('events')}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'events'
+                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                }`}
+            >
+              📅 Eventos
             </button>
           </div>
 
@@ -3441,6 +3643,210 @@ export default function AdminDashboard() {
                 )}
               </AnimatePresence>
 
+              {/* ══════ EVENT MODAL (Dashboard) ══════ */}
+              <AnimatePresence>
+                {isEventModalOpen && (
+                  <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#0B0F0D]/60 backdrop-blur-md overflow-y-auto"
+                    onClick={() => setIsEventModalOpen(false)}
+                  >
+                    <motion.div
+                      onClick={e => e.stopPropagation()}
+                      initial={{ opacity: 0, scale: 0.93, y: 20 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.93, y: 20 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                      className="amber-glass w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden my-8"
+                    >
+                      <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent" />
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-amber-honey/10 border border-amber-honey/20 rounded-2xl flex items-center justify-center">
+                            <Calendar size={20} className="text-amber-honey" />
+                          </div>
+                          <div>
+                            <h2 className="text-[13px] font-black uppercase tracking-[0.25em] text-[#F4F6F0]">
+                              {editingEvent ? 'Editar Evento' : 'Nuevo Evento'}
+                            </h2>
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey mt-0.5">Ms Ambar — Event Management</p>
+                          </div>
+                        </div>
+                        <button onClick={() => setIsEventModalOpen(false)} className="w-9 h-9 rounded-xl bg-white/5 text-[#F4F6F0]/40 hover:bg-white/10 hover:text-white flex items-center justify-center transition-all">
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      <form onSubmit={handleEventSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
+                        {/* Title */}
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Título del Evento *</label>
+                          <input
+                            type="text" required value={eventTitle} onChange={(e) => setEventTitle(e.target.value)}
+                            placeholder="Ej: Ms Ambar en Concierto Acústico"
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                          />
+                        </div>
+
+                        {/* Artist */}
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Artista / Intérprete *</label>
+                          <input
+                            type="text" required value={eventArtist} onChange={(e) => setEventArtist(e.target.value)}
+                            placeholder="Ej: Ms Ambar"
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                          />
+                        </div>
+
+                        {/* Date & Type */}
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Fecha y Hora *</label>
+                            <input
+                              type="datetime-local" required value={eventDate} onChange={(e) => setEventDate(e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all [color-scheme:dark]"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Tipo de Evento *</label>
+                            <select
+                              value={eventType} onChange={(e) => setEventType(e.target.value as any)}
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all [color-scheme:dark]"
+                            >
+                              <option value="concert">Concierto / Venue</option>
+                              <option value="meet_greet">Meet & Greet (Convivencia)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Conditional Theater (Only for concert) */}
+                        {eventType === 'concert' && (
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Teatro / Recinto *</label>
+                            <select
+                              required value={eventTheater} onChange={(e) => setEventTheater(e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all [color-scheme:dark]"
+                            >
+                              <option value="">-- Selecciona un Recinto --</option>
+                              {theaters.map((t: any) => (
+                                <option key={t.id} value={t.id}>{t.name} ({t.location})</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Pricing Configuration */}
+                        <div className="grid grid-cols-2 gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
+                          {eventType === 'concert' ? (
+                            <div className="space-y-1 col-span-2">
+                              <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Multiplicador de Precios *</label>
+                              <input
+                                type="number" step="0.01" min="0.1" required value={eventPriceMultiplier} onChange={(e) => setEventPriceMultiplier(e.target.value)}
+                                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                              />
+                              <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Multiplica los precios base de los asientos del teatro.</span>
+                            </div>
+                          ) : null}
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">
+                              {eventType === 'concert' ? 'Precio Meet & Greet Upgrade' : 'Precio del Boleto *'}
+                            </label>
+                            <input
+                              type="number" step="0.01" min="0" required value={eventMgPrice} onChange={(e) => setEventMgPrice(e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                            />
+                            <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">
+                              {eventType === 'concert' ? 'Dejar en 0 si no se ofrece upgrade.' : 'Precio por acceso de convivencia.'}
+                            </span>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">
+                              {eventType === 'concert' ? 'Límite de upgrades M&G' : 'Límite de Boletos *'}
+                            </label>
+                            <input
+                              type="number" min="0" required value={eventMgLimit} onChange={(e) => setEventMgLimit(e.target.value)}
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                            />
+                            <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">
+                              {eventType === 'concert' ? 'Capacidad máxima de upgrades.' : 'Límite total de ventas para la convivencia.'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Image Upload */}
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Imagen de Portada</label>
+                          <div className="flex gap-4 items-center">
+                            <div className="flex-1">
+                              <input
+                                type="file" accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setEventImageFile(file);
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setEventImagePreview(reader.result as string);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="w-full text-xs text-[#F4F6F0]/60 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:tracking-widest file:bg-amber-honey file:text-black hover:file:bg-amber-gold file:cursor-pointer"
+                              />
+                            </div>
+                            {eventImagePreview && (
+                              <div className="w-16 h-16 rounded-xl border border-white/10 bg-black/40 overflow-hidden shrink-0">
+                                <img src={eventImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Active Toggle */}
+                        <div className="flex items-center gap-3 pt-2">
+                          <input
+                            type="checkbox" id="eventIsActive" checked={eventIsActive} onChange={(e) => setEventIsActive(e.target.checked)}
+                            className="w-4 h-4 rounded border-white/10 bg-white/5 text-amber-honey focus:ring-amber-honey [color-scheme:dark]"
+                          />
+                          <label htmlFor="eventIsActive" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/80 cursor-pointer">
+                            Evento Activo (Visible para los clientes)
+                          </label>
+                        </div>
+
+                        {eventErrorMsg && (
+                          <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                            <AlertTriangle size={13} className="text-red-400 shrink-0" />
+                            <p className="text-[10px] font-bold text-red-400">{eventErrorMsg}</p>
+                          </div>
+                        )}
+
+                        {eventSuccessMsg && (
+                          <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                            <Check size={13} className="text-green-400 shrink-0" />
+                            <p className="text-[10px] font-bold text-green-400">{eventSuccessMsg}</p>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex gap-3 pt-4">
+                          <button type="button" onClick={() => setIsEventModalOpen(false)} className="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 transition-all">
+                            Cancelar
+                          </button>
+                          <button type="submit" disabled={eventLoading} className="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-amber-500 to-amber-600 text-black flex items-center justify-center gap-2 shadow-[0_2px_15px_rgba(245,158,11,0.2)] disabled:opacity-50">
+                            {eventLoading
+                              ? <><div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" /> Guardando...</>
+                              : <><Check size={13} /> {editingEvent ? 'Guardar Cambios' : 'Crear Evento'}</>
+                            }
+                          </button>
+                        </div>
+                      </form>
+                    </motion.div>
+                  </div>
+                )}
+              </AnimatePresence>
+
               {/* ══════ TAB 6: CONTRACTS PIPELINE ══════ */}
               {activeTab === 'contracts' && (
                 <motion.div
@@ -3895,6 +4301,155 @@ export default function AdminDashboard() {
                           </div>
                         )}
                       </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              {/* TAB 8: EVENTS MANAGEMENT */}
+              {activeTab === 'events' && (
+                <motion.div
+                  key="events-tab"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  {/* Header */}
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h2 className="text-2xl font-black uppercase italic tracking-tight flex items-center gap-2">
+                        📅 Gestión de Eventos
+                      </h2>
+                      <p className="text-[#F4F6F0]/50 text-[10px] uppercase tracking-widest font-bold mt-1">
+                        Crea y administra conciertos (con mapa de asientos) o convivencias Meet & Greet sin música
+                      </p>
+                    </div>
+                    <button
+                      onClick={openEventCreateModal}
+                      className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
+                    >
+                      <Plus size={15} /> Nuevo Evento
+                    </button>
+                  </div>
+
+                  {/* Events Grid */}
+                  {events.length === 0 ? (
+                    <div className="bg-white/5 border border-white/10 rounded-[2rem] p-16 flex flex-col items-center gap-4 text-center shadow-lg shadow-black/20">
+                      <Calendar size={48} className="text-[#F4F6F0]/20" />
+                      <p className="text-[#F4F6F0]/40 text-xs uppercase tracking-widest font-black">Sin eventos registrados</p>
+                      <p className="text-[#F4F6F0]/30 text-[10px] font-bold">Crea tu primer evento musical o de convivencia para comenzar a vender accesos</p>
+                      <button onClick={openEventCreateModal} className="mt-4 px-6 py-3 bg-amber-honey text-black font-black uppercase tracking-widest rounded-xl hover:bg-amber-gold transition-all">
+                        Crear primer Evento
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {events.map((event: any) => (
+                        <motion.div
+                          key={event.id}
+                          whileHover={{ y: -4 }}
+                          className="bg-white/5 border border-white/10 hover:border-amber-honey/40 rounded-[2rem] p-6 flex flex-col gap-4 transition-all shadow-lg shadow-black/20"
+                        >
+                          {/* Event Cover Image */}
+                          <div className="w-full h-40 rounded-2xl bg-black/40 border border-white/5 overflow-hidden relative">
+                            {event.image ? (
+                              <img src={resolveMediaUrl(event.image)} alt={event.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center text-white/20 gap-2">
+                                <Calendar size={32} />
+                                <span className="text-[9px] uppercase tracking-widest font-bold">Sin Imagen de Portada</span>
+                              </div>
+                            )}
+                            <div className="absolute top-3 right-3 flex gap-1">
+                              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
+                                event.event_type === 'concert'
+                                  ? 'bg-purple-950/80 text-purple-300 border-purple-800'
+                                  : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                              }`}>
+                                {event.event_type === 'concert' ? 'Concierto' : 'Meet & Greet'}
+                              </span>
+                              <button
+                                onClick={() => handleToggleEventActive(event)}
+                                className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-all ${
+                                  event.is_active
+                                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800 hover:bg-emerald-900'
+                                    : 'bg-red-950/80 text-red-300 border-red-800 hover:bg-red-900'
+                                }`}
+                              >
+                                {event.is_active ? 'Activo' : 'Inactivo'}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Event Details */}
+                          <div className="space-y-2 flex-1">
+                            <div>
+                              <h3 className="text-sm font-black text-[#F4F6F0] leading-tight line-clamp-1">{event.title}</h3>
+                              <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-0.5">{event.artist}</p>
+                            </div>
+
+                            <div className="border-t border-white/5 pt-2 mt-2 space-y-1.5 text-[9px] font-bold uppercase tracking-wider text-[#F4F6F0]/70">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar size={11} className="text-amber-honey" />
+                                <span>{new Date(event.date).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} hrs</span>
+                              </div>
+                              {event.event_type === 'concert' && (
+                                <div className="flex items-center gap-1.5">
+                                  <MapPin size={11} className="text-amber-honey" />
+                                  <span className="line-clamp-1">Recinto: {event.theater_name || 'Sin teatro asignado'}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Pricing & Limits info */}
+                            <div className="bg-black/30 rounded-xl p-3 border border-white/5 text-[9px] font-bold uppercase tracking-widest text-[#F4F6F0]/60 space-y-1 mt-2">
+                              {event.event_type === 'concert' ? (
+                                <>
+                                  <div className="flex justify-between">
+                                    <span>Multiplicador de Precio:</span>
+                                    <span className="text-[#F4F6F0] font-black">{event.price_multiplier}x</span>
+                                  </div>
+                                  {Number(event.mg_price) > 0 && (
+                                    <div className="flex justify-between border-t border-white/5 pt-1 mt-1 text-amber-honey">
+                                      <span>Upgrade M&G:</span>
+                                      <span>${Number(event.mg_price).toLocaleString()} MXN ({event.mg_available} disp)</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex justify-between">
+                                    <span>Precio de Convivencia:</span>
+                                    <span className="text-[#F4F6F0] font-black">${Number(event.mg_price).toLocaleString()} MXN</span>
+                                  </div>
+                                  <div className="flex justify-between border-t border-white/5 pt-1 mt-1">
+                                    <span>Boletos Disp / Límite:</span>
+                                    <span className="text-amber-honey font-black">{event.mg_available} / {event.mg_limit}</span>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Card Actions */}
+                          <div className="flex gap-2 border-t border-white/5 pt-4">
+                            <button
+                              onClick={() => openEventEditModal(event)}
+                              className="flex-1 py-2.5 rounded-xl bg-white/5 border border-white/10 text-[#F4F6F0] hover:bg-white/10 transition-all flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                            >
+                              <Edit2 size={12} /> Editar
+                            </button>
+                            <button
+                              onClick={() => handleEventDelete(event.id, event.title)}
+                              className="px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))}
                     </div>
                   )}
                 </motion.div>
@@ -5772,32 +6327,39 @@ export default function AdminDashboard() {
                               marginTop: campCtaMarginTop,
                               marginBottom: campCtaMarginBottom
                             }}>
-                              {campCtas.map((cta: any, cidx: number) => (
-                                <span
-                                  key={cidx}
-                                  style={{
-                                    backgroundColor: cta.bg_color || (
-                                      campTemplateType === 'moss' ? '#82c99b' :
-                                        campTemplateType === 'cosmic' ? '#c084fc' :
-                                          campTemplateType === 'glow' ? '#f59e0b' :
-                                            campTemplateType === 'mist' ? '#06b6d4' : '#f59e0b'
-                                    ),
-                                    color: cta.text_color || '#030303',
-                                    padding: cta.padding_size === 'small' ? '6px 12px' : cta.padding_size === 'large' ? '12px 24px' : '8px 16px',
-                                    borderRadius: cta.radius || '8px',
-                                    fontSize: cta.padding_size === 'large' ? '11px' : cta.padding_size === 'small' ? '9px' : '10px',
-                                    fontWeight: 'bold',
-                                    display: cta.is_full_width ? 'block' : 'inline-block',
-                                    margin: cta.is_full_width ? '10px auto' : '4px 6px',
-                                    letterSpacing: '0.5px',
-                                    textTransform: 'uppercase',
-                                    border: cta.border_width && cta.border_width !== '0px' ? `${cta.border_width} ${cta.border_style || 'solid'} ${cta.border_color || cta.bg_color || '#82c99b'}` : 'none',
-                                    boxShadow: cta.shadow_style === 'none' ? 'none' : cta.shadow_style === 'sutil' ? '0 2px 5px rgba(0,0,0,0.1)' : cta.shadow_style === 'glow' ? `0 0 12px ${(cta.bg_color || '#82c99b')}88` : cta.shadow_style === 'hard' ? '3px 3px 0px rgba(0,0,0,0.3)' : '0 4px 10px rgba(0,0,0,0.2)'
-                                  }}
-                                >
-                                  {cta.text || 'Botón CTA'}
-                                </span>
-                              ))}
+                              {campCtas.map((cta: any, cidx: number) => {
+                                const baseBg = cta.bg_color || (
+                                  campTemplateType === 'moss' ? '#82c99b' :
+                                    campTemplateType === 'cosmic' ? '#c084fc' :
+                                      campTemplateType === 'glow' ? '#f59e0b' :
+                                        campTemplateType === 'mist' ? '#06b6d4' : '#f59e0b'
+                                );
+                                return (
+                                  <span
+                                    key={cidx}
+                                    onMouseEnter={() => setHoveredEditorCta(cidx)}
+                                    onMouseLeave={() => setHoveredEditorCta(null)}
+                                    style={{
+                                      backgroundColor: hoveredEditorCta === cidx ? getHoverColor(baseBg) : baseBg,
+                                      color: cta.text_color || '#030303',
+                                      padding: cta.padding_size === 'small' ? '6px 12px' : cta.padding_size === 'large' ? '12px 24px' : '8px 16px',
+                                      borderRadius: cta.radius || '8px',
+                                      fontSize: cta.padding_size === 'large' ? '11px' : cta.padding_size === 'small' ? '9px' : '10px',
+                                      fontWeight: 'bold',
+                                      display: cta.is_full_width ? 'block' : 'inline-block',
+                                      margin: cta.is_full_width ? '10px auto' : '4px 6px',
+                                      letterSpacing: '0.5px',
+                                      textTransform: 'uppercase',
+                                      border: cta.border_width && cta.border_width !== '0px' ? `${cta.border_width} ${cta.border_style || 'solid'} ${cta.border_color || cta.bg_color || '#82c99b'}` : 'none',
+                                      boxShadow: cta.shadow_style === 'none' ? 'none' : cta.shadow_style === 'sutil' ? '0 2px 5px rgba(0,0,0,0.1)' : cta.shadow_style === 'glow' ? `0 0 12px ${(cta.bg_color || '#82c99b')}88` : cta.shadow_style === 'hard' ? '3px 3px 0px rgba(0,0,0,0.3)' : '0 4px 10px rgba(0,0,0,0.2)',
+                                      transition: 'background-color 0.2s ease-in-out',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {cta.text || 'Botón CTA'}
+                                  </span>
+                                );
+                              })}
                             </div>
                           ) : campCtaText ? (
                             <div style={{
@@ -5805,26 +6367,34 @@ export default function AdminDashboard() {
                               marginTop: campCtaMarginTop,
                               marginBottom: campCtaMarginBottom
                             }}>
-                              <span
-                                style={{
-                                  backgroundColor:
-                                    campTemplateType === 'moss' ? '#82c99b' :
-                                      campTemplateType === 'cosmic' ? '#c084fc' :
-                                        campTemplateType === 'glow' ? '#f59e0b' :
-                                          campTemplateType === 'mist' ? '#06b6d4' : '#f59e0b',
-                                  color: '#030303',
-                                  padding: '8px 16px',
-                                  borderRadius: '8px',
-                                  fontSize: '10px',
-                                  fontWeight: 'bold',
-                                  display: 'inline-block',
-                                  letterSpacing: '0.5px',
-                                  textTransform: 'uppercase',
-                                  boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
-                                }}
-                              >
-                                {campCtaText}
-                              </span>
+                              {(() => {
+                                const baseBg = campTemplateType === 'moss' ? '#82c99b' :
+                                  campTemplateType === 'cosmic' ? '#c084fc' :
+                                    campTemplateType === 'glow' ? '#f59e0b' :
+                                      campTemplateType === 'mist' ? '#06b6d4' : '#f59e0b';
+                                return (
+                                  <span
+                                    onMouseEnter={() => setHoveredEditorSingleCta(true)}
+                                    onMouseLeave={() => setHoveredEditorSingleCta(false)}
+                                    style={{
+                                      backgroundColor: hoveredEditorSingleCta ? getHoverColor(baseBg) : baseBg,
+                                      color: '#030303',
+                                      padding: '8px 16px',
+                                      borderRadius: '8px',
+                                      fontSize: '10px',
+                                      fontWeight: 'bold',
+                                      display: 'inline-block',
+                                      letterSpacing: '0.5px',
+                                      textTransform: 'uppercase',
+                                      boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                                      transition: 'background-color 0.2s ease-in-out',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    {campCtaText}
+                                  </span>
+                                );
+                              })()}
                             </div>
                           ) : null}
 
@@ -6188,62 +6758,75 @@ export default function AdminDashboard() {
                           {/* Dynamic CTA Buttons */}
                           {previewCampaign.ctas && previewCampaign.ctas.length > 0 ? (
                             <div style={{ textAlign: activeCtaAlign as any, marginTop: '30px', marginBottom: '20px' }}>
-                              {previewCampaign.ctas.map((cta: any, cidx: number) => (
-                                <a
-                                  key={cidx}
-                                  href={cta.link || '#'}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  style={{
-                                    backgroundColor: cta.bg_color || (
-                                      previewCampaign.template_type === 'moss' ? '#82c99b' :
-                                        previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                                          previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                            previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b'
-                                    ),
-                                    color: cta.text_color || '#030303',
-                                    padding: '14px 28px',
-                                    borderRadius: cta.radius || '12px',
-                                    fontSize: '13px',
-                                    fontWeight: 'bold',
-                                    textDecoration: 'none',
-                                    display: cta.is_full_width ? 'block' : 'inline-block',
-                                    margin: cta.is_full_width ? '10px auto' : '5px 10px',
-                                    letterSpacing: '1px',
-                                    textTransform: 'uppercase',
-                                    boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
-                                  }}
-                                >
-                                  {cta.text}
-                                </a>
-                              ))}
+                              {previewCampaign.ctas.map((cta: any, cidx: number) => {
+                                const baseBg = cta.bg_color || (
+                                  previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                    previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                      previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                        previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b'
+                                );
+                                return (
+                                  <a
+                                    key={cidx}
+                                    href={cta.link || '#'}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onMouseEnter={() => setHoveredModalCta(cidx)}
+                                    onMouseLeave={() => setHoveredModalCta(null)}
+                                    style={{
+                                      backgroundColor: hoveredModalCta === cidx ? getHoverColor(baseBg) : baseBg,
+                                      color: cta.text_color || '#030303',
+                                      padding: '14px 28px',
+                                      borderRadius: cta.radius || '12px',
+                                      fontSize: '13px',
+                                      fontWeight: 'bold',
+                                      textDecoration: 'none',
+                                      display: cta.is_full_width ? 'block' : 'inline-block',
+                                      margin: cta.is_full_width ? '10px auto' : '5px 10px',
+                                      letterSpacing: '1px',
+                                      textTransform: 'uppercase',
+                                      boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
+                                      transition: 'background-color 0.2s ease-in-out'
+                                    }}
+                                  >
+                                    {cta.text}
+                                  </a>
+                                );
+                              })}
                             </div>
                           ) : previewCampaign.cta_text ? (
                             <div style={{ textAlign: activeCtaAlign as any, marginTop: '30px', marginBottom: '20px' }}>
-                              <a
-                                href={previewCampaign.cta_link || '#'}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                style={{
-                                  backgroundColor:
-                                    previewCampaign.template_type === 'moss' ? '#82c99b' :
-                                      previewCampaign.template_type === 'cosmic' ? '#c084fc' :
-                                        previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                          previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
-                                  color: '#030303',
-                                  padding: '14px 28px',
-                                  borderRadius: '12px',
-                                  fontSize: '13px',
-                                  fontWeight: 'bold',
-                                  textDecoration: 'none',
-                                  display: 'inline-block',
-                                  letterSpacing: '1px',
-                                  textTransform: 'uppercase',
-                                  boxShadow: '0 5px 15px rgba(0,0,0,0.2)'
-                                }}
-                              >
-                                {previewCampaign.cta_text}
-                              </a>
+                              {(() => {
+                                const baseBg = previewCampaign.template_type === 'moss' ? '#82c99b' :
+                                  previewCampaign.template_type === 'cosmic' ? '#c084fc' :
+                                    previewCampaign.template_type === 'glow' ? '#f59e0b' :
+                                      previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b';
+                                return (
+                                  <a
+                                    href={previewCampaign.cta_link || '#'}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onMouseEnter={() => setHoveredModalSingleCta(true)}
+                                    onMouseLeave={() => setHoveredModalSingleCta(false)}
+                                    style={{
+                                      backgroundColor: hoveredModalSingleCta ? getHoverColor(baseBg) : baseBg,
+                                      color: '#030303',
+                                      padding: '14px 28px',
+                                      borderRadius: '12px',
+                                      fontSize: '13px',
+                                      fontWeight: 'bold',
+                                      textDecoration: 'none',
+                                      display: 'inline-block',
+                                      letterSpacing: '1px',
+                                      textTransform: 'uppercase',
+                                      boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
+                                      transition: 'background-color 0.2s ease-in-out'
+                                    }}
+                                  >
+                                    {previewCampaign.cta_text}
+                                  </a>
+                                );
+                              })()}
                             </div>
                           ) : null}
 
