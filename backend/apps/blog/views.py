@@ -67,7 +67,7 @@ def send_newsletter_email(post):
               {f"<div style='border-radius: 24px; overflow: hidden; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);'><img src='{image_url}' style='width: 100%; height: auto; display: block;' /></div>" if image_url else ""}
               
               <!-- Content -->
-              <h2 style="color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">{post.title}</h2>
+              <h2 style="color: #F4F6F0; font-size: 28px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">{post.title}</h2>
               
               <div style="color: rgba(244, 246, 240, 0.8); font-size: 15px; line-height: 1.8; margin-bottom: 30px;">
                 {post.content}
@@ -75,7 +75,7 @@ def send_newsletter_email(post):
               
               <!-- Button link -->
               <div style="text-align: center; margin-bottom: 45px;">
-                <a href="{settings.FRONTEND_URL}/ambar-te-escribe" style="background-color: #E5A93B; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
+                <a href="{settings.FRONTEND_URL}/ambar-te-escribe" style="background-color: #E5A93B; color: #080C0A; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
                   Leer Entrada Completa
                 </a>
               </div>
@@ -132,7 +132,7 @@ def send_welcome_email(subscriber):
           </div>
           
           <!-- Content -->
-          <h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">
+          <h2 style="color: #F4F6F0; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">
             {f"¡Hola, {subscriber.name}!" if subscriber.name else "¡Gracias por unirte a nuestro viaje!"}
           </h2>
           
@@ -142,7 +142,7 @@ def send_welcome_email(subscriber):
           
           <!-- Button link -->
           <div style="text-align: center; margin-bottom: 45px;">
-            <a href="{settings.FRONTEND_URL}/tour" style="background-color: #E5A93B; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
+            <a href="{settings.FRONTEND_URL}/tour" style="background-color: #E5A93B; color: #080C0A; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
               Ver Próximas Fechas del Tour
             </a>
           </div>
@@ -415,7 +415,7 @@ def get_campaign_html_template(campaign, sub_email):
     bg_color = "#06070b"
     card_bg = "#0c0d13"
     border_style = "1px solid rgba(255, 255, 255, 0.05)"
-    text_color = "#ffffff"
+    text_color = "#F4F6F0"
     accent_color = "#f59e0b"
     font_family = "Georgia, Garamond, serif"
     badge_bg = "rgba(255, 191, 0, 0.15)"
@@ -432,7 +432,7 @@ def get_campaign_html_template(campaign, sub_email):
         bg_color = "#05050f"
         card_bg = "#0c0a1a"
         border_style = "1px solid #4a154b"
-        text_color = "#ffffff"
+        text_color = "#F4F6F0"
         accent_color = "#c084fc"
         font_family = "'Georgia', serif"
         badge_bg = "rgba(192, 132, 252, 0.15)"
@@ -549,7 +549,7 @@ def get_campaign_html_template(campaign, sub_email):
     sender_name = custom_styles.get('sender_name', 'Ms Ambar')
     
     # Title Styles
-    title_color = custom_styles.get('title_color', '#ffffff')
+    title_color = custom_styles.get('title_color', '#F4F6F0')
     title_bg_color = custom_styles.get('title_bg_color', 'transparent')
     title_bg_image = custom_styles.get('title_bg_image', '')
     title_padding = custom_styles.get('title_padding', '0px')
@@ -595,7 +595,7 @@ def get_campaign_html_template(campaign, sub_email):
             btn_text = cta.get('text', '')
             btn_link = cta.get('link', '')
             btn_bg = cta.get('bg_color') or accent_color
-            btn_color = cta.get('text_color', '#030303')
+            btn_color = cta.get('text_color', '#080C0A')
             btn_radius = cta.get('radius', '12px')
             
             # Additional CTA customizations
@@ -645,7 +645,7 @@ def get_campaign_html_template(campaign, sub_email):
     elif campaign.cta_text and campaign.cta_link:
         cta_html = f"""
         <div style="text-align: center; margin-top: 35px; margin-bottom: 25px;">
-            <a href="{campaign.cta_link}" style="background-color: {accent_color}; color: #030303; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+            <a href="{campaign.cta_link}" style="background-color: {accent_color}; color: #080C0A; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
                 {campaign.cta_text}
             </a>
         </div>
