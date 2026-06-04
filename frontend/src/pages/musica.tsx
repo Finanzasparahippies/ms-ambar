@@ -1,7 +1,7 @@
 import React from 'react';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
-import { Play, Share2, Disc, ExternalLink } from 'lucide-react';
+import { Play, Share2, Disc, ExternalLink, Youtube, Music } from 'lucide-react';
 
 const ALBUMS = [
   { id: 1, title: 'Eclipse', year: '2026', tracks: 12, cover: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500&q=80' },
@@ -16,35 +16,69 @@ const MusicPage = () => {
         <title>Ms Ambar | Discografía</title>
       </Head>
 
-      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20">
-        <header className="mb-32">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20 pt-10">
+        <header className="mb-20 md:mb-32">
           <motion.h1
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-[12vw] font-black tracking-tighter leading-[0.8] mb-12"
+            className="text-5xl sm:text-7xl md:text-[10vw] font-black tracking-tighter leading-[0.8] mb-12"
           >
             DISCO<span className="text-amber-honey text-glow">GRAFÍA</span>
           </motion.h1>
-          <div className="flex flex-wrap gap-6">
-            <button className="btn-amber flex items-center gap-4 px-10">
-              <Play size={18} fill="currentColor" /> Escuchar en Spotify
-            </button>
-            <button className="amber-glass border border-white/10 px-10 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-4 hover:bg-white/10 transition-all">
-              <Disc size={18} /> Apple Music
-            </button>
+          <div className="flex flex-wrap gap-4 sm:gap-6">
+            <a
+              href="https://open.spotify.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-3 transition-all hover:scale-102 shadow-lg shadow-amber-honey/10"
+            >
+              <Play size={16} fill="currentColor" /> Spotify
+            </a>
+            <a
+              href="https://music.apple.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="amber-glass border border-white/10 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-white/10 transition-all hover:scale-102"
+            >
+              <Disc size={16} /> Apple Music
+            </a>
+            <a
+              href="https://youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="amber-glass border border-white/10 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-white/10 transition-all hover:scale-102"
+            >
+              <Youtube size={16} /> Canal de YouTube
+            </a>
+            <a
+              href="https://music.youtube.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="amber-glass border border-white/10 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-white/10 transition-all hover:scale-102"
+            >
+              <Youtube size={16} className="text-red-500" /> YouTube Music
+            </a>
+            <a
+              href="https://music.amazon.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="amber-glass border border-white/10 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-3 hover:bg-white/10 transition-all hover:scale-102"
+            >
+              <Music size={16} className="text-cyan-400" /> Amazon Music
+            </a>
           </div>
         </header>
 
-        <div className="space-y-60">
+        <div className="space-y-24 md:space-y-40 lg:space-y-60">
           {ALBUMS.map((album, i) => (
             <motion.section
               key={album.id}
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="flex flex-col lg:flex-row items-center gap-24"
+              className="flex flex-col lg:flex-row items-center gap-12 lg:gap-24"
             >
-              <div className="w-full lg:w-1/2 relative group">
+              <div className="w-full lg:w-1/2 relative group max-w-md mx-auto lg:max-w-none">
                 <div className="absolute inset-0 bg-amber-honey blur-[120px] opacity-0 group-hover:opacity-20 transition-opacity duration-700" />
                 <div className="relative z-10 aspect-square rounded-[4rem] overflow-hidden amber-glass border-2 border-amber-honey/10">
                   <img
@@ -56,21 +90,21 @@ const MusicPage = () => {
                 </div>
               </div>
 
-              <div className="flex-1">
+              <div className="flex-1 w-full">
                 <span className="text-amber-honey text-sm font-black tracking-[0.5em] mb-4 block opacity-60">{album.year}</span>
-                <h2 className="text-6xl md:text-8xl font-black tracking-tighter mb-8">{album.title}</h2>
-                <p className="opacity-50 mb-12 text-lg italic leading-relaxed max-w-xl">
+                <h2 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter mb-6">{album.title}</h2>
+                <p className="opacity-50 mb-8 text-base md:text-lg italic leading-relaxed max-w-xl">
                   Explorando texturas orgánicas y ritmos ancestrales, este álbum redefine el sonido contemporáneo de Ms Ambar.
                 </p>
 
-                <div className="space-y-2 mb-16 amber-glass p-8 rounded-[3rem]">
+                <div className="space-y-2 mb-12 amber-glass p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem]">
                   {[1, 2, 3, 4].map(track => (
-                    <div key={track} className="flex items-center justify-between py-5 border-b border-white/5 group cursor-pointer hover:bg-white/5 px-6 rounded-2xl transition-all">
-                      <div className="flex items-center gap-6">
+                    <div key={track} className="flex items-center justify-between py-4 border-b border-white/5 group cursor-pointer hover:bg-white/5 px-4 md:px-6 rounded-2xl transition-all">
+                      <div className="flex items-center gap-4 md:gap-6">
                         <span className="opacity-20 font-mono text-sm group-hover:text-amber-honey group-hover:opacity-100 transition-all">0{track}</span>
-                        <span className="text-sm font-extrabold tracking-tight uppercase">Sinfonía del Ámbar {track}</span>
+                        <span className="text-xs md:text-sm font-extrabold tracking-tight uppercase">Sinfonía del Ámbar {track}</span>
                       </div>
-                      <div className="flex items-center gap-5 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                      <div className="flex items-center gap-4 md:gap-5 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                         <Share2 size={16} className="opacity-40 hover:text-amber-honey hover:opacity-100" />
                         <ExternalLink size={16} className="opacity-40 hover:text-amber-honey hover:opacity-100" />
                       </div>

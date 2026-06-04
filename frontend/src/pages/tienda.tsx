@@ -164,18 +164,18 @@ export default function MerchPage() {
 
       <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20 pt-10">
         {/* Categories Bar */}
-        <div className="flex gap-10 mb-24 amber-glass px-10 py-6 rounded-full w-fit mx-auto text-[10px] uppercase font-black tracking-[0.3em]">
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-10 mb-16 md:mb-24 amber-glass px-6 sm:px-10 py-4 sm:py-6 rounded-3xl sm:rounded-full w-full sm:w-fit mx-auto text-[10px] uppercase font-black tracking-[0.3em]">
           <button className="text-amber-honey text-glow">Todos</button>
           <button className="opacity-40 hover:opacity-100 transition-all">Música</button>
           <button className="opacity-40 hover:opacity-100 transition-all">Ropa</button>
           <button className="opacity-40 hover:opacity-100 transition-all">Arte</button>
         </div>
 
-        <header className="mb-24 text-center">
+        <header className="mb-16 md:mb-24 text-center">
           <motion.h1
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-7xl md:text-9xl font-black tracking-tighter"
+            className="text-5xl sm:text-7xl md:text-9xl font-black tracking-tighter"
           >
             TIEN<span className="text-amber-honey text-glow">DA</span>
           </motion.h1>
@@ -183,7 +183,7 @@ export default function MerchPage() {
         </header>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-10">
           {products.map((product, i) => (
             <motion.div
               key={product.id}

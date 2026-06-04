@@ -707,9 +707,9 @@ export default function AmbarTeEscribePage() {
               <div className="w-12 h-12 bg-amber-honey/10 border border-amber-honey/30 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md overflow-hidden p-2 transition-transform hover:scale-105 duration-300">
                 <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain" />
               </div>
-              <h3 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Miembro de las Cartas</h3>
+              <h3 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Miembro del Club</h3>
               <p className="text-white/60 mb-6 max-w-md mx-auto text-xs leading-relaxed">
-                Estás registrado correctamente. Recibirás de manera directa y en exclusiva los poemas y lanzamientos de Ms Ambar.
+                Estás registrado correctamente. Recibirás de manera directa y en exclusiva las novedades y lanzamientos de Ms Ambar.
               </p>
               <button
                 onClick={() => {

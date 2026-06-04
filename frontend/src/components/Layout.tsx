@@ -20,9 +20,15 @@ const Layout = ({ children }: LayoutProps) => {
     router.pathname.startsWith('/admin') ||
     router.pathname.startsWith('/dashboard');
 
+  React.useEffect(() => {
+    if (isAuthOrAdmin) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  }, [isAuthOrAdmin]);
+
   if (isAuthOrAdmin) {
     return (
-      <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative bg-gradient-to-br from-[#121915] to-[#080C0A] text-[#F4F6F0]">
+      <div data-theme="dark" className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative bg-gradient-to-br from-[#080c0a] to-[#040605] text-[#F4F6F0]">
         <main className="relative z-10 min-h-screen">
           {children}
         </main>

@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
-from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification, EmailCampaign
-from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer, EmailCampaignSerializer
+from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification, EmailCampaign, CampaignTemplateImage
+from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer, EmailCampaignSerializer, CampaignTemplateImageSerializer
 from .utils import send_failover_email
 import logging
 import requests
@@ -40,39 +40,56 @@ def send_newsletter_email(post):
     for sub in subscribers:
         html_content = f"""
         <html>
-          <body style="background-color: #06070b; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px 20px; margin: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: #0c0d13; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
+              body, table, td, a {{
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+              }}
+            </style>
+          </head>
+          <body style="background-color: #080C0A; color: #F4F6F0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+            <div style="max-width: 600px; margin: 0 auto; background: #0B0F0D; border: 1px solid rgba(229, 169, 59, 0.12); padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02);">
               
               <!-- Header/Logo -->
               <div style="text-align: center; margin-bottom: 40px;">
-                <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; overflow: hidden; vertical-align: middle; text-align: center; padding: 5px; box-sizing: border-box;">
-                  <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
+                <div style="display: inline-block; width: 60px; height: 60px; background-color: #080C0A; border: 1px solid rgba(229, 169, 59, 0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 6px; box-sizing: border-box; box-shadow: 0 0 20px rgba(229, 169, 59, 0.12); vertical-align: middle;">
+                  <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_b.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
                 </div>
-                <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
-                <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Club Exclusivo</p>
+                <h1 style="color: #F4F6F0; font-size: 26px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; font-style: italic;">Ms Ambar</h1>
+                <div style="height: 1px; width: 40px; background-color: rgba(229, 169, 59, 0.3); margin: 8px auto;"></div>
+                <p style="color: #E5A93B; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">Club Exclusivo</p>
               </div>
               
               <!-- Post cover image if exists -->
-              {f"<div style='border-radius: 20px; overflow: hidden; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);'><img src='{image_url}' style='width: 100%; height: auto; display: block;' /></div>" if image_url else ""}
+              {f"<div style='border-radius: 24px; overflow: hidden; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);'><img src='{image_url}' style='width: 100%; height: auto; display: block;' /></div>" if image_url else ""}
               
               <!-- Content -->
               <h2 style="color: #ffffff; font-size: 28px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">{post.title}</h2>
               
-              <div style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px;">
+              <div style="color: rgba(244, 246, 240, 0.8); font-size: 15px; line-height: 1.8; margin-bottom: 30px;">
                 {post.content}
               </div>
               
               <!-- Button link -->
-              <div style="text-align: center; margin-bottom: 40px;">
-                <a href="{settings.FRONTEND_URL}/ambar-te-escribe" style="background-color: #f59e0b; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
+              <div style="text-align: center; margin-bottom: 45px;">
+                <a href="{settings.FRONTEND_URL}/ambar-te-escribe" style="background-color: #E5A93B; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
                   Leer Entrada Completa
                 </a>
               </div>
               
               <!-- Footer -->
-              <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-                <p style="margin: 0 0 10px 0;">Recibiste este correo porque estás suscrito a las cartas de Ms Ambar.</p>
-                <p style="margin: 0;"><a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub.email}" style="color: #f59e0b; text-decoration: underline;">Desuscribirse</a></p>
+              <div style="text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; color: rgba(244, 246, 240, 0.35); font-size: 11px; line-height: 1.6;">
+                <p style="margin: 0 0 10px 0; font-weight: 500;">Recibiste este correo porque estás suscrito a las cartas de Ms Ambar.</p>
+                <p style="margin: 0;">
+                  <a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub.email}" style="color: #E5A93B; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.25); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">Desuscribirse</a>
+                </p>
+                <!-- Premium Watermark Signature -->
+                <p style="margin: 30px 0 0 0; font-size: 8px; color: rgba(244, 246, 240, 0.15); letter-spacing: 2px; text-transform: uppercase; font-weight: bold;">
+                  Diseñado con alma por <a href="https://nectarlabs.dev" target="_blank" style="color: rgba(229, 169, 59, 0.45); text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.2); font-weight: 800; transition: all 0.3s;">Nectar Labs</a>
+                </p>
               </div>
               
             </div>
@@ -91,16 +108,27 @@ def send_welcome_email(subscriber):
     # Beautiful HTML layout matching ms-ambar aesthetics
     html_content = f"""
     <html>
-      <body style="background-color: #06070b; color: #ffffff; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px 20px; margin: 0;">
-        <div style="max-width: 600px; margin: 0 auto; background: #0c0d13; border: 1px solid rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
+          body, table, td, a {{
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          }}
+        </style>
+      </head>
+      <body style="background-color: #080C0A; color: #F4F6F0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px 20px; margin: 0; -webkit-font-smoothing: antialiased;">
+        <div style="max-width: 600px; margin: 0 auto; background: #0B0F0D; border: 1px solid rgba(229, 169, 59, 0.12); padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02);">
           
           <!-- Header/Logo -->
           <div style="text-align: center; margin-bottom: 40px;">
-            <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; overflow: hidden; vertical-align: middle; text-align: center; padding: 5px; box-sizing: border-box;">
-              <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
+            <div style="display: inline-block; width: 60px; height: 60px; background-color: #080C0A; border: 1px solid rgba(229, 169, 59, 0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 6px; box-sizing: border-box; box-shadow: 0 0 20px rgba(229, 169, 59, 0.12); vertical-align: middle;">
+              <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_b.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
             </div>
-            <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
-            <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Club Exclusivo</p>
+            <h1 style="color: #F4F6F0; font-size: 26px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; font-style: italic;">Ms Ambar</h1>
+            <div style="height: 1px; width: 40px; background-color: rgba(229, 169, 59, 0.3); margin: 8px auto;"></div>
+            <p style="color: #E5A93B; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">Club Exclusivo</p>
           </div>
           
           <!-- Content -->
@@ -108,21 +136,25 @@ def send_welcome_email(subscriber):
             {f"¡Hola, {subscriber.name}!" if subscriber.name else "¡Gracias por unirte a nuestro viaje!"}
           </h2>
           
-          <div style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
+          <div style="color: rgba(244, 246, 240, 0.8); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
             {f"Gracias por unirte a nuestro viaje. " if subscriber.name else ""}A partir de ahora, recibirás antes que nadie nuestras crónicas, fechas de presentaciones, sets exclusivos y actualizaciones del universo sonoro y visual de Ms Ambar.
           </div>
           
           <!-- Button link -->
-          <div style="text-align: center; margin-bottom: 40px;">
-            <a href="{settings.FRONTEND_URL}/tour" style="background-color: #f59e0b; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
+          <div style="text-align: center; margin-bottom: 45px;">
+            <a href="{settings.FRONTEND_URL}/tour" style="background-color: #E5A93B; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
               Ver Próximas Fechas del Tour
             </a>
           </div>
           
           <!-- Footer -->
-          <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-            <p style="margin: 0 0 10px 0;">Recibiste este correo porque te suscribiste en nuestro sitio web.</p>
-            <p style="margin: 0;"><a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={subscriber.email}" style="color: #f59e0b; text-decoration: underline;">Desuscribirse</a></p>
+          <div style="text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; color: rgba(244, 246, 240, 0.35); font-size: 11px; line-height: 1.6;">
+            <p style="margin: 0 0 10px 0; font-weight: 500;">Recibiste este correo porque te suscribiste en nuestro sitio web.</p>
+            <p style="margin: 0;"><a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={subscriber.email}" style="color: #E5A93B; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.25); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">Desuscribirse</a></p>
+            <!-- Premium Watermark Signature -->
+            <p style="margin: 30px 0 0 0; font-size: 8px; color: rgba(244, 246, 240, 0.15); letter-spacing: 2px; text-transform: uppercase; font-weight: bold;">
+              Diseñado con alma por <a href="https://nectarlabs.dev" target="_blank" style="color: rgba(229, 169, 59, 0.45); text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.2); font-weight: 800; transition: all 0.3s;">Nectar Labs</a>
+            </p>
           </div>
           
         </div>
@@ -422,34 +454,47 @@ def get_campaign_html_template(campaign, sub_email):
         badge_bg = "rgba(6, 182, 212, 0.15)"
         
     # Map and load custom premium typography if selected
-    user_font = getattr(campaign, 'font_family', 'serif')
-    font_import = ""
-    if user_font and user_font != 'serif':
-        font_configs = {
-            'playfair': {
-                'import': "@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap');",
-                'family': "'Playfair Display', Georgia, serif"
-            },
-            'cinzel': {
-                'import': "@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');",
-                'family': "'Cinzel', Georgia, serif"
-            },
-            'garamond': {
-                'import': "@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&display=swap');",
-                'family': "'Cormorant Garamond', 'Times New Roman', serif"
-            },
-            'montserrat': {
-                'import': "@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');",
-                'family': "'Montserrat', Helvetica, Arial, sans-serif"
-            },
-            'pinyon': {
-                'import': "@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap');",
-                'family': "'Pinyon Script', cursive"
-            }
+    font_configs = {
+        'serif': {
+            'import': "",
+            'family': "Georgia, Garamond, serif"
+        },
+        'playfair': {
+            'import': "@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap');",
+            'family': "'Playfair Display', Georgia, serif"
+        },
+        'cinzel': {
+            'import': "@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&display=swap');",
+            'family': "'Cinzel', Georgia, serif"
+        },
+        'garamond': {
+            'import': "@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&display=swap');",
+            'family': "'Cormorant Garamond', 'Times New Roman', serif"
+        },
+        'montserrat': {
+            'import': "@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap');",
+            'family': "'Montserrat', Helvetica, Arial, sans-serif"
+        },
+        'pinyon': {
+            'import': "@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&display=swap');",
+            'family': "'Pinyon Script', cursive"
         }
-        if user_font in font_configs:
-            font_import = font_configs[user_font]['import']
-            font_family = font_configs[user_font]['family']
+    }
+
+    title_font_key = getattr(campaign, 'title_font_family', 'serif')
+    body_font_key = getattr(campaign, 'font_family', 'serif')
+    footer_font_key = getattr(campaign, 'footer_font_family', 'serif')
+
+    title_font_config = font_configs.get(title_font_key, font_configs['serif'])
+    body_font_config = font_configs.get(body_font_key, font_configs['serif'])
+    footer_font_config = font_configs.get(footer_font_key, font_configs['serif'])
+
+    unique_imports = {title_font_config['import'], body_font_config['import'], footer_font_config['import']}
+    font_import = "\n".join([imp for imp in unique_imports if imp])
+
+    title_font_family = title_font_config['family']
+    body_font_family = body_font_config['family']
+    footer_font_family = footer_font_config['family']
 
     bg_style = ""
     if campaign.bg_image:
@@ -480,14 +525,124 @@ def get_campaign_html_template(campaign, sub_email):
         if not image_url.startswith('http'):
             api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
             image_url = f"{api_url}{image_url}"
+            
+        img_style = campaign.image_style or {}
+        width = img_style.get('width', '100%')
+        align = img_style.get('align', 'center')
+        radius = img_style.get('radius', '20px')
+        
+        wrapper_style = "margin-bottom: 30px;"
+        if align == 'center':
+            wrapper_style += " text-align: center;"
+        elif align == 'left':
+            wrapper_style += " text-align: left;"
+        elif align == 'right':
+            wrapper_style += " text-align: right;"
+            
         image_html = f"""
-        <div style="border-radius: 20px; overflow: hidden; margin-bottom: 30px; border: {border_style};">
-            <img src="{image_url}" style="width: 100%; height: auto; display: block;" />
+        <div style="{wrapper_style}">
+            <img src="{image_url}" style="width: {width}; max-width: 100%; height: auto; border-radius: {radius}; border: {border_style}; display: inline-block;" />
         </div>
         """
 
+    custom_styles = getattr(campaign, 'custom_styles', {}) or {}
+    sender_name = custom_styles.get('sender_name', 'Ms Ambar')
+    
+    # Title Styles
+    title_color = custom_styles.get('title_color', '#ffffff')
+    title_bg_color = custom_styles.get('title_bg_color', 'transparent')
+    title_bg_image = custom_styles.get('title_bg_image', '')
+    title_padding = custom_styles.get('title_padding', '0px')
+    title_radius = custom_styles.get('title_radius', '0px')
+    
+    # Body Styles
+    body_color = custom_styles.get('body_color', '') or text_color
+    body_bg_color = custom_styles.get('body_bg_color', 'transparent')
+    body_bg_image = custom_styles.get('body_bg_image', '')
+    body_padding = custom_styles.get('body_padding', '0px')
+    body_radius = custom_styles.get('body_radius', '0px')
+    
+    # Footer Styles
+    footer_color = custom_styles.get('footer_color', 'rgba(244, 246, 240, 0.35)')
+    footer_bg_color = custom_styles.get('footer_bg_color', 'transparent')
+    footer_bg_image = custom_styles.get('footer_bg_image', '')
+    footer_padding = custom_styles.get('footer_padding', '0px')
+    footer_radius = custom_styles.get('footer_radius', '0px')
+
+    def get_section_bg_style(bg_img, bg_col):
+        styles = []
+        if bg_col and bg_col != 'transparent':
+            styles.append(f"background-color: {bg_col}")
+        if bg_img:
+            img_url = bg_img
+            if not img_url.startswith('http'):
+                api_url_val = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
+                img_url = f"{api_url_val}{img_url}"
+            styles.append(f"background-image: url('{img_url}')")
+            styles.append("background-position: center")
+            styles.append("background-repeat: no-repeat")
+            styles.append("background-size: cover")
+        return "; ".join(styles) if styles else ""
+
+    title_bg_style = get_section_bg_style(title_bg_image, title_bg_color)
+    body_bg_style = get_section_bg_style(body_bg_image, body_bg_color)
+    footer_bg_style = get_section_bg_style(footer_bg_image, footer_bg_color)
+
     cta_html = ""
-    if campaign.cta_text and campaign.cta_link:
+    if campaign.ctas:
+        cta_buttons = []
+        for cta in campaign.ctas:
+            btn_text = cta.get('text', '')
+            btn_link = cta.get('link', '')
+            btn_bg = cta.get('bg_color') or accent_color
+            btn_color = cta.get('text_color', '#030303')
+            btn_radius = cta.get('radius', '12px')
+            
+            # Additional CTA customizations
+            btn_border_width = cta.get('border_width', '0px')
+            btn_border_style = cta.get('border_style', 'solid')
+            btn_border_color = cta.get('border_color', '') or btn_bg
+            btn_border = f"{btn_border_width} {btn_border_style} {btn_border_color}" if btn_border_width != '0px' else 'none'
+            
+            # Shadow/Glow customization
+            btn_shadow_style = cta.get('shadow_style', 'default')
+            if btn_shadow_style == 'none':
+                btn_shadow = 'none'
+            elif btn_shadow_style == 'sutil':
+                btn_shadow = '0 2px 5px rgba(0,0,0,0.1)'
+            elif btn_shadow_style == 'glow':
+                btn_shadow = f"0 0 15px {btn_bg}66"
+            elif btn_shadow_style == 'hard':
+                btn_shadow = '4px 4px 0px rgba(0,0,0,0.3)'
+            else: # default
+                btn_shadow = '0 5px 15px rgba(0,0,0,0.2)'
+                
+            # Padding customization
+            btn_padding_size = cta.get('padding_size', 'medium')
+            if btn_padding_size == 'small':
+                btn_padding = '10px 20px'
+            elif btn_padding_size == 'large':
+                btn_padding = '18px 36px'
+            else: # medium
+                btn_padding = '14px 28px'
+                
+            # Full width display
+            btn_display = 'block' if cta.get('is_full_width', False) else 'inline-block'
+            btn_margin = '10px auto' if cta.get('is_full_width', False) else '5px 10px'
+            
+            if btn_text and btn_link:
+                cta_buttons.append(f"""
+                <a href="{btn_link}" style="background-color: {btn_bg}; color: {btn_color}; padding: {btn_padding}; border-radius: {btn_radius}; font-size: 13px; font-weight: bold; text-decoration: none; display: {btn_display}; margin: {btn_margin}; letter-spacing: 1px; text-transform: uppercase; box-shadow: {btn_shadow}; border: {btn_border}; text-align: center;">
+                    {btn_text}
+                </a>
+                """)
+        if cta_buttons:
+            cta_html = f"""
+            <div style="text-align: center; margin-top: 35px; margin-bottom: 25px;">
+                {"".join(cta_buttons)}
+            </div>
+            """
+    elif campaign.cta_text and campaign.cta_link:
         cta_html = f"""
         <div style="text-align: center; margin-top: 35px; margin-bottom: 25px;">
             <a href="{campaign.cta_link}" style="background-color: {accent_color}; color: #030303; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
@@ -498,48 +653,84 @@ def get_campaign_html_template(campaign, sub_email):
 
     unsubscribe_url = f"{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub_email}"
     
-    poem_paragraphs = "".join([f"<p style='margin: 0 0 16px 0;'>{line.strip()}</p>" if line.strip() else "<div style='height: 16px;'></div>" for line in campaign.poem_text.split('\n')])
+    if "<p" in campaign.poem_text or "<br" in campaign.poem_text or "<div" in campaign.poem_text:
+        poem_paragraphs = campaign.poem_text
+    else:
+        poem_paragraphs = "".join([f"<p style='margin: 0 0 16px 0;'>{line.strip()}</p>" if line.strip() else "<div style='height: 16px;'></div>" for line in campaign.poem_text.split('\n')])
+
+    # Determine absolute URL for media conversions
+    api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
+    def make_urls_absolute(text):
+        if not text:
+            return ""
+        text = text.replace('src="/media/', f'src="{api_url}/media/')
+        text = text.replace("src='/media/", f"src='{api_url}/media/")
+        return text
+
+    poem_paragraphs = make_urls_absolute(poem_paragraphs)
+
+    email_title_to_render = getattr(campaign, 'email_title', '')
+    if not email_title_to_render:
+        email_title_to_render = campaign.subject
+    email_title_to_render = make_urls_absolute(email_title_to_render)
+
+    footer_text_to_render = getattr(campaign, 'footer_text', '')
+    if footer_text_to_render:
+        footer_html = f"<div style='margin: 0 0 10px 0;'>{footer_text_to_render}</div>"
+    else:
+        footer_html = "<p style='margin: 0 0 10px 0; font-weight: 500;'>Recibiste este correo porque eres parte del club de Ms Ambar.</p>"
+    footer_html = make_urls_absolute(footer_html)
 
     html_content = f"""
     <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           {font_import}
         </style>
       </head>
-      <body style="background-color: {bg_color}; color: {text_color}; font-family: {font_family}; padding: 40px 20px; margin: 0; text-align: center;">
-        <div style="max-width: 600px; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: left;">
+      <body style="background-color: {bg_color}; color: {text_color}; font-family: {body_font_family}; padding: 40px 20px; margin: 0; text-align: center; -webkit-font-smoothing: antialiased;">
+        <div style="max-width: 600px; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
           
           <!-- Header/Logo -->
           <div style="text-align: center; margin-bottom: 40px;">
-            <div style="display: inline-block; width: 50px; height: 50px; background-color: {accent_color}; border-radius: 50%; overflow: hidden; vertical-align: middle; text-align: center; padding: 5px; box-sizing: border-box;">
-              <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
+            <div style="display: inline-block; width: 60px; height: 60px; background-color: #080C0A; border: 1px solid rgba(229, 169, 59, 0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 6px; box-sizing: border-box; box-shadow: 0 0 20px rgba(229, 169, 59, 0.12); vertical-align: middle;">
+              <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_b.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
             </div>
-            <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
-            <p style="color: {accent_color}; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Ambar te escribe • Poesía</p>
+            <h1 style="color: #F4F6F0; font-size: 26px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; font-style: italic;">{sender_name}</h1>
+            <div style="height: 1px; width: 40px; background-color: rgba(229, 169, 59, 0.3); margin: 8px auto;"></div>
+            <p style="color: {accent_color}; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">Ambar te escribe • Poesía</p>
           </div>
           
           <!-- Cover image if exists -->
           {image_html}
           
-          <!-- Subject / Title -->
-          <h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.3; margin-top: 0; margin-bottom: 30px; letter-spacing: -0.02em; text-align: center; font-style: italic;">
-            {campaign.subject}
-          </h2>
+          <!-- Subject / Title Block -->
+          <div style="color: {title_color}; font-family: {title_font_family}; padding: {title_padding}; border-radius: {title_radius}; {title_bg_style}; margin-bottom: 30px; box-sizing: border-box;">
+            <h2 style="color: inherit; font-size: 24px; font-weight: 900; line-height: 1.3; margin: 0; letter-spacing: -0.02em; text-align: center; font-style: italic; font-family: inherit;">
+              {email_title_to_render}
+            </h2>
+          </div>
           
-          <!-- Poem content with custom styling -->
-          <div style="color: {text_color}; font-size: 16px; line-height: 1.8; margin-bottom: 40px; text-align: center; font-style: italic; opacity: 0.9;">
-            {poem_paragraphs}
+          <!-- Poem content / Body Block -->
+          <div style="color: {body_color}; font-family: {body_font_family}; padding: {body_padding}; border-radius: {body_radius}; {body_bg_style}; margin-bottom: 40px; box-sizing: border-box;">
+            <div style="color: inherit; font-size: 16px; line-height: 1.8; text-align: center; font-style: italic; opacity: 0.9; font-family: inherit; padding: 10px;">
+              {poem_paragraphs}
+            </div>
           </div>
           
           <!-- Dynamic CTA Button -->
           {cta_html}
           
-          <!-- Footer -->
-          <div style="text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px; margin-top: 40px; color: rgba(255,255,255,0.3); font-size: 11px;">
-            <p style="margin: 0 0 10px 0;">Recibiste este poema porque eres parte de las cartas de Ms Ambar.</p>
-            <p style="margin: 0;"><a href="{unsubscribe_url}" style="color: {accent_color}; text-decoration: underline;">Desuscribirse del boletín</a></p>
+          <!-- Footer Block -->
+          <div style="color: {footer_color}; font-family: {footer_font_family}; padding: {footer_padding}; border-radius: {footer_radius}; {footer_bg_style}; text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; line-height: 1.6; box-sizing: border-box;">
+            {footer_html}
+            <p style="margin: 0;"><a href="{unsubscribe_url}" style="color: {accent_color}; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.25); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">Desuscribirse del boletín</a></p>
+            <!-- Premium Watermark Signature -->
+            <p style="margin: 30px 0 0 0; font-size: 8px; color: rgba(244, 246, 240, 0.15); letter-spacing: 2px; text-transform: uppercase; font-weight: bold;">
+              Diseñado con amor por <a href="https://nectarlabs.dev" target="_blank" style="color: {accent_color}; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.2); font-weight: 800; transition: all 0.3s;">Nectar Labs</a>
+            </p>
           </div>
           
         </div>
@@ -583,6 +774,12 @@ class EmailCampaignViewSet(viewsets.ModelViewSet):
         
         threading.Thread(target=send_campaign_emails, args=(campaign,), daemon=True).start()
         return Response({"message": "La campaña de correos ha comenzado a enviarse en segundo plano."}, status=status.HTTP_200_OK)
+
+
+class CampaignTemplateImageViewSet(viewsets.ModelViewSet):
+    queryset = CampaignTemplateImage.objects.all().order_by('-created_at')
+    serializer_class = CampaignTemplateImageSerializer
+    permission_classes = [permissions.IsAdminUser]
 
 
 

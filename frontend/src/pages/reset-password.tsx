@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen text-[#F4F6F0] flex items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Dynamic Background Gradients */}
       <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-amber-honey/5 blur-[150px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-nature-sky/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-amber-honey/[0.03] blur-[150px] rounded-full pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -87,19 +87,19 @@ export default function ResetPasswordPage() {
           </Link>
           <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center justify-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-ping" />
-            Reinicializar Acceso
+            REINICIALIZAR ACCESO
           </span>
-          <h1 className="text-3xl md:text-4xl font-black text-[#F4F6F0] uppercase italic tracking-tighter mt-2">
-            Nueva Contraseña
+          <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mt-2 font-serif">
+            NUEVA CONTRASEÑA
           </h1>
-          <p className="text-[#F4F6F0]/50 text-xs font-bold uppercase tracking-wider mt-1 text-center">
-            {email ? `Restableciendo para: ${email}` : 'Establece tu nueva contraseña de ingreso'}
+          <p className="text-[#F4F6F0]/45 text-[10px] font-black uppercase tracking-widest mt-1.5 text-center">
+            {email ? `RESTABLECIENDO PARA: ${email}` : 'ESTABLECE TU NUEVA CONTRASEÑA DE INGRESO'}
           </p>
         </div>
 
         {/* Form Container Card */}
-        <div className="amber-glass p-8 rounded-[2.5rem] relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-amber-honey to-transparent opacity-60" />
+        <div className="bg-[#0c0f0d]/95 backdrop-blur-xl p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl shadow-black border border-amber-honey/25">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent" />
 
           <AnimatePresence mode="wait">
             {!success ? (
@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3 text-red-400 text-xs font-bold uppercase"
+                    className="p-4 bg-red-950/40 border border-red-500/30 rounded-2xl flex items-start gap-3 text-red-200 text-xs font-bold uppercase"
                   >
                     <ShieldAlert className="w-5 h-5 shrink-0" />
                     <span>{error}</span>
@@ -124,9 +124,9 @@ export default function ResetPasswordPage() {
 
                 {/* Password Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Nueva Contraseña</label>
+                  <label className="text-[9px] text-[#F4F6F0]/65 uppercase tracking-widest font-black block pl-1">Nueva Contraseña</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#F4F6F0]/25 group-focus-within:text-amber-honey transition-colors">
                       <Lock size={16} />
                     </div>
                     <input
@@ -134,13 +134,13 @@ export default function ResetPasswordPage() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Nueva contraseña"
-                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-12 py-4 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
+                      placeholder="••••••••"
+                      className="w-full bg-[#080c0a] border border-white/5 focus:border-amber-honey/40 focus:ring-1 focus:ring-amber-honey/25 rounded-2xl pl-11 pr-12 py-4 text-xs font-semibold text-[#F4F6F0] placeholder-[#F4F6F0]/20 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.02)]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-white/30 hover:text-white/60 transition-colors"
+                      className="absolute inset-y-0 right-0 pr-4 flex items-center text-[#F4F6F0]/25 hover:text-white/60 transition-colors"
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -149,9 +149,9 @@ export default function ResetPasswordPage() {
 
                 {/* Confirm Password Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Confirmar Nueva Contraseña</label>
+                  <label className="text-[9px] text-[#F4F6F0]/65 uppercase tracking-widest font-black block pl-1">Confirmar Nueva Contraseña</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#F4F6F0]/25 group-focus-within:text-amber-honey transition-colors">
                       <Lock size={16} />
                     </div>
                     <input
@@ -159,8 +159,8 @@ export default function ResetPasswordPage() {
                       required
                       value={passwordConfirm}
                       onChange={(e) => setPasswordConfirm(e.target.value)}
-                      placeholder="Confirmar contraseña"
-                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-4 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
+                      placeholder="••••••••"
+                      className="w-full bg-[#080c0a] border border-white/5 focus:border-amber-honey/40 focus:ring-1 focus:ring-amber-honey/25 rounded-2xl pl-11 pr-4 py-4 text-xs font-semibold text-[#F4F6F0] placeholder-[#F4F6F0]/20 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.02)]"
                     />
                   </div>
                 </div>
@@ -171,7 +171,7 @@ export default function ResetPasswordPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#1E2B22] font-black uppercase tracking-widest text-xs py-4 rounded-2xl transition-all shadow-[0_4px_30px_rgba(229,169,59,0.2)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-amber-honey text-[#080C0A] font-black uppercase tracking-widest text-xs py-4 rounded-2xl hover:bg-amber-honey/95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-honey/5"
                 >
                   {loading ? (
                     <div className="w-5 h-5 rounded-full border-2 border-black/20 border-t-black animate-spin" />
@@ -189,11 +189,11 @@ export default function ResetPasswordPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="py-6 text-center flex flex-col items-center gap-5"
               >
-                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400">
-                  <CheckCircle size={36} className="animate-pulse" />
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 animate-bounce">
+                  <CheckCircle size={36} />
                 </div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">Contraseña Cambiada</h3>
-                <p className="text-[#F4F6F0]/70 text-xs font-semibold leading-relaxed px-4">
+                <h3 className="text-xl font-black uppercase italic tracking-tight text-white font-serif">Contraseña Cambiada</h3>
+                <p className="text-[#F4F6F0]/65 text-xs font-bold uppercase tracking-widest leading-relaxed px-4">
                   Tu clave ha sido actualizada con éxito en el club de Ms Ambar. Redirigiéndote al inicio de sesión...
                 </p>
               </motion.div>
@@ -204,12 +204,15 @@ export default function ResetPasswordPage() {
         {/* Return to Forgot Link if missing uid/token */}
         {(!uid || !token) && (
           <div className="text-center mt-6">
-            <Link
-              href="/forgot-password"
-              className="inline-flex items-center gap-2 text-xs text-amber-honey hover:text-amber-honey/80 font-black uppercase tracking-widest text-[9px] transition-colors"
-            >
-              <ArrowLeft size={12} /> Solicitar Nuevo Token de Recuperación
-            </Link>
+            <p className="text-xs text-[#F4F6F0]/40 font-semibold uppercase tracking-wider text-[10px]">
+              ¿Token inválido?{' '}
+              <Link
+                href="/forgot-password"
+                className="text-amber-honey hover:text-amber-honey/80 font-black uppercase tracking-widest text-[10px] transition-colors ml-1"
+              >
+                SOLICITAR NUEVO TOKEN
+              </Link>
+            </p>
           </div>
         )}
       </motion.div>

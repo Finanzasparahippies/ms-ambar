@@ -21,6 +21,8 @@ const Navbar = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -49,6 +51,33 @@ const Navbar = () => {
     }
     setIsMobileMenuOpen(false);
   }, [router.pathname]);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setIsScrolled(scrollY > 20);
+
+      if (isMobileMenuOpen) {
+        setIsVisible(true);
+        return;
+      }
+
+      // Hide navbar when scroll goes past the first section (e.g. 100vh on home page, 300px on other pages)
+      const threshold = router.pathname === '/' ? window.innerHeight - 80 : 300;
+      if (scrollY > threshold) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [router.pathname, isMobileMenuOpen]);
 
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
@@ -79,10 +108,21 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-[1200px]">
-      <div className="amber-glass px-8 py-4 rounded-[2rem] flex justify-between items-center">
+    <nav
+      className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-500 ease-in-out ${
+        isScrolled || isMobileMenuOpen
+          ? 'border-b border-white/5 bg-[#080C0A]/90 backdrop-blur-md shadow-lg shadow-black/30'
+          : 'border-b border-transparent bg-transparent'
+      }`}
+      style={{
+        transform: isVisible ? 'translateY(0)' : 'translateY(-100%)',
+        opacity: isVisible ? 1 : 0,
+        pointerEvents: isVisible ? 'auto' : 'none',
+      }}
+    >
+      <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-5 flex justify-between items-center w-full">
         <Link href="/" className="flex items-center gap-4 group">
-          <div className="w-10 h-10 bg-amber-honey/10 border border-amber-honey/20 rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20 transition-all duration-300 group-hover:rotate-12 overflow-hidden p-1.5">
+          <div className="w-10 h-10 bg-amber-honey/10 border border-amber-honey/20 rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20 transition-all duration-300 group-hover:rotate-12 overflow-hidden p-1.5 animate-pulse">
             <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain" />
           </div>
           <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-6 w-auto object-contain hover:opacity-85 transition-opacity" />
@@ -94,8 +134,9 @@ const Navbar = () => {
             <Link
               key={link.name}
               href={link.href}
-              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
-                }`}
+              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey ${
+                router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+              }`}
             >
               {link.name}
             </Link>
@@ -110,10 +151,11 @@ const Navbar = () => {
                   {/* Nectar Studio Designer — admins only */}
                   <Link
                     href="/designer"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/designer'
-                      ? 'bg-amber-honey text-nature-night border-amber-honey'
-                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                      }`}
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                      router.pathname === '/designer'
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                    }`}
                     title="Nectar Studio Designer — Solo Admins"
                   >
                     <Layers size={10} /> Studio
@@ -121,10 +163,11 @@ const Navbar = () => {
                   {/* Admin Dashboard */}
                   <Link
                     href="/dashboard"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard')
-                      ? 'bg-amber-honey text-nature-night border-amber-honey'
-                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                      }`}
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
+                      router.pathname.startsWith('/dashboard')
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                    }`}
                   >
                     <Shield size={10} /> Admin
                   </Link>
@@ -146,14 +189,10 @@ const Navbar = () => {
               Login
             </Link>
           )}
-
-          {/* <div className="h-6 w-px bg-white/10 mx-1" />
-          <ThemeToggle theme={theme} toggle={toggleTheme} /> */}
         </div>
 
         {/* Mobile controls */}
         <div className="flex md:hidden items-center gap-4">
-          {/* <ThemeToggle theme={theme} toggle={toggleTheme} /> */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="text-white hover:text-amber-honey p-1 transition-colors outline-none"
@@ -172,15 +211,16 @@ const Navbar = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="amber-glass mt-2 p-6 rounded-[2rem] flex flex-col gap-4 md:hidden border border-white/5 shadow-2xl"
+            className="w-full bg-[#080C0A]/95 backdrop-blur-xl border-t border-white/5 p-6 flex flex-col gap-4 md:hidden absolute top-full left-0 right-0 shadow-2xl"
           >
             <div className="flex flex-col gap-3">
               {navLinks.map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-[11px] uppercase font-bold tracking-[0.25em] transition-all hover:text-amber-honey py-2 border-b border-white/[0.03] ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
-                    }`}
+                  className={`text-[11px] uppercase font-bold tracking-[0.25em] transition-all hover:text-amber-honey py-2 border-b border-white/[0.03] ${
+                    router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+                  }`}
                 >
                   {link.name}
                 </Link>
@@ -194,19 +234,21 @@ const Navbar = () => {
                   <div className="flex gap-3">
                     <Link
                       href="/designer"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname === '/designer'
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                        }`}
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
+                        router.pathname === '/designer'
+                          ? 'bg-amber-honey text-nature-night border-amber-honey'
+                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      }`}
                     >
                       <Layers size={12} /> Studio
                     </Link>
                     <Link
                       href="/dashboard"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname.startsWith('/dashboard')
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                        }`}
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
+                        router.pathname.startsWith('/dashboard')
+                          ? 'bg-amber-honey text-nature-night border-amber-honey'
+                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      }`}
                     >
                       <Shield size={12} /> Admin
                     </Link>

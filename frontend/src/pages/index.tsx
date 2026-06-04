@@ -862,7 +862,7 @@ const Home = () => {
       </Head>
 
       {/* ─── HERO SECTION (NECTAR LABS STYLE) ─── */}
-      <section className="relative min-h-[95vh] flex flex-col justify-center items-center px-6 py-24 md:py-32 overflow-hidden">
+      <section className="relative min-h-[50vh] flex flex-col justify-center items-center px-6 pt-32 pb-8 md:pt-40 md:pb-12 overflow-hidden">
         {/* Interactive canvas background */}
         <CanvasParticles morphTarget="none" />
 
@@ -903,24 +903,6 @@ const Home = () => {
             />
           </motion.div>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="text-[#F4F6F0]/70 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
-          >
-            La fusión vanguardista de arte lumínico, diseño acústico premium y expresión escénica digital.
-          </motion.p>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.25 }}
-            className="text-[#F4F6F0]/50 text-[10px] md:text-xs uppercase tracking-[0.2em] max-w-3xl mx-auto leading-relaxed"
-          >
-            Ms Ambar  desierto de Sonora. Frecuencias cósmicas, blues hipnótico, líricas del cosmos y activismo terrestre junto a Tierra Viva.
-          </motion.p>
-
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -944,7 +926,7 @@ const Home = () => {
       </section>
 
       {/* ─── BIOGRAPHY SECTION ─── */}
-      <section className="py-32 relative overflow-hidden">
+      <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden">
         {/* Subtle decorative glowing orb */}
         <div className="absolute top-1/2 left-[-10%] w-[35%] h-[35%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
 
@@ -957,7 +939,7 @@ const Home = () => {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.8 }}
-              className="lg:col-span-5 relative group"
+              className="lg:col-span-5 relative group max-w-md mx-auto lg:max-w-none w-full"
             >
               {/* Golden neon glow frame behind image */}
               <div className="absolute inset-0 bg-gradient-to-tr from-amber-honey/20 to-transparent rounded-[3rem] blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none" />
@@ -1027,9 +1009,9 @@ const Home = () => {
       </section>
 
       {/* ─── LIVE MUSIC RELEASES SHOWCASE ─── */}
-      <section className="py-32 border-y border-white/10 bg-white/[0.02] relative">
+      <section className="py-16 md:py-24 border-y border-white/10 bg-white/[0.02] relative">
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-16">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
             <div>
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Lanzamientos Recientes</span>
               <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tight mt-2">Música & Producción</h3>
@@ -1039,14 +1021,14 @@ const Home = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
             {[
               { title: 'Eclipse', desc: 'LP Álbum de Estudio • 2026', img: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500&q=80' },
               { title: 'Ambar Vision', desc: 'LP Álbum de Estudio • 2024', img: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=500&q=80' },
               { title: 'Desierto de Cristal', desc: 'LP Álbum de Estudio • 2023', img: 'https://images.unsplash.com/photo-1514525253361-bee8a48790c3?w=500&q=80' }
             ].map((track, i) => (
-              <div key={i} className="group relative rounded-[2.5rem] border border-white/10 bg-white/[0.01] hover:border-amber-honey/20 transition-all">
-                <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-6 border border-white/10">
+              <div key={i} className="group relative p-4 pb-6 rounded-[2.5rem] border border-white/10 bg-white/[0.01] hover:border-amber-honey/20 transition-all flex flex-col justify-between">
+                <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-4 border border-white/10">
                   <img src={track.img} alt={track.title} className="object-cover w-full h-full grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <Link href="/musica" className="w-16 h-16 rounded-full bg-amber-honey text-black flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
@@ -1065,7 +1047,7 @@ const Home = () => {
       </section>
 
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
-      <section className="py-32 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
+      <section className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
 
         <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-forest-green border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
@@ -1073,7 +1055,7 @@ const Home = () => {
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Esto es solo para los reales</span>
             <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
             <p className="text-white/60 text-xs max-w-sm mx-auto leading-relaxed">
-              Déja tu correo aquí y recibe el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
+              Déja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
             </p>
           </div>
 

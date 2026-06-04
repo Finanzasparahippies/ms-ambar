@@ -615,7 +615,7 @@ export default function BlogPage() {
           <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Esto es solo para los reales</span>
           <h3 className="text-4xl md:text-5xl font-serif text-white mb-4 tracking-tight italic font-normal">Ambar te escribe</h3>
           <p className="text-white/60 mb-10 max-w-md mx-auto text-xs leading-relaxed">
-            Déja tu correo aquí y recibe el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
+            Déja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
           </p>
 
           {newsletterSuccess ? (

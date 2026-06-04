@@ -39,7 +39,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen text-[#F4F6F0] flex items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Dynamic Background Gradients */}
       <div className="absolute top-[-20%] left-[-20%] w-[60%] h-[60%] bg-amber-honey/5 blur-[150px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-nature-sky/5 blur-[150px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-20%] w-[50%] h-[50%] bg-amber-honey/[0.03] blur-[150px] rounded-full pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -54,19 +54,19 @@ export default function ForgotPasswordPage() {
           </Link>
           <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center justify-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-ping" />
-            Recuperación de Cuenta
+            RECUPERACIÓN DE CUENTA
           </span>
-          <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mt-2">
-            Restablecer Clave
+          <h1 className="text-3xl md:text-4xl font-black text-white uppercase italic tracking-tighter mt-2 font-serif">
+            RESTABLECER CLAVE
           </h1>
-          <p className="text-white/50 text-xs font-bold uppercase tracking-wider mt-1">
-            Recupera tu acceso al club de Ms Ambar
+          <p className="text-[#F4F6F0]/45 text-[10px] font-black uppercase tracking-widest mt-1.5 text-center">
+            RECUPERA TU ACCESO AL CLUB DE MS AMBAR
           </p>
         </div>
 
         {/* Form Container Card */}
-        <div className="amber-glass p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl border border-white/5">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-amber-honey to-transparent opacity-60" />
+        <div className="bg-[#0c0f0d]/95 backdrop-blur-xl p-8 rounded-[2.5rem] relative overflow-hidden shadow-2xl shadow-black border border-amber-honey/25">
+          <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent" />
 
           <AnimatePresence mode="wait">
             {!success ? (
@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
                 exit={{ opacity: 0, y: -10 }}
               >
                 {/* Info Text */}
-                <p className="text-xs text-white/60 leading-relaxed text-center px-2">
+                <p className="text-[10px] text-[#F4F6F0]/65 uppercase tracking-widest font-bold leading-relaxed text-center px-2">
                   Introduce tu correo electrónico registrado y te enviaremos las instrucciones de restablecimiento de contraseña de inmediato.
                 </p>
 
@@ -96,9 +96,9 @@ export default function ForgotPasswordPage() {
 
                 {/* Email Field */}
                 <div className="space-y-2">
-                  <label className="text-[10px] text-white/60 uppercase tracking-widest font-black block pl-1">Correo Electrónico</label>
+                  <label className="text-[9px] text-[#F4F6F0]/65 uppercase tracking-widest font-black block pl-1">Correo Electrónico</label>
                   <div className="relative group">
-                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-white/30 group-focus-within:text-amber-honey transition-colors">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-[#F4F6F0]/25 group-focus-within:text-amber-honey transition-colors">
                       <Mail size={16} />
                     </div>
                     <input
@@ -107,7 +107,7 @@ export default function ForgotPasswordPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="nombre@ejemplo.com"
-                      className="w-full bg-white/5 border border-white/10 focus:border-amber-honey rounded-2xl pl-11 pr-4 py-4 text-sm font-semibold text-white placeholder-white/30 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.1)]"
+                      className="w-full bg-[#080c0a] border border-white/5 focus:border-amber-honey/40 focus:ring-1 focus:ring-amber-honey/25 rounded-2xl pl-11 pr-4 py-4 text-xs font-semibold text-[#F4F6F0] placeholder-[#F4F6F0]/20 outline-none transition-all focus:shadow-[0_0_15px_rgba(229,169,59,0.02)]"
                     />
                   </div>
                 </div>
@@ -118,7 +118,7 @@ export default function ForgotPasswordPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#1E2B22] font-black uppercase tracking-widest text-xs py-4 rounded-2xl transition-all shadow-[0_4px_30px_rgba(229,169,59,0.2)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-amber-honey text-[#080C0A] font-black uppercase tracking-widest text-xs py-4 rounded-2xl hover:bg-amber-honey/95 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-amber-honey/5"
                 >
                   {loading ? (
                     <div className="w-5 h-5 rounded-full border-2 border-black/20 border-t-black animate-spin" />
@@ -136,12 +136,12 @@ export default function ForgotPasswordPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 className="py-6 text-center flex flex-col items-center gap-5"
               >
-                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 animate-pulse">
-                  <CheckCircle size={36} className="animate-pulse" />
+                <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 animate-bounce">
+                  <CheckCircle size={36} />
                 </div>
-                <h3 className="text-xl font-black uppercase italic tracking-tight text-white">Solicitud Enviada</h3>
-                <p className="text-white/70 text-xs font-semibold leading-relaxed px-4">
-                  Si la dirección <span className="text-amber-honey font-bold">{email}</span> se encuentra registrada, recibirás un correo con las instrucciones de recuperación.
+                <h3 className="text-xl font-black uppercase italic tracking-tight text-white font-serif">Solicitud Enviada</h3>
+                <p className="text-[#F4F6F0]/65 text-xs font-bold uppercase tracking-widest leading-relaxed px-4">
+                  Si la dirección <span className="text-amber-honey font-black">{email}</span> se encuentra registrada, recibirás un correo con las instrucciones de recuperación.
                 </p>
 
                 {/* Developer debug helper link */}
@@ -150,17 +150,17 @@ export default function ForgotPasswordPage() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
-                    className="w-full mt-4 p-4 bg-amber-honey/10 border border-amber-honey/20 rounded-2xl text-left"
+                    className="w-full mt-4 p-4 bg-[#080c0a] border border-amber-honey/20 rounded-2xl text-left"
                   >
                     <span className="text-[9px] text-amber-honey uppercase tracking-wider font-black flex items-center gap-1.5 mb-2">
                       ⚡ Modo Desarrollo Nectar Labs
                     </span>
-                    <p className="text-[10px] text-white/60 leading-relaxed mb-3">
+                    <p className="text-[10px] text-[#F4F6F0]/50 leading-relaxed mb-3">
                       Enlace de recuperación generado en el servidor Django (DEBUG=True):
                     </p>
                     <a
                       href={devResetUrl}
-                      className="inline-flex items-center gap-1.5 bg-amber-honey hover:bg-amber-600 text-[#1E2B22] font-black uppercase tracking-wider text-[10px] px-4 py-3 rounded-xl transition-all shadow-[0_2px_15px_rgba(229,169,59,0.15)]"
+                      className="inline-flex items-center gap-1.5 bg-amber-honey hover:bg-amber-honey/95 text-[#080C0A] font-black uppercase tracking-wider text-[10px] px-4 py-3 rounded-xl transition-all shadow-md shadow-amber-honey/5"
                     >
                       Restablecer Ahora <ExternalLink size={12} />
                     </a>
@@ -173,12 +173,15 @@ export default function ForgotPasswordPage() {
 
         {/* Return to Login */}
         <div className="text-center mt-6">
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 text-xs text-white/50 hover:text-white/70 font-semibold transition-colors"
-          >
-            <ArrowLeft size={12} /> Volver al Inicio de Sesión
-          </Link>
+          <p className="text-xs text-[#F4F6F0]/40 font-semibold uppercase tracking-wider text-[10px]">
+            ¿Volver al inicio?{' '}
+            <Link
+              href="/login"
+              className="text-amber-honey hover:text-amber-honey/80 font-black uppercase tracking-widest text-[10px] transition-colors ml-1"
+            >
+              INICIAR SESIÓN
+            </Link>
+          </p>
         </div>
       </motion.div>
     </div>
