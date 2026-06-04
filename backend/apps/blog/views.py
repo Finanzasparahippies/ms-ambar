@@ -801,7 +801,7 @@ def get_campaign_html_template(campaign, sub_email):
             </div>
             <h1 style="color: #F4F6F0; font-size: 26px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; font-style: italic;">{sender_name}</h1>
             <div style="height: 1px; width: 40px; background-color: rgba(229, 169, 59, 0.3); margin: 8px auto;"></div>
-            <p style="color: {accent_color}; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">Ambar te escribe • Poesía</p>
+            <p style="color: {accent_color}; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">Ambar te escribe • Club Exclusivo</p>
           </div>
           
           <!-- Cover image if exists -->

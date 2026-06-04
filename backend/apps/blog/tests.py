@@ -520,4 +520,87 @@ class BlogAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['error'], 'Esta campaña ya ha sido enviada anteriormente.')
 
+    def test_campaign_template_rendering_custom_sections_and_ctas(self):
+        """Verify that get_campaign_html_template correctly renders custom section styles, multiple CTAs, and parses stanzas."""
+        from apps.blog.views import get_campaign_html_template
+
+        custom_styles = {
+            'sender_name': 'Ms Ambar Especial',
+            'title_color': '#ff0000',
+            'title_bg_color': '#00ff00',
+            'title_padding': '15px',
+            'title_radius': '10px',
+            'body_color': '#0000ff',
+            'body_bg_color': '#f0f0f0',
+            'body_padding': '25px',
+            'body_radius': '15px',
+            'footer_color': '#555555',
+            'footer_bg_color': '#cccccc',
+            'footer_padding': '10px',
+            'footer_radius': '5px'
+        }
+
+        ctas = [
+            {
+                'text': 'CTA 1',
+                'link': 'https://link1.com',
+                'bg_color': '#ff0055',
+                'text_color': '#ffffff',
+                'radius': '6px',
+                'border_width': '2px',
+                'border_color': '#000000',
+                'shadow_style': 'glow',
+                'padding_size': 'large',
+                'is_full_width': True
+            },
+            {
+                'text': 'CTA 2',
+                'link': 'https://link2.com',
+                'bg_color': '#00ff55',
+                'text_color': '#000000',
+                'radius': '10px'
+            }
+        ]
+
+        campaign = EmailCampaign.objects.create(
+            subject='Poema de Prueba Estilos',
+            poem_text='Estrofa uno linea uno\nEstrofa uno linea dos\n\nEstrofa dos linea uno\nEstrofa dos linea dos',
+            template_type='minimalist',
+            custom_styles=custom_styles,
+            ctas=ctas
+        )
+
+        html = get_campaign_html_template(campaign, 'test@example.com')
+
+        # Check sender name
+        self.assertIn('Ms Ambar Especial', html)
+
+        # Check section styling integration
+        self.assertIn('#ff0000', html) # title_color
+        self.assertIn('#00ff00', html) # title_bg_color
+        self.assertIn('#0000ff', html) # body_color
+        self.assertIn('#f0f0f0', html) # body_bg_color
+        self.assertIn('#555555', html) # footer_color
+        self.assertIn('#cccccc', html) # footer_bg_color
+
+        # Check CTA rendering
+        self.assertIn('href="https://link1.com"', html)
+        self.assertIn('CTA 1', html)
+        self.assertIn('background-color: #ff0055', html)
+        self.assertIn('color: #ffffff', html)
+        self.assertIn('border-radius: 6px', html)
+        self.assertIn('border: 2px solid #000000', html)
+        self.assertIn('display: block', html) # is_full_width: True
+
+        self.assertIn('href="https://link2.com"', html)
+        self.assertIn('CTA 2', html)
+        self.assertIn('background-color: #00ff55', html)
+        self.assertIn('color: #000000', html)
+        self.assertIn('border-radius: 10px', html)
+
+        # Check poetry stanza parser output
+        self.assertIn("Estrofa uno linea uno<br/>Estrofa uno linea dos", html)
+        self.assertIn("Estrofa dos linea uno<br/>Estrofa dos linea dos", html)
+
+
 

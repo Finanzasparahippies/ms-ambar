@@ -154,6 +154,9 @@ STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
 # Frontend URL
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
+# Backend/API URL (used for absolute media URLs in email campaigns)
+BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
+
 # REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
