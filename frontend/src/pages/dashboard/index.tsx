@@ -6273,19 +6273,28 @@ export default function AdminDashboard() {
                                   previewCampaign.template_type === 'moss' ? '#82c99b' :
                                     previewCampaign.template_type === 'cosmic' ? '#c084fc' :
                                       previewCampaign.template_type === 'glow' ? '#f59e0b' :
-                                        previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b',
+                                        previewCampaign.template_type === 'mist' ? '#06b6d4' : '#f59e0b'
+                              }}>
+                                Desuscribirse del boletín
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                  <div className="flex justify-end pt-2">
-                    <button
-                      onClick={() => setPreviewCampaign(null)}
-                      className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-[#F4F6F0]/80 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
-                    >
-                      Cerrar Vista Previa
-                    </button>
-                  </div>
-                </motion.div>
-              </div>
-            )}
+                    <div className="flex justify-end pt-2">
+                      <button
+                        onClick={() => setPreviewCampaign(null)}
+                        className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-[#F4F6F0]/80 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                      >
+                        Cerrar Vista Previa
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
