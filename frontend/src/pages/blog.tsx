@@ -8,6 +8,7 @@ import {
   FolderPlus, Globe, FileText, Check, ChevronRight, AlertCircle, Sparkles
 } from 'lucide-react';
 import axios from 'axios';
+import { showConfirm, showToast as premiumToast } from '../lib/notifications';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -57,11 +58,11 @@ export default function BlogPage() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 6000);
+    if (type === 'success') {
+      premiumToast.success(message);
+    } else {
+      premiumToast.error(message);
+    }
   };
 
   // Auth states
@@ -313,8 +314,12 @@ export default function BlogPage() {
 
   // Delete Post
   const handleDeletePost = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este post? Esta acción es irreversible.')) return;
-
+    const isConfirmed = await showConfirm(
+      '¿Estás seguro de que deseas eliminar este post? Esta acción es irreversible.',
+      'Eliminar Post'
+    );
+    if (!isConfirmed) return;
+ 
     try {
       const token = localStorage.getItem('token');
       const headers = token ? { Authorization: `Bearer ${token}` } : {};

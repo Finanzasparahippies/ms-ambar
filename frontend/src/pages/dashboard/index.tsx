@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -222,7 +223,7 @@ export default function AdminDashboard() {
       }, 1500);
     } catch (err: any) {
       console.error(err);
-      alert('Error al actualizar el perfil.');
+      showToast.error('Error al actualizar el perfil.');
     } finally {
       setProfileSaving(false);
     }
@@ -836,7 +837,8 @@ export default function AdminDashboard() {
   };
 
   const handleCampaignDelete = async (id: number, subject: string) => {
-    if (!confirm(`¿Eliminar permanentemente la campaña "${subject}"?`)) return;
+    const isConfirmed = await showConfirm(`¿Eliminar permanentemente la campaña "${subject}"?`, "Eliminar Campaña");
+    if (!isConfirmed) return;
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
     try {
@@ -848,17 +850,18 @@ export default function AdminDashboard() {
   };
 
   const handleCampaignSend = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas enviar esta campaña de poemas a todos los suscriptores activos? Esta acción es irreversible.')) return;
+    const isConfirmed = await showConfirm('¿Estás seguro de que deseas enviar esta campaña de poemas a todos los suscriptores activos? Esta acción es irreversible.', "Enviar Campaña");
+    if (!isConfirmed) return;
     setSendingCampaignId(id);
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
     try {
       await axios.post(`${API_URL}/blog/campaigns/${id}/send_campaign/`, {}, { headers });
-      alert('¡Envío de campaña iniciado con éxito en segundo plano!');
+      showToast.success('¡Envío de campaña iniciado con éxito!');
       fetchDashboardData();
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.error || 'Error al enviar la campaña.');
+      showAlert(err.response?.data?.error || 'Error al enviar la campaña.', "Error de Envío", "error");
     } finally {
       setSendingCampaignId(null);
     }
@@ -887,14 +890,15 @@ export default function AdminDashboard() {
       await fetchTemplateImages();
     } catch (err) {
       console.error('Error uploading template image:', err);
-      alert('Error al subir la imagen a la biblioteca.');
+      showToast.error('Error al subir la imagen a la biblioteca.');
     } finally {
       setLibraryUploadLoading(false);
     }
   };
 
   const handleTemplateImageDelete = async (id: number) => {
-    if (!confirm('¿Eliminar esta imagen de la biblioteca?')) return;
+    const isConfirmed = await showConfirm('¿Eliminar esta imagen de la biblioteca?', "Eliminar Imagen");
+    if (!isConfirmed) return;
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
     try {
@@ -902,7 +906,7 @@ export default function AdminDashboard() {
       await fetchTemplateImages();
     } catch (err) {
       console.error('Error deleting template image:', err);
-      alert('Error al eliminar la imagen.');
+      showToast.error('Error al eliminar la imagen.');
     }
   };
 
@@ -1044,7 +1048,8 @@ export default function AdminDashboard() {
   };
 
   const handleTheaterDelete = async (id: number, name: string) => {
-    if (!confirm(`¿Eliminar permanentemente "${name}"? Se borrarán todos los asientos y eventos asociados.`)) return;
+    const isConfirmed = await showConfirm(`¿Eliminar permanentemente "${name}"? Se borrarán todos los asientos y eventos asociados.`, "Eliminar Teatro");
+    if (!isConfirmed) return;
     try {
       await axios.delete(`${API_URL}/tickets/theaters/${id}/`);
       fetchDashboardData();
@@ -1215,7 +1220,8 @@ export default function AdminDashboard() {
   };
 
   const handleProductDelete = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar este producto?')) return;
+    const isConfirmed = await showConfirm('¿Estás seguro de que deseas eliminar este producto?', "Eliminar Producto");
+    if (!isConfirmed) return;
     setCatalogLoading(true);
     setCatalogErrorMsg(null);
 
@@ -1303,7 +1309,8 @@ export default function AdminDashboard() {
   };
 
   const handleCategoryDelete = async (id: number) => {
-    if (!confirm('¿Estás seguro de que deseas eliminar esta categoría? Si la eliminas, todos los productos en ella quedarán sin categoría.')) return;
+    const isConfirmed = await showConfirm('¿Estás seguro de que deseas eliminar esta categoría? Si la eliminas, todos los productos en ella quedarán sin categoría.', "Eliminar Categoría");
+    if (!isConfirmed) return;
     setCatalogLoading(true);
     setCatalogErrorMsg(null);
 
@@ -3104,7 +3111,7 @@ export default function AdminDashboard() {
                                 onClick={() => {
                                   const link = `${window.location.origin}/bookings/sign/${c.id}`;
                                   navigator.clipboard.writeText(link);
-                                  alert('Enlace de firma copiado al portapapeles!');
+                                  showToast.success('Enlace de firma copiado al portapapeles!');
                                 }}
                                 className="w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-[#F4F6F0]/70 transition-all text-center block"
                               >

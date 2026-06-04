@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, AlertTriangle, FileText, Calendar, Phone, Award, Mail, ArrowLeft, RefreshCw, PenTool } from 'lucide-react';
 import axios from 'axios';
+import { showAlert, showToast } from '../../../lib/notifications';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -155,7 +156,7 @@ const BookingSignaturePage = () => {
 
   const handleSignSubmit = async () => {
     if (!hasSigned) {
-      alert('Por favor dibuja tu firma en el lienzo.');
+      showToast.error('Por favor dibuja tu firma en el lienzo.');
       return;
     }
     const canvas = canvasRef.current;
@@ -182,7 +183,7 @@ const BookingSignaturePage = () => {
       }, 4000);
     } catch (err: any) {
       console.error(err);
-      alert(err.response?.data?.error || 'Error al enviar firma. Inténtalo de nuevo.');
+      showAlert(err.response?.data?.error || 'Error al enviar firma. Inténtalo de nuevo.', 'Error de Firma', 'error');
     } finally {
       setSaving(false);
     }

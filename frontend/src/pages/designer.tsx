@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { showConfirm } from '../lib/notifications';
 
 /** Decodes a JWT payload without verifying the signature (client-side only). */
 function decodeJwtPayload(token: string): Record<string, any> | null {
@@ -170,7 +171,11 @@ export default function DesignerPage() {
   const handleDeleteTheater = async () => {
     if (!selectedTheaterId) return;
     const current = theaters.find(t => t.id.toString() === selectedTheaterId.toString());
-    if (!confirm(`¿Eliminar permanentemente "${current?.name}"? Esta acción no se puede deshacer.`)) return;
+    const isConfirmed = await showConfirm(
+      `¿Eliminar permanentemente "${current?.name}"? Esta acción no se puede deshacer.`,
+      "Eliminar Teatro"
+    );
+    if (!isConfirmed) return;
     try {
       await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, { method: 'DELETE' });
       const updatedList = await fetchTheaters();

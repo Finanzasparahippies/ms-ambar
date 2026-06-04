@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import axios from 'axios';
+import { showAlert } from '../lib/notifications';
 
 const TourPage = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -125,7 +126,7 @@ const TourPage = () => {
       setWantsMG(false);
     } catch (err) {
       console.error("Error during checkout:", err);
-      alert("Hubo un error al procesar la reserva. Por favor intenta de nuevo.");
+      showAlert("Hubo un error al procesar la reserva. Por favor intenta de nuevo.", "Error de Reserva", "error");
     } finally {
       setIsSubmitting(false);
     }

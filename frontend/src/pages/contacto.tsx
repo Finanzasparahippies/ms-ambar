@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mail, Download, ArrowRight, CheckCircle, Calendar, Phone, Award } from 'lucide-react';
 import axios from 'axios';
+import { showAlert } from '../lib/notifications';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -36,7 +37,7 @@ const ContactPage = () => {
       setSuccessData(res.data);
     } catch (err: any) {
       console.error(err);
-      alert('Hubo un error al procesar tu solicitud de booking. Por favor verifica tus datos.');
+      showAlert('Hubo un error al procesar tu solicitud de booking. Por favor verifica tus datos.', 'Error de Envío', 'error');
     } finally {
       setSubmitting(false);
     }
