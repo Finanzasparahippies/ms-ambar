@@ -889,14 +889,19 @@ const Home = () => {
             </span>
           </motion.div>
 
-          <motion.h1
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.1 }}
-            className="text-6xl md:text-9xl font-black tracking-tight leading-tight italic text-glow px-4 md:px-8 py-2 md:py-4"
+            className="flex justify-center items-center py-6"
           >
-            Ms <span className="text-gradient bg-gradient-to-r from-amber-300 via-amber-honey to-amber-600 bg-clip-text text-transparent px-2">Ambar</span>
-          </motion.h1>
+            <img 
+              src="/logos/ms_ambar_logo_b.png" 
+              alt="Ms Ambar" 
+              className="h-20 md:h-32 w-auto object-contain hover:scale-[1.02] transition-transform duration-500"
+              style={{ filter: 'drop-shadow(0 0 35px rgba(229,169,59,0.25))' }}
+            />
+          </motion.div>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}

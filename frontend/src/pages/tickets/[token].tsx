@@ -123,9 +123,9 @@ export default function TicketPage() {
             className="w-full max-w-md bg-neutral-900/50 backdrop-blur-xl border border-neutral-800 rounded-[32px] overflow-hidden shadow-[0_0_50px_rgba(245,158,11,0.05)] z-10"
           >
             {/* Holographic Top Banner */}
-            <div className="relative py-6 px-8 bg-gradient-to-r from-amber-600/20 via-amber-500/10 to-amber-600/20 border-b border-neutral-800 text-center">
+            <div className="relative py-6 px-8 bg-gradient-to-r from-amber-600/20 via-amber-500/10 to-amber-600/20 border-b border-neutral-800 text-center flex flex-col items-center">
               <div className="absolute inset-0 bg-neutral-950/20 mix-blend-overlay pointer-events-none" />
-              <h1 className="text-2xl font-black tracking-[0.2em] text-white">Ms Ambar</h1>
+              <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-8 w-auto object-contain mb-1" />
               <p className="text-amber-500 text-[10px] font-mono uppercase tracking-[0.3em] mt-1 font-bold">BOLETO DIGITAL OFICIAL</p>
             </div>
 

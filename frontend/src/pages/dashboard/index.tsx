@@ -3001,7 +3001,9 @@ export default function AdminDashboard() {
                                           textAlign: 'center',
                                           fontWeight: 'bold',
                                           fontSize: '20px'
-                                        }}>A</div>
+                                        }}>
+                                          <img src="/logos/ms_ambar_monograma_n.png" alt="A" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', padding: '4px', boxSizing: 'border-box' }} />
+                                        </div>
                                         <h4 style={{ color: '#ffffff', fontSize: '18px', fontWeight: 'bold', margin: '10px 0 0 0' }}>Ms Ambar</h4>
                                         <p style={{
                                           color:

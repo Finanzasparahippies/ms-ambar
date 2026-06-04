@@ -78,7 +78,10 @@ export default function LoginPage() {
         className="max-w-md w-full relative z-10"
       >
         {/* Logo Section */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 flex flex-col items-center">
+          <Link href="/" className="mb-4 inline-block">
+            <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-16 h-16 object-contain hover:scale-105 transition-transform duration-300" />
+          </Link>
           <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center justify-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-ping" />
             Acceso Autorizado

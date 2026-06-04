@@ -39,7 +39,7 @@ class FailoverEmailBackendTests(SimpleTestCase):
             self.assertEqual(called_kwargs['username'], 'brevo_user')
             
             # Verify from_email was updated to Brevo default sender
-            self.assertEqual(msg.from_email, 'MS AMBAR <hola@msambar.com>')
+            self.assertEqual(msg.from_email, 'Ms Ambar <hola@msambar.com>')
 
     @patch('config.email_backends.get_connection')
     def test_failover_brevo_fails_ses_succeeds(self, mock_get_connection):
@@ -81,7 +81,7 @@ class FailoverEmailBackendTests(SimpleTestCase):
             self.assertEqual(second_args['username'], 'ses_user')
             
             # Verify from_email was updated to SES sender
-            self.assertEqual(msg.from_email, 'MS AMBAR <hola@msambar.com>')
+            self.assertEqual(msg.from_email, 'Ms Ambar <hola@msambar.com>')
 
     @patch('config.email_backends.get_connection')
     def test_failover_all_fail(self, mock_get_connection):

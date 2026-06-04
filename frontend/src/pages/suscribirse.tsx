@@ -95,8 +95,8 @@ export default function Suscribirse() {
             transition={{ duration: 0.4 }}
             className="max-w-md w-full amber-glass p-8 md:p-12 rounded-[3.5rem] text-center relative z-10"
           >
-            <div className="w-16 h-16 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mx-auto mb-8 text-amber-honey shadow-[0_0_20px_rgba(245,158,11,0.1)]">
-              <Mail size={24} className="animate-pulse" />
+            <div className="w-16 h-16 bg-amber-honey/10 border border-amber-honey/30 rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_20px_rgba(245,158,11,0.1)] overflow-hidden p-2.5 transition-transform hover:scale-105 duration-300">
+              <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain" />
             </div>
 
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Newsletter Oficial</span>

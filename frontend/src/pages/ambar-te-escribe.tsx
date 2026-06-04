@@ -480,14 +480,14 @@ export default function AmbarTeEscribePage() {
             <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
 
             <div className="max-w-md w-full amber-glass p-8 md:p-12 rounded-[3.5rem] text-center relative z-10">
-              <div className="w-16 h-16 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mx-auto mb-8 text-amber-honey">
-                <Lock size={28} className="animate-pulse" />
+              <div className="w-16 h-16 bg-amber-honey/10 border border-amber-honey/30 rounded-full flex items-center justify-center mx-auto mb-8 shadow-md overflow-hidden p-2.5 transition-transform hover:scale-105 duration-300">
+                <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain" />
               </div>
 
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Cartas Exclusivas</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Solo para los reales</span>
               <h2 className="text-3xl font-serif text-[#F4F6F0] mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
               <p className="text-[#F4F6F0]/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
-                Las crónicas y bitácoras de Ms Ambar están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido de las cartas y recibir poemas exclusivos en tu bandeja.
+                Las crónicas y bitácoras de Ms Ambar están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido del feed y recibir poemas exclusivos en tu bandeja.
               </p>
 
               <form className="flex flex-col gap-3 text-left" onSubmit={handleSubscribe}>
@@ -633,7 +633,7 @@ export default function AmbarTeEscribePage() {
                           alt={post.title}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
                         />
- 
+
                         <div className="absolute top-6 left-6 flex justify-between w-[85%] items-start">
                           <span className="bg-amber-honey text-nature-night px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20">
                             {post.category_name || 'Sin Categoría'}
@@ -704,8 +704,8 @@ export default function AmbarTeEscribePage() {
             {/* Newsletter Subscription confirmation at footer of page */}
             <div className="mt-40 bg-forest-green border border-amber-honey/10 p-12 md:p-20 rounded-[3rem] text-center relative overflow-hidden shadow-[0_0_50px_rgba(30,43,34,0.25)] max-w-2xl mx-auto">
               <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
-              <div className="w-12 h-12 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mx-auto mb-6 text-amber-honey">
-                <Check size={20} />
+              <div className="w-12 h-12 bg-amber-honey/10 border border-amber-honey/30 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md overflow-hidden p-2 transition-transform hover:scale-105 duration-300">
+                <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain" />
               </div>
               <h3 className="text-3xl font-serif text-white mb-4 tracking-tight italic font-normal">Miembro de las Cartas</h3>
               <p className="text-white/60 mb-6 max-w-md mx-auto text-xs leading-relaxed">
@@ -726,7 +726,7 @@ export default function AmbarTeEscribePage() {
         )}
       </AnimatePresence>
 
-         {/* ─── BEEHIIV STYLE POST EDITOR OVERLAY (Admins Only) ─── */}
+      {/* ─── BEEHIIV STYLE POST EDITOR OVERLAY (Admins Only) ─── */}
       <AnimatePresence>
         {isEditorOpen && (
           <motion.div
@@ -976,112 +976,112 @@ export default function AmbarTeEscribePage() {
               </div>
 
               <AnimatePresence>
-                  <motion.aside
-                    initial={{ width: 0, opacity: 0 }}
-                    animate={{ width: 340, opacity: 1 }}
-                    exit={{ width: 0, opacity: 0 }}
-                    className="border-l border-white/5 bg-black/40 backdrop-blur-2xl flex flex-col overflow-hidden"
-                  >
-                    <div className="p-6 flex-1 overflow-y-auto space-y-8 custom-scroll w-[340px]">
-                      <div className="flex items-center justify-between pb-4 border-b border-white/5">
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-honey flex items-center gap-2">
-                          <Settings size={12} /> Parámetros del Post
-                        </h3>
-                      </div>
- 
-                      <div className="space-y-3">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Estado de Publicación</label>
-                        <div className="bg-white/5 border border-white/10 p-2.5 rounded-2xl flex items-center justify-between">
-                          <span className="text-xs font-bold uppercase tracking-wider pl-1">
-                            {editorIsPublished ? (
-                              <span className="text-amber-honey flex items-center gap-1.5">
-                                <Globe size={12} /> Público / Activo
-                              </span>
-                            ) : (
-                              <span className="text-white/45 flex items-center gap-1.5">
-                                <FileText size={12} /> Borrador Local
-                              </span>
-                            )}
-                          </span>
-                          <button
-                            onClick={() => setEditorIsPublished(!editorIsPublished)}
-                            className={`w-12 h-6 rounded-full p-1 transition-all ${editorIsPublished ? 'bg-amber-honey' : 'bg-white/10'}`}
-                          >
-                            <div className={`w-4 h-4 rounded-full bg-white shadow-md transition-all ${editorIsPublished ? 'translate-x-6' : 'translate-x-0'}`} />
-                          </button>
-                        </div>
-                      </div>
- 
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Categoría</label>
-                          <button
-                            onClick={() => setShowNewCatInput(!showNewCatInput)}
-                            className="text-[9px] text-amber-honey hover:text-white uppercase font-black tracking-widest flex items-center gap-1"
-                          >
-                            <FolderPlus size={10} /> {showNewCatInput ? 'Cancelar' : 'Nueva'}
-                          </button>
-                        </div>
- 
-                        {showNewCatInput ? (
-                          <form onSubmit={handleCreateCategory} className="flex gap-2">
-                            <input
-                              type="text"
-                              required
-                              value={newCatName}
-                              onChange={(e) => setNewCatName(e.target.value)}
-                              placeholder="Nombre de categoría"
-                              className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-honey/50 text-white"
-                            />
-                            <button
-                              type="submit"
-                              className="bg-amber-honey text-nature-night px-3 rounded-xl flex items-center justify-center"
-                            >
-                              <Plus size={14} />
-                            </button>
-                          </form>
-                        ) : (
-                          <select
-                            value={editorCategory}
-                            onChange={(e) => setEditorCategory(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-amber-honey/50 outline-none text-white/80"
-                          >
-                            <option value="" className="bg-[#121915] text-[#F4F6F0]">Seleccionar Categoría</option>
-                            {categories.map((cat) => (
-                              <option key={cat.id} value={cat.id} className="bg-[#121915] text-[#F4F6F0]">
-                                {cat.name}
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
- 
-                      <div className="space-y-3">
-                        <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Imagen de Portada</label>
- 
-                        <div className="border border-dashed border-white/10 bg-white/5 hover:bg-white/10 rounded-2.5rem p-6 text-center cursor-pointer transition-colors relative group">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="absolute inset-0 opacity-0 cursor-pointer"
-                          />
-                          <Upload size={20} className="mx-auto text-amber-honey/60 mb-2 group-hover:scale-110 transition-transform" />
-                          <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Cargar Archivo</p>
-                          <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest mt-1">PNG, JPG, WEBP hasta 5MB</p>
-                        </div>
- 
-                        {editorImagePreview && (
-                          <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-[#07080d]">
-                            <img src={editorImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                              <p className="text-[9px] font-black uppercase tracking-widest text-white">Imagen Cargada</p>
-                            </div>
-                          </div>
-                        )}
+                <motion.aside
+                  initial={{ width: 0, opacity: 0 }}
+                  animate={{ width: 340, opacity: 1 }}
+                  exit={{ width: 0, opacity: 0 }}
+                  className="border-l border-white/5 bg-black/40 backdrop-blur-2xl flex flex-col overflow-hidden"
+                >
+                  <div className="p-6 flex-1 overflow-y-auto space-y-8 custom-scroll w-[340px]">
+                    <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-honey flex items-center gap-2">
+                        <Settings size={12} /> Parámetros del Post
+                      </h3>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Estado de Publicación</label>
+                      <div className="bg-white/5 border border-white/10 p-2.5 rounded-2xl flex items-center justify-between">
+                        <span className="text-xs font-bold uppercase tracking-wider pl-1">
+                          {editorIsPublished ? (
+                            <span className="text-amber-honey flex items-center gap-1.5">
+                              <Globe size={12} /> Público / Activo
+                            </span>
+                          ) : (
+                            <span className="text-white/45 flex items-center gap-1.5">
+                              <FileText size={12} /> Borrador Local
+                            </span>
+                          )}
+                        </span>
+                        <button
+                          onClick={() => setEditorIsPublished(!editorIsPublished)}
+                          className={`w-12 h-6 rounded-full p-1 transition-all ${editorIsPublished ? 'bg-amber-honey' : 'bg-white/10'}`}
+                        >
+                          <div className={`w-4 h-4 rounded-full bg-white shadow-md transition-all ${editorIsPublished ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </button>
                       </div>
                     </div>
-                  </motion.aside>
+
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Categoría</label>
+                        <button
+                          onClick={() => setShowNewCatInput(!showNewCatInput)}
+                          className="text-[9px] text-amber-honey hover:text-white uppercase font-black tracking-widest flex items-center gap-1"
+                        >
+                          <FolderPlus size={10} /> {showNewCatInput ? 'Cancelar' : 'Nueva'}
+                        </button>
+                      </div>
+
+                      {showNewCatInput ? (
+                        <form onSubmit={handleCreateCategory} className="flex gap-2">
+                          <input
+                            type="text"
+                            required
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                            placeholder="Nombre de categoría"
+                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-honey/50 text-white"
+                          />
+                          <button
+                            type="submit"
+                            className="bg-amber-honey text-nature-night px-3 rounded-xl flex items-center justify-center"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </form>
+                      ) : (
+                        <select
+                          value={editorCategory}
+                          onChange={(e) => setEditorCategory(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:outline-none focus:border-amber-honey/50 outline-none text-white/80"
+                        >
+                          <option value="" className="bg-[#121915] text-[#F4F6F0]">Seleccionar Categoría</option>
+                          {categories.map((cat) => (
+                            <option key={cat.id} value={cat.id} className="bg-[#121915] text-[#F4F6F0]">
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[9px] font-black uppercase tracking-widest text-white/40 block">Imagen de Portada</label>
+
+                      <div className="border border-dashed border-white/10 bg-white/5 hover:bg-white/10 rounded-2.5rem p-6 text-center cursor-pointer transition-colors relative group">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <Upload size={20} className="mx-auto text-amber-honey/60 mb-2 group-hover:scale-110 transition-transform" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-white/60">Cargar Archivo</p>
+                        <p className="text-[8px] text-white/30 uppercase font-bold tracking-widest mt-1">PNG, JPG, WEBP hasta 5MB</p>
+                      </div>
+
+                      {editorImagePreview && (
+                        <div className="relative rounded-2xl overflow-hidden border border-white/10 aspect-video bg-[#07080d]">
+                          <img src={editorImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-white">Imagen Cargada</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </motion.aside>
               </AnimatePresence>
             </div>
           </motion.div>

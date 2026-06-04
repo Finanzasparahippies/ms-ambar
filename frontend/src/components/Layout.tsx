@@ -2,6 +2,7 @@ import * as React from 'react';
 import Navbar from './Navbar';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -47,7 +48,9 @@ const Layout = ({ children }: LayoutProps) => {
       <footer className="relative z-10 py-20 px-10 mt-20 border-t border-white/5 amber-glass rounded-t-[4rem]">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-4 gap-12">
           <div className="col-span-2">
-            <h2 className="text-4xl font-black mb-6 tracking-tighter">Ms Ambar</h2>
+            <Link href="/" className="inline-block mb-6">
+              <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-10 w-auto object-contain hover:opacity-80 transition-opacity duration-300" />
+            </Link>
             <p className="opacity-50 text-sm max-w-sm leading-relaxed">
               Explorando la intersección entre la naturaleza, la historia y el sonido. Artista independiente desde México para el mundo.
             </p>

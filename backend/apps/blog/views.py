@@ -45,7 +45,9 @@ def send_newsletter_email(post):
               
               <!-- Header/Logo -->
               <div style="text-align: center; margin-bottom: 40px;">
-                <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
+                <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; overflow: hidden; vertical-align: middle; text-align: center; padding: 5px; box-sizing: border-box;">
+                  <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
+                </div>
                 <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
                 <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Cartas desde el escenario</p>
               </div>
@@ -94,7 +96,9 @@ def send_welcome_email(subscriber):
           
           <!-- Header/Logo -->
           <div style="text-align: center; margin-bottom: 40px;">
-            <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
+            <div style="display: inline-block; width: 50px; height: 50px; background-color: #f59e0b; border-radius: 50%; overflow: hidden; vertical-align: middle; text-align: center; padding: 5px; box-sizing: border-box;">
+              <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
+            </div>
             <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
             <p style="color: #f59e0b; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Cartas desde el escenario</p>
           </div>
@@ -509,7 +513,9 @@ def get_campaign_html_template(campaign, sub_email):
           
           <!-- Header/Logo -->
           <div style="text-align: center; margin-bottom: 40px;">
-            <div style="display: inline-block; width: 50px; height: 50px; background-color: {accent_color}; border-radius: 50%; line-height: 50px; text-align: center; font-weight: 900; font-size: 24px; color: #030303;">A</div>
+            <div style="display: inline-block; width: 50px; height: 50px; background-color: {accent_color}; border-radius: 50%; overflow: hidden; vertical-align: middle; text-align: center; padding: 5px; box-sizing: border-box;">
+              <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_n.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
+            </div>
             <h1 style="color: #ffffff; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px;">Ms Ambar</h1>
             <p style="color: {accent_color}; font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 3px; margin: 0;">Ambar te escribe • Poesía</p>
           </div>

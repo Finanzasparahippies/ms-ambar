@@ -82,10 +82,10 @@ const Navbar = () => {
     <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] w-[95%] max-w-[1200px]">
       <div className="amber-glass px-8 py-4 rounded-[2rem] flex justify-between items-center">
         <Link href="/" className="flex items-center gap-4 group">
-          <div className="w-10 h-10 bg-amber-honey rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20 transition-transform group-hover:rotate-12">
-            <span className="text-nature-night font-black text-lg">A</span>
+          <div className="w-10 h-10 bg-amber-honey/10 border border-amber-honey/20 rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20 transition-all duration-300 group-hover:rotate-12 overflow-hidden p-1.5">
+            <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-2xl font-extrabold tracking-tighter text-glow">Ms Ambar</h1>
+          <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-6 w-auto object-contain hover:opacity-85 transition-opacity" />
         </Link>
 
         {/* Desktop Menu */}
