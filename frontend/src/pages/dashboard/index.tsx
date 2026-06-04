@@ -44,7 +44,11 @@ import {
   Quote,
   Link2,
   Image as ImageIcon,
-  ChevronDown
+  ChevronDown,
+  Sliders,
+  Target,
+  FolderOpen,
+  Palette
 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -81,6 +85,7 @@ export default function AdminDashboard() {
   const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers'>('campaigns');
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'content' | 'theme' | 'cover' | 'sections' | 'ctas' | 'library'>('content');
   const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
   const [campId, setCampId] = useState<number | null>(null);
   const [campSubject, setCampSubject] = useState('');
@@ -173,6 +178,42 @@ export default function AdminDashboard() {
     const url = prompt('Ingresa la URL del enlace:');
     if (url) {
       executeCommand('createLink', url);
+    }
+  };
+
+  const handleEditorPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    const html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\r?\n/g, '<br/>');
+
+    if (typeof document !== 'undefined') {
+      if (document.queryCommandSupported('insertHTML')) {
+        document.execCommand('insertHTML', false, html);
+      } else {
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount) return;
+        selection.deleteFromDocument();
+        const el = document.createElement('div');
+        el.innerHTML = html;
+        const frag = document.createDocumentFragment();
+        let node;
+        while ((node = el.firstChild)) {
+          frag.appendChild(node);
+        }
+        selection.getRangeAt(0).insertNode(frag);
+      }
+
+      // Update state immediately
+      if (campaignEditorRef.current) {
+        const newHtml = campaignEditorRef.current.innerHTML;
+        if (editorActiveTab === 'body') setCampPoemText(newHtml);
+        else if (editorActiveTab === 'title') setCampEmailTitle(newHtml);
+        else if (editorActiveTab === 'footer') setCampFooterText(newHtml);
+      }
     }
   };
 
@@ -3563,6 +3604,32 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     )}
+                    
+                    {/* Navigation Tab Bar for Editor Settings */}
+                    <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1 overflow-x-auto custom-scroll mb-4">
+                      {[
+                        { id: 'content', label: 'Contenido', icon: <Mail size={12} /> },
+                        { id: 'theme', label: 'Diseño', icon: <Palette size={12} /> },
+                        { id: 'cover', label: 'Portada', icon: <ImageIcon size={12} /> },
+                        { id: 'sections', label: 'Espaciado', icon: <Sliders size={12} /> },
+                        { id: 'ctas', label: 'Botones', icon: <Target size={12} /> },
+                        { id: 'library', label: 'Biblioteca', icon: <FolderOpen size={12} /> },
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setSettingsTab(tab.id as any)}
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 whitespace-nowrap ${
+                            settingsTab === tab.id
+                              ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
+                              : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                          }`}
+                        >
+                          {tab.icon}
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
 
                     <form onSubmit={handleCampaignSubmit} className="space-y-6">
                       {campErrorMsg && (
@@ -3571,1270 +3638,1057 @@ export default function AdminDashboard() {
                         </div>
                       )}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Asunto del Correo</label>
-                          <input
-                            type="text"
-                            value={campSubject}
-                            onChange={e => setCampSubject(e.target.value)}
-                            placeholder="Ej. Susurros del Desierto - Un poema de Ms Ambar"
-                            required
-                            className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Nombre del Remitente (Header)</label>
-                          <input
-                            type="text"
-                            value={campSenderName}
-                            onChange={e => setCampSenderName(e.target.value)}
-                            placeholder="Ej. Ms Ambar"
-                            className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Plantilla de Fondo / Diseño Premium</label>
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                          {[
-                            { id: 'minimalist', name: 'Carbon', desc: 'Negro & Ámbar', class: 'bg-[#0c0d13] border-amber-honey/40 text-amber-honey' },
-                            { id: 'moss', name: 'Moss', desc: 'Verde Musgo', class: 'bg-[#122017] border-green-800 text-green-300' },
-                            { id: 'cosmic', name: 'Cosmic', desc: 'Índigo Cósmico', class: 'bg-[#0c0a1a] border-purple-800 text-purple-300' },
-                            { id: 'glow', name: 'Glow', desc: 'Cálido Miel', class: 'bg-[#1a130c] border-amber-700 text-amber-500' },
-                            { id: 'mist', name: 'Mist', desc: 'Gris Pizarra', class: 'bg-[#181b22] border-cyan-800 text-cyan-400' },
-                          ].map(t => (
-                            <div
-                              key={t.id}
-                              onClick={() => setCampTemplateType(t.id)}
-                              className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${t.class} ${campTemplateType === t.id ? 'ring-2 ring-amber-honey border-transparent' : 'opacity-65 hover:opacity-100'
-                                }`}
-                            >
-                              <span className="text-[10px] font-black uppercase tracking-wider">{t.name}</span>
-                              <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t.desc}</span>
+                      {/* CATEGORY 1: CONTENT */}
+                      {settingsTab === 'content' && (
+                        <div className="space-y-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Asunto del Correo</label>
+                              <input
+                                type="text"
+                                value={campSubject}
+                                onChange={e => setCampSubject(e.target.value)}
+                                placeholder="Ej. Susurros del Desierto - Un poema de Ms Ambar"
+                                required
+                                className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
+                              />
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Nombre del Remitente (Header)</label>
+                              <input
+                                type="text"
+                                value={campSenderName}
+                                onChange={e => setCampSenderName(e.target.value)}
+                                placeholder="Ej. Ms Ambar"
+                                className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
+                              />
+                            </div>
+                          </div>
 
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Contenido del Correo</label>
-                          <span className="text-[8px] bg-amber-honey/10 text-amber-honey border border-amber-honey/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
-                            Editando: {editorActiveTab === 'title' ? 'Título' : editorActiveTab === 'footer' ? 'Pie de Página' : 'Cuerpo'}
-                          </span>
-                        </div>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Contenido del Correo</label>
+                              <span className="text-[8px] bg-amber-honey/10 text-amber-honey border border-amber-honey/20 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">
+                                Editando: {editorActiveTab === 'title' ? 'Título' : editorActiveTab === 'footer' ? 'Pie' : 'Cuerpo'}
+                              </span>
+                            </div>
 
-                        {/* Segmented Tab Controls */}
-                        <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (campaignEditorRef.current) {
-                                const html = campaignEditorRef.current.innerHTML;
+                            {/* Segmented Tab Controls */}
+                            <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1">
+                              {[
+                                { id: 'title', label: 'Título / Cabecera' },
+                                { id: 'body', label: 'Cuerpo del Correo' },
+                                { id: 'footer', label: 'Pie de Página (Footer)' }
+                              ].map(tab => (
+                                <button
+                                  key={tab.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (campaignEditorRef.current) {
+                                      const html = campaignEditorRef.current.innerHTML;
+                                      if (editorActiveTab === 'body') setCampPoemText(html);
+                                      else if (editorActiveTab === 'title') setCampEmailTitle(html);
+                                      else if (editorActiveTab === 'footer') setCampFooterText(html);
+                                    }
+                                    setEditorActiveTab(tab.id as any);
+                                  }}
+                                  className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                    editorActiveTab === tab.id
+                                      ? 'bg-amber-honey text-[#030303] shadow-md'
+                                      : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                                  }`}
+                                >
+                                  {tab.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Editor Canvas Toolbar */}
+                            <div className="bg-white/5 border border-white/10 p-2 rounded-2xl flex flex-wrap gap-1 items-center shadow-lg">
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('bold')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Negrita"
+                              >
+                                <Bold size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('italic')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Itálica"
+                              >
+                                <Italic size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('underline')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Subrayado"
+                              >
+                                <Underline size={14} />
+                              </button>
+
+                              <div className="w-px h-6 bg-white/10 mx-1" />
+
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('formatBlock', '<h2>')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center font-bold text-xs"
+                                title="Título Grande H2"
+                              >
+                                H2
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('formatBlock', '<h3>')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center font-bold text-xs"
+                                title="Título Mediano H3"
+                              >
+                                H3
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('formatBlock', '<p>')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center text-xs"
+                                title="Párrafo"
+                              >
+                                P
+                              </button>
+
+                              <div className="w-px h-6 bg-white/10 mx-1" />
+
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('insertUnorderedList')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Lista Viñetas"
+                              >
+                                <List size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('insertOrderedList')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Lista Enumerada"
+                              >
+                                <ListOrdered size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('formatBlock', '<blockquote>')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Cita"
+                              >
+                                <Quote size={14} />
+                              </button>
+
+                              <div className="w-px h-6 bg-white/10 mx-1" />
+
+                              <button
+                                type="button"
+                                onClick={handleLinkInsert}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Insertar Enlace"
+                              >
+                                <Link2 size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('removeFormat')}
+                                className="w-8 h-8 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center ml-auto"
+                                title="Limpiar Formatos"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+
+                            {/* Content Editable Area */}
+                            <div
+                              ref={campaignEditorRef}
+                              contentEditable
+                              suppressContentEditableWarning
+                              onInput={e => {
+                                const html = e.currentTarget.innerHTML;
                                 if (editorActiveTab === 'body') setCampPoemText(html);
                                 else if (editorActiveTab === 'title') setCampEmailTitle(html);
                                 else if (editorActiveTab === 'footer') setCampFooterText(html);
+                              }}
+                              onPaste={handleEditorPaste}
+                              data-placeholder={
+                                editorActiveTab === 'title'
+                                  ? 'Escribe un título personalizado para el correo (o déjalo en blanco para usar el asunto)...'
+                                  : editorActiveTab === 'footer'
+                                    ? 'Escribe un pie de página personalizado (o déjalo en blanco para usar el predeterminado)...'
+                                    : 'Comienza a redactar el cuerpo del poema o correo aquí...'
                               }
-                              setEditorActiveTab('title');
-                            }}
-                            className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${editorActiveTab === 'title'
-                              ? 'bg-amber-honey text-[#030303] shadow-md'
-                              : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                              }`}
-                          >
-                            Título / Cabecera
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (campaignEditorRef.current) {
-                                const html = campaignEditorRef.current.innerHTML;
-                                if (editorActiveTab === 'body') setCampPoemText(html);
-                                else if (editorActiveTab === 'title') setCampEmailTitle(html);
-                                else if (editorActiveTab === 'footer') setCampFooterText(html);
-                              }
-                              setEditorActiveTab('body');
-                            }}
-                            className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${editorActiveTab === 'body'
-                              ? 'bg-amber-honey text-[#030303] shadow-md'
-                              : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                              }`}
-                          >
-                            Cuerpo del Correo
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (campaignEditorRef.current) {
-                                const html = campaignEditorRef.current.innerHTML;
-                                if (editorActiveTab === 'body') setCampPoemText(html);
-                                else if (editorActiveTab === 'title') setCampEmailTitle(html);
-                                else if (editorActiveTab === 'footer') setCampFooterText(html);
-                              }
-                              setEditorActiveTab('footer');
-                            }}
-                            className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${editorActiveTab === 'footer'
-                              ? 'bg-amber-honey text-[#030303] shadow-md'
-                              : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                              }`}
-                          >
-                            Pie de Página (Footer)
-                          </button>
+                              className="w-full min-h-[220px] max-h-[400px] overflow-y-auto bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-amber-honey transition-all"
+                              style={{ outline: 'none' }}
+                            />
+                          </div>
                         </div>
+                      )}
 
-                        {/* Editor Canvas Toolbar */}
-                        <div className="bg-white/5 border border-white/10 p-2 rounded-2xl flex flex-wrap gap-1 items-center shadow-lg">
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('bold')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
-                            title="Negrita"
-                          >
-                            <Bold size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('italic')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
-                            title="Itálica"
-                          >
-                            <Italic size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('underline')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
-                            title="Subrayado"
-                          >
-                            <Underline size={14} />
-                          </button>
+                      {/* CATEGORY 2: THEME & BACKGROUND */}
+                      {settingsTab === 'theme' && (
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Plantilla de Fondo / Diseño Premium</label>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                              {[
+                                { id: 'minimalist', name: 'Carbon', desc: 'Negro & Ámbar', class: 'bg-[#0c0d13] border-amber-honey/40 text-amber-honey' },
+                                { id: 'moss', name: 'Moss', desc: 'Verde Musgo', class: 'bg-[#122017] border-green-800 text-green-300' },
+                                { id: 'cosmic', name: 'Cosmic', desc: 'Índigo Cósmico', class: 'bg-[#0c0a1a] border-purple-800 text-purple-300' },
+                                { id: 'glow', name: 'Glow', desc: 'Cálido Miel', class: 'bg-[#1a130c] border-amber-700 text-amber-500' },
+                                { id: 'mist', name: 'Mist', desc: 'Gris Pizarra', class: 'bg-[#181b22] border-cyan-800 text-cyan-400' },
+                              ].map(t => (
+                                <div
+                                  key={t.id}
+                                  onClick={() => setCampTemplateType(t.id)}
+                                  className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${t.class} ${campTemplateType === t.id ? 'ring-2 ring-amber-honey border-transparent' : 'opacity-65 hover:opacity-100'
+                                    }`}
+                                >
+                                  <span className="text-[10px] font-black uppercase tracking-wider">{t.name}</span>
+                                  <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{t.desc}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
 
-                          <div className="w-px h-6 bg-white/10 mx-1" />
+                          <div className="space-y-3">
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Tipografía Global de Sección</label>
+                            <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold">
+                              Sección activa seleccionada: <span className="text-amber-honey underline italic">{editorActiveTab === 'title' ? 'Título' : editorActiveTab === 'footer' ? 'Pie' : 'Cuerpo'}</span>
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                              {[
+                                { id: 'serif', name: 'Estándar', css: 'font-serif', desc: 'Georgia Elegante' },
+                                { id: 'playfair', name: 'Playfair', css: 'font-serif', style: { fontFamily: "'Playfair Display', serif" }, desc: 'Clásico & Sofisticado' },
+                                { id: 'cinzel', name: 'Cinzel', css: 'font-serif', style: { fontFamily: "'Cinzel', serif" }, desc: 'Romano Imperial' },
+                                { id: 'garamond', name: 'Garamond', css: 'font-serif', style: { fontFamily: "'Cormorant Garamond', serif" }, desc: 'Musgo Artístico' },
+                                { id: 'montserrat', name: 'Montserrat', css: 'font-sans', style: { fontFamily: "'Montserrat', sans-serif" }, desc: 'Minimalista Moderno' },
+                                { id: 'pinyon', name: 'Pinyon Script', css: 'font-cursive', style: { fontFamily: "'Pinyon Script', cursive" }, desc: 'Caligrafía Íntima' },
+                              ].map(f => {
+                                const currentActiveFont =
+                                  editorActiveTab === 'title' ? campTitleFontFamily :
+                                    editorActiveTab === 'footer' ? campFooterFontFamily :
+                                      campFontFamily;
 
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('formatBlock', '<h2>')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center font-bold text-xs"
-                            title="Título Grande H2"
-                          >
-                            H2
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('formatBlock', '<h3>')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center font-bold text-xs"
-                            title="Título Mediano H3"
-                          >
-                            H3
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('formatBlock', '<p>')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center text-xs"
-                            title="Párrafo"
-                          >
-                            P
-                          </button>
+                                const handleFontSelect = () => {
+                                  if (editorActiveTab === 'title') setCampTitleFontFamily(f.id);
+                                  else if (editorActiveTab === 'footer') setCampFooterFontFamily(f.id);
+                                  else setCampFontFamily(f.id);
+                                };
 
-                          <div className="w-px h-6 bg-white/10 mx-1" />
+                                return (
+                                  <div
+                                    key={f.id}
+                                    onClick={handleFontSelect}
+                                    className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${currentActiveFont === f.id
+                                      ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
+                                      : 'bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/10'
+                                      }`}
+                                  >
+                                    <span className="text-xs font-black" style={f.style}>{f.name}</span>
+                                    <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{f.desc}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
 
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('insertUnorderedList')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
-                            title="Lista Viñetas"
-                          >
-                            <List size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('insertOrderedList')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
-                            title="Lista Enumerada"
-                          >
-                            <ListOrdered size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('formatBlock', '<blockquote>')}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
-                            title="Cita"
-                          >
-                            <Quote size={14} />
-                          </button>
-
-                          <div className="w-px h-6 bg-white/10 mx-1" />
-
-                          <button
-                            type="button"
-                            onClick={handleLinkInsert}
-                            className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
-                            title="Insertar Enlace"
-                          >
-                            <Link2 size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => executeCommand('removeFormat')}
-                            className="w-8 h-8 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center justify-center ml-auto"
-                            title="Limpiar Formatos"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-
-                        {/* Content Editable Area */}
-                        <div
-                          ref={campaignEditorRef}
-                          contentEditable
-                          suppressContentEditableWarning
-                          onInput={e => {
-                            const html = e.currentTarget.innerHTML;
-                            if (editorActiveTab === 'body') setCampPoemText(html);
-                            else if (editorActiveTab === 'title') setCampEmailTitle(html);
-                            else if (editorActiveTab === 'footer') setCampFooterText(html);
-                          }}
-                          data-placeholder={
-                            editorActiveTab === 'title'
-                              ? 'Escribe un título personalizado para el correo (o déjalo en blanco para usar el asunto)...'
-                              : editorActiveTab === 'footer'
-                                ? 'Escribe un pie de página personalizado (o déjalo en blanco para usar el predeterminado)...'
-                                : 'Comienza a redactar el cuerpo del correo aquí...'
-                          }
-                          className="w-full min-h-[220px] max-h-[400px] overflow-y-auto bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-mono focus:outline-none focus:border-amber-honey transition-all"
-                          style={{ outline: 'none' }}
-                        />
-                      </div>
-
-                      {/* ─── ACCORDION 0: BIBLIOTECA DE IMÁGENES DE PLANTILLA ─── */}
-                      <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/5 transition-all">
-                        <button
-                          type="button"
-                          onClick={() => setIsLibrarySectionOpen(!isLibrarySectionOpen)}
-                          className="w-full px-5 py-4 flex justify-between items-center text-xs font-black uppercase tracking-wider text-amber-honey hover:bg-white/5 transition-all text-left"
-                        >
-                          <span className="flex items-center gap-2">🗂️ Biblioteca de Imágenes de Plantilla</span>
-                          <ChevronDown size={14} className={`transform transition-transform duration-300 text-[#F4F6F0]/40 ${isLibrarySectionOpen ? 'rotate-180 text-amber-honey' : ''}`} />
-                        </button>
-                        <AnimatePresence initial={false}>
-                          {isLibrarySectionOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="border-t border-white/10 p-5 space-y-4 overflow-hidden"
-                            >
-                              <div className="space-y-3">
-                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Subir Nueva Imagen a la Biblioteca</label>
+                          <div className="space-y-4 border-t border-white/5 pt-4">
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Imagen de Fondo del Correo</label>
+                            <div className="flex gap-4 items-center bg-white/5 border border-white/10 p-4 rounded-xl">
+                              <div className="w-16 h-16 bg-white/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
+                                {campBgImagePreview ? (
+                                  <img src={campBgImagePreview} alt="Background Preview" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Eye size={20} className="text-[#F4F6F0]/20" />
+                                )}
+                              </div>
+                              <div className="space-y-1 flex-1">
                                 <input
                                   type="file"
                                   accept="image/*"
-                                  disabled={libraryUploadLoading}
                                   onChange={e => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                      handleTemplateImageUpload(file);
-                                      e.target.value = ''; // Reset value to allow uploading subsequent files
+                                      setCampBgImageFile(file);
+                                      const reader = new FileReader();
+                                      reader.onloadend = () => {
+                                        setCampBgImagePreview(reader.result as string);
+                                      };
+                                      reader.readAsDataURL(file);
                                     }
                                   }}
-                                  className="text-xs text-[#F4F6F0]/70 file:mr-4 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:tracking-widest file:bg-white/10 file:text-[#F4F6F0] file:cursor-pointer hover:file:bg-white/20 disabled:opacity-50"
+                                  className="text-[10px] text-[#F4F6F0]/70 file:bg-white/10 file:border-0 file:rounded-lg file:text-[#F4F6F0] file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-white/20"
                                 />
-                                {libraryUploadLoading && <p className="text-[9px] text-amber-honey animate-pulse font-bold">Subiendo a la biblioteca...</p>}
+                                <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold">Imagen integrada para el fondo de todo el correo.</p>
+                                {campBgImagePreview && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setCampBgImageFile(null);
+                                      setCampBgImagePreview(null);
+                                    }}
+                                    className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-lg transition-all block mt-2"
+                                  >
+                                    Quitar Fondo
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+
+                            {templateImages.length > 0 && (
+                              <div className="space-y-1.5">
+                                <label className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold block">O de la Biblioteca:</label>
+                                <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
+                                  {templateImages.map((img: any) => (
+                                    <div
+                                      key={img.id}
+                                      onClick={() => handleUseTemplateAsBg(img.image)}
+                                      className={`w-10 h-10 rounded-lg overflow-hidden border cursor-pointer hover:border-[#82c99b] shrink-0 transition-all ${campBgImagePreview === img.image ? 'border-[#82c99b] ring-1 ring-[#82c99b]' : 'border-white/10'}`}
+                                    >
+                                      <img src={img.image} className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">
+                                  <span>Opacidad</span>
+                                  <span className="text-amber-honey font-mono">{Math.round(campBgOpacity * 100)}%</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="1"
+                                  step="0.05"
+                                  value={campBgOpacity}
+                                  onChange={e => setCampBgOpacity(parseFloat(e.target.value))}
+                                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">
+                                  <span>Saturación</span>
+                                  <span className="text-amber-honey font-mono">{campBgSaturation}%</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="200"
+                                  step="10"
+                                  value={campBgSaturation}
+                                  onChange={e => setCampBgSaturation(parseInt(e.target.value))}
+                                  className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Posición del Fondo</label>
+                                <select
+                                  value={campBgPosition}
+                                  onChange={e => setCampBgPosition(e.target.value)}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                >
+                                  <option value="center">Centro</option>
+                                  <option value="top">Superior</option>
+                                  <option value="bottom">Inferior</option>
+                                </select>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CATEGORY 3: COVER IMAGE */}
+                      {settingsTab === 'cover' && (
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Archivo de Portada (Opcional)</label>
+                            <div className="flex items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-xl">
+                              {campImagePreview && (
+                                <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/10 shrink-0">
+                                  <img src={campImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setCampImageFile(file);
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      setCampImagePreview(reader.result as string);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="text-xs text-[#F4F6F0]/70 file:mr-4 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:tracking-widest file:bg-white/10 file:text-[#F4F6F0] file:cursor-pointer hover:file:bg-white/20"
+                              />
+                              {campImagePreview && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setCampImageFile(null);
+                                    setCampImagePreview(null);
+                                  }}
+                                  className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-lg transition-all"
+                                >
+                                  Quitar Portada
+                                </button>
+                              )}
+                            </div>
+
+                            {templateImages.length > 0 && (
+                              <div className="space-y-1.5 pt-2">
+                                <label className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold block">O de la Biblioteca:</label>
+                                <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
+                                  {templateImages.map((img: any) => (
+                                    <div
+                                      key={img.id}
+                                      onClick={() => handleUseTemplateAsCover(img.image)}
+                                      className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campImagePreview === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'}`}
+                                    >
+                                      <img src={img.image} className="w-full h-full object-cover" />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/5">
+                            <div className="space-y-1">
+                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Ancho de Imagen</label>
+                              <select
+                                value={campImageWidth}
+                                onChange={e => setCampImageWidth(e.target.value)}
+                                className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                              >
+                                <option value="30%">Pequeña (30%)</option>
+                                <option value="50%">Mediana (50%)</option>
+                                <option value="80%">Grande (80%)</option>
+                                <option value="100%">Completo (100%)</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Alineación</label>
+                              <select
+                                value={campImageAlign}
+                                onChange={e => setCampImageAlign(e.target.value)}
+                                className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                              >
+                                <option value="left">Izquierda</option>
+                                <option value="center">Centro</option>
+                                <option value="right">Derecha</option>
+                              </select>
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Redondeado</label>
+                              <select
+                                value={campImageRadius}
+                                onChange={e => setCampImageRadius(e.target.value)}
+                                className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                              >
+                                <option value="0px">Sin (0px)</option>
+                                <option value="8px">Sutil (8px)</option>
+                                <option value="16px">Elegante (16px)</option>
+                                <option value="20px">Redondeado (20px)</option>
+                                <option value="30px">Muy Redondo (30px)</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* CATEGORY 4: SPACING & BOX STYLES */}
+                      {settingsTab === 'sections' && (
+                        <div className="space-y-6">
+                          <div className="bg-[#121915]/50 border border-amber-honey/10 p-4 rounded-xl space-y-2">
+                            <p className="text-[10px] text-amber-honey font-bold uppercase tracking-wider">
+                              Sección activa: <span className="underline italic text-[#F4F6F0]">{editorActiveTab === 'title' ? 'Título' : editorActiveTab === 'footer' ? 'Pie' : 'Cuerpo'}</span>
+                            </p>
+                            <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest leading-normal">
+                              Usa las pestañas superiores de la categoría "Contenido" para cambiar qué sección estás personalizando.
+                            </p>
+                          </div>
+
+                          {editorActiveTab === 'title' && (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color del Texto del Título</label>
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="color"
+                                      value={campTitleTextColor.startsWith('#') ? campTitleTextColor : '#ffffff'}
+                                      onChange={e => setCampTitleTextColor(e.target.value)}
+                                      className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={campTitleTextColor}
+                                      onChange={e => setCampTitleTextColor(e.target.value)}
+                                      placeholder="#ffffff"
+                                      className="flex-1 bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color de Fondo del Título</label>
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="color"
+                                      value={campTitleBgColor.startsWith('#') ? campTitleBgColor : '#000000'}
+                                      onChange={e => setCampTitleBgColor(e.target.value)}
+                                      className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                    />
+                                    <select
+                                      value={campTitleBgColor}
+                                      onChange={e => setCampTitleBgColor(e.target.value)}
+                                      className="flex-1 bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                    >
+                                      <option value="transparent">Transparente</option>
+                                      <option value="#080C0A">Negro Carbon (#080C0A)</option>
+                                      <option value="#0c0f0d">Verde Oscuro (#0c0f0d)</option>
+                                      <option value="rgba(229, 169, 59, 0.1)">Ámbar Translúcido</option>
+                                      {campTitleBgColor.startsWith('#') && !['#080C0A', '#0c0f0d'].includes(campTitleBgColor) && (
+                                        <option value={campTitleBgColor}>Personalizado: {campTitleBgColor}</option>
+                                      )}
+                                    </select>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
+                                  <select
+                                    value={campTitlePadding}
+                                    onChange={e => setCampTitlePadding(e.target.value)}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    <option value="0px">Ninguno (0px)</option>
+                                    <option value="10px">Sutil (10px)</option>
+                                    <option value="20px">Mediano (20px)</option>
+                                    <option value="35px">Elegante (35px)</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
+                                  <select
+                                    value={campTitleRadius}
+                                    onChange={e => setCampTitleRadius(e.target.value)}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    <option value="0px">Recto (0px)</option>
+                                    <option value="8px">Sutil (8px)</option>
+                                    <option value="16px">Elegante (16px)</option>
+                                    <option value="24px">Muy Redondo (24px)</option>
+                                  </select>
+                                </div>
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Imágenes Guardadas (Haz clic para usar o eliminar)</label>
-                                {templateImages.length === 0 ? (
-                                  <p className="text-[10px] text-[#F4F6F0]/40 italic py-2">La biblioteca está vacía. Sube una imagen arriba para guardarla.</p>
-                                ) : (
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                <div className="flex justify-between items-center">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Imagen de Fondo del Título</label>
+                                  {campTitleBgImage && (
+                                    <button type="button" onClick={() => setCampTitleBgImage('')} className="text-[8px] uppercase tracking-widest font-black text-red-400">Quitar Imagen</button>
+                                  )}
+                                </div>
+                                {templateImages.length > 0 && (
+                                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
                                     {templateImages.map((img: any) => (
-                                      <div key={img.id} className="relative group border border-white/10 rounded-2xl overflow-hidden bg-[#0e1310]/80 flex flex-col p-1 gap-1">
-                                        <div className="w-full aspect-video rounded-xl overflow-hidden bg-black relative">
-                                          <img src={img.image} alt="Template" className="w-full h-full object-cover" />
-                                          <button
-                                            type="button"
-                                            onClick={() => handleTemplateImageDelete(img.id)}
-                                            className="absolute top-1.5 right-1.5 w-6 h-6 rounded-lg bg-red-500/80 hover:bg-red-600 text-white flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md"
-                                            title="Eliminar de Biblioteca"
-                                          >
-                                            <Trash2 size={12} />
-                                          </button>
-                                        </div>
-                                        <div className="flex flex-col gap-1 px-1 py-1">
-                                          <button
-                                            type="button"
-                                            onClick={() => insertImageAtCursor(img.image)}
-                                            className="w-full py-1 text-[8px] font-black uppercase tracking-wider bg-white/10 text-[#F4F6F0] rounded-lg hover:bg-white/20 transition-all text-center"
-                                          >
-                                            Insertar en Cuerpo
-                                          </button>
-                                          <div className="grid grid-cols-2 gap-1">
-                                            <button
-                                              type="button"
-                                              onClick={() => handleUseTemplateAsCover(img.image)}
-                                              className="py-1 text-[8px] font-black uppercase tracking-wider bg-amber-honey/10 text-amber-honey border border-amber-honey/20 rounded-lg hover:bg-amber-honey/20 transition-all text-center"
-                                              title="Usar como Imagen de Portada"
-                                            >
-                                              Portada
-                                            </button>
-                                            <button
-                                              type="button"
-                                              onClick={() => handleUseTemplateAsBg(img.image)}
-                                              className="py-1 text-[8px] font-black uppercase tracking-wider bg-[#82c99b]/10 text-[#82c99b] border border-[#82c99b]/25 rounded-lg hover:bg-[#82c99b]/20 transition-all text-center"
-                                              title="Usar como Fondo del Correo"
-                                            >
-                                              Fondo
-                                            </button>
-                                          </div>
-                                        </div>
+                                      <div
+                                        key={img.id}
+                                        onClick={() => setCampTitleBgImage(img.image)}
+                                        className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campTitleBgImage === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'}`}
+                                      >
+                                        <img src={img.image} className="w-full h-full object-cover" />
                                       </div>
                                     ))}
                                   </div>
                                 )}
                               </div>
-                            </motion.div>
+                            </div>
                           )}
-                        </AnimatePresence>
-                      </div>
 
-                      {/* ─── ACCORDION 1: TYPOGRAPHY SETTINGS ─── */}
-                      <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/5 transition-all">
-                        <button
-                          type="button"
-                          onClick={() => setIsFontSectionOpen(!isFontSectionOpen)}
-                          className="w-full px-5 py-4 flex justify-between items-center text-xs font-black uppercase tracking-wider text-amber-honey hover:bg-white/5 transition-all text-left"
-                        >
-                          <span className="flex items-center gap-2">
-                            ✍️ Tipografía: {editorActiveTab === 'title' ? 'Título' : editorActiveTab === 'footer' ? 'Pie de Página' : 'Cuerpo del Poema'}
-                          </span>
-                          <ChevronDown size={14} className={`transform transition-transform duration-300 text-[#F4F6F0]/40 ${isFontSectionOpen ? 'rotate-180 text-amber-honey' : ''}`} />
-                        </button>
-                        <AnimatePresence initial={false}>
-                          {isFontSectionOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="border-t border-white/10 p-5 space-y-4 overflow-hidden"
-                            >
-                              <p className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold">
-                                Elige una fuente artística de alta fidelidad para la sección activa del correo
-                              </p>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                {[
-                                  { id: 'serif', name: 'Estándar', css: 'font-serif', desc: 'Georgia Elegante' },
-                                  { id: 'playfair', name: 'Playfair', css: 'font-serif', style: { fontFamily: "'Playfair Display', serif" }, desc: 'Clásico & Sofisticado' },
-                                  { id: 'cinzel', name: 'Cinzel', css: 'font-serif', style: { fontFamily: "'Cinzel', serif" }, desc: 'Romano Imperial' },
-                                  { id: 'garamond', name: 'Garamond', css: 'font-serif', style: { fontFamily: "'Cormorant Garamond', serif" }, desc: 'Musgo Artístico' },
-                                  { id: 'montserrat', name: 'Montserrat', css: 'font-sans', style: { fontFamily: "'Montserrat', sans-serif" }, desc: 'Minimalista Moderno' },
-                                  { id: 'pinyon', name: 'Pinyon Script', css: 'font-cursive', style: { fontFamily: "'Pinyon Script', cursive" }, desc: 'Caligrafía Íntima' },
-                                ].map(f => {
-                                  const currentActiveFont =
-                                    editorActiveTab === 'title' ? campTitleFontFamily :
-                                      editorActiveTab === 'footer' ? campFooterFontFamily :
-                                        campFontFamily;
-
-                                  const handleFontSelect = () => {
-                                    if (editorActiveTab === 'title') setCampTitleFontFamily(f.id);
-                                    else if (editorActiveTab === 'footer') setCampFooterFontFamily(f.id);
-                                    else setCampFontFamily(f.id);
-                                  };
-
-                                  return (
-                                    <div
-                                      key={f.id}
-                                      onClick={handleFontSelect}
-                                      className={`p-3 rounded-2xl border cursor-pointer text-center transition-all hover:scale-102 flex flex-col justify-center items-center gap-1 ${currentActiveFont === f.id
-                                        ? 'bg-amber-honey/10 border-amber-honey text-amber-honey ring-1 ring-amber-honey'
-                                        : 'bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/10'
-                                        }`}
-                                    >
-                                      <span
-                                        className="text-xs font-black"
-                                        style={f.style}
-                                      >
-                                        {f.name}
-                                      </span>
-                                      <span className="text-[7px] font-bold uppercase tracking-widest opacity-60">{f.desc}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-
-                      {/* ─── ACCORDION 2: COVER IMAGE & COVER STYLING ─── */}
-                      <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/5 transition-all">
-                        <button
-                          type="button"
-                          onClick={() => setIsCoverSectionOpen(!isCoverSectionOpen)}
-                          className="w-full px-5 py-4 flex justify-between items-center text-xs font-black uppercase tracking-wider text-amber-honey hover:bg-white/5 transition-all text-left"
-                        >
-                          <span className="flex items-center gap-2">🖼️ Imagen y Estilo de Portada</span>
-                          <ChevronDown size={14} className={`transform transition-transform duration-300 text-[#F4F6F0]/40 ${isCoverSectionOpen ? 'rotate-180 text-amber-honey' : ''}`} />
-                        </button>
-                        <AnimatePresence initial={false}>
-                          {isCoverSectionOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="border-t border-white/10 p-5 space-y-4 overflow-hidden"
-                            >
-                              <div className="space-y-2">
-                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Archivo de Portada (Opcional)</label>
-                                <div className="flex items-center gap-4">
-                                  {campImagePreview && (
-                                    <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/10 shrink-0">
-                                      <img src={campImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    </div>
-                                  )}
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={e => {
-                                      const file = e.target.files?.[0];
-                                      if (file) {
-                                        setCampImageFile(file);
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                          setCampImagePreview(reader.result as string);
-                                        };
-                                        reader.readAsDataURL(file);
-                                      }
-                                    }}
-                                    className="text-xs text-[#F4F6F0]/70 file:mr-4 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:tracking-widest file:bg-white/10 file:text-[#F4F6F0] file:cursor-pointer hover:file:bg-white/20"
-                                  />
-                                  {campImagePreview && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setCampImageFile(null);
-                                        setCampImagePreview(null);
-                                      }}
-                                      className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-lg transition-all block mt-2"
-                                    >
-                                      Quitar Portada
-                                    </button>
-                                  )}
-                                </div>
-
-                                {templateImages.length > 0 && (
-                                  <div className="space-y-1.5 pt-2 border-t border-white/5">
-                                    <label className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold block">O elige de la Biblioteca:</label>
-                                    <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
-                                      {templateImages.map((img: any) => (
-                                        <div
-                                          key={img.id}
-                                          onClick={() => handleUseTemplateAsCover(img.image)}
-                                          className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campImagePreview === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'
-                                            }`}
-                                        >
-                                          <img src={img.image} className="w-full h-full object-cover" />
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                          {editorActiveTab === 'body' && (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Ancho de Imagen</label>
-                                  <select
-                                    value={campImageWidth}
-                                    onChange={e => setCampImageWidth(e.target.value)}
-                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-[#F4F6F0]"
-                                  >
-                                    <option value="30%" className="bg-[#0B0F0D] text-[#F4F6F0]">Pequeña (30%)</option>
-                                    <option value="50%" className="bg-[#0B0F0D] text-[#F4F6F0]">Mediana (50%)</option>
-                                    <option value="80%" className="bg-[#0B0F0D] text-[#F4F6F0]">Grande (80%)</option>
-                                    <option value="100%" className="bg-[#0B0F0D] text-[#F4F6F0]">Completo (100%)</option>
-                                  </select>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Alineación</label>
-                                  <select
-                                    value={campImageAlign}
-                                    onChange={e => setCampImageAlign(e.target.value)}
-                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-[#F4F6F0]"
-                                  >
-                                    <option value="left" className="bg-[#0B0F0D] text-[#F4F6F0]">Izquierda</option>
-                                    <option value="center" className="bg-[#0B0F0D] text-[#F4F6F0]">Centro</option>
-                                    <option value="right" className="bg-[#0B0F0D] text-[#F4F6F0]">Derecha</option>
-                                  </select>
-                                </div>
-
-                                <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Redondeado</label>
-                                  <select
-                                    value={campImageRadius}
-                                    onChange={e => setCampImageRadius(e.target.value)}
-                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-[#F4F6F0]"
-                                  >
-                                    <option value="0px" className="bg-[#0B0F0D] text-[#F4F6F0]">Sin Redondeado (0px)</option>
-                                    <option value="8px" className="bg-[#0B0F0D] text-[#F4F6F0]">Sutil (8px)</option>
-                                    <option value="16px" className="bg-[#0B0F0D] text-[#F4F6F0]">Elegante (16px)</option>
-                                    <option value="20px" className="bg-[#0B0F0D] text-[#F4F6F0]">Redondeado (20px)</option>
-                                    <option value="30px" className="bg-[#0B0F0D] text-[#F4F6F0]">Muy Redondo (30px)</option>
-                                  </select>
-                                </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-
-                      {/* ─── ACCORDION 3: ADVANCED BACKGROUND DESIGN SETTINGS ─── */}
-                      <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/5 transition-all">
-                        <button
-                          type="button"
-                          onClick={() => setIsBgSectionOpen(!isBgSectionOpen)}
-                          className="w-full px-5 py-4 flex justify-between items-center text-xs font-black uppercase tracking-wider text-amber-honey hover:bg-white/5 transition-all text-left"
-                        >
-                          <span className="flex items-center gap-2">🎨 Configuración de Fondo del Correo</span>
-                          <ChevronDown size={14} className={`transform transition-transform duration-300 text-[#F4F6F0]/40 ${isBgSectionOpen ? 'rotate-180 text-amber-honey' : ''}`} />
-                        </button>
-                        <AnimatePresence initial={false}>
-                          {isBgSectionOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="border-t border-white/10 p-5 space-y-4 overflow-hidden"
-                            >
-                              {/* Background Image Upload */}
-                              <div className="space-y-2">
-                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Imagen de Fondo (Opcional)</label>
-                                <div className="flex gap-4 items-center bg-white/5 border border-white/10 p-4 rounded-xl">
-                                  <div className="w-16 h-16 bg-white/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
-                                    {campBgImagePreview ? (
-                                      <img src={campBgImagePreview} alt="Background Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                      <Eye size={20} className="text-[#F4F6F0]/20" />
-                                    )}
-                                  </div>
-                                  <div className="space-y-1 flex-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color del Texto del Poema</label>
+                                  <div className="flex gap-2 items-center">
                                     <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={e => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                          setCampBgImageFile(file);
-                                          const reader = new FileReader();
-                                          reader.onloadend = () => {
-                                            setCampBgImagePreview(reader.result as string);
-                                          };
-                                          reader.readAsDataURL(file);
-                                        }
-                                      }}
-                                      className="text-[10px] text-[#F4F6F0]/70 file:bg-white/10 file:border-0 file:rounded-lg file:text-[#F4F6F0] file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-white/20"
+                                      type="color"
+                                      value={campBodyTextColor.startsWith('#') ? campBodyTextColor : '#f4f6f0'}
+                                      onChange={e => setCampBodyTextColor(e.target.value)}
+                                      className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
                                     />
-                                    <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold">Añade una imagen que se blendeará con la plantilla.</p>
-                                    {campBgImagePreview && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setCampBgImageFile(null);
-                                          setCampBgImagePreview(null);
-                                        }}
-                                        className="text-[9px] uppercase font-black tracking-widest text-red-400 hover:text-red-300 bg-red-500/10 border border-red-500/20 px-2.5 py-1.5 rounded-lg transition-all block mt-2"
-                                      >
-                                        Quitar Fondo
-                                      </button>
-                                    )}
+                                    <input
+                                      type="text"
+                                      value={campBodyTextColor}
+                                      onChange={e => setCampBodyTextColor(e.target.value)}
+                                      placeholder="Defecto de Plantilla"
+                                      className="flex-1 bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all"
+                                    />
                                   </div>
                                 </div>
-
-                                {templateImages.length > 0 && (
-                                  <div className="space-y-1.5 pt-2 border-t border-white/5">
-                                    <label className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold block">O elige de la Biblioteca:</label>
-                                    <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
-                                      {templateImages.map((img: any) => (
-                                        <div
-                                          key={img.id}
-                                          onClick={() => handleUseTemplateAsBg(img.image)}
-                                          className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-[#82c99b] shrink-0 transition-all ${campBgImagePreview === img.image ? 'border-[#82c99b] ring-1 ring-[#82c99b]' : 'border-white/10'
-                                            }`}
-                                        >
-                                          <img src={img.image} className="w-full h-full object-cover" />
-                                        </div>
-                                      ))}
-                                    </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color de Fondo del Poema</label>
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="color"
+                                      value={campBodyBgColor.startsWith('#') ? campBodyBgColor : '#000000'}
+                                      onChange={e => setCampBodyBgColor(e.target.value)}
+                                      className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                    />
+                                    <select
+                                      value={campBodyBgColor}
+                                      onChange={e => setCampBodyBgColor(e.target.value)}
+                                      className="flex-1 bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                    >
+                                      <option value="transparent">Transparente</option>
+                                      <option value="#080C0A">Negro Carbon (#080C0A)</option>
+                                      <option value="#0c0f0d">Verde Oscuro (#0c0f0d)</option>
+                                      <option value="rgba(229, 169, 59, 0.06)">Ámbar Translúcido</option>
+                                      {campBodyBgColor.startsWith('#') && !['#080C0A', '#0c0f0d'].includes(campBodyBgColor) && (
+                                        <option value={campBodyBgColor}>Personalizado: {campBodyBgColor}</option>
+                                      )}
+                                    </select>
                                   </div>
-                                )}
+                                </div>
                               </div>
 
-                              {/* Sliders and Selects */}
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                {/* Opacity */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                  <div className="flex justify-between text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">
-                                    <span>Opacidad</span>
-                                    <span className="text-amber-honey font-mono">{Math.round(campBgOpacity * 100)}%</span>
-                                  </div>
-                                  <input
-                                    type="range"
-                                    min="0"
-                                    max="1"
-                                    step="0.05"
-                                    value={campBgOpacity}
-                                    onChange={e => setCampBgOpacity(parseFloat(e.target.value))}
-                                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
-                                  />
-                                </div>
-
-                                {/* Saturation */}
-                                <div className="space-y-1">
-                                  <div className="flex justify-between text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">
-                                    <span>Saturación</span>
-                                    <span className="text-amber-honey font-mono">{campBgSaturation}%</span>
-                                  </div>
-                                  <input
-                                    type="range"
-                                    min="0"
-                                    max="200"
-                                    step="10"
-                                    value={campBgSaturation}
-                                    onChange={e => setCampBgSaturation(parseInt(e.target.value))}
-                                    className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-amber-honey"
-                                  />
-                                </div>
-
-                                {/* Position */}
-                                <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Posición del Fondo</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
                                   <select
-                                    value={campBgPosition}
-                                    onChange={e => setCampBgPosition(e.target.value)}
-                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all font-semibold uppercase tracking-wider text-[#F4F6F0]"
+                                    value={campBodyPadding}
+                                    onChange={e => setCampBodyPadding(e.target.value)}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
-                                    <option value="center" className="bg-[#0B0F0D] text-[#F4F6F0]">Centro</option>
-                                    <option value="top" className="bg-[#0B0F0D] text-[#F4F6F0]">Superior</option>
-                                    <option value="bottom" className="bg-[#0B0F0D] text-[#F4F6F0]">Inferior</option>
+                                    <option value="0px">Ninguno (0px)</option>
+                                    <option value="12px">Sutil (12px)</option>
+                                    <option value="24px">Mediano (24px)</option>
+                                    <option value="40px">Elegante (40px)</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
+                                  <select
+                                    value={campBodyRadius}
+                                    onChange={e => setCampBodyRadius(e.target.value)}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    <option value="0px">Recto (0px)</option>
+                                    <option value="12px">Sutil (12px)</option>
+                                    <option value="20px">Elegante (20px)</option>
+                                    <option value="32px">Muy Redondo (32px)</option>
                                   </select>
                                 </div>
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
 
-                      {/* ─── ACCORDION 3.5: CUSTOM SECTION STYLES ─── */}
-                      <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/5 transition-all">
-                        <button
-                          type="button"
-                          onClick={() => setIsSectionStyleSectionOpen(!isSectionStyleSectionOpen)}
-                          className="w-full px-5 py-4 flex justify-between items-center text-xs font-black uppercase tracking-wider text-amber-honey hover:bg-white/5 transition-all text-left"
-                        >
-                          <span className="flex items-center gap-2">🎨 Estilos de Secciones (Fondo y Colores)</span>
-                          <ChevronDown size={14} className={`transform transition-transform duration-300 text-[#F4F6F0]/40 ${isSectionStyleSectionOpen ? 'rotate-180 text-amber-honey' : ''}`} />
-                        </button>
-                        <AnimatePresence initial={false}>
-                          {isSectionStyleSectionOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="border-t border-white/10 p-5 space-y-6 overflow-hidden"
-                            >
-                              <div className="bg-[#121915]/50 border border-amber-honey/10 p-4 rounded-xl space-y-2">
-                                <p className="text-[10px] text-amber-honey font-bold uppercase tracking-wider">
-                                  Sección en edición activa: <span className="underline italic text-[#F4F6F0]">{editorActiveTab === 'title' ? 'Título' : editorActiveTab === 'footer' ? 'Pie de Página' : 'Cuerpo del Poema'}</span>
-                                </p>
-                                <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest leading-normal">
-                                  Usa las pestañas superiores del editor ("Título", "Cuerpo", "Pie") para seleccionar qué sección estás editando. Cada sección puede tener su propia combinación de colores, fondos y espaciado.
-                                </p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Imagen de Fondo del Poema</label>
+                                  {campBodyBgImage && (
+                                    <button type="button" onClick={() => setCampBodyBgImage('')} className="text-[8px] uppercase tracking-widest font-black text-red-400">Quitar Imagen</button>
+                                  )}
+                                </div>
+                                {templateImages.length > 0 && (
+                                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
+                                    {templateImages.map((img: any) => (
+                                      <div
+                                        key={img.id}
+                                        onClick={() => setCampBodyBgImage(img.image)}
+                                        className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campBodyBgImage === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'}`}
+                                      >
+                                        <img src={img.image} className="w-full h-full object-cover" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {editorActiveTab === 'footer' && (
+                            <div className="space-y-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color del Texto de Pie</label>
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="color"
+                                      value={campFooterTextColor.startsWith('#') ? campFooterTextColor : '#888888'}
+                                      onChange={e => setCampFooterTextColor(e.target.value)}
+                                      className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={campFooterTextColor}
+                                      onChange={e => setCampFooterTextColor(e.target.value)}
+                                      placeholder="Defecto de Plantilla"
+                                      className="flex-1 bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color de Fondo de Pie</label>
+                                  <div className="flex gap-2 items-center">
+                                    <input
+                                      type="color"
+                                      value={campFooterBgColor.startsWith('#') ? campFooterBgColor : '#000000'}
+                                      onChange={e => setCampFooterBgColor(e.target.value)}
+                                      className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                    />
+                                    <select
+                                      value={campFooterBgColor}
+                                      onChange={e => setCampFooterBgColor(e.target.value)}
+                                      className="flex-1 bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                    >
+                                      <option value="transparent">Transparente</option>
+                                      <option value="#080C0A">Negro Carbon (#080C0A)</option>
+                                      <option value="#0c0f0d">Verde Oscuro (#0c0f0d)</option>
+                                      <option value="rgba(229, 169, 59, 0.05)">Ámbar Translúcido</option>
+                                      {campFooterBgColor.startsWith('#') && !['#080C0A', '#0c0f0d'].includes(campFooterBgColor) && (
+                                        <option value={campFooterBgColor}>Personalizado: {campFooterBgColor}</option>
+                                      )}
+                                    </select>
+                                  </div>
+                                </div>
                               </div>
 
-                              {/* Title Section Customizer */}
-                              {editorActiveTab === 'title' && (
-                                <div className="space-y-4">
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color del Texto del Título</label>
-                                      <div className="flex gap-2 items-center">
-                                        <input
-                                          type="color"
-                                          value={campTitleTextColor.startsWith('#') ? campTitleTextColor : '#ffffff'}
-                                          onChange={e => setCampTitleTextColor(e.target.value)}
-                                          className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
-                                        />
-                                        <input
-                                          type="text"
-                                          value={campTitleTextColor}
-                                          onChange={e => setCampTitleTextColor(e.target.value)}
-                                          placeholder="#ffffff"
-                                          className="flex-1 bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color de Fondo del Título</label>
-                                      <div className="flex gap-2 items-center">
-                                        <input
-                                          type="color"
-                                          value={campTitleBgColor.startsWith('#') ? campTitleBgColor : '#000000'}
-                                          onChange={e => setCampTitleBgColor(e.target.value)}
-                                          className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
-                                        />
-                                        <select
-                                          value={campTitleBgColor}
-                                          onChange={e => setCampTitleBgColor(e.target.value)}
-                                          className="flex-1 bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                        >
-                                          <option value="transparent">Transparente</option>
-                                          <option value="#080C0A">Negro Carbon (#080C0A)</option>
-                                          <option value="#0c0f0d">Verde Oscuro (#0c0f0d)</option>
-                                          <option value="rgba(229, 169, 59, 0.1)">Ámbar Translúcido</option>
-                                          {campTitleBgColor.startsWith('#') && !['#080C0A', '#0c0f0d'].includes(campTitleBgColor) && (
-                                            <option value={campTitleBgColor}>Personalizado: {campTitleBgColor}</option>
-                                          )}
-                                        </select>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
-                                      <select
-                                        value={campTitlePadding}
-                                        onChange={e => setCampTitlePadding(e.target.value)}
-                                        className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                      >
-                                        <option value="0px">Ninguno (0px)</option>
-                                        <option value="10px">Sutil (10px)</option>
-                                        <option value="20px">Mediano (20px)</option>
-                                        <option value="35px">Elegante (35px)</option>
-                                      </select>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
-                                      <select
-                                        value={campTitleRadius}
-                                        onChange={e => setCampTitleRadius(e.target.value)}
-                                        className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                      >
-                                        <option value="0px">Recto (0px)</option>
-                                        <option value="8px">Sutil (8px)</option>
-                                        <option value="16px">Elegante (16px)</option>
-                                        <option value="24px">Muy Redondo (24px)</option>
-                                      </select>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Imagen de Fondo del Título (Opcional)</label>
-                                      {campTitleBgImage && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setCampTitleBgImage('')}
-                                          className="text-[8px] uppercase tracking-widest font-black text-red-400"
-                                        >
-                                          Quitar Imagen
-                                        </button>
-                                      )}
-                                    </div>
-                                    {templateImages.length === 0 ? (
-                                      <p className="text-[8px] text-[#F4F6F0]/40 italic pl-1">Sube imágenes en la "Biblioteca de Imágenes" superior para poder usarlas aquí como fondo.</p>
-                                    ) : (
-                                      <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
-                                        {templateImages.map((img: any) => (
-                                          <div
-                                            key={img.id}
-                                            onClick={() => setCampTitleBgImage(img.image)}
-                                            className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campTitleBgImage === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'}`}
-                                          >
-                                            <img src={img.image} className="w-full h-full object-cover" />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
+                                  <select
+                                    value={campFooterPadding}
+                                    onChange={e => setCampFooterPadding(e.target.value)}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    <option value="0px">Ninguno (0px)</option>
+                                    <option value="10px">Sutil (10px)</option>
+                                    <option value="20px">Mediano (20px)</option>
+                                    <option value="30px">Grande (30px)</option>
+                                  </select>
                                 </div>
-                              )}
-
-                              {/* Body Section Customizer */}
-                              {editorActiveTab === 'body' && (
-                                <div className="space-y-4">
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color del Texto del Poema</label>
-                                      <div className="flex gap-2 items-center">
-                                        <input
-                                          type="color"
-                                          value={campBodyTextColor.startsWith('#') ? campBodyTextColor : '#f4f6f0'}
-                                          onChange={e => setCampBodyTextColor(e.target.value)}
-                                          className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
-                                        />
-                                        <input
-                                          type="text"
-                                          value={campBodyTextColor}
-                                          onChange={e => setCampBodyTextColor(e.target.value)}
-                                          placeholder="Defecto de Plantilla"
-                                          className="flex-1 bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color de Fondo del Poema</label>
-                                      <div className="flex gap-2 items-center">
-                                        <input
-                                          type="color"
-                                          value={campBodyBgColor.startsWith('#') ? campBodyBgColor : '#000000'}
-                                          onChange={e => setCampBodyBgColor(e.target.value)}
-                                          className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
-                                        />
-                                        <select
-                                          value={campBodyBgColor}
-                                          onChange={e => setCampBodyBgColor(e.target.value)}
-                                          className="flex-1 bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                        >
-                                          <option value="transparent">Transparente</option>
-                                          <option value="#080C0A">Negro Carbon (#080C0A)</option>
-                                          <option value="#0c0f0d">Verde Oscuro (#0c0f0d)</option>
-                                          <option value="rgba(229, 169, 59, 0.06)">Ámbar Translúcido</option>
-                                          {campBodyBgColor.startsWith('#') && !['#080C0A', '#0c0f0d'].includes(campBodyBgColor) && (
-                                            <option value={campBodyBgColor}>Personalizado: {campBodyBgColor}</option>
-                                          )}
-                                        </select>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
-                                      <select
-                                        value={campBodyPadding}
-                                        onChange={e => setCampBodyPadding(e.target.value)}
-                                        className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                      >
-                                        <option value="0px">Ninguno (0px)</option>
-                                        <option value="12px">Sutil (12px)</option>
-                                        <option value="24px">Mediano (24px)</option>
-                                        <option value="40px">Elegante (40px)</option>
-                                      </select>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
-                                      <select
-                                        value={campBodyRadius}
-                                        onChange={e => setCampBodyRadius(e.target.value)}
-                                        className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                      >
-                                        <option value="0px">Recto (0px)</option>
-                                        <option value="12px">Sutil (12px)</option>
-                                        <option value="20px">Elegante (20px)</option>
-                                        <option value="32px">Muy Redondo (32px)</option>
-                                      </select>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Imagen de Fondo del Poema (Opcional - Imagen detrás del texto)</label>
-                                      {campBodyBgImage && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setCampBodyBgImage('')}
-                                          className="text-[8px] uppercase tracking-widest font-black text-red-400"
-                                        >
-                                          Quitar Imagen
-                                        </button>
-                                      )}
-                                    </div>
-                                    {templateImages.length === 0 ? (
-                                      <p className="text-[8px] text-[#F4F6F0]/40 italic pl-1">Sube imágenes en la "Biblioteca de Imágenes" superior para poder usarlas aquí como fondo.</p>
-                                    ) : (
-                                      <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
-                                        {templateImages.map((img: any) => (
-                                          <div
-                                            key={img.id}
-                                            onClick={() => setCampBodyBgImage(img.image)}
-                                            className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campBodyBgImage === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'}`}
-                                          >
-                                            <img src={img.image} className="w-full h-full object-cover" />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
+                                  <select
+                                    value={campFooterRadius}
+                                    onChange={e => setCampFooterRadius(e.target.value)}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    <option value="0px">Recto (0px)</option>
+                                    <option value="8px">Sutil (8px)</option>
+                                    <option value="16px">Elegante (16px)</option>
+                                  </select>
                                 </div>
-                              )}
-
-                              {/* Footer Section Customizer */}
-                              {editorActiveTab === 'footer' && (
-                                <div className="space-y-4">
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color del Texto de Pie</label>
-                                      <div className="flex gap-2 items-center">
-                                        <input
-                                          type="color"
-                                          value={campFooterTextColor.startsWith('#') ? campFooterTextColor : '#888888'}
-                                          onChange={e => setCampFooterTextColor(e.target.value)}
-                                          className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
-                                        />
-                                        <input
-                                          type="text"
-                                          value={campFooterTextColor}
-                                          onChange={e => setCampFooterTextColor(e.target.value)}
-                                          placeholder="Defecto de Plantilla"
-                                          className="flex-1 bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Color de Fondo de Pie</label>
-                                      <div className="flex gap-2 items-center">
-                                        <input
-                                          type="color"
-                                          value={campFooterBgColor.startsWith('#') ? campFooterBgColor : '#000000'}
-                                          onChange={e => setCampFooterBgColor(e.target.value)}
-                                          className="w-8 h-8 rounded-lg bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
-                                        />
-                                        <select
-                                          value={campFooterBgColor}
-                                          onChange={e => setCampFooterBgColor(e.target.value)}
-                                          className="flex-1 bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                        >
-                                          <option value="transparent">Transparente</option>
-                                          <option value="#080C0A">Negro Carbon (#080C0A)</option>
-                                          <option value="#0c0f0d">Verde Oscuro (#0c0f0d)</option>
-                                          <option value="rgba(229, 169, 59, 0.05)">Ámbar Translúcido</option>
-                                          {campFooterBgColor.startsWith('#') && !['#080C0A', '#0c0f0d'].includes(campFooterBgColor) && (
-                                            <option value={campFooterBgColor}>Personalizado: {campFooterBgColor}</option>
-                                          )}
-                                        </select>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
-                                      <select
-                                        value={campFooterPadding}
-                                        onChange={e => setCampFooterPadding(e.target.value)}
-                                        className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                      >
-                                        <option value="0px">Ninguno (0px)</option>
-                                        <option value="10px">Sutil (10px)</option>
-                                        <option value="20px">Mediano (20px)</option>
-                                        <option value="30px">Grande (30px)</option>
-                                      </select>
-                                    </div>
-
-                                    <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
-                                      <select
-                                        value={campFooterRadius}
-                                        onChange={e => setCampFooterRadius(e.target.value)}
-                                        className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                      >
-                                        <option value="0px">Recto (0px)</option>
-                                        <option value="8px">Sutil (8px)</option>
-                                        <option value="16px">Elegante (16px)</option>
-                                      </select>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Imagen de Fondo de Pie (Opcional)</label>
-                                      {campFooterBgImage && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setCampFooterBgImage('')}
-                                          className="text-[8px] uppercase tracking-widest font-black text-red-400"
-                                        >
-                                          Quitar Imagen
-                                        </button>
-                                      )}
-                                    </div>
-                                    {templateImages.length === 0 ? (
-                                      <p className="text-[8px] text-[#F4F6F0]/40 italic pl-1">Sube imágenes en la "Biblioteca de Imágenes" superior para poder usarlas aquí como fondo.</p>
-                                    ) : (
-                                      <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
-                                        {templateImages.map((img: any) => (
-                                          <div
-                                            key={img.id}
-                                            onClick={() => setCampFooterBgImage(img.image)}
-                                            className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campFooterBgImage === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'}`}
-                                          >
-                                            <img src={img.image} className="w-full h-full object-cover" />
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-
-                      {/* ─── ACCORDION 4: CALL TO ACTIONS BUILDER ─── */}
-                      <div className="border border-white/10 rounded-2xl overflow-hidden bg-white/5 transition-all">
-                        <button
-                          type="button"
-                          onClick={() => setIsCtaSectionOpen(!isCtaSectionOpen)}
-                          className="w-full px-5 py-4 flex justify-between items-center text-xs font-black uppercase tracking-wider text-amber-honey hover:bg-white/5 transition-all text-left"
-                        >
-                          <span className="flex items-center gap-2">🎯 Botones de Llamada a la Acción (CTAs)</span>
-                          <ChevronDown size={14} className={`transform transition-transform duration-300 text-[#F4F6F0]/40 ${isCtaSectionOpen ? 'rotate-180 text-amber-honey' : ''}`} />
-                        </button>
-                        <AnimatePresence initial={false}>
-                          {isCtaSectionOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: 'auto', opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.2 }}
-                              className="border-t border-white/10 p-5 space-y-4 overflow-hidden"
-                            >
-                              <div className="flex justify-between items-center pb-2">
-                                <span className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-black">Lista de Acciones</span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setCampCtas([...campCtas, { text: '', link: '', bg_color: '', text_color: '#030303', radius: '12px' }]);
-                                  }}
-                                  className="px-3 py-1.5 bg-white/5 border border-white/10 hover:border-amber-honey/30 hover:bg-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest text-amber-honey flex items-center gap-1 transition-all"
-                                >
-                                  <Plus size={10} /> Agregar CTA
-                                </button>
                               </div>
 
-                              {campCtas.length === 0 ? (
-                                <div className="space-y-3">
-                                  <p className="text-[9px] text-[#F4F6F0]/40 uppercase tracking-widest font-black pl-1 italic">
-                                    Ninguno creado aún. Puedes agregar uno usando el botón superior, o rellenar el CTA heredado abajo:
-                                  </p>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Imagen de Fondo de Pie</label>
+                                  {campFooterBgImage && (
+                                    <button type="button" onClick={() => setCampFooterBgImage('')} className="text-[8px] uppercase tracking-widest font-black text-red-400">Quitar Imagen</button>
+                                  )}
+                                </div>
+                                {templateImages.length > 0 && (
+                                  <div className="flex gap-2 overflow-x-auto pb-1 custom-scroll">
+                                    {templateImages.map((img: any) => (
+                                      <div
+                                        key={img.id}
+                                        onClick={() => setCampFooterBgImage(img.image)}
+                                        className={`w-12 h-12 rounded-lg overflow-hidden border cursor-pointer hover:border-amber-honey shrink-0 transition-all ${campFooterBgImage === img.image ? 'border-amber-honey ring-1 ring-amber-honey' : 'border-white/10'}`}
+                                      >
+                                        <img src={img.image} className="w-full h-full object-cover" />
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* CATEGORY 5: CALL TO ACTIONS BUILDER */}
+                      {settingsTab === 'ctas' && (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                            <span className="text-[10px] text-[#F4F6F0]/40 uppercase tracking-widest font-black">Lista de Acciones</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCampCtas([...campCtas, { text: '', link: '', bg_color: '', text_color: '#030303', radius: '12px' }]);
+                              }}
+                              className="px-3 py-1.5 bg-white/5 border border-white/10 hover:border-amber-honey/30 hover:bg-white/10 rounded-lg text-[9px] font-black uppercase tracking-widest text-amber-honey flex items-center gap-1 transition-all"
+                            >
+                              <Plus size={10} /> Agregar CTA
+                            </button>
+                          </div>
+
+                          {campCtas.length === 0 ? (
+                            <div className="space-y-3">
+                              <p className="text-[9px] text-[#F4F6F0]/40 uppercase tracking-widest font-black pl-1 italic">
+                                Ninguno creado aún. Agrega uno arriba, o usa el CTA simple (Legacy):
+                              </p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Texto del Botón (Legacy)</label>
+                                  <input
+                                    type="text"
+                                    value={campCtaText}
+                                    onChange={e => setCampCtaText(e.target.value)}
+                                    placeholder="Ej. Escuchar Single"
+                                    className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Enlace del Botón (Legacy URL)</label>
+                                  <input
+                                    type="url"
+                                    value={campCtaLink}
+                                    onChange={e => setCampCtaLink(e.target.value)}
+                                    placeholder="https://..."
+                                    className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono placeholder:text-[#F4F6F0]/30"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-4 max-h-[45vh] overflow-y-auto pr-1 custom-scroll">
+                              {campCtas.map((cta, idx) => (
+                                <div key={idx} className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3 relative group">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newCtas = [...campCtas];
+                                      newCtas.splice(idx, 1);
+                                      setCampCtas(newCtas);
+                                    }}
+                                    className="absolute top-3 right-3 w-6 h-6 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all"
+                                  >
+                                    <X size={10} />
+                                  </button>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Texto del Botón (Legacy)</label>
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Texto del Botón</label>
                                       <input
                                         type="text"
-                                        value={campCtaText}
-                                        onChange={e => setCampCtaText(e.target.value)}
+                                        value={cta.text}
+                                        onChange={e => {
+                                          const newCtas = [...campCtas];
+                                          newCtas[idx].text = e.target.value;
+                                          setCampCtas(newCtas);
+                                        }}
                                         placeholder="Ej. Escuchar Single"
-                                        className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
+                                        className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none"
                                       />
                                     </div>
                                     <div className="space-y-1">
-                                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Enlace del Botón (Legacy URL)</label>
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Enlace (URL)</label>
                                       <input
                                         type="url"
-                                        value={campCtaLink}
-                                        onChange={e => setCampCtaLink(e.target.value)}
+                                        value={cta.link}
+                                        onChange={e => {
+                                          const newCtas = [...campCtas];
+                                          newCtas[idx].link = e.target.value;
+                                          setCampCtas(newCtas);
+                                        }}
                                         placeholder="https://..."
-                                        className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono placeholder:text-[#F4F6F0]/30"
+                                        className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none font-mono"
                                       />
                                     </div>
                                   </div>
-                                </div>
-                              ) : (
-                                <div className="space-y-4">
-                                  {campCtas.map((cta, idx) => (
-                                    <div key={idx} className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3 relative group">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const newCtas = [...campCtas];
-                                          newCtas.splice(idx, 1);
-                                          setCampCtas(newCtas);
-                                        }}
-                                        className="absolute top-3 right-3 w-6 h-6 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all"
-                                      >
-                                        <X size={10} />
-                                      </button>
 
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Texto del Botón</label>
-                                          <input
-                                            type="text"
-                                            value={cta.text}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].text = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            placeholder="Ej. Escuchar Single"
-                                            className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all"
-                                          />
-                                        </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Enlace (URL)</label>
-                                          <input
-                                            type="url"
-                                            value={cta.link}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].link = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            placeholder="https://..."
-                                            className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all font-mono"
-                                          />
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Color de Fondo</label>
-                                          <select
-                                            value={cta.bg_color || ''}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].bg_color = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                          >
-                                            <option value="" className="bg-[#0B0F0D] text-[#F4F6F0]">Por defecto (Plantilla)</option>
-                                            <option value="#E5A93B" className="bg-[#0B0F0D] text-[#F4F6F0]">Ámbar Miel (#E5A93B)</option>
-                                            <option value="#c084fc" className="bg-[#0B0F0D] text-[#F4F6F0]">Morado Cosmic (#c084fc)</option>
-                                            <option value="#82c99b" className="bg-[#0B0F0D] text-[#F4F6F0]">Verde Moss (#82c99b)</option>
-                                            <option value="#06b6d4" className="bg-[#0B0F0D] text-[#F4F6F0]">Cyan Mist (#06b6d4)</option>
-                                            <option value="#ffffff" className="bg-[#0B0F0D] text-[#F4F6F0]">Blanco (#ffffff)</option>
-                                            <option value="#080C0A" className="bg-[#0B0F0D] text-[#F4F6F0]">Negro (#080C0A)</option>
-                                          </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Color de Texto</label>
-                                          <select
-                                            value={cta.text_color || '#030303'}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].text_color = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                          >
-                                            <option value="#030303" className="bg-[#0B0F0D] text-[#F4F6F0]">Negro (#030303)</option>
-                                            <option value="#ffffff" className="bg-[#0B0F0D] text-[#F4F6F0]">Blanco (#ffffff)</option>
-                                          </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
-                                          <select
-                                            value={cta.radius || '12px'}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].radius = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey transition-all text-[#F4F6F0]"
-                                          >
-                                            <option value="0px" className="bg-[#0B0F0D] text-[#F4F6F0]">Recto (0px)</option>
-                                            <option value="4px" className="bg-[#0B0F0D] text-[#F4F6F0]">Sutil (4px)</option>
-                                            <option value="8px" className="bg-[#0B0F0D] text-[#F4F6F0]">Redondeado (8px)</option>
-                                            <option value="12px" className="bg-[#0B0F0D] text-[#F4F6F0]">Estándar (12px)</option>
-                                            <option value="20px" className="bg-[#0B0F0D] text-[#F4F6F0]">Muy Redondo (20px)</option>
-                                            <option value="9999px" className="bg-[#0B0F0D] text-[#F4F6F0]">Píldora (9999px)</option>
-                                          </select>
-                                        </div>
-                                      </div>
-
-                                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Glow / Sombra</label>
-                                          <select
-                                            value={cta.shadow_style || 'default'}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].shadow_style = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
-                                          >
-                                            <option value="default" className="bg-[#0B0F0D]">Por defecto</option>
-                                            <option value="none" className="bg-[#0B0F0D]">Sin Sombra</option>
-                                            <option value="sutil" className="bg-[#0B0F0D]">Sutil</option>
-                                            <option value="glow" className="bg-[#0B0F0D]">Resplandor (Glow)</option>
-                                            <option value="hard" className="bg-[#0B0F0D]">Retro 3D (Rígido)</option>
-                                          </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Borde</label>
-                                          <select
-                                            value={cta.border_width || '0px'}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].border_width = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
-                                          >
-                                            <option value="0px" className="bg-[#0B0F0D]">Sin Borde</option>
-                                            <option value="1px" className="bg-[#0B0F0D]">Fino (1px)</option>
-                                            <option value="2px" className="bg-[#0B0F0D]">Medio (2px)</option>
-                                            <option value="3px" className="bg-[#0B0F0D]">Grueso (3px)</option>
-                                          </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Tamaño (Padding)</label>
-                                          <select
-                                            value={cta.padding_size || 'medium'}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].padding_size = e.target.value;
-                                              setCampCtas(newCtas);
-                                            }}
-                                            className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
-                                          >
-                                            <option value="small" className="bg-[#0B0F0D]">Compacto</option>
-                                            <option value="medium" className="bg-[#0B0F0D]">Estándar</option>
-                                            <option value="large" className="bg-[#0B0F0D]">Grande</option>
-                                          </select>
-                                        </div>
-                                        <div className="space-y-1">
-                                          <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Ancho</label>
-                                          <select
-                                            value={cta.is_full_width ? 'true' : 'false'}
-                                            onChange={e => {
-                                              const newCtas = [...campCtas];
-                                              newCtas[idx].is_full_width = e.target.value === 'true';
-                                              setCampCtas(newCtas);
-                                            }}
-                                            className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
-                                          >
-                                            <option value="false" className="bg-[#0B0F0D]">Alineado (Auto)</option>
-                                            <option value="true" className="bg-[#0B0F0D]">Completo (Full Width)</option>
-                                          </select>
-                                        </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Fondo del Botón</label>
+                                      <div className="flex gap-2 items-center">
+                                        <input
+                                          type="color"
+                                          value={cta.bg_color || '#82c99b'}
+                                          onChange={e => {
+                                            const newCtas = [...campCtas];
+                                            newCtas[idx].bg_color = e.target.value;
+                                            setCampCtas(newCtas);
+                                          }}
+                                          className="w-6 h-6 rounded-md bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                        />
+                                        <input
+                                          type="text"
+                                          value={cta.bg_color || ''}
+                                          onChange={e => {
+                                            const newCtas = [...campCtas];
+                                            newCtas[idx].bg_color = e.target.value;
+                                            setCampCtas(newCtas);
+                                          }}
+                                          placeholder="Defecto"
+                                          className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
+                                        />
                                       </div>
                                     </div>
-                                  ))}
+
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Color del Texto</label>
+                                      <div className="flex gap-2 items-center">
+                                        <input
+                                          type="color"
+                                          value={cta.text_color || '#030303'}
+                                          onChange={e => {
+                                            const newCtas = [...campCtas];
+                                            newCtas[idx].text_color = e.target.value;
+                                            setCampCtas(newCtas);
+                                          }}
+                                          className="w-6 h-6 rounded-md bg-transparent border border-white/10 cursor-pointer p-0 overflow-hidden"
+                                        />
+                                        <input
+                                          type="text"
+                                          value={cta.text_color || ''}
+                                          onChange={e => {
+                                            const newCtas = [...campCtas];
+                                            newCtas[idx].text_color = e.target.value;
+                                            setCampCtas(newCtas);
+                                          }}
+                                          placeholder="#030303"
+                                          className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                      <label className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-black block pl-1">Redondeado</label>
+                                      <select
+                                        value={cta.radius || '8px'}
+                                        onChange={e => {
+                                          const newCtas = [...campCtas];
+                                          newCtas[idx].radius = e.target.value;
+                                          setCampCtas(newCtas);
+                                        }}
+                                        className="w-full bg-[#121915] border border-white/10 rounded-lg px-2 py-1 text-[10px] outline-none text-[#F4F6F0]"
+                                      >
+                                        <option value="0px">Recto (0px)</option>
+                                        <option value="4px">Sutil (4px)</option>
+                                        <option value="8px">Elegante (8px)</option>
+                                        <option value="12px">Redondo (12px)</option>
+                                        <option value="20px">Total (20px)</option>
+                                      </select>
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                            </motion.div>
+                              ))}
+                            </div>
                           )}
-                        </AnimatePresence>
-                      </div>
+                        </div>
+                      )}
+
+                      {/* CATEGORY 6: LIBRARY */}
+                      {settingsTab === 'library' && (
+                        <div className="space-y-4">
+                          <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                            <span className="text-[10px] text-[#F4F6F0]/40 uppercase tracking-widest font-black">Biblioteca de Imágenes</span>
+                            <label className="px-3 py-1.5 bg-amber-honey/10 border border-amber-honey/20 hover:bg-amber-honey/20 rounded-lg text-[9px] font-black uppercase tracking-widest text-amber-honey flex items-center gap-1 cursor-pointer transition-all">
+                              <Plus size={10} /> {libraryUploadLoading ? 'Subiendo...' : 'Subir Imagen'}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                disabled={libraryUploadLoading}
+                                onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleTemplateImageUpload(file);
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {templateImages.length === 0 ? (
+                            <div className="text-center py-8 border border-dashed border-white/10 rounded-2xl">
+                              <FolderOpen size={24} className="mx-auto text-[#F4F6F0]/20 mb-2" />
+                              <p className="text-[10px] text-[#F4F6F0]/40 uppercase tracking-widest font-black">Tu biblioteca está vacía</p>
+                              <p className="text-[9px] text-[#F4F6F0]/30 mt-1 max-w-xs mx-auto leading-normal">Sube imágenes para utilizarlas como portada, fondo o dentro de los poemas.</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[48vh] overflow-y-auto pr-1 custom-scroll">
+                              {templateImages.map((img: any) => (
+                                <div key={img.id} className="group relative bg-white/5 border border-white/5 rounded-2xl overflow-hidden aspect-square flex flex-col justify-end">
+                                  <img src={img.image} className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105 duration-300" />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2 gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => insertImageAtCursor(img.image)}
+                                      className="w-full py-1 bg-amber-honey hover:bg-amber-gold text-[#030303] rounded-lg text-[8px] font-black uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+                                    >
+                                      <PlusCircle size={9} /> Insertar en Editor
+                                    </button>
+                                    <div className="grid grid-cols-2 gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUseTemplateAsCover(img.image)}
+                                        className="py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[7px] font-black uppercase tracking-wider transition-all"
+                                      >
+                                        Portada
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleUseTemplateAsBg(img.image)}
+                                        className="py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[7px] font-black uppercase tracking-wider transition-all"
+                                      >
+                                        Fondo Gral
+                                      </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => setCampTitleBgImage(img.image)}
+                                        className="py-1 bg-white/15 hover:bg-white/25 text-[#F4F6F0]/80 rounded-md text-[6px] font-bold uppercase transition-all"
+                                        title="Fondo Título"
+                                      >
+                                        Título
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setCampBodyBgImage(img.image)}
+                                        className="py-1 bg-white/15 hover:bg-white/25 text-[#F4F6F0]/80 rounded-md text-[6px] font-bold uppercase transition-all"
+                                        title="Fondo Cuerpo"
+                                      >
+                                        Cuerpo
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setCampFooterBgImage(img.image)}
+                                        className="py-1 bg-white/15 hover:bg-white/25 text-[#F4F6F0]/80 rounded-md text-[6px] font-bold uppercase transition-all"
+                                        title="Fondo Pie"
+                                      >
+                                        Pie
+                                      </button>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTemplateImageDelete(img.id)}
+                                      className="w-full py-1 bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white rounded-lg text-[8px] font-black uppercase tracking-wider flex items-center justify-center gap-1 transition-all mt-0.5 border border-red-500/10"
+                                    >
+                                      <Trash2 size={9} /> Eliminar
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="flex gap-4 justify-end pt-4 border-t border-white/10">
                         <button

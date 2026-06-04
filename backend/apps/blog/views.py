@@ -715,7 +715,15 @@ def get_campaign_html_template(campaign, sub_email):
     if "<p" in campaign.poem_text or "<br" in campaign.poem_text or "<div" in campaign.poem_text:
         poem_paragraphs = campaign.poem_text
     else:
-        poem_paragraphs = "".join([f"<p style='margin: 0 0 16px 0;'>{line.strip()}</p>" if line.strip() else "<div style='height: 16px;'></div>" for line in campaign.poem_text.split('\n')])
+        stanzas = []
+        text_normalized = campaign.poem_text.replace('\r\n', '\n').replace('\r', '\n')
+        raw_stanzas = text_normalized.split('\n\n')
+        for raw_stanza in raw_stanzas:
+            if raw_stanza.strip():
+                lines = [line.strip() for line in raw_stanza.split('\n')]
+                stanza_html = "<br/>".join(lines)
+                stanzas.append(f"<p style='margin: 0 0 24px 0; font-family: inherit;'>{stanza_html}</p>")
+        poem_paragraphs = "".join(stanzas)
 
     # Determine absolute URL for media conversions
     api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
@@ -747,13 +755,47 @@ def get_campaign_html_template(campaign, sub_email):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           {font_import}
+          
+          /* Responsive email layout styling */
+          @media only screen and (max-width: 600px) {{
+            .email-body {{
+              padding: 16px 8px !important;
+            }}
+            .email-card {{
+              padding: 24px 16px !important;
+              border-radius: 20px !important;
+            }}
+            .email-header {{
+              margin-bottom: 24px !important;
+            }}
+            .email-title {{
+              font-size: 20px !important;
+              margin-bottom: 20px !important;
+            }}
+            .email-poem-box {{
+              padding: 16px 8px !important;
+              margin-bottom: 24px !important;
+            }}
+            .email-poem-text {{
+              font-size: 14px !important;
+              line-height: 1.6 !important;
+            }}
+            .email-cta-box {{
+              margin-top: 24px !important;
+              margin-bottom: 16px !important;
+            }}
+            .email-footer {{
+              margin-top: 30px !important;
+              padding-top: 16px !important;
+            }}
+          }}
         </style>
       </head>
-      <body style="background-color: {bg_color}; color: {text_color}; font-family: {body_font_family}; padding: 40px 20px; margin: 0; text-align: center; -webkit-font-smoothing: antialiased;">
-        <div style="max-width: 600px; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
+      <body class="email-body" style="background-color: {bg_color}; color: {text_color}; font-family: {body_font_family}; padding: 40px 20px; margin: 0; text-align: center; -webkit-font-smoothing: antialiased;">
+        <div class="email-card" style="max-width: 680px; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
           
           <!-- Header/Logo -->
-          <div style="text-align: center; margin-bottom: 40px;">
+          <div class="email-header" style="text-align: center; margin-bottom: 40px;">
             <div style="display: inline-block; width: 60px; height: 60px; background-color: #080C0A; border: 1px solid rgba(229, 169, 59, 0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 6px; box-sizing: border-box; box-shadow: 0 0 20px rgba(229, 169, 59, 0.12); vertical-align: middle;">
               <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_b.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
             </div>
@@ -766,24 +808,26 @@ def get_campaign_html_template(campaign, sub_email):
           {image_html}
           
           <!-- Subject / Title Block -->
-          <div style="color: {title_color}; font-family: {title_font_family}; padding: {title_padding}; border-radius: {title_radius}; {title_bg_style}; margin-bottom: 30px; box-sizing: border-box;">
+          <div class="email-title" style="color: {title_color}; font-family: {title_font_family}; padding: {title_padding}; border-radius: {title_radius}; {title_bg_style}; margin-bottom: 30px; box-sizing: border-box;">
             <h2 style="color: inherit; font-size: 24px; font-weight: 900; line-height: 1.3; margin: 0; letter-spacing: -0.02em; text-align: center; font-style: italic; font-family: inherit;">
               {email_title_to_render}
             </h2>
           </div>
           
           <!-- Poem content / Body Block -->
-          <div style="color: {body_color}; font-family: {body_font_family}; padding: {body_padding}; border-radius: {body_radius}; {body_bg_style}; margin-bottom: 40px; box-sizing: border-box;">
-            <div style="color: inherit; font-size: 16px; line-height: 1.8; text-align: center; font-style: italic; opacity: 0.9; font-family: inherit; padding: 10px;">
+          <div class="email-poem-box" style="color: {body_color}; font-family: {body_font_family}; padding: {body_padding}; border-radius: {body_radius}; {body_bg_style}; margin-bottom: 40px; box-sizing: border-box;">
+            <div class="email-poem-text" style="color: inherit; font-size: 16px; line-height: 1.8; text-align: center; font-style: italic; opacity: 0.9; font-family: inherit; padding: 10px;">
               {poem_paragraphs}
             </div>
           </div>
           
           <!-- Dynamic CTA Button -->
-          {cta_html}
+          <div class="email-cta-box" style="box-sizing: border-box;">
+            {cta_html}
+          </div>
           
           <!-- Footer Block -->
-          <div style="color: {footer_color}; font-family: {footer_font_family}; padding: {footer_padding}; border-radius: {footer_radius}; {footer_bg_style}; text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; line-height: 1.6; box-sizing: border-box;">
+          <div class="email-footer" style="color: {footer_color}; font-family: {footer_font_family}; padding: {footer_padding}; border-radius: {footer_radius}; {footer_bg_style}; text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; line-height: 1.6; box-sizing: border-box;">
             {footer_html}
             <p style="margin: 0;"><a href="{unsubscribe_url}" style="color: {accent_color}; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.25); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">Desuscribirse del boletín</a></p>
             <!-- Premium Watermark Signature -->
