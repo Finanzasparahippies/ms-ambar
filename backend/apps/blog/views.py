@@ -467,10 +467,13 @@ class SESIdentityVerificationViewSet(viewsets.ModelViewSet):
         return Response("OK", status=status.HTTP_200_OK)
 
 
-def get_campaign_html_template(campaign, sub_email):
+def get_campaign_html_template(campaign, sub_email, base_url=None):
     import re
     
-    api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
+    if base_url:
+        api_url = base_url.rstrip('/')
+    else:
+        api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
     
     def clean_media_url(url, api_url_val):
         if not url:
@@ -792,10 +795,31 @@ def get_campaign_html_template(campaign, sub_email):
     def make_urls_absolute(text):
         if not text:
             return ""
+        # src replacement
         text = text.replace('src="/media/', f'src="{api_url}/media/')
         text = text.replace("src='/media/", f"src='{api_url}/media/")
+        text = text.replace('src="media/', f'src="{api_url}/media/')
+        text = text.replace("src='media/", f"src='{api_url}/media/")
         pattern = r'(src=["\'])(https?://[^/]+)/media/'
         text = re.sub(pattern, rf'\1{api_url}/media/', text)
+        
+        # href replacement
+        text = text.replace('href="/media/', f'href="{api_url}/media/')
+        text = text.replace("href='/media/", f"href='{api_url}/media/")
+        text = text.replace('href="media/', f'href="{api_url}/media/')
+        text = text.replace("href='media/", f"href='{api_url}/media/")
+        pattern_href = r'(href=["\'])(https?://[^/]+)/media/'
+        text = re.sub(pattern_href, rf'\1{api_url}/media/', text)
+        
+        # background url() replacement
+        text = text.replace("url('/media/", f"url('{api_url}/media/")
+        text = text.replace('url("/media/', f'url("{api_url}/media/')
+        text = text.replace("url(/media/", f"url({api_url}/media/")
+        text = text.replace("url('media/", f"url('{api_url}/media/")
+        text = text.replace('url("media/', f'url("{api_url}/media/')
+        text = text.replace("url(media/", f"url({api_url}/media/")
+        pattern_url = r'(url\([\'"]?)(https?://[^/)]+)/media/'
+        text = re.sub(pattern_url, rf'\1{api_url}/media/', text)
         return text
 
     poem_paragraphs = make_urls_absolute(poem_paragraphs)
@@ -968,7 +992,7 @@ def get_campaign_html_template(campaign, sub_email):
     return html_content
 
 
-def send_campaign_emails(campaign):
+def send_campaign_emails(campaign, base_url=None):
     subscribers = NewsletterSubscriber.objects.filter(is_active=True)
     if not subscribers.exists():
         campaign.is_sent = True
@@ -981,7 +1005,7 @@ def send_campaign_emails(campaign):
     campaign.save()
 
     for sub in subscribers:
-        html_content = get_campaign_html_template(campaign, sub.email)
+        html_content = get_campaign_html_template(campaign, sub.email, base_url=base_url)
         text_content = strip_tags(html_content)
         try:
             send_failover_email(campaign.subject, html_content, text_content, [sub.email])
@@ -1000,7 +1024,8 @@ class EmailCampaignViewSet(viewsets.ModelViewSet):
         if campaign.is_sent:
             return Response({"error": "Esta campaña ya ha sido enviada anteriormente."}, status=status.HTTP_400_BAD_REQUEST)
         
-        threading.Thread(target=send_campaign_emails, args=(campaign,), daemon=True).start()
+        base_url = request.build_absolute_uri('/')
+        threading.Thread(target=send_campaign_emails, args=(campaign, base_url), daemon=True).start()
         return Response({"message": "La campaña de correos ha comenzado a enviarse en segundo plano."}, status=status.HTTP_200_OK)
 
 

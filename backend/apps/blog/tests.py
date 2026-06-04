@@ -684,5 +684,43 @@ class BlogAppTests(APITestCase):
         self.assertIn("Estrofa uno linea uno<br/>Estrofa uno linea dos", html)
         self.assertIn("Estrofa dos linea uno<br/>Estrofa dos linea dos", html)
 
+    def test_campaign_media_urls_absolute_resolution(self):
+        """Verify get_campaign_html_template correctly handles relative and absolute media urls with dynamic base_url."""
+        from apps.blog.views import get_campaign_html_template
+        
+        custom_styles = {
+            'title_bg_image': '/media/templates/title-bg.jpg',
+            'body_bg_image': 'http://localhost:8000/media/uploads/body-bg.png',
+            'footer_bg_image': 'media/templates/footer-bg.gif'
+        }
+        
+        campaign = EmailCampaign.objects.create(
+            subject='Dynamic URLs test',
+            poem_text='<p>Ver <a href="/media/docs/file.pdf">documento</a> y la imagen <img src="http://oldhost:8000/media/uploads/img.png" style="background-image: url(\'/media/styles/bg.png\');">.</p>',
+            template_type='minimalist',
+            custom_styles=custom_styles
+        )
+        
+        # Call with custom base_url
+        html = get_campaign_html_template(campaign, 'fan@example.com', base_url='http://dynamic-host:3080')
+        
+        # Verify relative title_bg_image is resolved with base_url
+        self.assertIn("background-image: url('http://dynamic-host:3080/media/templates/title-bg.jpg')", html)
+        
+        # Verify absolute body_bg_image is resolved with base_url
+        self.assertIn("background-image: url('http://dynamic-host:3080/media/uploads/body-bg.png')", html)
+        
+        # Verify relative footer_bg_image without leading slash is resolved with base_url
+        self.assertIn("background-image: url('http://dynamic-host:3080/media/templates/footer-bg.gif')", html)
+        
+        # Verify rich text a href is resolved with base_url
+        self.assertIn('href="http://dynamic-host:3080/media/docs/file.pdf"', html)
+        
+        # Verify rich text img src is resolved with base_url
+        self.assertIn('src="http://dynamic-host:3080/media/uploads/img.png"', html)
+        
+        # Verify rich text background-image: url() is resolved with base_url
+        self.assertIn("background-image: url('http://dynamic-host:3080/media/styles/bg.png')", html)
+
 
 
