@@ -35,20 +35,30 @@ class EmailCampaignSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def to_internal_value(self, data):
-        # If ctas, image_style or custom_styles are strings (sent via FormData), parse them as JSON
-        mutable_data = data.copy() if hasattr(data, 'copy') else data
-        for field in ['ctas', 'image_style', 'custom_styles']:
+        """Parse JSON fields that may arrive as stringified JSON (e.g., from FormData).
+        Validates that they contain proper JSON; otherwise raises a ValidationError.
+        """
+        mutable_data = data.copy() if hasattr(data, "copy") else data
+        json_fields = ["ctas", "image_style", "custom_styles"]
+        errors = {}
+
+        for field in json_fields:
             if field in mutable_data and isinstance(mutable_data[field], str):
                 try:
                     import json
                     mutable_data[field] = json.loads(mutable_data[field])
-                except Exception:
-                    pass
+                except json.JSONDecodeError as exc:
+                    errors[field] = f"Debe ser JSON válido: {exc}"
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
         # Handle clearing images
-        if 'bg_image' in mutable_data and (mutable_data['bg_image'] == 'null' or mutable_data['bg_image'] == ''):
-            mutable_data['bg_image'] = None
-        if 'image' in mutable_data and (mutable_data['image'] == 'null' or mutable_data['image'] == ''):
-            mutable_data['image'] = None
+        if "bg_image" in mutable_data and mutable_data["bg_image"] in ("null", ""):
+            mutable_data["bg_image"] = None
+        if "image" in mutable_data and mutable_data["image"] in ("null", ""):
+            mutable_data["image"] = None
+
         return super().to_internal_value(mutable_data)
 
 
