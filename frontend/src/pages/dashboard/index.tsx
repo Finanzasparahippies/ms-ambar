@@ -572,7 +572,7 @@ export default function AdminDashboard() {
           campaignEditorRef.current.innerHTML = draft.campPoemText || '';
         }
       }, 100);
-      
+
       setHasDraft(false);
     } catch (e) {
       // ignore
@@ -808,12 +808,12 @@ export default function AdminDashboard() {
         router.push('/login?redirect=/dashboard');
       } else {
         setCampErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar la campaña.');
-      }
+      };
     }
     finally {
       setCampLoading(false);
     }
-  };
+
 
   const handleCampaignDelete = async (id: number, subject: string) => {
     if (!confirm(`¿Eliminar permanentemente la campaña "${subject}"?`)) return;
@@ -3613,8 +3613,8 @@ export default function AdminDashboard() {
                               setEditorActiveTab('title');
                             }}
                             className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${editorActiveTab === 'title'
-                                ? 'bg-amber-honey text-[#030303] shadow-md'
-                                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                              ? 'bg-amber-honey text-[#030303] shadow-md'
+                              : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
                               }`}
                           >
                             Título / Cabecera
@@ -3631,8 +3631,8 @@ export default function AdminDashboard() {
                               setEditorActiveTab('body');
                             }}
                             className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${editorActiveTab === 'body'
-                                ? 'bg-amber-honey text-[#030303] shadow-md'
-                                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                              ? 'bg-amber-honey text-[#030303] shadow-md'
+                              : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
                               }`}
                           >
                             Cuerpo del Correo
@@ -3649,8 +3649,8 @@ export default function AdminDashboard() {
                               setEditorActiveTab('footer');
                             }}
                             className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${editorActiveTab === 'footer'
-                                ? 'bg-amber-honey text-[#030303] shadow-md'
-                                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                              ? 'bg-amber-honey text-[#030303] shadow-md'
+                              : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
                               }`}
                           >
                             Pie de Página (Footer)
@@ -3907,11 +3907,11 @@ export default function AdminDashboard() {
                                   { id: 'montserrat', name: 'Montserrat', css: 'font-sans', style: { fontFamily: "'Montserrat', sans-serif" }, desc: 'Minimalista Moderno' },
                                   { id: 'pinyon', name: 'Pinyon Script', css: 'font-cursive', style: { fontFamily: "'Pinyon Script', cursive" }, desc: 'Caligrafía Íntima' },
                                 ].map(f => {
-                                  const currentActiveFont = 
+                                  const currentActiveFont =
                                     editorActiveTab === 'title' ? campTitleFontFamily :
-                                    editorActiveTab === 'footer' ? campFooterFontFamily :
-                                    campFontFamily;
-                                  
+                                      editorActiveTab === 'footer' ? campFooterFontFamily :
+                                        campFontFamily;
+
                                   const handleFontSelect = () => {
                                     if (editorActiveTab === 'title') setCampTitleFontFamily(f.id);
                                     else if (editorActiveTab === 'footer') setCampFooterFontFamily(f.id);
@@ -5217,7 +5217,7 @@ export default function AdminDashboard() {
                           const styles = typeof previewCampaign.custom_styles === 'string'
                             ? JSON.parse(previewCampaign.custom_styles)
                             : (previewCampaign.custom_styles || {});
-                          
+
                           const titleBgStyle: any = styles.title_bg_color && styles.title_bg_color !== 'transparent'
                             ? { backgroundColor: styles.title_bg_color }
                             : {};
@@ -5362,7 +5362,7 @@ export default function AdminDashboard() {
                           const styles = typeof previewCampaign.custom_styles === 'string'
                             ? JSON.parse(previewCampaign.custom_styles)
                             : (previewCampaign.custom_styles || {});
-                          
+
                           const footerBgStyle: any = styles.footer_bg_color && styles.footer_bg_color !== 'transparent'
                             ? { backgroundColor: styles.footer_bg_color }
                             : {};
