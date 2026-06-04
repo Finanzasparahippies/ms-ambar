@@ -1,0 +1,18 @@
+2026-06-03 20:11:40,052 [INFO] 🚀 Starting Ms Ambar Image Optimization Process
+2026-06-03 20:11:40,052 [INFO] Input Directory:  frontend/public/Images
+2026-06-03 20:11:40,053 [INFO] Output Directory: frontend/public/Images
+2026-06-03 20:11:40,053 [INFO] In-place mode:    True
+2026-06-03 20:11:40,053 [INFO] Convert to WebP:  False
+2026-06-03 20:11:40,053 [INFO] Quality target:   75
+2026-06-03 20:11:40,053 [INFO] Max dimension:    1920px
+2026-06-03 20:11:40,077 [INFO] ⚙️ Optimizing: Inicio_Hero.jpg (14.12 MB)
+2026-06-03 20:11:40,822 [INFO]    Resized from 6000x4000 to 1920x1280
+2026-06-03 20:11:40,838 [INFO]    Saved: 14456.9KB → 90.7KB (-14366.2KB / -99.4%)
+2026-06-03 20:11:40,838 [INFO] 📊 ===== IMAGE OPTIMIZATION REPORT =====
+2026-06-03 20:11:40,838 [INFO] Files Processed:   1
+2026-06-03 20:11:40,839 [INFO] Files Skipped:     0
+2026-06-03 20:11:40,839 [INFO] Original Size:     14.12 MB
+2026-06-03 20:11:40,839 [INFO] Optimized Size:    0.09 MB
+2026-06-03 20:11:40,839 [INFO] Disk Space Saved:  14.03 MB (99.4% reduction)
+2026-06-03 20:11:40,839 [INFO] Log saved at:      logs/optimize_20260603_201140.log
+2026-06-03 20:11:40,839 [INFO] Manifest updated:  /home/saul/Documentos/Proyectos/ms-ambar/scripts/.optimized_manifest.json

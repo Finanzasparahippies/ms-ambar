@@ -943,6 +943,89 @@ const Home = () => {
         </div>
       </section>
 
+      {/* ─── BIOGRAPHY SECTION ─── */}
+      <section className="py-32 relative overflow-hidden">
+        {/* Subtle decorative glowing orb */}
+        <div className="absolute top-1/2 left-[-10%] w-[35%] h-[35%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="max-w-[1600px] mx-auto px-6 md:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+            
+            {/* Left Column: Image with premium frame and drop-shadow */}
+            <motion.div 
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8 }}
+              className="lg:col-span-5 relative group"
+            >
+              {/* Golden neon glow frame behind image */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-amber-honey/20 to-transparent rounded-[3rem] blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none" />
+              
+              <div className="relative rounded-[3rem] overflow-hidden border border-white/10 p-3 bg-white/[0.02] backdrop-blur-md transition-all duration-500 group-hover:border-amber-honey/30 shadow-2xl">
+                <div className="relative aspect-[3/4] rounded-[2.5rem] overflow-hidden">
+                  <img 
+                    src="/Images/Inicio_Biografia.jpg" 
+                    alt="Ms. Ámbar" 
+                    className="object-cover w-full h-full grayscale group-hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                  />
+                  {/* Decorative dark overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#06070b]/60 via-transparent to-transparent opacity-60" />
+                </div>
+              </div>
+              
+              {/* Corner decorative golden lines style (nectarlabs design) */}
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-tl-[2rem]" />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-br-[2rem]" />
+            </motion.div>
+            
+            {/* Right Column: Typography & Story */}
+            <motion.div 
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="lg:col-span-7 space-y-8"
+            >
+              <div className="space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
+                  <Sparkles size={10} className="animate-pulse" /> La Cantautora
+                </span>
+                <h3 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-[#F4F6F0]">
+                  Ms. Ámbar
+                </h3>
+                <div className="w-16 h-[2px] bg-gradient-to-r from-amber-honey to-transparent" />
+              </div>
+              
+              <div className="space-y-6 text-[#F4F6F0]/85 text-sm md:text-base font-medium leading-relaxed font-sans">
+                <p>
+                  Ms. Ámbar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como <span className="text-[#F4F6F0] font-bold">R&B, soul, regional mexicano y bachata</span>. Su carrera profesional comenzó en 2017 con la banda <span className="text-white/90">"Moonset"</span>, pero consolidó su relevancia al unirse a la gira del rapero mexicano <span className="text-amber-honey font-bold">Charles Ans</span> en 2019, actuando como telonera en grandes escenarios como el <span className="text-white/90">Auditorio Nacional</span>.
+                </p>
+                <p>
+                  Su primer álbum formal, <span className="text-amber-honey font-semibold font-serif italic text-base">"14•28"</span>, fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas, como el 14 de junio, día en que falleció su padre cuando ella tenía cinco años. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.
+                </p>
+                <p>
+                  Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del <span className="text-[#F4F6F0] font-bold">Festival de Viña del Mar 2025</span>, con la canción <span className="text-amber-honey font-bold">"No te voy a llorar"</span>, consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.
+                </p>
+              </div>
+              
+              <div className="pt-4 flex flex-wrap gap-6 items-center">
+                <Link 
+                  href="/tour" 
+                  className="px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-white/5 border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 hover:text-amber-honey transition-all flex items-center gap-2 text-[#F4F6F0]"
+                >
+                  Ver Fechas del Tour <ArrowRight size={12} />
+                </Link>
+                <span className="text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 font-bold">
+                  Hermosillo • México • Viña del Mar
+                </span>
+              </div>
+            </motion.div>
+
+          </div>
+        </div>
+      </section>
+
       {/* ─── LIVE MUSIC RELEASES SHOWCASE ─── */}
       <section className="py-32 border-y border-white/10 bg-white/[0.02] relative">
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
