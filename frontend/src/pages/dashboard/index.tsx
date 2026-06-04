@@ -5069,7 +5069,7 @@ export default function AdminDashboard() {
                             textTransform: 'uppercase',
                             letterSpacing: '2px',
                             margin: '2px 0 0 0'
-                          }}>Ambar te escribe • Poesía</p>
+                          }}>Ambar te escribe • Club Exclusivo</p>
                         </div>
 
                         {/* Optional cover image */}

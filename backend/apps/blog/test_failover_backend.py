@@ -28,7 +28,9 @@ class FailoverEmailBackendTests(SimpleTestCase):
             BREVO_EMAIL_HOST_USER='brevo_user',
             BREVO_EMAIL_HOST_PASSWORD='brevo_password',
             SES_EMAIL_HOST_USER='ses_user',
-            SES_EMAIL_HOST_PASSWORD='ses_password'
+            SES_EMAIL_HOST_PASSWORD='ses_password',
+            BREVO_DEFAULT_FROM_EMAIL='Ms Ambar <hola@msambar.com>',
+            SES_DEFAULT_FROM_EMAIL='Ms Ambar <hola@msambar.com>'
         ):
             sent_count = backend.send_messages([msg])
             
@@ -67,7 +69,9 @@ class FailoverEmailBackendTests(SimpleTestCase):
             BREVO_EMAIL_HOST_USER='brevo_user',
             BREVO_EMAIL_HOST_PASSWORD='brevo_password',
             SES_EMAIL_HOST_USER='ses_user',
-            SES_EMAIL_HOST_PASSWORD='ses_password'
+            SES_EMAIL_HOST_PASSWORD='ses_password',
+            BREVO_DEFAULT_FROM_EMAIL='Ms Ambar <hola@msambar.com>',
+            SES_DEFAULT_FROM_EMAIL='Ms Ambar <hola@msambar.com>'
         ):
             sent_count = backend.send_messages([msg])
             
