@@ -231,9 +231,11 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
         import io
         import datetime
         from django.utils.dateparse import parse_datetime
+        from django.db import transaction
         
         file = request.FILES.get('file')
         if not file:
+            logger.warning("[import_csv] No se proporcionó ningún archivo CSV.")
             return Response({"error": "No se proporcionó ningún archivo CSV."}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
@@ -252,11 +254,14 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
             csv_file.seek(0)
             reader = csv.DictReader(csv_file, delimiter=delimiter)
         except Exception as e:
+            logger.error(f"[import_csv] Error al leer el archivo CSV: {str(e)}")
             return Response({"error": f"Error al leer el archivo: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
-        imported_count = 0
-        errors = []
+        # Parse all rows in memory first to optimize DB queries
+        email_to_row = {}
+        row_count = 0
         for row in reader:
+            row_count += 1
             # Clean keys by stripping whitespace, ignoring None keys, and preventing strip errors on lists/None values
             row = { k.strip(): (v.strip() if isinstance(v, str) else '') for k, v in row.items() if k }
             
@@ -270,7 +275,38 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
                 continue
                 
             email = email.strip()
-            
+            # If the email is empty after stripping, skip
+            if not email:
+                continue
+            email_to_row[email] = row
+
+        total_unique_emails = len(email_to_row)
+        logger.info(f"[import_csv] Procesando archivo con {row_count} filas. Encontrados {total_unique_emails} correos únicos.")
+
+        if total_unique_emails == 0:
+            logger.info("[import_csv] No se encontraron correos válidos para importar.")
+            return Response({
+                "message": "Se procesaron 0 suscriptores con éxito.",
+                "errors": []
+            }, status=status.HTTP_200_OK)
+
+        # Fetch existing subscribers in one single query
+        emails_list = list(email_to_row.keys())
+        try:
+            existing_subscribers = {
+                s.email: s for s in NewsletterSubscriber.objects.filter(email__in=emails_list)
+            }
+            logger.info(f"[import_csv] Encontrados {len(existing_subscribers)} suscriptores existentes en base de datos.")
+        except Exception as e:
+            logger.error(f"[import_csv] Error al consultar suscriptores existentes: {str(e)}")
+            return Response({"error": f"Error de base de datos al consultar suscriptores: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        subscribers_to_create = []
+        subscribers_to_update = []
+        errors = []
+        imported_count = 0
+
+        for email, row in email_to_row.items():
             status_val = row.get('status', '').lower().strip()
             is_active = True
             if status_val in ['inactive', 'unsubscribed', 'unactive', 'false', '0']:
@@ -297,24 +333,11 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
                             break
                         except Exception:
                             continue
-            
+
             try:
-                defaults = {
-                    'is_active': is_active,
-                    'name': name_val,
-                    'subscriber_id': subscriber_id_val,
-                    'api_subscription_id': api_subscription_id_val,
-                    'tags': tags_val,
-                    'is_premium': is_premium_val,
-                }
-                if created_at_val:
-                    defaults['created_at'] = created_at_val
-                    
-                subscriber, created = NewsletterSubscriber.objects.get_or_create(
-                    email=email,
-                    defaults=defaults
-                )
-                if not created:
+                if email in existing_subscribers:
+                    # Update existing model instance in memory
+                    subscriber = existing_subscribers[email]
                     subscriber.is_active = is_active
                     if name_val:
                         subscriber.name = name_val
@@ -327,11 +350,47 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
                     subscriber.is_premium = is_premium_val
                     if created_at_val:
                         subscriber.created_at = created_at_val
-                    subscriber.save()
+                    subscribers_to_update.append(subscriber)
+                else:
+                    # Create new model instance in memory
+                    kwargs = {
+                        'email': email,
+                        'is_active': is_active,
+                        'name': name_val,
+                        'subscriber_id': subscriber_id_val,
+                        'api_subscription_id': api_subscription_id_val,
+                        'tags': tags_val,
+                        'is_premium': is_premium_val,
+                    }
+                    if created_at_val:
+                        kwargs['created_at'] = created_at_val
+                    
+                    subscriber = NewsletterSubscriber(**kwargs)
+                    subscribers_to_create.append(subscriber)
+                
                 imported_count += 1
             except Exception as e:
-                errors.append(f"Error con {email}: {str(e)}")
-                
+                err_msg = f"Error al parsear datos de {email}: {str(e)}"
+                errors.append(err_msg)
+                logger.error(f"[import_csv] {err_msg}")
+
+        # Perform atomic bulk database transactions
+        try:
+            with transaction.atomic():
+                if subscribers_to_create:
+                    logger.info(f"[import_csv] Guardando en lote (bulk_create) {len(subscribers_to_create)} nuevos suscriptores...")
+                    NewsletterSubscriber.objects.bulk_create(subscribers_to_create)
+                if subscribers_to_update:
+                    logger.info(f"[import_csv] Actualizando en lote (bulk_update) {len(subscribers_to_update)} suscriptores existentes...")
+                    fields_to_update = ['is_active', 'name', 'subscriber_id', 'api_subscription_id', 'tags', 'is_premium', 'created_at']
+                    NewsletterSubscriber.objects.bulk_update(subscribers_to_update, fields_to_update)
+            
+            logger.info(f"[import_csv] Importación completada con éxito. Creados: {len(subscribers_to_create)}, Actualizados: {len(subscribers_to_update)}, Errores: {len(errors)}")
+        except Exception as e:
+            err_msg = f"Error al ejecutar operaciones bulk en base de datos: {str(e)}"
+            logger.error(f"[import_csv] {err_msg}")
+            return Response({"error": err_msg}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         return Response({
             "message": f"Se procesaron {imported_count} suscriptores con éxito.",
             "errors": errors
