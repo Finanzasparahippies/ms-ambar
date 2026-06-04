@@ -6,9 +6,19 @@ from .models import Event, Theater, Ticket, Seat
 from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer
 
 class EventViewSet(viewsets.ModelViewSet):
-    queryset = Event.objects.filter(is_active=True)
+    queryset = Event.objects.all()
     serializer_class = EventSerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user and user.is_authenticated and user.is_staff:
+            return Event.objects.all()
+        return Event.objects.filter(is_active=True)
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve', 'seats']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
     @action(detail=True, methods=['get'])
     def seats(self, request, pk=None):

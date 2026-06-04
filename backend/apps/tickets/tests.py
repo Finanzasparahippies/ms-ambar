@@ -73,6 +73,60 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['title'], "Sinfonía Ámbar 2026")
 
+    def test_event_list_staff_sees_all(self):
+        """Verify staff/admin can list all events including inactive ones."""
+        # Create an inactive event
+        inactive_event = Event.objects.create(
+            title="Concierto Cancelado",
+            artist="MS AMBAR Ensemble",
+            date=timezone.now() + timezone.timedelta(days=15),
+            theater=self.theater,
+            is_active=False
+        )
+        url = reverse('event-list')
+        
+        # Non-staff user / Anonymous
+        response_anon = self.client.get(url)
+        self.assertEqual(response_anon.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response_anon.data), 1)
+        
+        # Staff/Admin user
+        self.client.force_authenticate(user=self.admin_user)
+        response_admin = self.client.get(url)
+        self.assertEqual(response_admin.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response_admin.data), 2)
+        titles = [e['title'] for e in response_admin.data]
+        self.assertIn("Concierto Cancelado", titles)
+        self.assertIn("Sinfonía Ámbar 2026", titles)
+
+    def test_event_creation_restricted(self):
+        """Verify normal users cannot create events."""
+        url = reverse('event-list')
+        data = {
+            'title': 'Intento Fallido',
+            'artist': 'Hacker',
+            'date': (timezone.now() + timezone.timedelta(days=5)).isoformat(),
+            'event_type': 'concert'
+        }
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_event_creation_admin_success(self):
+        """Verify admin users can create events successfully."""
+        url = reverse('event-list')
+        data = {
+            'title': 'Nuevo Evento Admin',
+            'artist': 'MS AMBAR',
+            'date': (timezone.now() + timezone.timedelta(days=5)).isoformat(),
+            'event_type': 'concert',
+            'price_multiplier': '1.50'
+        }
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Event.objects.filter(title='Nuevo Evento Admin').count(), 1)
+
     def test_event_seats_availability(self):
         """Verify the event/seats endpoint lists seats and marks occupied seats correctly."""
         # Occupy one seat

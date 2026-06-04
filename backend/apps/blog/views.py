@@ -487,6 +487,39 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
             return f"{api_url_val}/media/{parts[1]}"
         return url
 
+    def get_hover_color(hex_str):
+        if not hex_str:
+            return "#d97706"
+        clean_hex = hex_str.lstrip('#')
+        if len(clean_hex) == 3:
+            clean_hex = ''.join(c * 2 for c in clean_hex)
+        if len(clean_hex) != 6:
+            return hex_str
+        try:
+            r = int(clean_hex[0:2], 16)
+            g = int(clean_hex[2:4], 16)
+            b = int(clean_hex[4:6], 16)
+        except ValueError:
+            return hex_str
+        
+        # Relative luminance
+        luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        factor = 0.15
+        
+        if luminance > 0.5:
+            # Light color -> darken
+            new_r = max(0, int(r * (1 - factor)))
+            new_g = max(0, int(g * (1 - factor)))
+            new_b = max(0, int(b * (1 - factor)))
+        else:
+            # Dark color -> lighten
+            new_r = min(255, int(r + (255 - r) * factor))
+            new_g = min(255, int(g + (255 - g) * factor))
+            new_b = min(255, int(b + (255 - b) * factor))
+            
+        return f"#{new_r:02x}{new_g:02x}{new_b:02x}"
+
+    hover_css_rules = []
     style = campaign.template_type
     
     # Defaults (minimalist Carbon style)
@@ -711,7 +744,7 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
     cta_html = ""
     if campaign.ctas:
         cta_buttons = []
-        for cta in campaign.ctas:
+        for cidx, cta in enumerate(campaign.ctas):
             btn_text = cta.get('text', '')
             btn_link = cta.get('link', '') or '#'
             btn_bg = cta.get('bg_color') or accent_color
@@ -751,8 +784,11 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
             btn_margin = '10px auto' if cta.get('is_full_width', False) else '5px 10px'
             
             if btn_text:
+                hover_bg = get_hover_color(btn_bg)
+                btn_class = f"email-cta-btn-{cidx}"
+                hover_css_rules.append(f".{btn_class}:hover {{ background-color: {hover_bg} !important; }}")
                 cta_buttons.append(f"""
-                <a href="{btn_link}" style="background-color: {btn_bg}; color: {btn_color}; padding: {btn_padding}; border-radius: {btn_radius}; font-size: 13px; font-weight: bold; text-decoration: none; display: {btn_display}; margin: {btn_margin}; letter-spacing: 1px; text-transform: uppercase; box-shadow: {btn_shadow}; border: {btn_border}; text-align: center;">
+                <a href="{btn_link}" class="{btn_class}" style="background-color: {btn_bg}; color: {btn_color}; padding: {btn_padding}; border-radius: {btn_radius}; font-size: 13px; font-weight: bold; text-decoration: none; display: {btn_display}; margin: {btn_margin}; letter-spacing: 1px; text-transform: uppercase; box-shadow: {btn_shadow}; border: {btn_border}; text-align: center; transition: background-color 0.2s ease-in-out;">
                     {btn_text}
                 </a>
                 """)
@@ -768,9 +804,11 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
         cta_link = campaign.cta_link or '#'
         cta_margin_top = custom_styles.get('cta_margin_top', '35px')
         cta_margin_bottom = custom_styles.get('cta_margin_bottom', '25px')
+        hover_bg = get_hover_color(accent_color)
+        hover_css_rules.append(f".email-cta-btn-single:hover {{ background-color: {hover_bg} !important; }}")
         cta_html = f"""
         <div class="email-cta-box" style="text-align: {cta_alignment_desktop}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
-            <a href="{cta_link}" style="background-color: {accent_color}; color: #080C0A; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+            <a href="{cta_link}" class="email-cta-btn-single" style="background-color: {accent_color}; color: #080C0A; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2); transition: background-color 0.2s ease-in-out;">
                 {campaign.cta_text}
             </a>
         </div>
@@ -835,6 +873,7 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
     else:
         footer_html = "<p style='margin: 0 0 10px 0; font-weight: 500;'>Recibiste este correo porque eres parte del club de Ms Ambar.</p>"
     footer_html = make_urls_absolute(footer_html)
+    hover_rules_css = "\n".join(hover_css_rules)
 
     html_content = f"""
     <html>
@@ -843,6 +882,9 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
           {font_import}
+          
+          /* Hover effects */
+          {hover_rules_css}
           
           /* Responsive email layout styling */
           @media only screen and (max-width: 768px) {{
