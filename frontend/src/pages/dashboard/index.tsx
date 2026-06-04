@@ -803,7 +803,13 @@ export default function AdminDashboard() {
       fetchDashboardData();
     } catch (err: any) {
       console.error(err);
-      setCampErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar la campaña.');
+      if (err.response?.status === 401) {
+        // Token invalid or expired – redirect to login
+        router.push('/login?redirect=/dashboard');
+      } else {
+        setCampErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar la campaña.');
+      }
+    }
     } finally {
       setCampLoading(false);
     }

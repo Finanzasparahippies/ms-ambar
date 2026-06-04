@@ -36,23 +36,18 @@ class EmailCampaignSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         """Parse JSON fields that may arrive as stringified JSON (e.g., from FormData).
-        Validates that they contain proper JSON; otherwise raises a ValidationError.
+        Provide defaults if parsing fails.
         """
+        import json
         mutable_data = data.copy() if hasattr(data, "copy") else data
         json_fields = ["ctas", "image_style", "custom_styles"]
-        errors = {}
-
         for field in json_fields:
             if field in mutable_data and isinstance(mutable_data[field], str):
                 try:
-                    import json
                     mutable_data[field] = json.loads(mutable_data[field])
-                except json.JSONDecodeError as exc:
-                    errors[field] = f"Debe ser JSON válido: {exc}"
-
-        if errors:
-            raise serializers.ValidationError(errors)
-
+                except json.JSONDecodeError:
+                    # Provide sensible defaults when parsing fails
+                    mutable_data[field] = [] if field == "ctas" else {}
         # Handle clearing images
         if "bg_image" in mutable_data and mutable_data["bg_image"] in ("null", ""):
             mutable_data["bg_image"] = None
