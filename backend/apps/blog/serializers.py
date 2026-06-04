@@ -39,15 +39,26 @@ class EmailCampaignSerializer(serializers.ModelSerializer):
         Provide defaults if parsing fails.
         """
         import json
-        mutable_data = data.copy() if hasattr(data, "copy") else data
+        from django.http import QueryDict
+
+        if isinstance(data, QueryDict):
+            mutable_data = data.dict()
+        else:
+            mutable_data = data.copy() if hasattr(data, "copy") else dict(data)
+
         json_fields = ["ctas", "image_style", "custom_styles"]
         for field in json_fields:
-            if field in mutable_data and isinstance(mutable_data[field], str):
-                try:
-                    mutable_data[field] = json.loads(mutable_data[field])
-                except json.JSONDecodeError:
-                    # Provide sensible defaults when parsing fails
+            if field in mutable_data:
+                val = mutable_data[field]
+                if isinstance(val, str):
+                    try:
+                        mutable_data[field] = json.loads(val)
+                    except json.JSONDecodeError:
+                        # Provide sensible defaults when parsing fails
+                        mutable_data[field] = [] if field == "ctas" else {}
+                elif val is None or val == "":
                     mutable_data[field] = [] if field == "ctas" else {}
+
         # Handle clearing images
         if "bg_image" in mutable_data and mutable_data["bg_image"] in ("null", ""):
             mutable_data["bg_image"] = None

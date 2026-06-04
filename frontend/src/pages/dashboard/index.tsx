@@ -808,14 +808,13 @@ export default function AdminDashboard() {
         router.push('/login?redirect=/dashboard');
       } else {
         setCampErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar la campaña.');
-      };
-    }
-    finally {
+      }
+    } finally {
       setCampLoading(false);
     }
+  };
 
-
-    const handleCampaignDelete = async (id: number, subject: string) => {
+  const handleCampaignDelete = async (id: number, subject: string) => {
       if (!confirm(`¿Eliminar permanentemente la campaña "${subject}"?`)) return;
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
@@ -5577,4 +5576,3 @@ export default function AdminDashboard() {
       <Link href={href}>{BtnContent}</Link>
     );
   }
-}
