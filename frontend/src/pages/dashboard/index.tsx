@@ -126,6 +126,7 @@ export default function AdminDashboard() {
   const [campBodyBgImage, setCampBodyBgImage] = useState('');
   const [campBodyPadding, setCampBodyPadding] = useState('0px');
   const [campBodyRadius, setCampBodyRadius] = useState('0px');
+  const [campBodyAlignment, setCampBodyAlignment] = useState('center');
 
   const [campFooterTextColor, setCampFooterTextColor] = useState('');
   const [campFooterBgColor, setCampFooterBgColor] = useState('transparent');
@@ -475,6 +476,9 @@ export default function AdminDashboard() {
   // Draft Campaign Auto-Saver System
   useEffect(() => {
     if (isCampaignModalOpen && !isDraftPending.current) {
+      const cleanImagePreview = campImagePreview && campImagePreview.startsWith('data:') ? null : campImagePreview;
+      const cleanBgImagePreview = campBgImagePreview && campBgImagePreview.startsWith('data:') ? null : campBgImagePreview;
+
       const draft = {
         campId,
         campSubject,
@@ -513,10 +517,15 @@ export default function AdminDashboard() {
         campBgOpacity,
         campBgSaturation,
         campBgPosition,
-        campImagePreview,
-        campBgImagePreview
+        campBodyAlignment,
+        campImagePreview: cleanImagePreview,
+        campBgImagePreview: cleanBgImagePreview
       };
-      localStorage.setItem('ms_ambar_campaign_draft', JSON.stringify(draft));
+      try {
+        localStorage.setItem('ms_ambar_campaign_draft', JSON.stringify(draft));
+      } catch (e) {
+        console.warn('Failed to save campaign draft to localStorage:', e);
+      }
     }
   }, [
     isCampaignModalOpen,
@@ -558,7 +567,8 @@ export default function AdminDashboard() {
     campBgSaturation,
     campBgPosition,
     campImagePreview,
-    campBgImagePreview
+    campBgImagePreview,
+    campBodyAlignment
   ]);
 
   const restoreDraft = () => {
@@ -605,6 +615,7 @@ export default function AdminDashboard() {
       setCampBgPosition(draft.campBgPosition ?? 'center');
       setCampImagePreview(draft.campImagePreview ?? null);
       setCampBgImagePreview(draft.campBgImagePreview ?? null);
+      setCampBodyAlignment(draft.campBodyAlignment ?? 'center');
 
       setTimeout(() => {
         if (campaignEditorRef.current) {
@@ -670,6 +681,7 @@ export default function AdminDashboard() {
     setCampCtaAlignment('center');
     setCampCtaMarginTop('35px');
     setCampCtaMarginBottom('25px');
+    setCampBodyAlignment('center');
     setEditorActiveTab('body');
     setCampEmailTitle('');
     setCampFooterText('');
@@ -763,6 +775,7 @@ export default function AdminDashboard() {
     setCampBodyBgImage(styles.body_bg_image || '');
     setCampBodyPadding(styles.body_padding || '0px');
     setCampBodyRadius(styles.body_radius || '0px');
+    setCampBodyAlignment(styles.body_alignment || 'center');
     setCampFooterTextColor(styles.footer_color || '');
     setCampFooterBgColor(styles.footer_bg_color || 'transparent');
     setCampFooterBgImage(styles.footer_bg_image || '');
@@ -865,6 +878,7 @@ export default function AdminDashboard() {
       body_bg_image: campBodyBgImage,
       body_padding: campBodyPadding,
       body_radius: campBodyRadius,
+      body_alignment: campBodyAlignment,
       footer_color: campFooterTextColor,
       footer_bg_color: campFooterBgColor,
       footer_bg_image: campFooterBgImage,
@@ -974,12 +988,21 @@ export default function AdminDashboard() {
 
   const handleUseTemplateAsCover = async (imageUrl: string) => {
     try {
-      const response = await fetch(imageUrl);
+      let targetUrl = imageUrl;
+      if (imageUrl.startsWith('http')) {
+        try {
+          const parsedUrl = new URL(imageUrl);
+          targetUrl = parsedUrl.pathname;
+        } catch (e) {
+          // ignore
+        }
+      }
+      const response = await fetch(targetUrl);
       const blob = await response.blob();
-      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      const filename = targetUrl.substring(targetUrl.lastIndexOf('/') + 1);
       const file = new File([blob], filename, { type: blob.type });
       setCampImageFile(file);
-      setCampImagePreview(imageUrl);
+      setCampImagePreview(targetUrl);
     } catch (err) {
       console.error('Error setting cover image from template:', err);
     }
@@ -987,12 +1010,21 @@ export default function AdminDashboard() {
 
   const handleUseTemplateAsBg = async (imageUrl: string) => {
     try {
-      const response = await fetch(imageUrl);
+      let targetUrl = imageUrl;
+      if (imageUrl.startsWith('http')) {
+        try {
+          const parsedUrl = new URL(imageUrl);
+          targetUrl = parsedUrl.pathname;
+        } catch (e) {
+          // ignore
+        }
+      }
+      const response = await fetch(targetUrl);
       const blob = await response.blob();
-      const filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+      const filename = targetUrl.substring(targetUrl.lastIndexOf('/') + 1);
       const file = new File([blob], filename, { type: blob.type });
       setCampBgImageFile(file);
-      setCampBgImagePreview(imageUrl);
+      setCampBgImagePreview(targetUrl);
     } catch (err) {
       console.error('Error setting background image from template:', err);
     }
@@ -4318,6 +4350,22 @@ export default function AdminDashboard() {
                                 </div>
                               </div>
 
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Alineación del Poema</label>
+                                  <select
+                                    value={campBodyAlignment}
+                                    onChange={e => setCampBodyAlignment(e.target.value)}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    <option value="center">Centrado (Por Defecto)</option>
+                                    <option value="left">Izquierda (Bloque Centrado)</option>
+                                    <option value="justify">Justificado (Bloque Centrado)</option>
+                                    <option value="right">Derecha (Bloque Centrado)</option>
+                                  </select>
+                                </div>
+                              </div>
+
                               <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                   <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Imagen de Fondo del Poema</label>
@@ -5027,28 +5075,34 @@ export default function AdminDashboard() {
                           </h4>
 
                           {/* Poem content HTML */}
-                          <div
-                            className="text-xs leading-relaxed text-center italic"
-                            style={{
-                              color: campBodyTextColor || (
-                                campTemplateType === 'moss' ? '#f5fbf7' :
-                                  campTemplateType === 'cosmic' ? '#ffffff' :
-                                    campTemplateType === 'glow' ? '#fffdfa' :
-                                      campTemplateType === 'mist' ? '#f3f4f6' : '#ffffff'
-                              ),
-                              backgroundColor: campBodyBgColor,
-                              backgroundImage: campBodyBgImage ? `url(${campBodyBgImage})` : undefined,
-                              backgroundSize: 'cover',
-                              backgroundPosition: 'center',
-                              padding: campBodyPadding,
-                              borderRadius: campBodyRadius,
-                              opacity: 0.9,
-                              fontFamily: resolveFontStack(campFontFamily),
-                              boxSizing: 'border-box',
-                              marginBottom: '20px'
-                            }}
-                            dangerouslySetInnerHTML={{ __html: campPoemText || '<i>El cuerpo del poema aparecerá aquí...</i>' }}
-                          />
+                          <div style={{ textAlign: 'center' }}>
+                            <div
+                              className="text-xs leading-relaxed italic"
+                              style={{
+                                color: campBodyTextColor || (
+                                  campTemplateType === 'moss' ? '#f5fbf7' :
+                                    campTemplateType === 'cosmic' ? '#ffffff' :
+                                      campTemplateType === 'glow' ? '#fffdfa' :
+                                        campTemplateType === 'mist' ? '#f3f4f6' : '#ffffff'
+                                ),
+                                backgroundColor: campBodyBgColor,
+                                backgroundImage: campBodyBgImage ? `url(${campBodyBgImage})` : undefined,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                padding: campBodyPadding,
+                                borderRadius: campBodyRadius,
+                                opacity: 0.9,
+                                fontFamily: resolveFontStack(campFontFamily),
+                                boxSizing: 'border-box',
+                                marginBottom: '20px',
+                                textAlign: campBodyAlignment as any,
+                                display: 'inline-block',
+                                maxWidth: '90%',
+                                wordBreak: 'break-word'
+                              }}
+                              dangerouslySetInnerHTML={{ __html: campPoemText || '<i>El cuerpo del poema aparecerá aquí...</i>' }}
+                            />
+                          </div>
 
                           {/* CTAs list */}
                           {campCtas && campCtas.length > 0 ? (

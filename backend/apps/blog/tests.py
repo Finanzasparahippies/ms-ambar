@@ -466,6 +466,66 @@ class BlogAppTests(APITestCase):
         # Should apply the custom font stack to the body
         self.assertIn("font-family: 'Pinyon Script', cursive;", html)
 
+    def test_campaign_responsive_rendering(self):
+        """Verify get_campaign_html_template applies responsive styling (media queries and classes)."""
+        from apps.blog.views import get_campaign_html_template
+        
+        custom_styles = {
+            'card_max_width_desktop': '760px',
+            'card_padding_desktop': '48px',
+            'card_padding_tablet': '32px',
+            'card_padding_mobile': '20px',
+            'title_font_size_desktop': '30px',
+            'title_font_size_tablet': '24px',
+            'title_font_size_mobile': '20px',
+            'body_font_size_desktop': '18px',
+            'body_font_size_tablet': '16px',
+            'body_font_size_mobile': '15px',
+            'body_alignment_desktop': 'justify',
+            'body_alignment_tablet': 'left',
+            'body_alignment_mobile': 'center',
+            'image_width_tablet': '80%',
+            'image_width_mobile': '100%',
+            'image_align_tablet': 'left',
+            'image_align_mobile': 'center',
+            'cta_alignment_tablet': 'left',
+            'cta_alignment_mobile': 'center'
+        }
+        
+        campaign = EmailCampaign.objects.create(
+            subject='Responsive Test',
+            poem_text='Línea de poema...',
+            template_type='minimalist',
+            custom_styles=custom_styles
+        )
+        
+        html = get_campaign_html_template(campaign, 'fan@example.com')
+        
+        # Verify desktop inline styles
+        self.assertIn('max-width: 760px', html)
+        self.assertIn('padding: 48px', html)
+        self.assertIn('font-size: 30px', html)
+        self.assertIn('font-size: 18px', html)
+        self.assertIn('text-align: justify', html)
+        
+        # Verify Tablet Media Query block
+        self.assertIn('@media only screen and (max-width: 768px)', html)
+        self.assertIn('.email-card {\n              padding: 32px !important;', html)
+        self.assertIn('.email-title-h2 {\n              font-size: 24px !important;', html)
+        self.assertIn('.email-poem-text {\n              font-size: 16px !important;\n              text-align: left !important;', html)
+        self.assertIn('.email-cover-wrapper {\n              text-align: left !important;', html)
+        self.assertIn('.email-cover-image {\n              width: 80% !important;', html)
+        self.assertIn('.email-cta-box {\n              text-align: left !important;', html)
+        
+        # Verify Mobile Media Query block
+        self.assertIn('@media only screen and (max-width: 480px)', html)
+        self.assertIn('.email-card {\n              padding: 20px !important;', html)
+        self.assertIn('.email-title-h2 {\n              font-size: 20px !important;', html)
+        self.assertIn('.email-poem-text {\n              font-size: 15px !important;\n              text-align: center !important;', html)
+        self.assertIn('.email-cover-wrapper {\n              text-align: center !important;', html)
+        self.assertIn('.email-cover-image {\n              width: 100% !important;', html)
+        self.assertIn('.email-cta-box {\n              text-align: center !important;', html)
+
     @patch('apps.blog.views.send_failover_email')
     def test_send_campaign_success(self, mock_send_email):
         """Verify sending a campaign triggers dispatch to active subscribers."""

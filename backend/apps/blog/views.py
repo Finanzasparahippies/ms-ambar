@@ -558,9 +558,14 @@ def get_campaign_html_template(campaign, sub_email):
     bg_style = ""
     if campaign.bg_image:
         bg_url = campaign.bg_image.url
+        api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
         if not bg_url.startswith('http'):
-            api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
             bg_url = f"{api_url}{bg_url}"
+        else:
+            for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
+                if bg_url.startswith(local_host):
+                    bg_url = bg_url.replace(local_host, api_url)
+                    break
             
         overlay_alpha = round(1.0 - campaign.bg_opacity, 2)
         if overlay_alpha < 0: overlay_alpha = 0
@@ -578,34 +583,74 @@ def get_campaign_html_template(campaign, sub_email):
             
         bg_style = f"background-image: linear-gradient(rgba({theme_rgb}, {overlay_alpha}), rgba({theme_rgb}, {overlay_alpha})), url('{bg_url}'); background-position: {campaign.bg_position}; background-repeat: no-repeat; background-size: cover; filter: saturate({campaign.bg_saturation}%);"
 
+    custom_styles = getattr(campaign, 'custom_styles', {}) or {}
+    sender_name = custom_styles.get('sender_name', 'Ms Ambar')
+    
+    # Desktop defaults & overrides
+    card_max_width_desktop = custom_styles.get('card_max_width_desktop', '680px')
+    card_padding_desktop = custom_styles.get('card_padding_desktop', '40px')
+    title_font_size_desktop = custom_styles.get('title_font_size_desktop', '26px')
+    body_font_size_desktop = custom_styles.get('body_font_size_desktop', '16px')
+    body_alignment_desktop = custom_styles.get('body_alignment', 'center')
+    body_alignment_desktop = custom_styles.get('body_alignment_desktop', body_alignment_desktop)
+    
+    # Tablet overrides (fall back to desktop values if not configured)
+    card_padding_tablet = custom_styles.get('card_padding_tablet', card_padding_desktop)
+    title_font_size_tablet = custom_styles.get('title_font_size_tablet', '22px')
+    body_font_size_tablet = custom_styles.get('body_font_size_tablet', '15px')
+    body_alignment_tablet = custom_styles.get('body_alignment_tablet', body_alignment_desktop)
+    
+    # Mobile overrides (fall back to tablet/desktop values if not configured)
+    card_padding_mobile = custom_styles.get('card_padding_mobile', '16px')
+    title_font_size_mobile = custom_styles.get('title_font_size_mobile', '18px')
+    body_font_size_mobile = custom_styles.get('body_font_size_mobile', '14px')
+    body_alignment_mobile = custom_styles.get('body_alignment_mobile', body_alignment_tablet)
+
+    # Image responsive overrides
+    img_style = campaign.image_style or {}
+    image_width_desktop = img_style.get('width', '100%')
+    image_align_desktop = img_style.get('align', 'center')
+    image_radius = img_style.get('radius', '20px')
+
+    image_width_tablet = custom_styles.get('image_width_tablet', image_width_desktop)
+    image_align_tablet = custom_styles.get('image_align_tablet', image_align_desktop)
+    
+    image_width_mobile = custom_styles.get('image_width_mobile', image_width_tablet)
+    image_align_mobile = custom_styles.get('image_align_mobile', image_align_tablet)
+
+    # CTA responsive overrides
+    cta_alignment_desktop = custom_styles.get('cta_alignment', 'center')
+    cta_alignment_desktop = custom_styles.get('cta_alignment_desktop', cta_alignment_desktop)
+    cta_alignment_tablet = custom_styles.get('cta_alignment_tablet', cta_alignment_desktop)
+    cta_alignment_mobile = custom_styles.get('cta_alignment_mobile', cta_alignment_tablet)
+
     image_html = ""
     if campaign.image:
         image_url = campaign.image.url
+        api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
         if not image_url.startswith('http'):
-            api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
             image_url = f"{api_url}{image_url}"
+        else:
+            for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
+                if image_url.startswith(local_host):
+                    image_url = image_url.replace(local_host, api_url)
+                    break
             
-        img_style = campaign.image_style or {}
-        width = img_style.get('width', '100%')
-        align = img_style.get('align', 'center')
-        radius = img_style.get('radius', '20px')
-        
         wrapper_style = "margin-bottom: 30px;"
-        if align == 'center':
+        if image_align_desktop == 'center':
             wrapper_style += " text-align: center;"
-        elif align == 'left':
+        elif image_align_desktop == 'left':
             wrapper_style += " text-align: left;"
-        elif align == 'right':
+        elif image_align_desktop == 'right':
             wrapper_style += " text-align: right;"
             
         image_html = f"""
-        <div style="{wrapper_style}">
-            <img src="{image_url}" style="width: {width}; max-width: 100%; height: auto; border-radius: {radius}; border: {border_style}; display: inline-block;" />
+        <div class="email-cover-wrapper" style="{wrapper_style}">
+            <img class="email-cover-image" src="{image_url}" style="width: {image_width_desktop}; max-width: 100%; height: auto; border-radius: {image_radius}; border: {border_style}; display: inline-block;" />
         </div>
         """
 
     custom_styles = getattr(campaign, 'custom_styles', {}) or {}
-    sender_name = custom_styles.get('sender_name', 'Ms Ambar')
     
     # Title Styles
     title_color = custom_styles.get('title_color', '#F4F6F0')
@@ -634,9 +679,14 @@ def get_campaign_html_template(campaign, sub_email):
             styles.append(f"background-color: {bg_col}")
         if bg_img:
             img_url = bg_img
+            api_url_val = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
             if not img_url.startswith('http'):
-                api_url_val = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
                 img_url = f"{api_url_val}{img_url}"
+            else:
+                for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
+                    if img_url.startswith(local_host):
+                        img_url = img_url.replace(local_host, api_url_val)
+                        break
             styles.append(f"background-image: url('{img_url}')")
             styles.append("background-position: center")
             styles.append("background-repeat: no-repeat")
@@ -696,20 +746,18 @@ def get_campaign_html_template(campaign, sub_email):
                 </a>
                 """)
         if cta_buttons:
-            cta_alignment = custom_styles.get('cta_alignment', 'center')
             cta_margin_top = custom_styles.get('cta_margin_top', '35px')
             cta_margin_bottom = custom_styles.get('cta_margin_bottom', '25px')
             cta_html = f"""
-            <div style="text-align: {cta_alignment}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
+            <div class="email-cta-box" style="text-align: {cta_alignment_desktop}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
                 {"".join(cta_buttons)}
             </div>
             """
     elif campaign.cta_text and campaign.cta_link:
-        cta_alignment = custom_styles.get('cta_alignment', 'center')
         cta_margin_top = custom_styles.get('cta_margin_top', '35px')
         cta_margin_bottom = custom_styles.get('cta_margin_bottom', '25px')
         cta_html = f"""
-        <div style="text-align: {cta_alignment}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
+        <div class="email-cta-box" style="text-align: {cta_alignment_desktop}; margin-top: {cta_margin_top}; margin-bottom: {cta_margin_bottom};">
             <a href="{campaign.cta_link}" style="background-color: {accent_color}; color: #080C0A; padding: 14px 28px; border-radius: 12px; font-size: 13px; font-weight: bold; text-decoration: none; display: inline-block; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
                 {campaign.cta_text}
             </a>
@@ -732,12 +780,15 @@ def get_campaign_html_template(campaign, sub_email):
         poem_paragraphs = "".join(stanzas)
 
     # Determine absolute URL for media conversions
-    api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
+    api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000').rstrip('/')
     def make_urls_absolute(text):
         if not text:
             return ""
         text = text.replace('src="/media/', f'src="{api_url}/media/')
         text = text.replace("src='/media/", f"src='{api_url}/media/")
+        for local_host in ['http://localhost:8000', 'http://127.0.0.1:8000', 'http://backend-staging:8000', 'http://backend:8000']:
+            text = text.replace(f'src="{local_host}/media/', f'src="{api_url}/media/')
+            text = text.replace(f"src='{local_host}/media/", f"src='{api_url}/media/")
         return text
 
     poem_paragraphs = make_urls_absolute(poem_paragraphs)
@@ -763,42 +814,71 @@ def get_campaign_html_template(campaign, sub_email):
           {font_import}
           
           /* Responsive email layout styling */
-          @media only screen and (max-width: 600px) {{
+          @media only screen and (max-width: 768px) {{
+            .email-card {{
+              padding: {card_padding_tablet} !important;
+            }}
+            .email-title-h2 {{
+              font-size: {title_font_size_tablet} !important;
+            }}
+            .email-poem-text {{
+              font-size: {body_font_size_tablet} !important;
+              text-align: {body_alignment_tablet} !important;
+            }}
+            .email-cover-wrapper {{
+              text-align: {image_align_tablet} !important;
+            }}
+            .email-cover-image {{
+              width: {image_width_tablet} !important;
+            }}
+            .email-cta-box {{
+              text-align: {cta_alignment_tablet} !important;
+            }}
             .email-body {{
               padding: 16px 8px !important;
-            }}
-            .email-card {{
-              padding: 24px 16px !important;
-              border-radius: 20px !important;
             }}
             .email-header {{
               margin-bottom: 24px !important;
             }}
             .email-title {{
-              font-size: 20px !important;
               margin-bottom: 20px !important;
             }}
             .email-poem-box {{
               padding: 16px 8px !important;
               margin-bottom: 24px !important;
             }}
-            .email-poem-text {{
-              font-size: 14px !important;
-              line-height: 1.6 !important;
-            }}
-            .email-cta-box {{
-              margin-top: 24px !important;
-              margin-bottom: 16px !important;
-            }}
             .email-footer {{
               margin-top: 30px !important;
               padding-top: 16px !important;
             }}
           }}
+          
+          @media only screen and (max-width: 480px) {{
+            .email-card {{
+              padding: {card_padding_mobile} !important;
+              border-radius: 20px !important;
+            }}
+            .email-title-h2 {{
+              font-size: {title_font_size_mobile} !important;
+            }}
+            .email-poem-text {{
+              font-size: {body_font_size_mobile} !important;
+              text-align: {body_alignment_mobile} !important;
+            }}
+            .email-cover-wrapper {{
+              text-align: {image_align_mobile} !important;
+            }}
+            .email-cover-image {{
+              width: {image_width_mobile} !important;
+            }}
+            .email-cta-box {{
+              text-align: {cta_alignment_mobile} !important;
+            }}
+          }}
         </style>
       </head>
       <body class="email-body" style="background-color: {bg_color}; color: {text_color}; font-family: {body_font_family}; padding: 40px 20px; margin: 0; text-align: center; -webkit-font-smoothing: antialiased;">
-        <div class="email-card" style="max-width: 680px; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
+        <div class="email-card" style="max-width: {card_max_width_desktop}; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: {card_padding_desktop}; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
           
           <!-- Header/Logo -->
           <div class="email-header" style="text-align: center; margin-bottom: 40px;">
@@ -815,14 +895,14 @@ def get_campaign_html_template(campaign, sub_email):
           
           <!-- Subject / Title Block -->
           <div class="email-title" style="color: {title_color}; font-family: {title_font_family}; padding: {title_padding}; border-radius: {title_radius}; {title_bg_style}; margin-bottom: 30px; box-sizing: border-box;">
-            <h2 style="color: inherit; font-size: 24px; font-weight: 900; line-height: 1.3; margin: 0; letter-spacing: -0.02em; text-align: center; font-style: italic; font-family: inherit;">
+            <h2 class="email-title-h2" style="color: inherit; font-size: {title_font_size_desktop}; font-weight: 900; line-height: 1.3; margin: 0; letter-spacing: -0.02em; text-align: center; font-style: italic; font-family: inherit;">
               {email_title_to_render}
             </h2>
           </div>
           
           <!-- Poem content / Body Block -->
-          <div class="email-poem-box" style="color: {body_color}; font-family: {body_font_family}; padding: {body_padding}; border-radius: {body_radius}; {body_bg_style}; margin-bottom: 40px; box-sizing: border-box;">
-            <div class="email-poem-text" style="color: inherit; font-size: 16px; line-height: 1.8; text-align: center; font-style: italic; opacity: 0.9; font-family: inherit; padding: 10px;">
+          <div class="email-poem-box" style="color: {body_color}; font-family: {body_font_family}; padding: {body_padding}; border-radius: {body_radius}; {body_bg_style}; margin-bottom: 40px; box-sizing: border-box; text-align: center;">
+            <div class="email-poem-text" style="color: inherit; font-size: {body_font_size_desktop}; line-height: 1.8; text-align: {body_alignment_desktop}; font-style: italic; opacity: 0.9; font-family: inherit; padding: 10px; display: inline-block; max-width: 90%; word-break: break-word;">
               {poem_paragraphs}
             </div>
           </div>
