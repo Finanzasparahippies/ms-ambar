@@ -1941,9 +1941,10 @@ export default function AdminDashboard() {
                   </motion.div>
                 </div>
               )}
+            </motion.div>
+          )}
 
                           {/* ══════ TAB 5: THEATERS MANAGEMENT ══════ */}
-                          <AnimatePresence>
                             {activeTab === 'theaters' && (
                               <motion.div
                                 key="theaters-tab"
@@ -2082,7 +2083,6 @@ export default function AdminDashboard() {
                                 )}
                               </motion.div>
                             )}
-                          </AnimatePresence>
 
                           {/* ══════ THEATER MODAL (Dashboard) ══════ */}
                           <AnimatePresence>
@@ -2162,7 +2162,6 @@ export default function AdminDashboard() {
                           </AnimatePresence>
 
                           {/* ══════ TAB 6: CONTRACTS PIPELINE ══════ */}
-                          <AnimatePresence>
                             {activeTab === 'contracts' && (
                               <motion.div
                                 key="contracts-tab"

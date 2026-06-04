@@ -146,4 +146,4 @@ const MetricCard = ({ icon, title, value, detail }: any) => (
   </motion.div>
 );
 
-export default PerformanceDashboard;ard;
+export default PerformanceDashboard;
