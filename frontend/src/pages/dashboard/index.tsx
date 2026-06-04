@@ -48,7 +48,10 @@ import {
   Sliders,
   Target,
   FolderOpen,
-  Palette
+  Palette,
+  Monitor,
+  Tablet,
+  Smartphone
 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -135,6 +138,47 @@ export default function AdminDashboard() {
   const [campFooterRadius, setCampFooterRadius] = useState('0px');
 
   const [isSectionStyleSectionOpen, setIsSectionStyleSectionOpen] = useState(false);
+
+  // Responsive design states
+  const [previewViewport, setPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [isPreviewExpanded, setIsPreviewExpanded] = useState(false);
+  const [campCardMaxWidthDesktop, setCampCardMaxWidthDesktop] = useState('680px');
+  const [campCardPaddingDesktop, setCampCardPaddingDesktop] = useState('40px');
+  const [campCardPaddingTablet, setCampCardPaddingTablet] = useState('40px');
+  const [campCardPaddingMobile, setCampCardPaddingMobile] = useState('16px');
+  
+  const [campTitleFontSizeDesktop, setCampTitleFontSizeDesktop] = useState('26px');
+  const [campTitleFontSizeTablet, setCampTitleFontSizeTablet] = useState('22px');
+  const [campTitleFontSizeMobile, setCampTitleFontSizeMobile] = useState('18px');
+  
+  const [campBodyFontSizeDesktop, setCampBodyFontSizeDesktop] = useState('16px');
+  const [campBodyFontSizeTablet, setCampBodyFontSizeTablet] = useState('15px');
+  const [campBodyFontSizeMobile, setCampBodyFontSizeMobile] = useState('14px');
+  const [campBodyAlignmentTablet, setCampBodyAlignmentTablet] = useState('center');
+  const [campBodyAlignmentMobile, setCampBodyAlignmentMobile] = useState('center');
+  
+  const [campImageWidthTablet, setCampImageWidthTablet] = useState('100%');
+  const [campImageWidthMobile, setCampImageWidthMobile] = useState('100%');
+  const [campImageAlignTablet, setCampImageAlignTablet] = useState('center');
+  const [campImageAlignMobile, setCampImageAlignMobile] = useState('center');
+  
+  const [campCtaAlignTablet, setCampCtaAlignTablet] = useState('center');
+  const [campCtaAlignMobile, setCampCtaAlignMobile] = useState('center');
+
+  const [campTitlePaddingTablet, setCampTitlePaddingTablet] = useState('0px');
+  const [campTitlePaddingMobile, setCampTitlePaddingMobile] = useState('0px');
+  const [campTitleRadiusTablet, setCampTitleRadiusTablet] = useState('0px');
+  const [campTitleRadiusMobile, setCampTitleRadiusMobile] = useState('0px');
+
+  const [campBodyPaddingTablet, setCampBodyPaddingTablet] = useState('0px');
+  const [campBodyPaddingMobile, setCampBodyPaddingMobile] = useState('0px');
+  const [campBodyRadiusTablet, setCampBodyRadiusTablet] = useState('0px');
+  const [campBodyRadiusMobile, setCampBodyRadiusMobile] = useState('0px');
+
+  const [campFooterPaddingTablet, setCampFooterPaddingTablet] = useState('0px');
+  const [campFooterPaddingMobile, setCampFooterPaddingMobile] = useState('0px');
+  const [campFooterRadiusTablet, setCampFooterRadiusTablet] = useState('0px');
+  const [campFooterRadiusMobile, setCampFooterRadiusMobile] = useState('0px');
 
   const [campLoading, setCampLoading] = useState(false);
   const [campSuccessMsg, setCampSuccessMsg] = useState<string | null>(null);
@@ -518,6 +562,36 @@ export default function AdminDashboard() {
         campBgSaturation,
         campBgPosition,
         campBodyAlignment,
+        campCardMaxWidthDesktop,
+        campCardPaddingDesktop,
+        campCardPaddingTablet,
+        campCardPaddingMobile,
+        campTitleFontSizeDesktop,
+        campTitleFontSizeTablet,
+        campTitleFontSizeMobile,
+        campBodyFontSizeDesktop,
+        campBodyFontSizeTablet,
+        campBodyFontSizeMobile,
+        campBodyAlignmentTablet,
+        campBodyAlignmentMobile,
+        campImageWidthTablet,
+        campImageWidthMobile,
+        campImageAlignTablet,
+        campImageAlignMobile,
+        campCtaAlignTablet,
+        campCtaAlignMobile,
+        campTitlePaddingTablet,
+        campTitlePaddingMobile,
+        campTitleRadiusTablet,
+        campTitleRadiusMobile,
+        campBodyPaddingTablet,
+        campBodyPaddingMobile,
+        campBodyRadiusTablet,
+        campBodyRadiusMobile,
+        campFooterPaddingTablet,
+        campFooterPaddingMobile,
+        campFooterRadiusTablet,
+        campFooterRadiusMobile,
         campImagePreview: cleanImagePreview,
         campBgImagePreview: cleanBgImagePreview
       };
@@ -568,7 +642,37 @@ export default function AdminDashboard() {
     campBgPosition,
     campImagePreview,
     campBgImagePreview,
-    campBodyAlignment
+    campBodyAlignment,
+    campCardMaxWidthDesktop,
+    campCardPaddingDesktop,
+    campCardPaddingTablet,
+    campCardPaddingMobile,
+    campTitleFontSizeDesktop,
+    campTitleFontSizeTablet,
+    campTitleFontSizeMobile,
+    campBodyFontSizeDesktop,
+    campBodyFontSizeTablet,
+    campBodyFontSizeMobile,
+    campBodyAlignmentTablet,
+    campBodyAlignmentMobile,
+    campImageWidthTablet,
+    campImageWidthMobile,
+    campImageAlignTablet,
+    campImageAlignMobile,
+    campCtaAlignTablet,
+    campCtaAlignMobile,
+    campTitlePaddingTablet,
+    campTitlePaddingMobile,
+    campTitleRadiusTablet,
+    campTitleRadiusMobile,
+    campBodyPaddingTablet,
+    campBodyPaddingMobile,
+    campBodyRadiusTablet,
+    campBodyRadiusMobile,
+    campFooterPaddingTablet,
+    campFooterPaddingMobile,
+    campFooterRadiusTablet,
+    campFooterRadiusMobile
   ]);
 
   const restoreDraft = () => {
@@ -616,6 +720,36 @@ export default function AdminDashboard() {
       setCampImagePreview(draft.campImagePreview ?? null);
       setCampBgImagePreview(draft.campBgImagePreview ?? null);
       setCampBodyAlignment(draft.campBodyAlignment ?? 'center');
+      setCampCardMaxWidthDesktop(draft.campCardMaxWidthDesktop ?? '680px');
+      setCampCardPaddingDesktop(draft.campCardPaddingDesktop ?? '40px');
+      setCampCardPaddingTablet(draft.campCardPaddingTablet ?? '40px');
+      setCampCardPaddingMobile(draft.campCardPaddingMobile ?? '16px');
+      setCampTitleFontSizeDesktop(draft.campTitleFontSizeDesktop ?? '26px');
+      setCampTitleFontSizeTablet(draft.campTitleFontSizeTablet ?? '22px');
+      setCampTitleFontSizeMobile(draft.campTitleFontSizeMobile ?? '18px');
+      setCampBodyFontSizeDesktop(draft.campBodyFontSizeDesktop ?? '16px');
+      setCampBodyFontSizeTablet(draft.campBodyFontSizeTablet ?? '15px');
+      setCampBodyFontSizeMobile(draft.campBodyFontSizeMobile ?? '14px');
+      setCampBodyAlignmentTablet(draft.campBodyAlignmentTablet ?? 'center');
+      setCampBodyAlignmentMobile(draft.campBodyAlignmentMobile ?? 'center');
+      setCampImageWidthTablet(draft.campImageWidthTablet ?? '100%');
+      setCampImageWidthMobile(draft.campImageWidthMobile ?? '100%');
+      setCampImageAlignTablet(draft.campImageAlignTablet ?? 'center');
+      setCampImageAlignMobile(draft.campImageAlignMobile ?? 'center');
+      setCampCtaAlignTablet(draft.campCtaAlignTablet ?? 'center');
+      setCampCtaAlignMobile(draft.campCtaAlignMobile ?? 'center');
+      setCampTitlePaddingTablet(draft.campTitlePaddingTablet ?? '0px');
+      setCampTitlePaddingMobile(draft.campTitlePaddingMobile ?? '0px');
+      setCampTitleRadiusTablet(draft.campTitleRadiusTablet ?? '0px');
+      setCampTitleRadiusMobile(draft.campTitleRadiusMobile ?? '0px');
+      setCampBodyPaddingTablet(draft.campBodyPaddingTablet ?? '0px');
+      setCampBodyPaddingMobile(draft.campBodyPaddingMobile ?? '0px');
+      setCampBodyRadiusTablet(draft.campBodyRadiusTablet ?? '0px');
+      setCampBodyRadiusMobile(draft.campBodyRadiusMobile ?? '0px');
+      setCampFooterPaddingTablet(draft.campFooterPaddingTablet ?? '0px');
+      setCampFooterPaddingMobile(draft.campFooterPaddingMobile ?? '0px');
+      setCampFooterRadiusTablet(draft.campFooterRadiusTablet ?? '0px');
+      setCampFooterRadiusMobile(draft.campFooterRadiusMobile ?? '0px');
 
       setTimeout(() => {
         if (campaignEditorRef.current) {
@@ -682,6 +816,25 @@ export default function AdminDashboard() {
     setCampCtaMarginTop('35px');
     setCampCtaMarginBottom('25px');
     setCampBodyAlignment('center');
+    setCampCardMaxWidthDesktop('680px');
+    setCampCardPaddingDesktop('40px');
+    setCampCardPaddingTablet('40px');
+    setCampCardPaddingMobile('16px');
+    setCampTitleFontSizeDesktop('26px');
+    setCampTitleFontSizeTablet('22px');
+    setCampTitleFontSizeMobile('18px');
+    setCampBodyFontSizeDesktop('16px');
+    setCampBodyFontSizeTablet('15px');
+    setCampBodyFontSizeMobile('14px');
+    setCampBodyAlignmentTablet('center');
+    setCampBodyAlignmentMobile('center');
+    setCampImageWidthTablet('100%');
+    setCampImageWidthMobile('100%');
+    setCampImageAlignTablet('center');
+    setCampImageAlignMobile('center');
+    setCampCtaAlignTablet('center');
+    setCampCtaAlignMobile('center');
+    setPreviewViewport('desktop');
     setEditorActiveTab('body');
     setCampEmailTitle('');
     setCampFooterText('');
@@ -702,6 +855,19 @@ export default function AdminDashboard() {
     setCampFooterBgImage('');
     setCampFooterPadding('0px');
     setCampFooterRadius('0px');
+    setCampTitlePaddingTablet('0px');
+    setCampTitlePaddingMobile('0px');
+    setCampTitleRadiusTablet('0px');
+    setCampTitleRadiusMobile('0px');
+    setCampBodyPaddingTablet('0px');
+    setCampBodyPaddingMobile('0px');
+    setCampBodyRadiusTablet('0px');
+    setCampBodyRadiusMobile('0px');
+    setCampFooterPaddingTablet('0px');
+    setCampFooterPaddingMobile('0px');
+    setCampFooterRadiusTablet('0px');
+    setCampFooterRadiusMobile('0px');
+    setIsPreviewExpanded(false);
     setIsSectionStyleSectionOpen(false);
     setIsFontSectionOpen(false);
     setIsCoverSectionOpen(false);
@@ -781,6 +947,43 @@ export default function AdminDashboard() {
     setCampFooterBgImage(styles.footer_bg_image || '');
     setCampFooterPadding(styles.footer_padding || '0px');
     setCampFooterRadius(styles.footer_radius || '0px');
+    setCampCardMaxWidthDesktop(styles.card_max_width_desktop || '680px');
+    setCampCardPaddingDesktop(styles.card_padding_desktop || '40px');
+    setCampCardPaddingTablet(styles.card_padding_tablet || '40px');
+    setCampCardPaddingMobile(styles.card_padding_mobile || '16px');
+    setCampTitleFontSizeDesktop(styles.title_font_size_desktop || '26px');
+    setCampTitleFontSizeTablet(styles.title_font_size_tablet || '22px');
+    setCampTitleFontSizeMobile(styles.title_font_size_mobile || '18px');
+    setCampBodyFontSizeDesktop(styles.body_font_size_desktop || '16px');
+    setCampBodyFontSizeTablet(styles.body_font_size_tablet || '15px');
+    setCampBodyFontSizeMobile(styles.body_font_size_mobile || '14px');
+    setCampBodyAlignmentTablet(styles.body_alignment_tablet || 'center');
+    setCampBodyAlignmentMobile(styles.body_alignment_mobile || 'center');
+    setCampImageWidthTablet(styles.image_width_tablet || campaign.image_style?.width || '100%');
+    setCampImageWidthMobile(styles.image_width_mobile || campaign.image_style?.width || '100%');
+    setCampImageAlignTablet(styles.image_align_tablet || campaign.image_style?.align || 'center');
+    setCampImageAlignMobile(styles.image_align_mobile || campaign.image_style?.align || 'center');
+    setCampCtaAlignTablet(styles.cta_alignment_tablet || styles.cta_alignment || 'center');
+    setCampCtaAlignMobile(styles.cta_alignment_mobile || styles.cta_alignment || 'center');
+    
+    // Load responsive section styles
+    setCampTitlePaddingTablet(styles.title_padding_tablet || styles.title_padding || '0px');
+    setCampTitlePaddingMobile(styles.title_padding_mobile || styles.title_padding_tablet || styles.title_padding || '0px');
+    setCampTitleRadiusTablet(styles.title_radius_tablet || styles.title_radius || '0px');
+    setCampTitleRadiusMobile(styles.title_radius_mobile || styles.title_radius_tablet || styles.title_radius || '0px');
+    
+    setCampBodyPaddingTablet(styles.body_padding_tablet || styles.body_padding || '0px');
+    setCampBodyPaddingMobile(styles.body_padding_mobile || styles.body_padding_tablet || styles.body_padding || '0px');
+    setCampBodyRadiusTablet(styles.body_radius_tablet || styles.body_radius || '0px');
+    setCampBodyRadiusMobile(styles.body_radius_mobile || styles.body_radius_tablet || styles.body_radius || '0px');
+    
+    setCampFooterPaddingTablet(styles.footer_padding_tablet || styles.footer_padding || '0px');
+    setCampFooterPaddingMobile(styles.footer_padding_mobile || styles.footer_padding_tablet || styles.footer_padding || '0px');
+    setCampFooterRadiusTablet(styles.footer_radius_tablet || styles.footer_radius || '0px');
+    setCampFooterRadiusMobile(styles.footer_radius_mobile || styles.footer_radius_tablet || styles.footer_radius || '0px');
+    
+    setPreviewViewport('desktop');
+    setIsPreviewExpanded(false);
     setIsSectionStyleSectionOpen(false);
 
     let initialCtas = campaign.ctas || [];
@@ -883,7 +1086,38 @@ export default function AdminDashboard() {
       footer_bg_color: campFooterBgColor,
       footer_bg_image: campFooterBgImage,
       footer_padding: campFooterPadding,
-      footer_radius: campFooterRadius
+      footer_radius: campFooterRadius,
+      card_max_width_desktop: campCardMaxWidthDesktop,
+      card_padding_desktop: campCardPaddingDesktop,
+      card_padding_tablet: campCardPaddingTablet,
+      card_padding_mobile: campCardPaddingMobile,
+      title_font_size_desktop: campTitleFontSizeDesktop,
+      title_font_size_tablet: campTitleFontSizeTablet,
+      title_font_size_mobile: campTitleFontSizeMobile,
+      body_font_size_desktop: campBodyFontSizeDesktop,
+      body_font_size_tablet: campBodyFontSizeTablet,
+      body_font_size_mobile: campBodyFontSizeMobile,
+      body_alignment_desktop: campBodyAlignment,
+      body_alignment_tablet: campBodyAlignmentTablet,
+      body_alignment_mobile: campBodyAlignmentMobile,
+      image_width_tablet: campImageWidthTablet,
+      image_width_mobile: campImageWidthMobile,
+      image_align_tablet: campImageAlignTablet,
+      image_align_mobile: campImageAlignMobile,
+      cta_alignment_tablet: campCtaAlignTablet,
+      cta_alignment_mobile: campCtaAlignMobile,
+      title_padding_tablet: campTitlePaddingTablet,
+      title_padding_mobile: campTitlePaddingMobile,
+      title_radius_tablet: campTitleRadiusTablet,
+      title_radius_mobile: campTitleRadiusMobile,
+      body_padding_tablet: campBodyPaddingTablet,
+      body_padding_mobile: campBodyPaddingMobile,
+      body_radius_tablet: campBodyRadiusTablet,
+      body_radius_mobile: campBodyRadiusMobile,
+      footer_padding_tablet: campFooterPaddingTablet,
+      footer_padding_mobile: campFooterPaddingMobile,
+      footer_radius_tablet: campFooterRadiusTablet,
+      footer_radius_mobile: campFooterRadiusMobile
     };
     formData.append('custom_styles', JSON.stringify(customStyles));
 
@@ -3611,7 +3845,7 @@ export default function AdminDashboard() {
                   onClick={e => e.stopPropagation()}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="amber-glass w-full max-w-6xl rounded-[2.5rem] p-8 shadow-2xl relative flex flex-col lg:flex-row gap-8 max-h-[90vh] overflow-hidden"
+                  className="amber-glass w-full max-w-7xl rounded-[2.5rem] p-8 shadow-2xl relative flex flex-col lg:flex-row gap-8 max-h-[90vh] overflow-hidden"
                 >
                   <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent" />
                   <button
@@ -3623,7 +3857,7 @@ export default function AdminDashboard() {
                   </button>
 
                   {/* Column 1: Editor Form */}
-                  <div className="flex-1 overflow-y-auto pr-2 custom-scroll space-y-6 lg:max-h-[78vh]">
+                  <div className={`${isPreviewExpanded ? 'hidden' : 'flex-1'} overflow-y-auto pr-2 custom-scroll space-y-6 lg:max-h-[78vh]`}>
                     <div>
                       <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">
                         {campId ? 'Editar Campaña de Poemas' : 'Nueva Campaña de Poemas'}
@@ -3688,6 +3922,34 @@ export default function AdminDashboard() {
                       {campErrorMsg && (
                         <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-xs font-bold uppercase tracking-wide">
                           ⚠️ {campErrorMsg}
+                        </div>
+                      )}
+
+                      {/* Mini Breakpoint Switcher for styling options */}
+                      {['cover', 'sections', 'ctas'].includes(settingsTab) && (
+                        <div className="flex justify-between items-center bg-white/5 border border-white/5 p-3 rounded-2xl">
+                          <span className="text-[9px] text-[#F4F6F0]/65 uppercase tracking-widest font-black">Diseño responsivo activo:</span>
+                          <div className="flex bg-neutral-950 border border-white/10 rounded-xl p-0.5 gap-0.5 animate-fade-in">
+                            {[
+                              { id: 'desktop', label: 'Escritorio', icon: <Monitor size={10} /> },
+                              { id: 'tablet', label: 'Tablet', icon: <Tablet size={10} /> },
+                              { id: 'mobile', label: 'Móvil', icon: <Smartphone size={10} /> },
+                            ].map(vp => (
+                              <button
+                                key={vp.id}
+                                type="button"
+                                onClick={() => setPreviewViewport(vp.id as any)}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                  previewViewport === vp.id
+                                    ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
+                                    : 'text-[#F4F6F0]/65 hover:text-[#F4F6F0] hover:bg-white/5'
+                                }`}
+                              >
+                                {vp.icon}
+                                <span className="hidden sm:inline">{vp.label}</span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -4118,45 +4380,66 @@ export default function AdminDashboard() {
                             )}
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-white/5">
-                            <div className="space-y-1">
-                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Ancho de Imagen</label>
-                              <select
-                                value={campImageWidth}
-                                onChange={e => setCampImageWidth(e.target.value)}
-                                className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
-                              >
-                                <option value="30%">Pequeña (30%)</option>
-                                <option value="50%">Mediana (50%)</option>
-                                <option value="80%">Grande (80%)</option>
-                                <option value="100%">Completo (100%)</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Alineación</label>
-                              <select
-                                value={campImageAlign}
-                                onChange={e => setCampImageAlign(e.target.value)}
-                                className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
-                              >
-                                <option value="left">Izquierda</option>
-                                <option value="center">Centro</option>
-                                <option value="right">Derecha</option>
-                              </select>
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Redondeado</label>
-                              <select
-                                value={campImageRadius}
-                                onChange={e => setCampImageRadius(e.target.value)}
-                                className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
-                              >
-                                <option value="0px">Sin (0px)</option>
-                                <option value="8px">Sutil (8px)</option>
-                                <option value="16px">Elegante (16px)</option>
-                                <option value="20px">Redondeado (20px)</option>
-                                <option value="30px">Muy Redondo (30px)</option>
-                              </select>
+                          <div className="space-y-4 pt-2 border-t border-white/5">
+                            <span className="text-[9px] text-amber-honey uppercase tracking-widest font-black block">
+                              Ajustes de Imagen ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                            </span>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in">
+                              <div className="space-y-1">
+                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Ancho de Imagen</label>
+                                <select
+                                  value={
+                                    previewViewport === 'desktop' ? campImageWidth :
+                                    previewViewport === 'tablet' ? campImageWidthTablet :
+                                    campImageWidthMobile
+                                  }
+                                  onChange={e => {
+                                    if (previewViewport === 'desktop') setCampImageWidth(e.target.value);
+                                    else if (previewViewport === 'tablet') setCampImageWidthTablet(e.target.value);
+                                    else setCampImageWidthMobile(e.target.value);
+                                  }}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                >
+                                  <option value="30%">Pequeña (30%)</option>
+                                  <option value="50%">Mediana (50%)</option>
+                                  <option value="80%">Grande (80%)</option>
+                                  <option value="100%">Completo (100%)</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Alineación</label>
+                                <select
+                                  value={
+                                    previewViewport === 'desktop' ? campImageAlign :
+                                    previewViewport === 'tablet' ? campImageAlignTablet :
+                                    campImageAlignMobile
+                                  }
+                                  onChange={e => {
+                                    if (previewViewport === 'desktop') setCampImageAlign(e.target.value);
+                                    else if (previewViewport === 'tablet') setCampImageAlignTablet(e.target.value);
+                                    else setCampImageAlignMobile(e.target.value);
+                                  }}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                >
+                                  <option value="left">Izquierda</option>
+                                  <option value="center">Centro</option>
+                                  <option value="right">Derecha</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Redondeado (Global)</label>
+                                <select
+                                  value={campImageRadius}
+                                  onChange={e => setCampImageRadius(e.target.value)}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                >
+                                  <option value="0px">Sin (0px)</option>
+                                  <option value="8px">Sutil (8px)</option>
+                                  <option value="16px">Elegante (16px)</option>
+                                  <option value="20px">Redondeado (20px)</option>
+                                  <option value="30px">Muy Redondo (30px)</option>
+                                </select>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -4172,6 +4455,70 @@ export default function AdminDashboard() {
                             <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest leading-normal">
                               Usa las pestañas superiores de la categoría "Contenido" para cambiar qué sección estás personalizando.
                             </p>
+                          </div>
+
+                          {/* CONFIGURACIÓN GENERAL DE LA TARJETA */}
+                          <div className="bg-white/5 border border-white/10 p-4 rounded-2xl space-y-4">
+                            <span className="text-[9px] text-amber-honey uppercase tracking-widest font-black block border-b border-white/5 pb-1">Configuración General de la Tarjeta</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
+                              <div className="space-y-1">
+                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Ancho Máximo (Escritorio)</label>
+                                <select
+                                  value={campCardMaxWidthDesktop}
+                                  onChange={e => setCampCardMaxWidthDesktop(e.target.value)}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                >
+                                  <option value="600px">Estrecho (600px)</option>
+                                  <option value="680px">Estándar (680px)</option>
+                                  <option value="760px">Ancho (760px)</option>
+                                  <option value="840px">Extra Ancho (840px)</option>
+                                  <option value="1000px">Giga Ancho (1000px)</option>
+                                  <option value="1200px">Ultra Ancho (1200px)</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">
+                                  Relleno de Tarjeta ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                </label>
+                                <select
+                                  value={
+                                    previewViewport === 'desktop' ? campCardPaddingDesktop :
+                                    previewViewport === 'tablet' ? campCardPaddingTablet :
+                                    campCardPaddingMobile
+                                  }
+                                  onChange={e => {
+                                    if (previewViewport === 'desktop') setCampCardPaddingDesktop(e.target.value);
+                                    else if (previewViewport === 'tablet') setCampCardPaddingTablet(e.target.value);
+                                    else setCampCardPaddingMobile(e.target.value);
+                                  }}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                >
+                                  {(previewViewport === 'desktop'
+                                    ? [
+                                        { value: '20px', label: 'Sutil (20px)' },
+                                        { value: '32px', label: 'Mediano (32px)' },
+                                        { value: '40px', label: 'Elegante (40px)' },
+                                        { value: '48px', label: 'Extra Elegante (48px)' },
+                                      ]
+                                    : previewViewport === 'tablet'
+                                      ? [
+                                          { value: '20px', label: 'Sutil (20px)' },
+                                          { value: '24px', label: 'Mediano (24px)' },
+                                          { value: '32px', label: 'Elegante (32px)' },
+                                          { value: '40px', label: 'Extra Elegante (40px)' },
+                                        ]
+                                      : [
+                                          { value: '12px', label: 'Sutil (12px)' },
+                                          { value: '16px', label: 'Mediano (16px)' },
+                                          { value: '20px', label: 'Elegante (20px)' },
+                                          { value: '24px', label: 'Extra Elegante (24px)' },
+                                        ]
+                                  ).map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
                           </div>
 
                           {editorActiveTab === 'title' && (
@@ -4223,10 +4570,20 @@ export default function AdminDashboard() {
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Relleno (Padding) ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
                                   <select
-                                    value={campTitlePadding}
-                                    onChange={e => setCampTitlePadding(e.target.value)}
+                                    value={
+                                      previewViewport === 'desktop' ? campTitlePadding :
+                                      previewViewport === 'tablet' ? campTitlePaddingTablet :
+                                      campTitlePaddingMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampTitlePadding(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampTitlePaddingTablet(e.target.value);
+                                      else setCampTitlePaddingMobile(e.target.value);
+                                    }}
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     <option value="0px">Ninguno (0px)</option>
@@ -4236,16 +4593,56 @@ export default function AdminDashboard() {
                                   </select>
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Bordes Redondeados ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
                                   <select
-                                    value={campTitleRadius}
-                                    onChange={e => setCampTitleRadius(e.target.value)}
+                                    value={
+                                      previewViewport === 'desktop' ? campTitleRadius :
+                                      previewViewport === 'tablet' ? campTitleRadiusTablet :
+                                      campTitleRadiusMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampTitleRadius(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampTitleRadiusTablet(e.target.value);
+                                      else setCampTitleRadiusMobile(e.target.value);
+                                    }}
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     <option value="0px">Recto (0px)</option>
                                     <option value="8px">Sutil (8px)</option>
                                     <option value="16px">Elegante (16px)</option>
                                     <option value="24px">Muy Redondo (24px)</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div className="space-y-3 pt-2 border-t border-white/5">
+                                <div className="space-y-1 animate-fade-in">
+                                  <label className="text-[9px] text-amber-honey uppercase tracking-widest font-black block">
+                                    Tamaño de Letra del Título ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
+                                  <select
+                                    value={
+                                      previewViewport === 'desktop' ? campTitleFontSizeDesktop :
+                                      previewViewport === 'tablet' ? campTitleFontSizeTablet :
+                                      campTitleFontSizeMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampTitleFontSizeDesktop(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampTitleFontSizeTablet(e.target.value);
+                                      else setCampTitleFontSizeMobile(e.target.value);
+                                    }}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    {(previewViewport === 'desktop'
+                                      ? ['20px', '24px', '26px', '30px', '36px', '42px']
+                                      : previewViewport === 'tablet'
+                                        ? ['18px', '20px', '22px', '26px', '30px']
+                                        : ['16px', '18px', '20px', '24px']
+                                    ).map(sz => (
+                                      <option key={sz} value={sz}>{sz}</option>
+                                    ))}
                                   </select>
                                 </div>
                               </div>
@@ -4323,10 +4720,20 @@ export default function AdminDashboard() {
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Relleno (Padding) ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
                                   <select
-                                    value={campBodyPadding}
-                                    onChange={e => setCampBodyPadding(e.target.value)}
+                                    value={
+                                      previewViewport === 'desktop' ? campBodyPadding :
+                                      previewViewport === 'tablet' ? campBodyPaddingTablet :
+                                      campBodyPaddingMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampBodyPadding(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampBodyPaddingTablet(e.target.value);
+                                      else setCampBodyPaddingMobile(e.target.value);
+                                    }}
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     <option value="0px">Ninguno (0px)</option>
@@ -4336,10 +4743,20 @@ export default function AdminDashboard() {
                                   </select>
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Bordes Redondeados ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
                                   <select
-                                    value={campBodyRadius}
-                                    onChange={e => setCampBodyRadius(e.target.value)}
+                                    value={
+                                      previewViewport === 'desktop' ? campBodyRadius :
+                                      previewViewport === 'tablet' ? campBodyRadiusTablet :
+                                      campBodyRadiusMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampBodyRadius(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampBodyRadiusTablet(e.target.value);
+                                      else setCampBodyRadiusMobile(e.target.value);
+                                    }}
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     <option value="0px">Recto (0px)</option>
@@ -4350,18 +4767,56 @@ export default function AdminDashboard() {
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Alineación del Poema</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Alineación del Poema ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
                                   <select
-                                    value={campBodyAlignment}
-                                    onChange={e => setCampBodyAlignment(e.target.value)}
+                                    value={
+                                      previewViewport === 'desktop' ? campBodyAlignment :
+                                      previewViewport === 'tablet' ? campBodyAlignmentTablet :
+                                      campBodyAlignmentMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampBodyAlignment(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampBodyAlignmentTablet(e.target.value);
+                                      else setCampBodyAlignmentMobile(e.target.value);
+                                    }}
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     <option value="center">Centrado (Por Defecto)</option>
-                                    <option value="left">Izquierda (Bloque Centrado)</option>
-                                    <option value="justify">Justificado (Bloque Centrado)</option>
-                                    <option value="right">Derecha (Bloque Centrado)</option>
+                                    <option value="left">Izquierda</option>
+                                    <option value="justify">Justificado</option>
+                                    <option value="right">Derecha</option>
+                                  </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Tamaño de Letra del Poema ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
+                                  <select
+                                    value={
+                                      previewViewport === 'desktop' ? campBodyFontSizeDesktop :
+                                      previewViewport === 'tablet' ? campBodyFontSizeTablet :
+                                      campBodyFontSizeMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampBodyFontSizeDesktop(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampBodyFontSizeTablet(e.target.value);
+                                      else setCampBodyFontSizeMobile(e.target.value);
+                                    }}
+                                    className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
+                                  >
+                                    {(previewViewport === 'desktop'
+                                      ? ['14px', '16px', '18px', '20px']
+                                      : previewViewport === 'tablet'
+                                        ? ['13px', '14px', '15px', '16px', '18px']
+                                        : ['12px', '13px', '14px', '15px', '16px']
+                                    ).map(sz => (
+                                      <option key={sz} value={sz}>{sz}</option>
+                                    ))}
                                   </select>
                                 </div>
                               </div>
@@ -4439,10 +4894,20 @@ export default function AdminDashboard() {
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Relleno (Padding)</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Relleno (Padding) ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
                                   <select
-                                    value={campFooterPadding}
-                                    onChange={e => setCampFooterPadding(e.target.value)}
+                                    value={
+                                      previewViewport === 'desktop' ? campFooterPadding :
+                                      previewViewport === 'tablet' ? campFooterPaddingTablet :
+                                      campFooterPaddingMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampFooterPadding(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampFooterPaddingTablet(e.target.value);
+                                      else setCampFooterPaddingMobile(e.target.value);
+                                    }}
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     <option value="0px">Ninguno (0px)</option>
@@ -4452,10 +4917,20 @@ export default function AdminDashboard() {
                                   </select>
                                 </div>
                                 <div className="space-y-1">
-                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">Bordes Redondeados</label>
+                                  <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block pl-1">
+                                    Bordes Redondeados ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                  </label>
                                   <select
-                                    value={campFooterRadius}
-                                    onChange={e => setCampFooterRadius(e.target.value)}
+                                    value={
+                                      previewViewport === 'desktop' ? campFooterRadius :
+                                      previewViewport === 'tablet' ? campFooterRadiusTablet :
+                                      campFooterRadiusMobile
+                                    }
+                                    onChange={e => {
+                                      if (previewViewport === 'desktop') setCampFooterRadius(e.target.value);
+                                      else if (previewViewport === 'tablet') setCampFooterRadiusTablet(e.target.value);
+                                      else setCampFooterRadiusMobile(e.target.value);
+                                    }}
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     <option value="0px">Recto (0px)</option>
@@ -4497,19 +4972,8 @@ export default function AdminDashboard() {
                           {/* GLOBAL CTA BLOCK SETTINGS */}
                           <div className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3">
                             <span className="text-[9px] text-amber-honey uppercase tracking-widest font-black block border-b border-white/5 pb-1">Distribución del Bloque de Botones</span>
-                            <div className="grid grid-cols-3 gap-3">
-                              <div className="space-y-1">
-                                <label className="text-[8px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Alineación</label>
-                                <select
-                                  value={campCtaAlignment}
-                                  onChange={e => setCampCtaAlignment(e.target.value)}
-                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] outline-none text-[#F4F6F0]"
-                                >
-                                  <option value="left">Izquierda</option>
-                                  <option value="center">Centro</option>
-                                  <option value="right">Derecha</option>
-                                </select>
-                              </div>
+                            
+                            <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <label className="text-[8px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Margen Sup.</label>
                                 <select
@@ -4534,6 +4998,31 @@ export default function AdminDashboard() {
                                   <option value="20px">Medio (20px)</option>
                                   <option value="25px">Estándar (25px)</option>
                                   <option value="40px">Grande (40px)</option>
+                                </select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 pt-2 border-t border-white/5 animate-fade-in">
+                              <div className="space-y-1">
+                                <label className="text-[8px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">
+                                  Alineación de Botones ({previewViewport === 'desktop' ? 'Escritorio' : previewViewport === 'tablet' ? 'Tablet' : 'Móvil'})
+                                </label>
+                                <select
+                                  value={
+                                    previewViewport === 'desktop' ? campCtaAlignment :
+                                    previewViewport === 'tablet' ? campCtaAlignTablet :
+                                    campCtaAlignMobile
+                                  }
+                                  onChange={e => {
+                                    if (previewViewport === 'desktop') setCampCtaAlignment(e.target.value);
+                                    else if (previewViewport === 'tablet') setCampCtaAlignTablet(e.target.value);
+                                    else setCampCtaAlignMobile(e.target.value);
+                                  }}
+                                  className="w-full bg-[#121915] border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] outline-none text-[#F4F6F0]"
+                                >
+                                  <option value="left">Izquierda</option>
+                                  <option value="center">Centro</option>
+                                  <option value="right">Derecha</option>
                                 </select>
                               </div>
                             </div>
@@ -4946,13 +5435,56 @@ export default function AdminDashboard() {
                   </div>
 
                   {/* Column 2: Live Preview */}
-                  <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] overflow-y-auto pl-4 border-t lg:border-t-0 lg:border-l border-white/10 custom-scroll flex-col gap-4 lg:max-h-[78vh] sticky top-0">
-                    <div>
-                      <h3 className="text-sm font-black uppercase italic tracking-tight text-[#F4F6F0]">Previsualizador en Tiempo Real</h3>
-                      <p className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-1">Cómo se verá el correo recibido</p>
+                  <div className={`${isPreviewExpanded ? 'flex-1 w-full pl-0 border-l-0' : 'hidden lg:flex lg:w-[500px] xl:w-[580px] pl-4 border-l border-white/10'} overflow-y-auto border-t lg:border-t-0 custom-scroll flex-col gap-4 lg:max-h-[78vh] sticky top-0`}>
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                      <div>
+                        <h3 className="text-sm font-black uppercase italic tracking-tight text-[#F4F6F0]">Previsualizador en Tiempo Real</h3>
+                        <p className="text-[8px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-1">Cómo se verá el correo recibido</p>
+                      </div>
+
+                      <div className="flex gap-2 items-center">
+                        {/* Viewport Switcher Selector */}
+                        <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1">
+                          {[
+                            { id: 'desktop', label: 'Escritorio', icon: <Monitor size={10} /> },
+                            { id: 'tablet', label: 'Tablet', icon: <Tablet size={10} /> },
+                            { id: 'mobile', label: 'Móvil', icon: <Smartphone size={10} /> },
+                          ].map(vp => (
+                            <button
+                              key={vp.id}
+                              type="button"
+                              onClick={() => setPreviewViewport(vp.id as any)}
+                              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                previewViewport === vp.id
+                                  ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
+                                  : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                              }`}
+                            >
+                              {vp.icon}
+                              <span>{vp.label}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Expand/Collapse Button */}
+                        <button
+                          type="button"
+                          onClick={() => setIsPreviewExpanded(!isPreviewExpanded)}
+                          className="flex items-center justify-center w-8 h-8 rounded-xl bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/10 transition-all duration-200"
+                          title={isPreviewExpanded ? 'Mostrar Editor' : 'Ocultar Editor (Pantalla Completa)'}
+                        >
+                          {isPreviewExpanded ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="border border-white/10 rounded-2xl overflow-hidden flex flex-col bg-[#080C0A] w-full">
+                    <div 
+                      className="border border-white/10 rounded-2xl overflow-hidden flex flex-col bg-[#080C0A] transition-all duration-300 mx-auto w-full"
+                      style={{
+                        width: previewViewport === 'mobile' ? '375px' : previewViewport === 'tablet' ? '768px' : '100%',
+                        maxWidth: '100%',
+                      }}
+                    >
                       {/* Email Header */}
                       <div className="bg-white/5 border-b border-white/10 px-4 py-3 space-y-1.5 text-[10px] text-[#F4F6F0]/70">
                         <div><span className="font-bold text-[#F4F6F0]/45 mr-2 uppercase text-[8px] tracking-wider">De:</span> Ms Ambar &lt;hola@msambar.com&gt;</div>
@@ -4968,7 +5500,8 @@ export default function AdminDashboard() {
                                 campTemplateType === 'mist' ? '#0f1115' : '#06070b'
                       }}>
                         <div style={{
-                          maxWidth: '100%',
+                          maxWidth: previewViewport === 'mobile' ? '100%' : previewViewport === 'tablet' ? '100%' : campCardMaxWidthDesktop,
+                          width: '100%',
                           margin: '0 auto',
                           backgroundColor:
                             campTemplateType === 'moss' ? '#122017' :
@@ -4980,7 +5513,7 @@ export default function AdminDashboard() {
                               campTemplateType === 'cosmic' ? '1px solid #4a154b' :
                                 campTemplateType === 'glow' ? '1px solid #d97706' :
                                   campTemplateType === 'mist' ? '1px solid #374151' : '1px solid rgba(255, 255, 255, 0.05)',
-                          padding: '20px',
+                          padding: previewViewport === 'mobile' ? campCardPaddingMobile : previewViewport === 'tablet' ? campCardPaddingTablet : campCardPaddingDesktop,
                           borderRadius: '16px',
                           fontFamily:
                             campFontFamily === 'playfair' ? "'Playfair Display', Georgia, serif" :
@@ -4990,6 +5523,7 @@ export default function AdminDashboard() {
                                     campFontFamily === 'pinyon' ? "'Pinyon Script', cursive" :
                                       'Georgia, serif',
                           textAlign: 'left',
+                          transition: 'all 0.3s ease',
                           ...(campBgImagePreview ? {
                             backgroundImage: `linear-gradient(rgba(${campTemplateType === 'moss' ? '18, 32, 23' :
                               campTemplateType === 'cosmic' ? '12, 10, 26' :
@@ -5032,13 +5566,16 @@ export default function AdminDashboard() {
                           {/* Cover Image */}
                           {campImagePreview && (
                             <div style={{
-                              textAlign: (campImageAlign === 'left' ? 'left' : campImageAlign === 'right' ? 'right' : 'center') as any,
+                              textAlign: (
+                                (previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'left' ? 'left' :
+                                (previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'right' ? 'right' : 'center'
+                              ) as any,
                               marginBottom: '15px'
                             }}>
                               <img
                                 src={campImagePreview}
                                 style={{
-                                  width: campImageWidth || '100%',
+                                  width: previewViewport === 'mobile' ? campImageWidthMobile : previewViewport === 'tablet' ? campImageWidthTablet : campImageWidth || '100%',
                                   maxWidth: '100%',
                                   height: 'auto',
                                   borderRadius: campImageRadius || '16px',
@@ -5057,9 +5594,9 @@ export default function AdminDashboard() {
                             backgroundImage: campTitleBgImage ? `url(${campTitleBgImage})` : undefined,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
-                            padding: campTitlePadding,
-                            borderRadius: campTitleRadius,
-                            fontSize: '15px',
+                            padding: previewViewport === 'mobile' ? campTitlePaddingMobile : previewViewport === 'tablet' ? campTitlePaddingTablet : campTitlePadding,
+                            borderRadius: previewViewport === 'mobile' ? campTitleRadiusMobile : previewViewport === 'tablet' ? campTitleRadiusTablet : campTitleRadius,
+                            fontSize: previewViewport === 'mobile' ? campTitleFontSizeMobile : previewViewport === 'tablet' ? campTitleFontSizeTablet : campTitleFontSizeDesktop,
                             fontWeight: 'bold',
                             textAlign: 'center',
                             fontStyle: 'italic',
@@ -5077,7 +5614,7 @@ export default function AdminDashboard() {
                           {/* Poem content HTML */}
                           <div style={{ textAlign: 'center' }}>
                             <div
-                              className="text-xs leading-relaxed italic"
+                              className="leading-relaxed italic"
                               style={{
                                 color: campBodyTextColor || (
                                   campTemplateType === 'moss' ? '#f5fbf7' :
@@ -5089,13 +5626,14 @@ export default function AdminDashboard() {
                                 backgroundImage: campBodyBgImage ? `url(${campBodyBgImage})` : undefined,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
-                                padding: campBodyPadding,
-                                borderRadius: campBodyRadius,
+                                padding: previewViewport === 'mobile' ? campBodyPaddingMobile : previewViewport === 'tablet' ? campBodyPaddingTablet : campBodyPadding,
+                                borderRadius: previewViewport === 'mobile' ? campBodyRadiusMobile : previewViewport === 'tablet' ? campBodyRadiusTablet : campBodyRadius,
                                 opacity: 0.9,
                                 fontFamily: resolveFontStack(campFontFamily),
+                                fontSize: previewViewport === 'mobile' ? campBodyFontSizeMobile : previewViewport === 'tablet' ? campBodyFontSizeTablet : campBodyFontSizeDesktop,
                                 boxSizing: 'border-box',
                                 marginBottom: '20px',
-                                textAlign: campBodyAlignment as any,
+                                textAlign: (previewViewport === 'mobile' ? campBodyAlignmentMobile : previewViewport === 'tablet' ? campBodyAlignmentTablet : campBodyAlignment) as any,
                                 display: 'inline-block',
                                 maxWidth: '90%',
                                 wordBreak: 'break-word'
@@ -5106,7 +5644,11 @@ export default function AdminDashboard() {
 
                           {/* CTAs list */}
                           {campCtas && campCtas.length > 0 ? (
-                            <div style={{ textAlign: campCtaAlignment as any, marginTop: campCtaMarginTop, marginBottom: campCtaMarginBottom }}>
+                            <div style={{
+                              textAlign: (previewViewport === 'mobile' ? campCtaAlignMobile : previewViewport === 'tablet' ? campCtaAlignTablet : campCtaAlignment) as any,
+                              marginTop: campCtaMarginTop,
+                              marginBottom: campCtaMarginBottom
+                            }}>
                               {campCtas.map((cta: any, cidx: number) => (
                                 <span
                                   key={cidx}
@@ -5135,7 +5677,11 @@ export default function AdminDashboard() {
                               ))}
                             </div>
                           ) : campCtaText ? (
-                            <div style={{ textAlign: campCtaAlignment as any, marginTop: campCtaMarginTop, marginBottom: campCtaMarginBottom }}>
+                            <div style={{
+                              textAlign: (previewViewport === 'mobile' ? campCtaAlignMobile : previewViewport === 'tablet' ? campCtaAlignTablet : campCtaAlignment) as any,
+                              marginTop: campCtaMarginTop,
+                              marginBottom: campCtaMarginBottom
+                            }}>
                               <span
                                 style={{
                                   backgroundColor:
@@ -5163,15 +5709,17 @@ export default function AdminDashboard() {
                           <div style={{
                             textAlign: 'center',
                             borderTop: '1px solid rgba(255,255,255,0.05)',
-                            paddingTop: campFooterPadding !== '0px' ? campFooterPadding : '10px',
+                            paddingTop: (previewViewport === 'mobile' ? campFooterPaddingMobile : previewViewport === 'tablet' ? campFooterPaddingTablet : campFooterPadding) !== '0px'
+                              ? (previewViewport === 'mobile' ? campFooterPaddingMobile : previewViewport === 'tablet' ? campFooterPaddingTablet : campFooterPadding)
+                              : '10px',
                             marginTop: '20px',
                             color: campFooterTextColor || 'rgba(255,255,255,0.3)',
                             backgroundColor: campFooterBgColor,
                             backgroundImage: campFooterBgImage ? `url(${campFooterBgImage})` : undefined,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
-                            padding: campFooterPadding,
-                            borderRadius: campFooterRadius,
+                            padding: previewViewport === 'mobile' ? campFooterPaddingMobile : previewViewport === 'tablet' ? campFooterPaddingTablet : campFooterPadding,
+                            borderRadius: previewViewport === 'mobile' ? campFooterRadiusMobile : previewViewport === 'tablet' ? campFooterRadiusTablet : campFooterRadius,
                             fontSize: '8px',
                             lineHeight: '1.4',
                             fontFamily: resolveFontStack(campFooterFontFamily),

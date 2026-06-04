@@ -673,6 +673,22 @@ def get_campaign_html_template(campaign, sub_email):
     footer_padding = custom_styles.get('footer_padding', '0px')
     footer_radius = custom_styles.get('footer_radius', '0px')
 
+    # Responsive section style overrides (Tablet)
+    title_padding_tablet = custom_styles.get('title_padding_tablet', title_padding)
+    title_radius_tablet = custom_styles.get('title_radius_tablet', title_radius)
+    body_padding_tablet = custom_styles.get('body_padding_tablet', body_padding)
+    body_radius_tablet = custom_styles.get('body_radius_tablet', body_radius)
+    footer_padding_tablet = custom_styles.get('footer_padding_tablet', footer_padding)
+    footer_radius_tablet = custom_styles.get('footer_radius_tablet', footer_radius)
+
+    # Responsive section style overrides (Mobile)
+    title_padding_mobile = custom_styles.get('title_padding_mobile', title_padding_tablet)
+    title_radius_mobile = custom_styles.get('title_radius_mobile', title_radius_tablet)
+    body_padding_mobile = custom_styles.get('body_padding_mobile', body_padding_tablet)
+    body_radius_mobile = custom_styles.get('body_radius_mobile', body_radius_tablet)
+    footer_padding_mobile = custom_styles.get('footer_padding_mobile', footer_padding_tablet)
+    footer_radius_mobile = custom_styles.get('footer_radius_mobile', footer_radius_tablet)
+
     def get_section_bg_style(bg_img, bg_col):
         styles = []
         if bg_col and bg_col != 'transparent':
@@ -816,6 +832,7 @@ def get_campaign_html_template(campaign, sub_email):
           /* Responsive email layout styling */
           @media only screen and (max-width: 768px) {{
             .email-card {{
+              width: 100% !important;
               padding: {card_padding_tablet} !important;
             }}
             .email-title-h2 {{
@@ -841,13 +858,18 @@ def get_campaign_html_template(campaign, sub_email):
               margin-bottom: 24px !important;
             }}
             .email-title {{
+              padding: {title_padding_tablet} !important;
+              border-radius: {title_radius_tablet} !important;
               margin-bottom: 20px !important;
             }}
             .email-poem-box {{
-              padding: 16px 8px !important;
+              padding: {body_padding_tablet} !important;
+              border-radius: {body_radius_tablet} !important;
               margin-bottom: 24px !important;
             }}
             .email-footer {{
+              padding: {footer_padding_tablet} !important;
+              border-radius: {footer_radius_tablet} !important;
               margin-top: 30px !important;
               padding-top: 16px !important;
             }}
@@ -855,6 +877,7 @@ def get_campaign_html_template(campaign, sub_email):
           
           @media only screen and (max-width: 480px) {{
             .email-card {{
+              width: 100% !important;
               padding: {card_padding_mobile} !important;
               border-radius: 20px !important;
             }}
@@ -873,6 +896,18 @@ def get_campaign_html_template(campaign, sub_email):
             }}
             .email-cta-box {{
               text-align: {cta_alignment_mobile} !important;
+            }}
+            .email-title {{
+              padding: {title_padding_mobile} !important;
+              border-radius: {title_radius_mobile} !important;
+            }}
+            .email-poem-box {{
+              padding: {body_padding_mobile} !important;
+              border-radius: {body_radius_mobile} !important;
+            }}
+            .email-footer {{
+              padding: {footer_padding_mobile} !important;
+              border-radius: {footer_radius_mobile} !important;
             }}
           }}
         </style>

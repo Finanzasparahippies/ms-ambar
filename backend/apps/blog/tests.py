@@ -489,7 +489,22 @@ class BlogAppTests(APITestCase):
             'image_align_tablet': 'left',
             'image_align_mobile': 'center',
             'cta_alignment_tablet': 'left',
-            'cta_alignment_mobile': 'center'
+            'cta_alignment_mobile': 'center',
+            
+            # New responsive padding/radius styles
+            'title_padding_tablet': '10px',
+            'title_radius_tablet': '8px',
+            'body_padding_tablet': '24px',
+            'body_radius_tablet': '12px',
+            'footer_padding_tablet': '20px',
+            'footer_radius_tablet': '16px',
+            
+            'title_padding_mobile': '5px',
+            'title_radius_mobile': '4px',
+            'body_padding_mobile': '12px',
+            'body_radius_mobile': '6px',
+            'footer_padding_mobile': '10px',
+            'footer_radius_mobile': '8px'
         }
         
         campaign = EmailCampaign.objects.create(
@@ -510,21 +525,27 @@ class BlogAppTests(APITestCase):
         
         # Verify Tablet Media Query block
         self.assertIn('@media only screen and (max-width: 768px)', html)
-        self.assertIn('.email-card {\n              padding: 32px !important;', html)
+        self.assertIn('.email-card {\n              width: 100% !important;\n              padding: 32px !important;', html)
         self.assertIn('.email-title-h2 {\n              font-size: 24px !important;', html)
         self.assertIn('.email-poem-text {\n              font-size: 16px !important;\n              text-align: left !important;', html)
         self.assertIn('.email-cover-wrapper {\n              text-align: left !important;', html)
         self.assertIn('.email-cover-image {\n              width: 80% !important;', html)
         self.assertIn('.email-cta-box {\n              text-align: left !important;', html)
+        self.assertIn('.email-title {\n              padding: 10px !important;\n              border-radius: 8px !important;', html)
+        self.assertIn('.email-poem-box {\n              padding: 24px !important;\n              border-radius: 12px !important;', html)
+        self.assertIn('.email-footer {\n              padding: 20px !important;\n              border-radius: 16px !important;', html)
         
         # Verify Mobile Media Query block
         self.assertIn('@media only screen and (max-width: 480px)', html)
-        self.assertIn('.email-card {\n              padding: 20px !important;', html)
+        self.assertIn('.email-card {\n              width: 100% !important;\n              padding: 20px !important;', html)
         self.assertIn('.email-title-h2 {\n              font-size: 20px !important;', html)
         self.assertIn('.email-poem-text {\n              font-size: 15px !important;\n              text-align: center !important;', html)
         self.assertIn('.email-cover-wrapper {\n              text-align: center !important;', html)
         self.assertIn('.email-cover-image {\n              width: 100% !important;', html)
         self.assertIn('.email-cta-box {\n              text-align: center !important;', html)
+        self.assertIn('.email-title {\n              padding: 5px !important;\n              border-radius: 4px !important;', html)
+        self.assertIn('.email-poem-box {\n              padding: 12px !important;\n              border-radius: 6px !important;', html)
+        self.assertIn('.email-footer {\n              padding: 10px !important;\n              border-radius: 8px !important;', html)
 
     @patch('apps.blog.views.send_failover_email')
     def test_send_campaign_success(self, mock_send_email):
