@@ -810,7 +810,7 @@ export default function AdminDashboard() {
         setCampErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar la campaña.');
       }
 
-    } finally {
+    finally {
       setCampLoading(false);
     }
   };
