@@ -833,6 +833,8 @@ def get_campaign_html_template(campaign, sub_email):
           @media only screen and (max-width: 768px) {{
             .email-card {{
               width: 100% !important;
+              min-width: 300px !important;
+              box-sizing: border-box !important;
               padding: {card_padding_tablet} !important;
             }}
             .email-title-h2 {{
@@ -878,6 +880,8 @@ def get_campaign_html_template(campaign, sub_email):
           @media only screen and (max-width: 480px) {{
             .email-card {{
               width: 100% !important;
+              min-width: 300px !important;
+              box-sizing: border-box !important;
               padding: {card_padding_mobile} !important;
               border-radius: 20px !important;
             }}
@@ -909,11 +913,20 @@ def get_campaign_html_template(campaign, sub_email):
               padding: {footer_padding_mobile} !important;
               border-radius: {footer_radius_mobile} !important;
             }}
+            .email-body {{
+              padding: 12px 8px !important;
+            }}
+          }}
+          
+          @media only screen and (max-width: 320px) {{
+            .email-body {{
+              padding: 12px 0px !important;
+            }}
           }}
         </style>
       </head>
       <body class="email-body" style="background-color: {bg_color}; color: {text_color}; font-family: {body_font_family}; padding: 40px 20px; margin: 0; text-align: center; -webkit-font-smoothing: antialiased;">
-        <div class="email-card" style="max-width: {card_max_width_desktop}; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: {card_padding_desktop}; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
+        <div class="email-card" style="max-width: {card_max_width_desktop}; width: 100%; min-width: 300px; box-sizing: border-box; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: {card_padding_desktop}; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
           
           <!-- Header/Logo -->
           <div class="email-header" style="text-align: center; margin-bottom: 40px;">

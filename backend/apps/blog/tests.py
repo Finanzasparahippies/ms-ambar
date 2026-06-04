@@ -518,6 +518,8 @@ class BlogAppTests(APITestCase):
         
         # Verify desktop inline styles
         self.assertIn('max-width: 760px', html)
+        self.assertIn('min-width: 300px', html)
+        self.assertIn('box-sizing: border-box', html)
         self.assertIn('padding: 48px', html)
         self.assertIn('font-size: 30px', html)
         self.assertIn('font-size: 18px', html)
@@ -525,7 +527,7 @@ class BlogAppTests(APITestCase):
         
         # Verify Tablet Media Query block
         self.assertIn('@media only screen and (max-width: 768px)', html)
-        self.assertIn('.email-card {\n              width: 100% !important;\n              padding: 32px !important;', html)
+        self.assertIn('.email-card {\n              width: 100% !important;\n              min-width: 300px !important;\n              box-sizing: border-box !important;\n              padding: 32px !important;', html)
         self.assertIn('.email-title-h2 {\n              font-size: 24px !important;', html)
         self.assertIn('.email-poem-text {\n              font-size: 16px !important;\n              text-align: left !important;', html)
         self.assertIn('.email-cover-wrapper {\n              text-align: left !important;', html)
@@ -537,7 +539,7 @@ class BlogAppTests(APITestCase):
         
         # Verify Mobile Media Query block
         self.assertIn('@media only screen and (max-width: 480px)', html)
-        self.assertIn('.email-card {\n              width: 100% !important;\n              padding: 20px !important;', html)
+        self.assertIn('.email-card {\n              width: 100% !important;\n              min-width: 300px !important;\n              box-sizing: border-box !important;\n              padding: 20px !important;', html)
         self.assertIn('.email-title-h2 {\n              font-size: 20px !important;', html)
         self.assertIn('.email-poem-text {\n              font-size: 15px !important;\n              text-align: center !important;', html)
         self.assertIn('.email-cover-wrapper {\n              text-align: center !important;', html)

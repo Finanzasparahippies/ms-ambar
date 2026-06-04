@@ -5492,7 +5492,8 @@ export default function AdminDashboard() {
                       </div>
 
                       {/* Email Body Frame */}
-                      <div className="p-4 overflow-y-auto custom-scroll" style={{
+                      <div className="overflow-y-auto custom-scroll" style={{
+                        padding: previewViewport === 'mobile' ? '12px 8px' : '16px',
                         backgroundColor:
                           campTemplateType === 'moss' ? '#0b130e' :
                             campTemplateType === 'cosmic' ? '#05050f' :
@@ -5502,6 +5503,8 @@ export default function AdminDashboard() {
                         <div style={{
                           maxWidth: previewViewport === 'mobile' ? '100%' : previewViewport === 'tablet' ? '100%' : campCardMaxWidthDesktop,
                           width: '100%',
+                          minWidth: '300px',
+                          boxSizing: 'border-box',
                           margin: '0 auto',
                           backgroundColor:
                             campTemplateType === 'moss' ? '#122017' :
@@ -5775,7 +5778,8 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Email body simulation */}
-                    <div className="flex-1 overflow-y-auto p-8 custom-scroll" style={{
+                    <div className="flex-1 overflow-y-auto custom-scroll" style={{
+                      padding: '12px 8px',
                       backgroundColor:
                         previewCampaign.template_type === 'moss' ? '#0b130e' :
                           previewCampaign.template_type === 'cosmic' ? '#05050f' :
@@ -5784,6 +5788,9 @@ export default function AdminDashboard() {
                     }}>
                       <div style={{
                         maxWidth: '500px',
+                        width: '100%',
+                        minWidth: '300px',
+                        boxSizing: 'border-box',
                         margin: '0 auto',
                         backgroundColor:
                           previewCampaign.template_type === 'moss' ? '#122017' :
