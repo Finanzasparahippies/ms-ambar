@@ -77,6 +77,7 @@ const PremiumCTAButton = ({
       "disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
     )}
   >
+    {/* Shimmer sweep on hover */}
     {!disabled && (
       <span className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
     )}
@@ -119,7 +120,7 @@ const TourPage = () => {
         : 'http://localhost:8000/api');
   };
 
-  // Handle returning from Stripe Checkout
+  // Handle returning from Stripe Checkout — FIXED CONTEXT AND ROUTING CRASH
   useEffect(() => {
     if (!router.isReady) return;
     const { success, session_id } = router.query;
@@ -135,6 +136,7 @@ const TourPage = () => {
           if (tickets && tickets.length > 0) {
             setCreatedTickets(tickets);
             setEmail(tickets[0].user_email || '');
+            // Corrección de propiedad cruzada: evita que explote la asignación de UI
             setFullName(tickets[0].full_name || tickets[0].user_name || '');
             setCheckoutSuccess(true);
             setIsCheckoutOpen(true);
@@ -145,7 +147,7 @@ const TourPage = () => {
         })
         .catch(err => {
           console.error("Error retrieving tickets by session:", err);
-          showAlert("Hubo un error al recuperar tus boletos. Por favor revisa tu correo electrónico o el admin.", "Error de Sincronización", "error");
+          showAlert("Hubo un error al recuperar tus boletos. Por favor revisa tu correo electrónico.", "Error", "error");
         })
         .finally(() => {
           setIsLoading(false);
@@ -158,6 +160,7 @@ const TourPage = () => {
     document.documentElement.setAttribute('data-theme', theme);
     const apiUrl = getApiUrl();
 
+    // Fetch events and site settings in parallel
     Promise.all([
       fetch(`${apiUrl}/tickets/events/`).then(r => r.json()),
       fetch(`${apiUrl}/tickets/settings/`).then(r => r.json()).catch(() => null),
@@ -221,24 +224,21 @@ const TourPage = () => {
 
   const { base_price: checkoutBasePrice, service_fee: checkoutServiceFee, total: checkoutTotal } = calculateTotalWithFee(baseTotal);
 
-  // EDGE CASE SUCCESS CALCULATOR: Extrae costos reales del array devuelto por el API tras la compra
-  const getCreatedTicketsTotal = () => {
+  // EDGE CASE SUCCESS CALCULATOR: Extrae el costo bruto real de la orden devuelta por Django
+  const getCreatedTicketsTotalAmount = () => {
     if (!createdTickets || createdTickets.length === 0) return 0;
 
-    // Si fue M&G puro, sumamos el precio configurado del evento por la cantidad de boletos
     if (createdTickets[0].seat_display === 'Meet & Greet' && !createdTickets[0].seat) {
       return createdTickets.length * Number(currentEvent?.mg_price || 0);
     }
 
-    // Si son asientos físicos, sumamos el precio base real de cada asiento asignado
     return createdTickets.reduce((acc, ticket) => {
       const baseSeatPrice = ticket.seat_details?.base_price || ticket.base_price || 0;
       const multiplier = Number(currentEvent?.price_multiplier || 1);
       let seatCost = Number(baseSeatPrice) * multiplier;
 
-      // Edgecase: Si el asiento de concierto incluyó un upgrade extra de M&G
       if (ticket.has_mg && currentEvent?.event_type !== 'meet_greet') {
-        seatCost += Ribbon(currentEvent?.mg_price || 0);
+        seatCost += Number(currentEvent?.mg_price || 0);
       }
       return acc + seatCost;
     }, 0);
@@ -276,10 +276,8 @@ const TourPage = () => {
     }
   };
 
-  if (!isMounted) return null;
-
   return (
-    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen bg-[#07080a]">
+    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen">
       <Head>
         <title>Ms Ambar | Accesos Oficiales 2026</title>
         <meta name="description" content="MS Ambar Accesos Oficiales 2026. Reserva tus entradas y vive la experiencia acústico-visual de vanguardia." />
@@ -340,18 +338,18 @@ const TourPage = () => {
                 key={currentEvent?.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-4xl md:text-5xl font-black tracking-tight mb-8 uppercase italic leading-tight text-white"
+                className="text-4xl md:text-5xl font-black tracking-tight mb-8 uppercase italic leading-tight"
               >
                 {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
               </motion.h2>
               <div className="flex flex-col gap-4 text-xs uppercase tracking-widest font-black">
-                <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
+                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <MapPin size={14} className="text-amber-honey" />
-                  <span className="text-white">{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Plataforma Digital' : 'Cargando Recinto...'}</span>
+                  <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Plataforma Digital' : 'Cargando Recinto...'}</span>
                 </div>
-                <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
+                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <Calendar size={14} className="text-amber-honey" />
-                  <span className="text-white">{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
+                  <span>{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
                 </div>
               </div>
             </header>
@@ -365,7 +363,7 @@ const TourPage = () => {
                   exit={{ opacity: 0 }}
                   className="relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-xl shadow-amber-honey/5 w-full aspect-[3/4]"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#07080a]/80 via-transparent to-transparent z-10 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-nature-night/20 to-transparent z-10 pointer-events-none" />
                   <img
                     src={currentEvent.flyer_url}
                     alt={`Flyer oficial: ${currentEvent.title}`}
@@ -383,7 +381,7 @@ const TourPage = () => {
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-8 rounded-[2.5rem] border border-white/10 bg-white/5 space-y-6 text-white"
+                className="p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-6"
               >
                 <div className="flex items-center gap-3 text-amber-honey">
                   <Star className="fill-current animate-pulse" size={20} />
@@ -392,39 +390,57 @@ const TourPage = () => {
                 <p className="text-xs leading-relaxed opacity-80">
                   Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales con la artista.
                 </p>
+                <ul className="space-y-3 text-[10px] font-bold uppercase tracking-wider opacity-75">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Acceso exclusivo al venue de convivencia
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Firma de autógrafos y posters de colección
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Fotografía digital oficial individual
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Monograma Ámbar de edición limitada
+                  </li>
+                </ul>
               </motion.div>
             )}
           </div>
 
           {/* Right Column: Booking Panel + Seating Chart */}
           <div className="lg:col-span-8 flex flex-col gap-8">
-            <motion.div layout className="border border-white/10 bg-[#0c0e12] text-white shadow-2xl p-8 rounded-[3rem]">
-              <div className="text-center mb-8 border-b border-white/10 pb-6">
+            <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-xl shadow-nature-night/5 p-8 rounded-[3rem]">
+              <div className="text-center mb-8 border-b border-nature-night/10 pb-6">
                 <h3 className="text-2xl font-black uppercase tracking-wider mb-2">Reserva Digital</h3>
-                <p className="text-[9px] uppercase tracking-[0.3em] text-amber-honey font-bold">Reserva directa mediante Néctar Gateway</p>
+                <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
               </div>
 
               {isMeetGreet && (
-                <div className="mb-6 p-6 rounded-[2rem] bg-white/5 border border-white/10 text-center space-y-4">
+                <div className="mb-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
                   <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
                   <div className="flex items-center justify-center gap-6">
                     <button
                       onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
-                      className="w-12 h-12 rounded-full bg-white/5 hover:bg-amber-honey/20 border border-white/10 flex items-center justify-center font-bold text-white transition-colors"
+                      className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
                     >
                       <Minus size={14} />
                     </button>
-                    <span className="text-3xl font-black min-w-[2rem] text-center text-white">{mgQuantity}</span>
+                    <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
                     <button
                       onClick={() => setMgQuantity(mgQuantity + 1)}
-                      className="w-12 h-12 rounded-full bg-white/5 hover:bg-amber-honey/20 border border-white/10 flex items-center justify-center font-bold text-white transition-colors"
+                      className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
                     >
                       <Plus size={14} />
                     </button>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[9px] font-bold uppercase text-white/40 tracking-widest">Precio Unitario</p>
-                    <p className="text-xl font-black text-white">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
+                    <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
+                    <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
                   </div>
                 </div>
               )}
@@ -434,34 +450,37 @@ const TourPage = () => {
                   onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
                   className={cn(
                     "mb-6 p-5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
-                    wantsMG ? "bg-amber-honey border-amber-honey text-black" : "bg-white/5 border-white/10 hover:border-amber-honey/30"
+                    wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
                   )}
                 >
                   <div className="flex items-center gap-4 relative z-10">
                     <div className={cn(
                       "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500",
-                      wantsMG ? "bg-black text-amber-honey rotate-12" : "bg-amber-honey text-black"
+                      wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
                     )}>
                       <Star size={20} fill="currentColor" />
                     </div>
                     <div>
-                      <h4 className="font-black text-xs uppercase tracking-widest">Meet & Greet</h4>
-                      <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-black/70" : "text-amber-honey")}>
+                      <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet</h4>
+                      <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
                         {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
                       </p>
                     </div>
                   </div>
+                  {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
+                    {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
+                  </span>}
                 </div>
               )}
 
               <div className="space-y-3 mb-6 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
                 {isMeetGreet ? (
-                  <div className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10">
+                  <div className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10">
                     <div>
                       <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Meet & Greet</p>
-                      <p className="text-xs font-bold text-white/80">{mgQuantity} Pase(s) de Convivencia</p>
+                      <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
                     </div>
-                    <span className="font-extrabold text-xs text-white">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
+                    <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
                   </div>
                 ) : (
                   <>
@@ -472,21 +491,21 @@ const TourPage = () => {
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, scale: 0.8 }}
-                          className="flex justify-between items-center bg-white/5 p-4 rounded-xl border border-white/10"
+                          className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10"
                         >
                           <div>
                             <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
-                            <p className="text-xs font-bold text-white/80">Fila {seat.row} • Asiento {seat.number}</p>
+                            <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
                           </div>
-                          <span className="font-extrabold text-xs text-white">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
+                          <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
                         </motion.div>
                       ))}
                     </AnimatePresence>
 
                     {selectedSeats.length === 0 && (
-                      <div className="py-12 text-center border border-dashed border-white/10 rounded-2xl opacity-40">
-                        <Ticket className="mx-auto mb-2 text-white" size={32} />
-                        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-white">Elige un asiento en el mapa</p>
+                      <div className="py-12 text-center border border-dashed border-nature-night/20 rounded-2xl opacity-40">
+                        <Ticket className="mx-auto mb-2 text-nature-night/40" size={32} />
+                        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-nature-night/40">Elige un asiento en el mapa</p>
                       </div>
                     )}
                   </>
@@ -496,13 +515,13 @@ const TourPage = () => {
               {baseTotal > 0 ? (
                 <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
               ) : (
-                <div className="pt-6 border-t border-white/10 mb-6">
+                <div className="pt-6 border-t border-nature-night/10 mb-6">
                   <div className="flex justify-between items-end">
                     <div>
-                      <p className="text-[9px] uppercase font-bold text-white/50 tracking-[0.25em] mb-2">Total</p>
+                      <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-2">Total</p>
                       <p className="text-4xl font-black leading-none text-amber-honey">$0 MXN</p>
                     </div>
-                    <Users size={18} className="text-white/30 mb-1" />
+                    <Users size={18} className="text-nature-night/30 mb-1" />
                   </div>
                 </div>
               )}
@@ -521,11 +540,11 @@ const TourPage = () => {
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
                 {isLoading ? (
-                  <div className="h-[450px] md:h-[600px] flex items-center justify-center border border-white/10 bg-white/5 rounded-[3.5rem]">
+                  <div className="h-[450px] md:h-[600px] flex items-center justify-center border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.01] dark:bg-white/[0.01] rounded-[3.5rem]">
                     <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em]">Tejiendo la Planta...</div>
                   </div>
                 ) : (
-                  <div className="h-[450px] md:h-[600px] rounded-[3.5rem] overflow-hidden border border-white/10">
+                  <div className="h-[450px] md:h-[600px] rounded-[3.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10">
                     <SeatingChart
                       seats={seats}
                       onSelect={handleSelectionChange}
@@ -544,12 +563,12 @@ const TourPage = () => {
         {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */}
         <AnimatePresence>
           {isCheckoutOpen && (
-            <div className="fixed inset-0 z-[120] bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+            <div className="fixed inset-0 z-[110] bg-nature-night/60 backdrop-blur-md flex items-center justify-center p-4">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-[#0c0e12] border border-white/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-white shadow-2xl overflow-hidden"
+                className="bg-white border border-nature-night/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-hidden"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/10 rounded-bl-[8rem] pointer-events-none" />
 
@@ -561,55 +580,55 @@ const TourPage = () => {
                       setEmail('');
                       setPhone('');
                     }}
-                    className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors"
+                    className="absolute top-6 right-6 text-nature-night/50 hover:text-nature-night transition-colors"
                   >
                     <X size={18} />
                   </button>
                 )}
 
                 {checkoutSuccess ? (
-                  <div className="text-center space-y-5 py-2">
-                    <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-400">
-                      <CheckCircle size={30} />
+                  <div className="text-center space-y-6 py-4">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
+                      <CheckCircle size={32} />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       <h3 className="text-2xl font-black uppercase tracking-wider">¡Compra Confirmada!</h3>
-                      <p className="text-xs text-white/60">Tus accesos han sido generados y enviados a tu correo:</p>
+                      <p className="text-xs text-nature-night/60">Tus accesos han sido generados y enviados a su correo:</p>
                       <p className="text-xs font-bold text-amber-honey">{email}</p>
                     </div>
 
-                    {/* DESGLOSE FINANCIERO ADICIONAL DENTRO DEL MODAL (Edge-case Audit) */}
+                    {/* DESGLOSE FINANCIERO CORREGIDO — MATCHING DESKTOP ASYMMETRIC FLYER SPEC */}
                     {(() => {
-                      const computedBaseTotal = getCreatedTicketsTotal();
-                      const { base_price, service_fee, total } = calculateTotalWithFee(computedBaseTotal);
-                      if (computedBaseTotal <= 0) return null;
+                      const totalCargado = getCreatedTicketsTotalAmount();
+                      const { base_price: costoNetoBoleto, service_fee: comisionPlataforma } = calculateTotalWithFee(totalCargado);
+                      if (totalCargado <= 0) return null;
                       return (
-                        <div className="bg-black/30 border border-white/5 p-4 rounded-xl text-left space-y-1.5 text-[11px]">
-                          <div className="flex justify-between text-white/50">
-                            <span>Monto Base ({createdTickets.length} accesos):</span>
-                            <span className="font-semibold text-white">${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                        <div className="bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-xl text-left space-y-1.5 text-[11px]">
+                          <div className="flex justify-between text-nature-night/60">
+                            <span>Costo del Boleto ({createdTickets.length} accesos):</span>
+                            <span className="font-semibold text-nature-night">${costoNetoBoleto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                           </div>
-                          <div className="flex justify-between text-amber-500/80">
-                            <span className="flex items-center gap-1"><Info size={10} /> Tarifa Operativa / Stripe:</span>
-                            <span className="font-semibold">+${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                          <div className="flex justify-between text-amber-600">
+                            <span className="flex items-center gap-1"><Info size={10} /> Cargo de servicio (Stripe MX):</span>
+                            <span className="font-semibold">+${comisionPlataforma.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                           </div>
-                          <div className="flex justify-between text-white font-bold border-t border-white/10 pt-1.5 mt-1 text-xs">
-                            <span>Total Cargado:</span>
-                            <span className="text-amber-honey">${Math.ceil(total).toLocaleString('es-MX')} MXN</span>
+                          <div className="flex justify-between text-nature-night font-bold border-t border-nature-night/10 pt-1.5 mt-1 text-xs">
+                            <span>Total Pagado:</span>
+                            <span className="text-amber-honey">${Math.ceil(totalCargado).toLocaleString('es-MX')} MXN</span>
                           </div>
                         </div>
                       );
                     })()}
 
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-left space-y-3">
+                    <div className="bg-nature-night/[0.02] p-5 rounded-2xl border border-nature-night/10 text-left space-y-3">
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales</h4>
-                      <div className="space-y-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
+                      <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                         {createdTickets.map((t, idx) => (
-                          <div key={t.id} className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/10">
-                            <span className="text-xs font-bold text-white/80">Boleto #{idx + 1} ({t.seat_display || 'Entrada General'})</span>
+                          <div key={t.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-nature-night/10">
+                            <span className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</span>
                             <Link
                               href={`/tickets/${t.token}`}
-                              className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors"
+                              className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors"
                               target="_blank"
                             >
                               Ver Boleto
@@ -628,22 +647,22 @@ const TourPage = () => {
                         setEmail('');
                         setPhone('');
                       }}
-                      className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.01] transition-transform shadow-lg shadow-amber-500/10"
+                      className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform"
                     >
                       Finalizar y Volver
                     </button>
                   </div>
                 ) : (
                   <form onSubmit={handleCheckoutSubmit} className="space-y-6">
-                    <div className="border-b border-white/10 pb-4">
+                    <div className="border-b border-nature-night/10 pb-4">
                       <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">Pasarela Segura</span>
-                      <h3 className="text-2xl font-black uppercase tracking-tight mt-1 text-white">Confirmar Reserva</h3>
+                      <h3 className="text-2xl font-black uppercase tracking-tight mt-1">Confirmar Reserva</h3>
                     </div>
 
-                    <div className="bg-white/5 border border-white/10 p-5 rounded-2xl space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-white/50">Resumen del Evento</p>
-                      <h4 className="text-sm font-black text-white">{currentEvent?.title}</h4>
-                      <p className="text-xs text-white/60">
+                    <div className="bg-nature-night/[0.02] border border-nature-night/10 p-5 rounded-2xl space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-nature-night/50">Resumen del Evento</p>
+                      <h4 className="text-sm font-black text-nature-night">{currentEvent?.title}</h4>
+                      <p className="text-xs text-nature-night/60">
                         {isMeetGreet
                           ? `${mgQuantity} Pase(s) de Convivencia Meet & Greet`
                           : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
@@ -652,19 +671,19 @@ const TourPage = () => {
                       </p>
 
                       {baseTotal > 0 && (
-                        <div className="pt-3 border-t border-white/10 mt-2 space-y-1.5">
+                        <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
                           <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-white/50 font-bold uppercase tracking-wider">Precio Base</span>
-                            <span className="font-extrabold text-white">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                            <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
+                            <span className="font-extrabold text-nature-night">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                           </div>
                           <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-amber-500 font-bold uppercase tracking-wider flex items-center gap-1">
+                            <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
                               <Info size={9} /> Cargo de servicio
                             </span>
-                            <span className="font-bold text-amber-500">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                            <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                           </div>
-                          <div className="flex justify-between items-end pt-2 border-t border-white/10">
-                            <span className="text-[10px] uppercase font-bold text-white/50">Total a Pagar</span>
+                          <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
+                            <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
                             <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
                           </div>
                         </div>
@@ -673,37 +692,37 @@ const TourPage = () => {
 
                     <div className="space-y-4">
                       <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-white/50">Nombre Completo</label>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Nombre Completo</label>
                         <input
                           type="text"
                           required
                           value={fullName}
                           onChange={e => setFullName(e.target.value)}
                           placeholder="Juan Pérez..."
-                          className="w-full bg-black/30 border border-white/10 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-white"
+                          className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-white/50">Correo Electrónico</label>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Correo Electrónico</label>
                         <input
                           type="email"
                           required
                           value={email}
                           onChange={e => setEmail(e.target.value)}
                           placeholder="juan@example.com..."
-                          className="w-full bg-black/30 border border-white/10 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-white"
+                          className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-white/50">Teléfono (WhatsApp)</label>
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Teléfono (WhatsApp)</label>
                         <input
                           type="tel"
                           value={phone}
                           onChange={e => setPhone(e.target.value)}
-                          placeholder="+52 55 1234 5678"
-                          className="w-full bg-black/30 border border-white/10 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-white"
+                          placeholder="+52 55 1234 5678..."
+                          className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
                         />
                       </div>
                     </div>
