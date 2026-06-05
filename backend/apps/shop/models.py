@@ -26,11 +26,76 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    stripe_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del producto en Stripe")
+    stripe_price_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del precio en Stripe")
 
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+
+        from django.conf import settings
+        import stripe
+
+        updated = False
+        if getattr(settings, "STRIPE_SECRET_KEY", None) and not getattr(settings, "TESTING", False) and (not self.stripe_product_id or not self.stripe_price_id):
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            try:
+                # Search for existing Stripe Product with this slug or id
+                product = None
+                for p in stripe.Product.list(limit=100).auto_paging_iter():
+                    if p.active and (p.metadata.get("product_slug") == self.slug or p.metadata.get("product_id") == str(self.id)):
+                        product = p
+                        break
+                
+                expected_name = f"[Ms Ambar] {self.name}"
+                if not product:
+                    product = stripe.Product.create(
+                        name=expected_name,
+                        description=self.description or "",
+                        metadata={"product_id": str(self.id), "product_slug": self.slug}
+                    )
+                else:
+                    # Update details if changed
+                    updates = {}
+                    if product.name != expected_name:
+                        updates["name"] = expected_name
+                    if product.description != self.description:
+                        updates["description"] = self.description
+                    current_product_id = product.metadata.get("product_id")
+                    current_product_slug = product.metadata.get("product_slug")
+                    if current_product_id != str(self.id) or current_product_slug != self.slug:
+                        updates["metadata"] = {"product_id": str(self.id), "product_slug": self.slug}
+                    if updates:
+                        stripe.Product.modify(product.id, **updates)
+
+                self.stripe_product_id = product.id
+
+                # Fetch active prices for this product to avoid duplicates
+                prices = stripe.Price.list(product=product.id, active=True)
+                price_id = None
+                amount_cents = int(self.price * 100)
+                for p in prices.data:
+                    if not p.recurring and p.unit_amount == amount_cents and p.currency == "mxn":
+                        price_id = p.id
+                        break
+
+                if not price_id:
+                    price_obj = stripe.Price.create(
+                        unit_amount=amount_cents,
+                        currency="mxn",
+                        product=product.id,
+                    )
+                    price_id = price_obj.id
+
+                self.stripe_price_id = price_id
+                updated = True
+            except Exception as e:
+                import logging
+                logging.getLogger("apps").error(f"Error creating Stripe Product/Prices for Product {self.name}: {e}")
+
+        if updated:
+            super().save(update_fields=['stripe_product_id', 'stripe_price_id'])
 
     def __str__(self):
         return self.name

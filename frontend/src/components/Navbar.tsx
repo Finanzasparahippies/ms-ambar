@@ -101,7 +101,7 @@ const Navbar = () => {
     { name: 'Accesos', href: '/comprar-boletos' },
     // { name: 'Galería', href: '/galleria' }, // TODO: Habilitar cuando esté completado
     // { name: 'Música', href: '/musica' }, // TODO: Habilitar cuando esté completado
-    { name: 'Tienda', href: '/tienda' },
+    // { name: 'Tienda', href: '/tienda' }, // TODO: Habilitar cuando esté completado
     { name: 'Ambar te escribe', href: '/ambar-te-escribe' },
     { name: 'Contacto', href: '/contacto' },
     // { name: 'Entretenimiento', href: '/entretenimiento' }, // TODO: Habilitar cuando esté completado
@@ -109,11 +109,10 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-500 ease-in-out ${
-        isScrolled || isMobileMenuOpen
+      className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-500 ease-in-out ${isScrolled || isMobileMenuOpen
           ? 'border-b border-white/5 bg-[#080C0A]/90 backdrop-blur-md shadow-lg shadow-black/30'
           : 'border-b border-transparent bg-transparent'
-      }`}
+        }`}
       style={{
         transform: isVisible ? 'translateY(0)' : 'translateY(-100%)',
         opacity: isVisible ? 1 : 0,
@@ -134,9 +133,8 @@ const Navbar = () => {
             <Link
               key={link.name}
               href={link.href}
-              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey ${
-                router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
-              }`}
+              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+                }`}
             >
               {link.name}
             </Link>
@@ -151,11 +149,10 @@ const Navbar = () => {
                   {/* Nectar Studio Designer — admins only */}
                   <Link
                     href="/designer"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
-                      router.pathname === '/designer'
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/designer'
                         ? 'bg-amber-honey text-nature-night border-amber-honey'
                         : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                    }`}
+                      }`}
                     title="Nectar Studio Designer — Solo Admins"
                   >
                     <Layers size={10} /> Studio
@@ -163,11 +160,10 @@ const Navbar = () => {
                   {/* Admin Dashboard */}
                   <Link
                     href="/dashboard"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${
-                      router.pathname.startsWith('/dashboard')
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard')
                         ? 'bg-amber-honey text-nature-night border-amber-honey'
                         : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                    }`}
+                      }`}
                   >
                     <Shield size={10} /> Admin
                   </Link>
@@ -218,9 +214,8 @@ const Navbar = () => {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-[11px] uppercase font-bold tracking-[0.25em] transition-all hover:text-amber-honey py-2 border-b border-white/[0.03] ${
-                    router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
-                  }`}
+                  className={`text-[11px] uppercase font-bold tracking-[0.25em] transition-all hover:text-amber-honey py-2 border-b border-white/[0.03] ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -234,21 +229,19 @@ const Navbar = () => {
                   <div className="flex gap-3">
                     <Link
                       href="/designer"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
-                        router.pathname === '/designer'
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname === '/designer'
                           ? 'bg-amber-honey text-nature-night border-amber-honey'
                           : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                      }`}
+                        }`}
                     >
                       <Layers size={12} /> Studio
                     </Link>
                     <Link
                       href="/dashboard"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${
-                        router.pathname.startsWith('/dashboard')
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname.startsWith('/dashboard')
                           ? 'bg-amber-honey text-nature-night border-amber-honey'
                           : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                      }`}
+                        }`}
                     >
                       <Shield size={12} /> Admin
                     </Link>

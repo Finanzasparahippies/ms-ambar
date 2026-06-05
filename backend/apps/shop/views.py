@@ -84,6 +84,9 @@ def handle_successful_payment(session):
         event_id = metadata.get('event_id')
         seat_ids_raw = metadata.get('seat_ids', '')
         user_email = metadata.get('user_email')
+        phone = metadata.get('phone', '')
+        has_mg = metadata.get('has_mg') == 'True'
+        session_id = session.get('id')
         
         event = Event.objects.get(id=event_id)
         seat_ids = [s for s in seat_ids_raw.split(',') if s.strip()] if seat_ids_raw else []
@@ -91,36 +94,59 @@ def handle_successful_payment(session):
         if seat_ids:
             for seat_id in seat_ids:
                 seat = Seat.objects.get(id=seat_id)
-                # Create or update ticket
-                ticket, created = Ticket.objects.get_or_create(
-                    event=event,
-                    seat=seat,
-                    defaults={'user_email': user_email, 'status': 'paid'}
-                )
-                if not created:
+                # First try to find by session_id and seat, then fallback to event and seat
+                ticket = None
+                if session_id:
+                    ticket = Ticket.objects.filter(stripe_session_id=session_id, seat=seat).first()
+                if not ticket:
+                    ticket = Ticket.objects.filter(event=event, seat=seat).first()
+                
+                if ticket:
                     ticket.status = 'paid'
+                    ticket.user_email = user_email
+                    ticket.user_phone = phone
+                    ticket.has_mg = has_mg
+                    if session_id:
+                        ticket.stripe_session_id = session_id
                     ticket.save()
+                else:
+                    ticket = Ticket.objects.create(
+                        event=event,
+                        seat=seat,
+                        user_email=user_email,
+                        user_phone=phone,
+                        status='paid',
+                        has_mg=has_mg,
+                        stripe_session_id=session_id
+                    )
                 
                 # Trigger delivery
                 try:
                     send_ticket_email(ticket)
                     if ticket.user_phone:
                         send_ticket_whatsapp(ticket)
-                    # send_ticket_telegram(ticket) # Optional
                 except Exception as e:
                     print(f"Error delivering ticket: {e}")
                 
                 print(f"Payment confirmed and ticket delivered: {ticket.token}")
         else:
             quantity = int(metadata.get('quantity', 1))
-            for _ in range(quantity):
+            # Check if tickets under this session_id already exist to prevent duplicate creation
+            existing_count = 0
+            if session_id:
+                existing_count = Ticket.objects.filter(stripe_session_id=session_id).count()
+            
+            to_create = quantity - existing_count
+            for _ in range(max(0, to_create)):
                 ticket = Ticket.objects.create(
                     event=event,
                     seat=None,
                     ga_zone=None,
                     user_email=user_email,
+                    user_phone=phone,
                     status='paid',
-                    has_mg=True
+                    has_mg=True,
+                    stripe_session_id=session_id
                 )
                 
                 # Trigger delivery
@@ -128,7 +154,6 @@ def handle_successful_payment(session):
                     send_ticket_email(ticket)
                     if ticket.user_phone:
                         send_ticket_whatsapp(ticket)
-                    # send_ticket_telegram(ticket) # Optional
                 except Exception as e:
                     print(f"Error delivering ticket: {e}")
                 

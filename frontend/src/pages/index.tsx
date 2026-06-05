@@ -883,8 +883,8 @@ const Home = () => {
             <Sparkles size={12} className="text-amber-honey animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
               {nextEvent
-                ? `Tour Oficial 2026 • Próximo Show: ${nextEvent.title} (${getFormattedEventDate(nextEvent.date)})`
-                : "Tour Oficial 2026 • Próximo Show Oct 24"
+                ? `Mi próximo evento: ${nextEvent.title} — ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
+                : "¡Próximamente nuevo evento!"
               }
             </span>
           </motion.div>
@@ -924,6 +924,63 @@ const Home = () => {
           </motion.div>
         </div>
       </section>
+
+      {/* ─── PRÓXIMO EVENTO FLYER SECTION ─── */}
+      {nextEvent?.flyer_url && (
+        <section className="pb-4 md:pb-8">
+          <div className="max-w-[1600px] mx-auto px-6 md:px-10">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8 }}
+              className="relative rounded-[3rem] overflow-hidden border border-amber-honey/15 group shadow-2xl shadow-amber-honey/5"
+            >
+              {/* Gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/90 via-[#06070b]/50 to-transparent z-10 pointer-events-none" />
+
+              {/* Flyer Image */}
+              <img
+                src={nextEvent.flyer_url}
+                alt={`Flyer: ${nextEvent.title}`}
+                className="w-full h-64 md:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-1000"
+              />
+
+              {/* Content overlay */}
+              <div className="absolute inset-0 z-20 flex flex-col justify-end p-8 md:p-12 pointer-events-none">
+                <div className="max-w-2xl space-y-4">
+                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
+                    <Sparkles size={10} className="animate-pulse" /> Próximo Evento
+                  </span>
+                  <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-tight">
+                    {nextEvent.title}
+                  </h2>
+                  <p className="text-sm text-[#F4F6F0]/70 font-medium">
+                    {getFormattedEventDate(nextEvent.date)}
+                    {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
+                      <span className="ml-2">
+                        <span className="text-[#F4F6F0]/50 text-xs"> — desde </span>
+                        <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
+                        <span className="text-amber-honey/70 text-xs font-bold"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cargo de servicio</span>
+                        <span className="text-amber-honey font-black text-sm"> = ${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
+                      </span>
+                    )}
+                  </p>
+                  <Link
+                    href="/comprar-boletos"
+                    className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/30 hover:scale-105 hover:shadow-amber-honey/50 transition-all pointer-events-auto"
+                  >
+                    <Ticket size={14} /> Adquirir Accesos
+                  </Link>
+                </div>
+              </div>
+
+              {/* Decorative amber glow */}
+              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-amber-honey/5 via-transparent to-transparent pointer-events-none z-10" />
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ─── BIOGRAPHY SECTION ─── */}
       <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden">
@@ -1008,7 +1065,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ─── LIVE MUSIC RELEASES SHOWCASE ─── */}
+      {/* ─── LIVE MUSIC RELEASES SHOWCASE ─── 
       <section className="py-16 md:py-24 border-y border-white/10 bg-white/[0.02] relative">
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
@@ -1044,7 +1101,7 @@ const Home = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
       <section className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
@@ -1123,7 +1180,7 @@ const Home = () => {
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Suscribirse a las Cartas <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
+                          Suscribirse al Club <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
                         </span>
                       )}
                     </button>

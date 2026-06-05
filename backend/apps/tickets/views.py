@@ -2,12 +2,19 @@ from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Event, Theater, Ticket, Seat
-from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer
+from rest_framework.views import APIView
+from .models import Event, Theater, Ticket, Seat, SiteSettings
+from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer, SiteSettingsSerializer
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
+
+    def get_serializer_context(self):
+        """Pass request to serializer so image/flyer URLs are absolute."""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
 
     def get_queryset(self):
         user = self.request.user
@@ -94,7 +101,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
 
     def get_permissions(self):
-        if self.action == 'checkout':
+        if self.action in ['checkout', 'by_session']:
             return [permissions.AllowAny()]
         elif self.action == 'validate':
             return [permissions.IsAdminUser()]
@@ -175,30 +182,17 @@ class TicketViewSet(viewsets.ModelViewSet):
         except Event.DoesNotExist:
             return Response({'error': 'Evento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        from apps.tickets.utils import send_ticket_email
+        from apps.shop.utils import create_ticket_checkout_session
+        from django.conf import settings
 
-        tickets_created = []
+        success_url = f"{settings.FRONTEND_URL}/comprar-boletos"
+        cancel_url = f"{settings.FRONTEND_URL}/comprar-boletos"
 
+        seats = []
         if event.event_type == 'meet_greet':
             qty = int(quantity)
             if qty < 1:
                 return Response({'error': 'La cantidad debe ser al menos 1.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-            for _ in range(qty):
-                ticket = Ticket.objects.create(
-                    event=event,
-                    seat=None,
-                    ga_zone=None,
-                    user_email=email,
-                    user_phone=phone,
-                    status='paid',
-                    has_mg=True
-                )
-                tickets_created.append(ticket)
-                try:
-                    send_ticket_email(ticket)
-                except Exception as e:
-                    print(f"Error sending ticket email: {e}")
         else:
             if not seat_ids:
                 return Response({'error': 'Debes seleccionar al menos un asiento.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -215,27 +209,128 @@ class TicketViewSet(viewsets.ModelViewSet):
             for s_id in seat_ids:
                 try:
                     seat = Seat.objects.get(id=s_id)
+                    seats.append(seat)
                 except Seat.DoesNotExist:
                     return Response({'error': f'Asiento con ID {s_id} no existe.'}, status=status.HTTP_400_BAD_REQUEST)
 
-                ticket = Ticket.objects.create(
-                    event=event,
-                    seat=seat,
-                    ga_zone=None,
-                    user_email=email,
-                    user_phone=phone,
-                    status='paid',
-                    has_mg=has_mg
-                )
-                tickets_created.append(ticket)
-                try:
-                    send_ticket_email(ticket)
-                except Exception as e:
-                    print(f"Error sending ticket email: {e}")
+        use_mock = False
+        if not getattr(settings, 'TESTING', False):
+            stripe_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+            if not stripe_key or any(p in stripe_key for p in ['change_me', 'replace_me', 'test_mock', 'placeholder']):
+                use_mock = True
 
-        serializer = TicketSerializer(tickets_created, many=True)
+        session_id = None
+        session_url = None
+
+        if not use_mock:
+            try:
+                # Create Stripe Checkout Session
+                session = create_ticket_checkout_session(
+                    event=event,
+                    seats=seats,
+                    user_email=email,
+                    success_url=success_url,
+                    cancel_url=cancel_url,
+                    quantity=quantity,
+                    has_mg=has_mg,
+                    phone=phone
+                )
+                session_id = session.id
+                session_url = session.url
+            except Exception as e:
+                import logging
+                logging.getLogger("apps").warning(f"Error creating Stripe checkout session, falling back to mock: {e}")
+                use_mock = True
+
+        if use_mock:
+            # Mock checkout fallback
+            import uuid
+            mock_session_id = f"mock_{uuid.uuid4().hex}"
+            session_id = mock_session_id
+            session_url = f"{success_url}?success=true&session_id={mock_session_id}"
+
+            # Create tickets as 'paid' directly for mock so that returning immediately works
+            if event.event_type == 'meet_greet':
+                for _ in range(int(quantity)):
+                    Ticket.objects.create(
+                        event=event,
+                        seat=None,
+                        ga_zone=None,
+                        user_email=email,
+                        user_phone=phone,
+                        status='paid',
+                        has_mg=True,
+                        stripe_session_id=mock_session_id
+                    )
+            else:
+                for seat in seats:
+                    Ticket.objects.create(
+                        event=event,
+                        seat=seat,
+                        ga_zone=None,
+                        user_email=email,
+                        user_phone=phone,
+                        status='paid',
+                        has_mg=has_mg,
+                        stripe_session_id=mock_session_id
+                    )
+        else:
+            # Standard Stripe pre-creation of reserved tickets for concert
+            if event.event_type != 'meet_greet':
+                for seat in seats:
+                    Ticket.objects.create(
+                        event=event,
+                        seat=seat,
+                        ga_zone=None,
+                        user_email=email,
+                        user_phone=phone,
+                        status='reserved',
+                        has_mg=has_mg,
+                        stripe_session_id=session_id
+                    )
+
         return Response({
             'status': 'success',
-            'message': f'Se han generado {len(tickets_created)} boletos exitosamente.',
-            'tickets': serializer.data
-        }, status=status.HTTP_201_CREATED)
+            'session_id': session_id,
+            'session_url': session_url
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['get'], url_path='by_session')
+    def by_session(self, request):
+        session_id = request.query_params.get('session_id')
+        if not session_id:
+            return Response({'error': 'session_id es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        tickets = Ticket.objects.filter(stripe_session_id=session_id)
+        serializer = self.get_serializer(tickets, many=True)
+        return Response(serializer.data)
+
+
+class SiteSettingsView(APIView):
+    """
+    Retorna y actualiza la configuración global del sitio (singleton).
+    GET  /api/tickets/settings/ — Público
+    POST /api/tickets/settings/ — Solo admins (staff)
+    """
+
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+    def get(self, request):
+        settings_obj = SiteSettings.get()
+        serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        settings_obj = SiteSettings.get()
+        # Update only provided fields
+        if 'tickets_page_subtitle' in request.data:
+            settings_obj.tickets_page_subtitle = request.data['tickets_page_subtitle']
+        if 'homepage_cta_text' in request.data:
+            settings_obj.homepage_cta_text = request.data['homepage_cta_text']
+        settings_obj.save()
+        serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
+        return Response(serializer.data)
+

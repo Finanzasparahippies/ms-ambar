@@ -501,6 +501,8 @@ export default function AdminDashboard() {
   const [eventIsActive, setEventIsActive] = useState(true);
   const [eventImageFile, setEventImageFile] = useState<File | null>(null);
   const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
+  const [eventFlyerFile, setEventFlyerFile] = useState<File | null>(null);
+  const [eventFlyerPreview, setEventFlyerPreview] = useState<string | null>(null);
   const [eventLoading, setEventLoading] = useState(false);
   const [eventSuccessMsg, setEventSuccessMsg] = useState<string | null>(null);
   const [eventErrorMsg, setEventErrorMsg] = useState<string | null>(null);
@@ -515,6 +517,12 @@ export default function AdminDashboard() {
   const [theaterSuccessMsg, setTheaterSuccessMsg] = useState<string | null>(null);
   const [theaterErrorMsg, setTheaterErrorMsg] = useState<string | null>(null);
   const [theaterSyncStatus, setTheaterSyncStatus] = useState<Record<number, 'idle' | 'loading' | 'success' | 'error'>>({});
+
+  // ─── Site Settings State (Dynamic Texts) ───
+  const [siteSettingsSubtitle, setSiteSettingsSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
+  const [siteSettingsCta, setSiteSettingsCta] = useState('¡Próximamente nuevo evento!');
+  const [siteSettingsLoading, setSiteSettingsLoading] = useState(false);
+  const [siteSettingsSuccess, setSiteSettingsSuccess] = useState<string | null>(null);
 
   const fetchDashboardData = async () => {
     const token = localStorage.getItem('token');
@@ -543,7 +551,7 @@ export default function AdminDashboard() {
     try {
       if (staffFlag) {
         // Staff/Admin Data Fetching
-        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes] = await Promise.all([
+        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes, siteSettingsRes] = await Promise.all([
           axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
           axios.get(`${API_URL}/dashboard/system/`, { headers }).catch(err => {
             console.error("System metrics fetch failed, using fallback", err);
@@ -559,7 +567,8 @@ export default function AdminDashboard() {
           axios.get(`${API_URL}/blog/subscribers/`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_URL}/users/profile/`, { headers }).catch(() => ({ data: null })),
           axios.get(`${API_URL}/blog/campaign-template-images/`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/tickets/events/`, { headers }).catch(() => ({ data: [] }))
+          axios.get(`${API_URL}/tickets/events/`, { headers }).catch(() => ({ data: [] })),
+          axios.get(`${API_URL}/tickets/settings/`).catch(() => ({ data: null })),
         ]);
 
         setStats(analyticsRes.data);
@@ -573,6 +582,10 @@ export default function AdminDashboard() {
         setSubscribers(Array.isArray(subscribersRes.data) ? subscribersRes.data : []);
         setTemplateImages(Array.isArray(templateImagesRes.data) ? templateImagesRes.data : []);
         setEvents(Array.isArray(eventsRes.data) ? eventsRes.data : []);
+        if (siteSettingsRes?.data) {
+          if (siteSettingsRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(siteSettingsRes.data.tickets_page_subtitle);
+          if (siteSettingsRes.data.homepage_cta_text) setSiteSettingsCta(siteSettingsRes.data.homepage_cta_text);
+        }
         if (profileRes && profileRes.data) {
           setClientProfile(profileRes.data);
         }
@@ -1540,6 +1553,8 @@ export default function AdminDashboard() {
     setEventIsActive(true);
     setEventImageFile(null);
     setEventImagePreview(null);
+    setEventFlyerFile(null);
+    setEventFlyerPreview(null);
     setEventErrorMsg(null);
     setEventSuccessMsg(null);
     setIsEventModalOpen(true);
@@ -1566,6 +1581,8 @@ export default function AdminDashboard() {
     setEventIsActive(event.is_active);
     setEventImageFile(null);
     setEventImagePreview(event.image ? resolveMediaUrl(event.image) : null);
+    setEventFlyerFile(null);
+    setEventFlyerPreview(event.flyer ? resolveMediaUrl(event.flyer) : null);
     setEventErrorMsg(null);
     setEventSuccessMsg(null);
     setIsEventModalOpen(true);
@@ -1611,6 +1628,9 @@ export default function AdminDashboard() {
 
     if (eventImageFile) {
       formData.append('image', eventImageFile);
+    }
+    if (eventFlyerFile) {
+      formData.append('flyer', eventFlyerFile);
     }
 
     try {
@@ -3775,6 +3795,34 @@ export default function AdminDashboard() {
                           </div>
                         </div>
 
+                        {/* Flyer Upload */}
+                        <div className="space-y-2">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">🎟️ Flyer Oficial del Evento</label>
+                          <div className="flex gap-4 items-center">
+                            <div className="flex-1">
+                              <input
+                                type="file" accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    setEventFlyerFile(file);
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => setEventFlyerPreview(reader.result as string);
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="w-full text-xs text-[#F4F6F0]/60 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:tracking-widest file:bg-amber-honey/20 file:text-amber-honey hover:file:bg-amber-honey/30 file:cursor-pointer"
+                              />
+                            </div>
+                            {eventFlyerPreview && (
+                              <div className="w-24 h-14 rounded-xl border border-amber-honey/20 bg-black/40 overflow-hidden shrink-0">
+                                <img src={eventFlyerPreview} alt="Flyer Preview" className="w-full h-full object-cover" />
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[8px] text-[#F4F6F0]/30 font-bold uppercase tracking-wider block">Se mostrará en la landing page y en la p&aacute;gina de compra de boletos.</span>
+                        </div>
+
                         {/* Image Upload */}
                         <div className="space-y-2">
                           <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Imagen de Portada</label>
@@ -4316,6 +4364,65 @@ export default function AdminDashboard() {
                   transition={{ duration: 0.3 }}
                   className="space-y-6"
                 >
+                  {/* Site Settings Panel */}
+                  <div className="bg-white/5 border border-amber-honey/20 rounded-[2rem] p-6 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-black uppercase italic tracking-tight text-amber-honey flex items-center gap-2">⚙️ Textos Dinámicos del Sitio</h3>
+                      <p className="text-[9px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold mt-1">Actualiza los textos que aparecen en la página de accesos y la landing page.</p>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Subtítulo de Página de Accesos</label>
+                        <textarea
+                          value={siteSettingsSubtitle}
+                          onChange={e => setSiteSettingsSubtitle(e.target.value)}
+                          rows={3}
+                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all resize-none"
+                          placeholder="Selecciona tu concierto, explora el mapa..."
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Badge de Próximo Evento (Landing)</label>
+                        <input
+                          type="text"
+                          value={siteSettingsCta}
+                          onChange={e => setSiteSettingsCta(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                          placeholder="¡Próximamente nuevo evento!"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={async () => {
+                          setSiteSettingsLoading(true);
+                          try {
+                            const token = localStorage.getItem('token');
+                            // POST to create or update the singleton
+                            await fetch(`${API_URL}/tickets/settings/`, {
+                              method: 'POST',
+                              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ tickets_page_subtitle: siteSettingsSubtitle, homepage_cta_text: siteSettingsCta })
+                            });
+                            setSiteSettingsSuccess('¡Configuración guardada exitosamente!');
+                            setTimeout(() => setSiteSettingsSuccess(null), 3000);
+                          } catch (err) {
+                            console.error('Error saving site settings:', err);
+                          } finally {
+                            setSiteSettingsLoading(false);
+                          }
+                        }}
+                        disabled={siteSettingsLoading}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-honey text-black font-black uppercase tracking-widest text-[9px] hover:bg-amber-gold transition-all disabled:opacity-50 shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
+                      >
+                        {siteSettingsLoading ? 'Guardando...' : '💾 Guardar Configuración'}
+                      </button>
+                      {siteSettingsSuccess && (
+                        <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">{siteSettingsSuccess}</p>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>

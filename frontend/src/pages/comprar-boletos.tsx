@@ -2,17 +2,96 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import SeatingChart from '../components/SeatingChart';
 import TourTimeline from '../components/TourTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Ticket, Users, MapPin, Calendar, Star, Sparkles, Minus, Plus, X, CheckCircle
+  Ticket, Users, MapPin, Calendar, Star, Sparkles, Minus, Plus, X, CheckCircle, Info, ShieldCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import axios from 'axios';
 import { showAlert } from '../lib/notifications';
 
+// ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
+const STRIPE_PCT_FEE = 0.036;   // 3.6%
+const STRIPE_FLAT_FEE = 3.00;   // $3.00 MXN
+
+const calculateTotalWithFee = (baseAmount: number): { base_price: number; service_fee: number; total: number } => {
+  if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
+  const total = baseAmount;
+  const service_fee = baseAmount * STRIPE_PCT_FEE + STRIPE_FLAT_FEE;
+  const base_price = total - service_fee;
+  return {
+    base_price: Math.round(base_price * 100) / 100,
+    service_fee: Math.round(service_fee * 100) / 100,
+    total: Math.round(total * 100) / 100,
+  };
+};
+
+// ── Price Breakdown Component ────────────────────────────────────────────────
+const PriceBreakdown = ({ baseTotal, label = 'Precio Base' }: { baseTotal: number; label?: string }) => {
+  const { base_price, service_fee, total } = calculateTotalWithFee(baseTotal);
+  if (baseTotal <= 0) return null;
+
+  return (
+    <div className="space-y-2 border-t border-nature-night/10 pt-4 mt-4">
+      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-nature-night/60">
+        <span>{label}</span>
+        <span>${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+      </div>
+      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-amber-600">
+        <span className="flex items-center gap-1.5">
+          <Info size={10} />
+          Cargo de servicio
+        </span>
+        <span>+${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+      </div>
+      <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
+        <div>
+          <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-1">Total a Pagar</p>
+          <p className="text-3xl font-black leading-none text-amber-honey">${Math.ceil(total).toLocaleString('es-MX')} MXN</p>
+        </div>
+        <Users size={18} className="text-nature-night/30 mb-1" />
+      </div>
+      <p className="text-[8px] text-nature-night/40 leading-relaxed">
+        El precio incluye un cargo de servicio de plataforma (Stripe MX). El monto final a pagar es ${Math.ceil(total).toLocaleString('es-MX')} MXN.
+      </p>
+    </div>
+  );
+};
+
+// ── Ultra-Premium CTA Button ─────────────────────────────────────────────────
+const PremiumCTAButton = ({
+  onClick, disabled, children
+}: { onClick: () => void; disabled?: boolean; children: React.ReactNode }) => (
+  <motion.button
+    whileHover={disabled ? {} : { scale: 1.015 }}
+    whileTap={disabled ? {} : { scale: 0.985 }}
+    disabled={disabled}
+    onClick={onClick}
+    className={cn(
+      "relative w-full overflow-hidden rounded-2xl py-6 px-8 font-black text-[11px] uppercase tracking-[0.3em] transition-all duration-300",
+      "bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-nature-night",
+      "shadow-[0_8px_32px_rgba(245,158,11,0.35)] hover:shadow-[0_12px_48px_rgba(245,158,11,0.55)]",
+      "disabled:opacity-30 disabled:grayscale disabled:pointer-events-none"
+    )}
+  >
+    {/* Shimmer sweep on hover */}
+    {!disabled && (
+      <span className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/25 to-transparent pointer-events-none" />
+    )}
+    <span className="relative z-10 flex items-center justify-center gap-3">
+      <ShieldCheck size={16} className="shrink-0" />
+      {children}
+      <Sparkles size={14} className="shrink-0 animate-pulse" />
+    </span>
+  </motion.button>
+);
+
+// ── Main TourPage Component ──────────────────────────────────────────────────
 const TourPage = () => {
+  const router = useRouter();
   const [events, setEvents] = useState<any[]>([]);
   const [currentEvent, setCurrentEvent] = useState<any>(null);
   const [seats, setSeats] = useState<any[]>([]);
@@ -22,6 +101,39 @@ const TourPage = () => {
   const [wantsMG, setWantsMG] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [elements, setElements] = useState<any[]>([]);
+  const [pageSubtitle, setPageSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
+
+  // Handle returning from Stripe Checkout
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { success, session_id } = router.query;
+    if (success === 'true' && session_id) {
+      setIsLoading(true);
+      const apiUrl = getApiUrl();
+      fetch(`${apiUrl}/tickets/tickets/by_session/?session_id=${session_id}`)
+        .then(res => {
+          if (!res.ok) throw new Error('No se pudieron recuperar los boletos.');
+          return res.json();
+        })
+        .then(tickets => {
+          if (tickets && tickets.length > 0) {
+            setCreatedTickets(tickets);
+            setEmail(tickets[0].user_email);
+            setFullName(tickets[0].user_name || '');
+            setCheckoutSuccess(true);
+            setIsCheckoutOpen(true);
+            router.replace('/comprar-boletos', undefined, { shallow: true });
+          }
+        })
+        .catch(err => {
+          console.error("Error retrieving tickets by session:", err);
+          showAlert("Hubo un error al recuperar tus boletos. Por favor revisa tu correo electrónico.", "Error", "error");
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [router.isReady, router.query]);
 
   // Meet & Greet and Checkout states
   const [mgQuantity, setMgQuantity] = useState(1);
@@ -44,19 +156,24 @@ const TourPage = () => {
     setIsMounted(true);
     document.documentElement.setAttribute('data-theme', theme);
     const apiUrl = getApiUrl();
-    fetch(`${apiUrl}/tickets/events/`)
-      .then(res => res.json())
-      .then(data => {
-        setEvents(data);
-        if (data && data.length > 0) {
-          setCurrentEvent(data[0]);
-        }
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error("Error fetching events:", err);
-        setIsLoading(false);
-      });
+
+    // Fetch events and site settings in parallel
+    Promise.all([
+      fetch(`${apiUrl}/tickets/events/`).then(r => r.json()),
+      fetch(`${apiUrl}/tickets/settings/`).then(r => r.json()).catch(() => null),
+    ]).then(([eventsData, settingsData]) => {
+      if (eventsData && eventsData.length > 0) {
+        setEvents(eventsData);
+        setCurrentEvent(eventsData[0]);
+      }
+      if (settingsData?.tickets_page_subtitle) {
+        setPageSubtitle(settingsData.tickets_page_subtitle);
+      }
+      setIsLoading(false);
+    }).catch(err => {
+      console.error("Error fetching data:", err);
+      setIsLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -81,7 +198,7 @@ const TourPage = () => {
       .catch(err => console.error("Error fetching seats:", err));
   }, [currentEvent]);
 
-  if (!isMounted) return null;
+  // Early return check (evaluated before JSX render)
 
   const handleSelectionChange = (ids: string[]) => {
     const selectedObjects = ids.map(id => {
@@ -90,7 +207,7 @@ const TourPage = () => {
     setSelectedSeats(selectedObjects);
   };
 
-  const getPrice = (seat: any) => {
+  const getSeatBasePrice = (seat: any) => {
     if (!seat) return 0;
     const base = Number(seat.base_price || 0);
     const mult = Number(currentEvent?.price_multiplier || 1);
@@ -98,11 +215,13 @@ const TourPage = () => {
   };
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';
-  const seatsTotal = isMeetGreet ? 0 : selectedSeats.reduce((acc, seat) => acc + getPrice(seat), 0);
-  const mgPrice = isMeetGreet
+  const seatsBaseTotal = isMeetGreet ? 0 : selectedSeats.reduce((acc, seat) => acc + getSeatBasePrice(seat), 0);
+  const mgBaseTotal = isMeetGreet
     ? mgQuantity * Number(currentEvent?.mg_price || 0)
     : (wantsMG ? Number(currentEvent?.mg_price || 0) : 0);
-  const totalPrice = seatsTotal + mgPrice;
+  const baseTotal = seatsBaseTotal + mgBaseTotal;
+
+  const { base_price: checkoutBasePrice, service_fee: checkoutServiceFee, total: checkoutTotal } = calculateTotalWithFee(baseTotal);
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,10 +239,16 @@ const TourPage = () => {
         has_mg: isMeetGreet ? true : wantsMG
       });
 
-      setCreatedTickets(res.data.tickets || []);
-      setCheckoutSuccess(true);
-      setSelectedSeats([]);
-      setWantsMG(false);
+      if (res.data.session_url) {
+        // Redirect to Stripe Checkout
+        window.location.href = res.data.session_url;
+      } else {
+        // Mock fallback if Stripe integration is bypassed
+        setCreatedTickets(res.data.tickets || []);
+        setCheckoutSuccess(true);
+        setSelectedSeats([]);
+        setWantsMG(false);
+      }
     } catch (err) {
       console.error("Error during checkout:", err);
       showAlert("Hubo un error al procesar la reserva. Por favor intenta de nuevo.", "Error de Reserva", "error");
@@ -132,6 +257,8 @@ const TourPage = () => {
     }
   };
 
+  if (!isMounted) return null;
+
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen">
       <Head>
@@ -139,7 +266,7 @@ const TourPage = () => {
         <meta name="description" content="MS Ambar Accesos Oficiales 2026. Reserva tus entradas y vive la experiencia acústico-visual de vanguardia." />
       </Head>
 
-      {/* Header section (Nectar Labs style) */}
+      {/* ─── Header Section ─── */}
       <section className="pt-10 pb-16 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative overflow-hidden">
         <div className="absolute top-[-10%] left-[-15%] w-[45%] h-[45%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
         <div className="max-w-4xl mx-auto space-y-6">
@@ -160,17 +287,18 @@ const TourPage = () => {
             ACCESOS <span className="text-glow text-gradient bg-gradient-to-r from-amber-400 via-amber-honey to-amber-700 bg-clip-text text-transparent px-2">OFICIALES 2026</span>
           </motion.h1>
 
+          {/* Dynamic subtitle from backend */}
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-nature-night/70 dark:text-[#F4F6F0]/70 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
           >
-            Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.
+            {pageSubtitle}
           </motion.p>
         </div>
       </section>
 
-      {/* Main Reservation Section */}
+      {/* ─── Main Reservation Section ─── */}
       <section className="pb-32 max-w-[1600px] mx-auto px-6 md:px-10">
         <TourTimeline
           events={events}
@@ -185,89 +313,124 @@ const TourPage = () => {
           currentEvent={currentEvent}
         />
 
-        <div className="grid lg:grid-cols-12 gap-12 xl:gap-20 mt-12">
-          <div className="lg:col-span-8">
-            <header className="mb-10">
+        <div className="grid lg:grid-cols-12 gap-12 xl:gap-20 mt-12 items-start">
+
+          {/* Left Column: Event details + Flyer */}
+          <div className="lg:col-span-4 space-y-8">
+            <header className="mb-10 text-left">
               <motion.h2
                 key={currentEvent?.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-4xl md:text-6xl font-black tracking-tight mb-8 uppercase italic"
+                className="text-4xl md:text-5xl font-black tracking-tight mb-8 uppercase italic leading-tight"
               >
                 {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
               </motion.h2>
-              <div className="flex flex-wrap gap-6 text-xs uppercase tracking-widest font-black">
-                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md">
+              <div className="flex flex-col gap-4 text-xs uppercase tracking-widest font-black">
+                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <MapPin size={14} className="text-amber-honey" />
                   <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Plataforma Digital' : 'Cargando Recinto...'}</span>
                 </div>
-                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md">
+                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <Calendar size={14} className="text-amber-honey" />
                   <span>{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
                 </div>
               </div>
             </header>
 
-            {isLoading ? (
-              <div className="h-[450px] md:h-[700px] flex items-center justify-center border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.01] dark:bg-white/[0.01] rounded-[3.5rem]">
-                <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em]">Tejiendo la Planta...</div>
-              </div>
-            ) : isMeetGreet ? (
-              <div className="flex flex-col items-center justify-center h-[450px] md:h-[700px] border border-nature-night/15 dark:border-white/10 bg-forest-green rounded-[3.5rem] p-8 text-center space-y-6 backdrop-blur-sm relative overflow-hidden group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <div className="w-20 h-20 rounded-full bg-amber-honey/10 border border-amber-honey/20 flex items-center justify-center text-amber-honey animate-pulse z-10">
-                  <Star size={36} className="fill-current" />
-                </div>
-                <div className="space-y-2 z-10">
-                  <h3 className="text-2xl font-black uppercase tracking-wider text-white">Convivencia Meet & Greet</h3>
-                  <p className="text-xs text-white/70 max-w-md mx-auto leading-relaxed">
-                    Pase exclusivo para convivir con Ms Ambar. Evento especial sin límite de boletos para compartir momentos únicos, firmar autógrafos y tomarse fotografías.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-6 bg-white/10 border border-white/20 px-8 py-4 rounded-3xl backdrop-blur-md z-10">
-                  <button
-                    onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-bold text-white hover:bg-amber-honey hover:text-black transition-colors"
-                  >
-                    <Minus size={14} />
-                  </button>
-                  <span className="text-2xl font-black min-w-[2rem] text-center text-white">{mgQuantity}</span>
-                  <button
-                    onClick={() => setMgQuantity(mgQuantity + 1)}
-                    className="w-10 h-10 rounded-full bg-white/15 border border-white/25 flex items-center justify-center font-bold text-white hover:bg-amber-honey hover:text-black transition-colors"
-                  >
-                    <Plus size={14} />
-                  </button>
-                </div>
-
-                <div className="space-y-1 z-10">
-                  <p className="text-[10px] font-black uppercase text-amber-honey tracking-widest">Precio por Boleto</p>
-                  <p className="text-xl font-bold text-white">${Number(currentEvent.mg_price).toLocaleString()} MXN</p>
-                </div>
-              </div>
-            ) : (
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
-                <div className="h-[450px] md:h-[700px] rounded-[3.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10">
-                  <SeatingChart
-                    seats={seats}
-                    onSelect={handleSelectionChange}
-                    selectedIds={selectedSeats.map(s => String(s.id))}
-                    theme={theme}
-                    elements={elements}
+            {/* Event Flyer Banner — shown only if event has a flyer */}
+            <AnimatePresence mode="wait">
+              {currentEvent?.flyer_url && (
+                <motion.div
+                  key={`flyer-${currentEvent.id}`}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-xl shadow-amber-honey/5 w-full aspect-[3/4]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-nature-night/20 to-transparent z-10 pointer-events-none" />
+                  <img
+                    src={currentEvent.flyer_url}
+                    alt={`Flyer oficial: ${currentEvent.title}`}
+                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
                   />
+                  <div className="absolute bottom-6 left-8 z-20">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
+                    <h3 className="text-xl font-black text-white uppercase italic">{currentEvent.title}</h3>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* If Meet & Greet, show a premium details card on the left (without background image) */}
+            {isMeetGreet && (
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-6"
+              >
+                <div className="flex items-center gap-3 text-amber-honey">
+                  <Star className="fill-current animate-pulse" size={20} />
+                  <h3 className="text-lg font-black uppercase tracking-wider">Detalles de la Convivencia</h3>
                 </div>
-              </div>
+                <p className="text-xs leading-relaxed opacity-80">
+                  Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales con la artista.
+                </p>
+                <ul className="space-y-3 text-[10px] font-bold uppercase tracking-wider opacity-75">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Acceso exclusivo al venue de convivencia
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Firma de autógrafos y posters de colección
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Fotografía digital oficial individual
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Monograma Ámbar de edición limitada
+                  </li>
+                </ul>
+              </motion.div>
             )}
           </div>
 
-          <div className="lg:col-span-4">
-            <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-xl shadow-nature-night/5 p-8 rounded-[3rem] sticky top-8">
+          {/* Right Column: Booking Panel + Seating Chart */}
+          <div className="lg:col-span-8 flex flex-col gap-8">
+            <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-xl shadow-nature-night/5 p-8 rounded-[3rem]">
               <div className="text-center mb-8 border-b border-nature-night/10 pb-6">
                 <h3 className="text-2xl font-black uppercase tracking-wider mb-2">Reserva Digital</h3>
                 <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
               </div>
+
+              {/* Meet & Greet quantity selector (integrated inside Reserva Digital card) */}
+              {isMeetGreet && (
+                <div className="mb-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
+                  <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
+                  <div className="flex items-center justify-center gap-6">
+                    <button
+                      onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
+                      className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
+                    <button
+                      onClick={() => setMgQuantity(mgQuantity + 1)}
+                      className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
+                    <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
+                  </div>
+                </div>
+              )}
 
               {/* Meet & Greet Toggle (Standard Concert Events Only) */}
               {!isMeetGreet && (
@@ -298,7 +461,7 @@ const TourPage = () => {
                 </div>
               )}
 
-              <div className="space-y-3 mb-8 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+              <div className="space-y-3 mb-6 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
                 {isMeetGreet ? (
                   <div className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10">
                     <div>
@@ -322,7 +485,7 @@ const TourPage = () => {
                             <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
                             <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
                           </div>
-                          <span className="font-extrabold text-xs text-nature-night">${getPrice(seat).toLocaleString()} MXN</span>
+                          <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
                         </motion.div>
                       ))}
                     </AnimatePresence>
@@ -337,27 +500,55 @@ const TourPage = () => {
                 )}
               </div>
 
-              <div className="pt-6 border-t border-nature-night/10 mb-6">
-                <div className="flex justify-between items-end">
-                  <div>
-                    <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-2">Total</p>
-                    <p className="text-4xl font-black leading-none text-amber-honey">${totalPrice.toLocaleString()} MXN</p>
+              {/* Price Breakdown with Stripe Fees */}
+              {baseTotal > 0 ? (
+                <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
+              ) : (
+                <div className="pt-6 border-t border-nature-night/10 mb-6">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-2">Total</p>
+                      <p className="text-4xl font-black leading-none text-amber-honey">$0 MXN</p>
+                    </div>
+                    <Users size={18} className="text-nature-night/30 mb-1" />
                   </div>
-                  <Users size={18} className="text-nature-night/30 mb-1" />
                 </div>
-              </div>
+              )}
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={isMeetGreet ? false : selectedSeats.length === 0}
-                onClick={() => setIsCheckoutOpen(true)}
-                className="w-full py-4.5 rounded-2xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black disabled:opacity-30 disabled:grayscale transition-all shadow-lg shadow-amber-honey/10"
-              >
-                Proceder al Pago
-              </motion.button>
+              {/* Ultra-Premium CTA Button */}
+              <div className="mt-6">
+                <PremiumCTAButton
+                  disabled={isMeetGreet ? false : selectedSeats.length === 0}
+                  onClick={() => setIsCheckoutOpen(true)}
+                >
+                  Proceder al Pago
+                </PremiumCTAButton>
+              </div>
             </motion.div>
+
+            {/* Seating Chart - shown only if event is a concert (not meet & greet) */}
+            {!isMeetGreet && (
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
+                {isLoading ? (
+                  <div className="h-[450px] md:h-[600px] flex items-center justify-center border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.01] dark:bg-white/[0.01] rounded-[3.5rem]">
+                    <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em]">Tejiendo la Planta...</div>
+                  </div>
+                ) : (
+                  <div className="h-[450px] md:h-[600px] rounded-[3.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10">
+                    <SeatingChart
+                      seats={seats}
+                      onSelect={handleSelectionChange}
+                      selectedIds={selectedSeats.map(s => String(s.id))}
+                      theme={theme}
+                      elements={elements}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
+
         </div>
 
         {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */}
@@ -437,7 +628,7 @@ const TourPage = () => {
                       <h3 className="text-2xl font-black uppercase tracking-tight mt-1">Confirmar Reserva</h3>
                     </div>
 
-                    {/* Order Summary */}
+                    {/* Order Summary with Stripe Fee Breakdown */}
                     <div className="bg-nature-night/[0.02] border border-nature-night/10 p-5 rounded-2xl space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-widest text-nature-night/50">Resumen del Evento</p>
                       <h4 className="text-sm font-black text-nature-night">{currentEvent?.title}</h4>
@@ -448,10 +639,25 @@ const TourPage = () => {
                         }
                         {wantsMG && !isMeetGreet && " (Incluye Meet & Greet)"}
                       </p>
-                      <div className="flex justify-between items-end pt-3 border-t border-nature-night/10 mt-2">
-                        <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
-                        <span className="text-lg font-black text-amber-honey">${totalPrice.toLocaleString()} MXN</span>
-                      </div>
+
+                      {baseTotal > 0 && (
+                        <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
+                            <span className="font-extrabold text-nature-night">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                              <Info size={9} /> Cargo de servicio
+                            </span>
+                            <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                          </div>
+                          <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
+                            <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
+                            <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Input Fields */}
@@ -495,9 +701,11 @@ const TourPage = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full py-4.5 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black disabled:opacity-30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform"
+                      className="w-full py-5 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black disabled:opacity-30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-amber-honey/20"
                     >
-                      {isSubmitting ? 'Procesando Pago...' : 'Confirmar y Generar Boletos'}
+                      <ShieldCheck size={14} />
+                      {isSubmitting ? 'Procesando Pago...' : 'Confirmar y Pagar Boletos'}
+                      {!isSubmitting && <Sparkles size={12} className="animate-pulse" />}
                     </button>
                   </form>
                 )}

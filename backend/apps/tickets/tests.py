@@ -3,6 +3,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.utils import timezone
 from apps.tickets.models import Theater, Event, Seat, Ticket, GADeclaration
+from unittest.mock import patch
 
 class TicketsAppTests(APITestCase):
     def setUp(self):
@@ -191,8 +192,14 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['status'], 'error')
 
-    def test_checkout_concert_success(self):
-        """Test checking out seats for a concert event successfully."""
+    @patch('stripe.checkout.Session.create')
+    def test_checkout_concert_success(self, mock_stripe_create):
+        """Test checking out seats for a concert event successfully creates a Stripe checkout session."""
+        class MockSession:
+            id = 'cs_test_123'
+            url = 'https://checkout.stripe.com/pay/cs_test_123'
+        mock_stripe_create.return_value = MockSession()
+
         url = reverse('ticket-list') + 'checkout/'
         data = {
             'email': 'concert_buyer@example.com',
@@ -202,10 +209,18 @@ class TicketsAppTests(APITestCase):
             'has_mg': False
         }
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'success')
-        self.assertEqual(len(response.data['tickets']), 1)
-        self.assertEqual(response.data['tickets'][0]['seat_display'], f"{self.seat_std.row}{self.seat_std.number}")
+        self.assertEqual(response.data['session_id'], 'cs_test_123')
+        self.assertEqual(response.data['session_url'], 'https://checkout.stripe.com/pay/cs_test_123')
+
+        # Verify reserved tickets are pre-created
+        tickets = Ticket.objects.filter(event=self.event, user_email='concert_buyer@example.com')
+        self.assertEqual(tickets.count(), 1)
+        ticket = tickets.first()
+        self.assertEqual(ticket.status, 'reserved')
+        self.assertEqual(ticket.seat, self.seat_std)
+        self.assertEqual(ticket.stripe_session_id, 'cs_test_123')
 
     def test_checkout_concert_occupied_fail(self):
         """Test checking out an already occupied seat fails."""
@@ -225,8 +240,14 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
 
-    def test_checkout_meet_greet_success(self):
+    @patch('stripe.checkout.Session.create')
+    def test_checkout_meet_greet_success(self, mock_stripe_create):
         """Test checking out Meet & Greet tickets with quantity."""
+        class MockSession:
+            id = 'cs_test_456'
+            url = 'https://checkout.stripe.com/pay/cs_test_456'
+        mock_stripe_create.return_value = MockSession()
+
         mg_event = Event.objects.create(
             title="Convivencia Hermosillo",
             artist="MS AMBAR",
@@ -246,11 +267,26 @@ class TicketsAppTests(APITestCase):
             'has_mg': True
         }
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(len(response.data['tickets']), 3)
-        for ticket in response.data['tickets']:
-            self.assertEqual(ticket['seat_display'], 'Meet & Greet')
-            self.assertEqual(ticket['theater_name'], 'Convivencia')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'success')
+        self.assertEqual(response.data['session_id'], 'cs_test_456')
+        self.assertEqual(response.data['session_url'], 'https://checkout.stripe.com/pay/cs_test_456')
+
+    def test_by_session_success(self):
+        """Test retrieving tickets by their Stripe session ID."""
+        ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_std,
+            user_email="buyer@example.com",
+            status="paid",
+            stripe_session_id="cs_session_unique_789"
+        )
+        url = reverse('ticket-list') + 'by_session/'
+        response = self.client.get(url, {'session_id': 'cs_session_unique_789'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 1)
+        self.assertEqual(response.data[0]['token'], str(ticket.token))
+        self.assertEqual(response.data[0]['stripe_session_id'], 'cs_session_unique_789')
 
     def test_retrieve_ticket_by_uuid(self):
         """Test that we can retrieve a ticket by its UUID token using the retrieve detail endpoint."""

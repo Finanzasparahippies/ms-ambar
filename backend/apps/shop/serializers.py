@@ -10,7 +10,7 @@ class ProductSerializer(serializers.ModelSerializer):
     category_name = serializers.ReadOnlyField(source='category.name')
     class Meta:
         model = Product
-        fields = ['id', 'name', 'slug', 'description', 'price', 'stock', 'image', 'category', 'category_name']
+        fields = ['id', 'name', 'slug', 'description', 'price', 'stock', 'image', 'category', 'category_name', 'stripe_product_id', 'stripe_price_id']
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')

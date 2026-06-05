@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.test import override_settings
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
@@ -166,3 +167,147 @@ class ShopAppTests(APITestCase):
         self.assertEqual(response2.status_code, status.HTTP_200_OK)
         # Should NOT trigger send_ticket_email again
         self.assertEqual(mock_send_ticket.call_count, 1)
+
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_mock')
+    @patch('stripe.Price.create')
+    @patch('stripe.Price.list')
+    @patch('stripe.Product.create')
+    @patch('stripe.Product.list')
+    def test_product_stripe_sync_on_create(self, mock_prod_list, mock_prod_create, mock_price_list, mock_price_create):
+        """Verify saving a new product correctly creates a product and price in Stripe."""
+        # 1. Mock listing: no existing products
+        class MockIterator:
+            def auto_paging_iter(self):
+                return []
+        mock_prod_list.return_value = MockIterator()
+        
+        # 2. Mock creation of product
+        class MockProduct:
+            id = 'prod_mock_new_123'
+            active = True
+            name = '[Ms Ambar] Nuevo Item'
+            description = 'Description text'
+            metadata = {}
+        mock_prod_create.return_value = MockProduct()
+
+        # 3. Mock price list: empty
+        class MockPriceList:
+            data = []
+        mock_price_list.return_value = MockPriceList()
+
+        # 4. Mock price creation
+        class MockPrice:
+            id = 'price_mock_new_123'
+        mock_price_create.return_value = MockPrice()
+
+        # Create the product (tests the save hook)
+        new_prod = Product.objects.create(
+            name='Nuevo Item',
+            description='Description text',
+            price=150.00,
+            stock=5,
+            category=self.category,
+            is_active=True
+        )
+
+        # Assert product.save() correctly synced with mocked Stripe API
+        mock_prod_create.assert_called_once()
+        mock_price_create.assert_called_once()
+        self.assertEqual(new_prod.stripe_product_id, 'prod_mock_new_123')
+        self.assertEqual(new_prod.stripe_price_id, 'price_mock_new_123')
+
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_mock')
+    @patch('stripe.Price.create')
+    @patch('stripe.Price.list')
+    @patch('stripe.Product.modify')
+    @patch('stripe.Product.list')
+    def test_product_stripe_sync_reuses_existing(self, mock_prod_list, mock_prod_modify, mock_price_list, mock_price_create):
+        """Verify saving a product reuses Stripe product and price if they exist with matching metadata."""
+        # 1. Mock listing: returns an existing product with same metadata
+        class MockProduct:
+            id = 'prod_existing_123'
+            active = True
+            name = '[Ms Ambar] Reusable Item'
+            description = 'Same description'
+            metadata = {'product_slug': 'reusable-item', 'product_id': '999'}
+        
+        class MockIterator:
+            def auto_paging_iter(self):
+                return [MockProduct()]
+        mock_prod_list.return_value = MockIterator()
+
+        # 2. Mock price list: returns matching price (amount 15000 cents, MXN, non-recurring)
+        class MockPrice:
+            id = 'price_existing_123'
+            unit_amount = 15000
+            currency = 'mxn'
+            recurring = None
+        
+        class MockPriceList:
+            data = [MockPrice()]
+        mock_price_list.return_value = MockPriceList()
+
+        # Create/Save the product
+        prod = Product.objects.create(
+            id=999,
+            name='Reusable Item',
+            description='Same description',
+            price=150.00,
+            stock=10,
+            category=self.category,
+            is_active=True
+        )
+
+        # Assertions
+        mock_price_create.assert_not_called()
+        self.assertEqual(prod.stripe_product_id, 'prod_existing_123')
+        self.assertEqual(prod.stripe_price_id, 'price_existing_123')
+
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_mock')
+    @patch('stripe.Price.create')
+    @patch('stripe.Price.list')
+    @patch('stripe.Product.create')
+    @patch('stripe.Product.list')
+    def test_event_stripe_sync_meet_greet(self, mock_prod_list, mock_prod_create, mock_price_list, mock_price_create):
+        """Verify saving a Meet & Greet Event syncs the product and price to Stripe."""
+        # 1. Mock listing: no existing products
+        class MockIterator:
+            def auto_paging_iter(self):
+                return []
+        mock_prod_list.return_value = MockIterator()
+
+        # 2. Mock creation of product
+        class MockProduct:
+            id = 'prod_event_mg_123'
+            active = True
+            name = '[Boletos] M&G Test'
+            metadata = {}
+        mock_prod_create.return_value = MockProduct()
+
+        # 3. Mock price list: empty
+        class MockPriceList:
+            data = []
+        mock_price_list.return_value = MockPriceList()
+
+        # 4. Mock price creation
+        class MockPrice:
+            id = 'price_event_mg_123'
+        mock_price_create.return_value = MockPrice()
+
+        # Create Event
+        event = Event.objects.create(
+            title="M&G Test",
+            artist="Artist Test",
+            date=timezone.now() + timezone.timedelta(days=10),
+            event_type="meet_greet",
+            mg_price=1200.00,
+            mg_limit=10,
+            is_active=True
+        )
+
+        # Assertions
+        mock_prod_create.assert_called_once()
+        mock_price_create.assert_called_once()
+        self.assertEqual(event.stripe_product_id, 'prod_event_mg_123')
+        self.assertEqual(event.stripe_price_id, 'price_event_mg_123')
+

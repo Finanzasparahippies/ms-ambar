@@ -134,15 +134,95 @@ class Event(models.Model):
     date = models.DateTimeField()
     theater = models.ForeignKey(Theater, on_delete=models.CASCADE, null=True, blank=True, related_name='events')
     image = models.ImageField(upload_to='events/', null=True, blank=True)
+    flyer = models.ImageField(
+        upload_to='event_flyers/',
+        null=True,
+        blank=True,
+        help_text="Imagen del flyer oficial del evento. Se muestra en la landing page y en la página de compra de boletos."
+    )
     is_active = models.BooleanField(default=True)
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default='concert')
-    
+
     # Meet & Greet Logic
     mg_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     mg_limit = models.PositiveIntegerField(default=0)
-    
+
     # Price multiplier for this specific event
     price_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=1.0)
+
+    stripe_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del producto en Stripe para este evento")
+    stripe_price_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del precio en Stripe (solo para Meet & Greet o general)")
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        from django.conf import settings
+        from django.utils.text import slugify
+        import stripe
+
+        updated = False
+        if getattr(settings, "STRIPE_SECRET_KEY", None) and not getattr(settings, "TESTING", False) and (not self.stripe_product_id or (self.event_type == 'meet_greet' and not self.stripe_price_id)):
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            try:
+                event_slug = slugify(self.title)
+                # Search for existing Stripe Product with this slug or id
+                product = None
+                for p in stripe.Product.list(limit=100).auto_paging_iter():
+                    if p.active and (p.metadata.get("event_slug") == event_slug or p.metadata.get("event_id") == str(self.id)):
+                        product = p
+                        break
+                
+                expected_name = f"[Boletos] {self.title}"
+                if not product:
+                    product = stripe.Product.create(
+                        name=expected_name,
+                        description=f"Boletos para el evento {self.title} de {self.artist}.",
+                        metadata={"event_id": str(self.id), "event_slug": event_slug}
+                    )
+                else:
+                    # Update details if changed
+                    updates = {}
+                    if product.name != expected_name:
+                        updates["name"] = expected_name
+                    current_event_id = product.metadata.get("event_id")
+                    current_event_slug = product.metadata.get("event_slug")
+                    if current_event_id != str(self.id) or current_event_slug != event_slug:
+                        updates["metadata"] = {"event_id": str(self.id), "event_slug": event_slug}
+                    if updates:
+                        stripe.Product.modify(product.id, **updates)
+
+                self.stripe_product_id = product.id
+
+                if self.event_type == 'meet_greet':
+                    # Fetch active prices for this product to avoid duplicates
+                    prices = stripe.Price.list(product=product.id, active=True)
+                    price_id = None
+                    amount_cents = int(self.mg_price * 100)
+                    for p in prices.data:
+                        if not p.recurring and p.unit_amount == amount_cents and p.currency == "mxn":
+                            price_id = p.id
+                            break
+
+                    if not price_id:
+                        price_obj = stripe.Price.create(
+                            unit_amount=amount_cents,
+                            currency="mxn",
+                            product=product.id,
+                        )
+                        price_id = price_obj.id
+
+                    self.stripe_price_id = price_id
+                else:
+                    # Clear stripe_price_id if it's not a meet & greet event anymore
+                    self.stripe_price_id = None
+                
+                updated = True
+            except Exception as e:
+                import logging
+                logging.getLogger("apps").error(f"Error creating Stripe Product/Prices for Event {self.title}: {e}")
+
+        if updated:
+            super().save(update_fields=['stripe_product_id', 'stripe_price_id'])
 
     def __str__(self):
         return f"{self.title} - {self.date.strftime('%Y-%m-%d')}"
@@ -151,6 +231,18 @@ class Event(models.Model):
     def mg_available(self):
         sold = self.tickets.filter(status='paid', has_mg=True).count()
         return max(0, self.mg_limit - sold)
+
+    @property
+    def base_price(self):
+        """Returns the lowest seat base_price in the event's theater, or 0 if no theater/seats."""
+        if self.event_type == 'meet_greet':
+            return float(self.mg_price)
+        if self.theater:
+            from apps.tickets.models import Seat
+            min_seat = self.theater.seats.order_by('base_price').first()
+            if min_seat:
+                return float(min_seat.base_price * self.price_multiplier)
+        return 0
 
 class Seat(models.Model):
     CATEGORY_CHOICES = [
@@ -224,6 +316,9 @@ class Ticket(models.Model):
     # Meet & Greet Upgrade
     has_mg = models.BooleanField(default=False)
     
+    # Stripe Session ID
+    stripe_session_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID de la sesión de checkout de Stripe")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -232,3 +327,41 @@ class Ticket(models.Model):
 
     def __str__(self):
         return f"Ticket for {self.event.title} - Seat {self.seat.row}{self.seat.number}"
+
+
+class SiteSettings(models.Model):
+    """
+    Singleton model para configuración global del sitio.
+    Solo puede existir una instancia (pk=1).
+    Se administra desde el Django Admin.
+    """
+    tickets_page_subtitle = models.TextField(
+        default="Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.",
+        help_text="Subtítulo que aparece en la página de compra de boletos (comprar-boletos)."
+    )
+    homepage_cta_text = models.TextField(
+        default="¡Próximamente nuevo evento!",
+        help_text="Texto del badge de próximo evento en la landing page cuando no hay eventos programados."
+    )
+
+    class Meta:
+        verbose_name = "Configuración del Sitio"
+        verbose_name_plural = "Configuración del Sitio"
+
+    def save(self, *args, **kwargs):
+        """Forzar siempre pk=1 (singleton)."""
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Prevent deletion of the singleton."""
+        pass
+
+    @classmethod
+    def get(cls):
+        """Obtiene (o crea si no existe) la instancia singleton."""
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return "Configuración Global del Sitio"
