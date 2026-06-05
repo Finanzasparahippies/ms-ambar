@@ -234,7 +234,7 @@ class ShopCheckoutView(APIView):
 
         # Validate products and stock
         total_amount = 0
-order_items_to_prepare = []
+        order_items_to_prepare = []
         line_items = []
 
         # 1. Validar Stock e inventario antes de crear la pasarela
@@ -282,6 +282,7 @@ order_items_to_prepare = []
         # 3. Construir la pasarela de Stripe Checkout
         try:
             checkout_session = stripe.checkout.Session.create(
+                
                 payment_method_types=['card'],
                 line_items=line_items,
                 mode='payment',
