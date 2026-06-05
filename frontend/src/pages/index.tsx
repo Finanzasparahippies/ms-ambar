@@ -925,157 +925,171 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Left Column: Content (7 of 12 Columns - Centered Layout) */}
-      <div className="space-y-6 order-2 lg:order-1 lg:col-span-7 z-20 flex flex-col items-center lg:items-start text-center lg:text-left justify-center h-full w-full">
+      {/* ─── PRÓXIMO EVENTO FLYER SECTION ─── */}
+      {nextEvent?.flyer_url && (
+        <section className="pb-6 md:pb-12 bg-[#06070b]">
+          <div className="max-w-[1400px] mx-auto px-6 md:px-10">
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              className="relative bg-gradient-to-br from-[#0d0e12] to-[#07080c] rounded-[2.5rem] overflow-hidden border border-amber-honey/10 group shadow-[0_0_50px_rgba(6,7,11,0.8)] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 p-8 md:p-14 items-center"
+            >
 
-        {/* Badge premium flotante */}
-        <div className="inline-flex items-center gap-2 bg-amber-honey/5 border border-amber-honey/20 px-3 py-1.5 rounded-full w-fit backdrop-blur-sm">
-          <Sparkles size={12} className="text-amber-honey animate-pulse" />
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey/90">
-            Próximo Evento
-          </span>
-        </div>
+              {/* Left Column: Content (7 of 12 Columns - Centered Layout) */}
+              <div className="space-y-6 order-2 lg:order-1 lg:col-span-7 z-20 flex flex-col items-center lg:items-start text-center lg:text-left justify-center h-full w-full">
 
-        {/* Título encajonado y centrado */}
-        <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-[0.95] max-w-md lg:max-w-xl group-hover:text-amber-honey/90 transition-colors duration-500">
-          {nextEvent.title}
-        </h2>
+                {/* Badge premium flotante */}
+                <div className="inline-flex items-center gap-2 bg-amber-honey/5 border border-amber-honey/20 px-3 py-1.5 rounded-full w-fit backdrop-blur-sm">
+                  <Sparkles size={12} className="text-amber-honey animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey/90">
+                    Próximo Evento
+                  </span>
+                </div>
 
-        {/* Separador sutil de diseño editorial (Centrado dinámicamente) */}
-        <div className="w-12 h-[2px] bg-gradient-to-r lg:bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent lg:from-amber-honey/40 lg:to-transparent" />
+                {/* Título encajonado y centrado */}
+                <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-[0.95] max-w-md lg:max-w-xl group-hover:text-amber-honey/90 transition-colors duration-500">
+                  {nextEvent.title}
+                </h2>
 
-        {/* Tarifa y Detalles (Centrados en móvil/tablet, alineados a la izquierda en desktop) */}
-        <div className="space-y-2 w-full max-w-md lg:max-w-lg flex flex-col items-center lg:items-start">
-          <p className="text-sm md:text-base text-white/90 font-bold tracking-tight text-center lg:text-left">
-            {getFormattedEventDate(nextEvent.date)}
-          </p>
+                {/* Separador sutil de diseño editorial (Centrado dinámicamente) */}
+                <div className="w-12 h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent lg:from-amber-honey/40 lg:to-transparent" />
 
-          {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
-            <div className="text-xs md:text-sm text-[#F4F6F0]/60 font-medium leading-relaxed bg-[#0d0e12]/40 p-3 rounded-xl border border-white/5 backdrop-blur-sm w-full text-center lg:text-left">
-              <span className="text-[#F4F6F0]/40">Acceso general — desde </span>
-              <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
-              <span className="text-amber-honey/60 font-medium"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2 })} cargo</span>
-              <div className="mt-1 pt-1 border-t border-white/5 text-sm">
-                <span className="text-[#F4F6F0]/40 font-normal">Total final: </span>
-                <span className="text-amber-honey font-black text-base">${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
+                {/* Tarifa y Detalles */}
+                <div className="space-y-2 w-full max-w-md lg:max-w-lg flex flex-col items-center lg:items-start">
+                  <p className="text-sm md:text-base text-white/90 font-bold tracking-tight text-center lg:text-left">
+                    {getFormattedEventDate(nextEvent.date)}
+                  </p>
+
+                  {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
+                    <div className="text-xs md:text-sm text-[#F4F6F0]/60 font-medium leading-relaxed bg-[#0d0e12]/40 p-3 rounded-xl border border-white/5 backdrop-blur-sm w-full text-center lg:text-left">
+                      <span className="text-[#F4F6F0]/40">Acceso general — desde </span>
+                      <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
+                      <span className="text-amber-honey/60 font-medium"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2 })} cargo</span>
+                      <div className="mt-1 pt-1 border-t border-white/5 text-sm">
+                        <span className="text-[#F4F6F0]/40 font-normal">Total final: </span>
+                        <span className="text-amber-honey font-black text-base">${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón Call to Action */}
+                <div className="pt-2 w-full lg:w-auto">
+                  <Link
+                    href="/comprar-boletos"
+                    className="inline-flex items-center justify-center gap-3 w-full sm:w-auto px-10 py-4.5 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-xl shadow-amber-honey/20 hover:bg-white hover:text-black hover:scale-[1.03] hover:shadow-white/10 transition-all duration-300"
+                  >
+                    <Ticket size={14} /> Adquirir Accesos
+                  </Link>
+                </div>
               </div>
-            </div>
-          )}
-          
-        {/* Botón Call to Action */}
-        <div className="pt-2 w-full lg:w-auto">
-          <Link
-            href="/comprar-boletos"
-            className="inline-flex items-center justify-center gap-3 w-full sm:w-auto px-10 py-4.5 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-xl shadow-amber-honey/20 hover:bg-white hover:text-black hover:scale-[1.03] hover:shadow-white/10 transition-all duration-300"
-          >
-            <Ticket size={14} /> Adquirir Accesos
-          </Link>
-        </div>
-      </div>
 
-      {/* Right Column: Flyer Container (5 of 12 Columns) */}
-      <div className="w-full h-80 sm:h-[400px] lg:h-[460px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
-        <div className="relative w-full h-full max-w-[340px] lg:max-w-none rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5">
-          <img
-            src={nextEvent.flyer_url}
-            alt={`Flyer: ${nextEvent.title}`}
-            className="w-full h-full object-contain object-center lg:object-right group-hover:scale-[1.04] transition-transform duration-1000 ease-out"
-          />
-        </div>
-      </div>
+              {/* Right Column: Flyer Container (5 of 12 Columns) */}
+              <div className="w-full h-80 sm:h-[400px] lg:h-[460px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
+                <div className="relative w-full h-full max-w-[340px] lg:max-w-none rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5">
+                  <img
+                    src={nextEvent.flyer_url}
+                    alt={`Flyer: ${nextEvent.title}`}
+                    className="w-full h-full object-contain object-center lg:object-right group-hover:scale-[1.04] transition-transform duration-1000 ease-out"
+                  />
+                </div>
+              </div>
 
-      {/* El Aura Amber Glow Ultra-premium */}
-      <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-80 h-80 bg-amber-honey/10 rounded-full blur-[120px] pointer-events-none z-10 group-hover:bg-amber-honey/15 transition-colors duration-1000" />
-      <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/20 via-transparent to-transparent pointer-events-none z-10" />
-    </motion.div>
-          </div >
-        </section >
+              {/* El Aura Amber Glow Ultra-premium */}
+              <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-80 h-80 bg-amber-honey/10 rounded-full blur-[120px] pointer-events-none z-10 group-hover:bg-amber-honey/15 transition-colors duration-1000" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/20 via-transparent to-transparent pointer-events-none z-10" />
+
+            </motion.div>
+          </div>
+        </section>
       )}
 
-{/* ─── BIOGRAPHY SECTION ─── */ }
-<section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden">
-  {/* Subtle decorative glowing orb */}
-  <div className="absolute top-1/2 left-[-10%] w-[35%] h-[35%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
+      {/* ─── BIOGRAPHY SECTION ─── */}
+      <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden">
+        {/* Subtle decorative glowing orb */}
+        <div className="absolute top-1/2 left-[-10%] w-[35%] h-[35%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
 
-  <div className="max-w-[1600px] mx-auto px-6 md:px-10">
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
+        <div className="max-w-[1600px] mx-auto px-6 md:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
 
-      {/* Left Column: Image with premium frame and drop-shadow */}
-      <motion.div
-        initial={{ opacity: 0, x: -50 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8 }}
-        className="lg:col-span-5 relative group max-w-md mx-auto lg:max-w-none w-full"
-      >
-        {/* Golden neon glow frame behind image */}
-        <div className="absolute inset-0 bg-gradient-to-tr from-amber-honey/20 to-transparent rounded-[3rem] blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none" />
+            {/* Left Column: Image with premium frame and drop-shadow */}
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8 }}
+              className="lg:col-span-5 relative group max-w-md mx-auto lg:max-w-none w-full"
+            >
+              {/* Golden neon glow frame behind image */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-amber-honey/20 to-transparent rounded-[3rem] blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none" />
 
-        <div className="relative rounded-[3rem] overflow-hidden border border-white/10 p-3 bg-white/[0.02] backdrop-blur-md transition-all duration-500 group-hover:border-amber-honey/30 shadow-2xl">
-          <div className="relative aspect-[3/4] rounded-[2.5rem] overflow-hidden">
-            <img
-              src="/Images/Inicio_Biografia.jpg"
-              alt="Ms. Ámbar"
-              className="object-cover w-full h-full grayscale group-hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-700 ease-out"
-            />
-            {/* Decorative dark overlay gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#06070b]/60 via-transparent to-transparent opacity-60" />
+              <div className="relative rounded-[3rem] overflow-hidden border border-white/10 p-3 bg-white/[0.02] backdrop-blur-md transition-all duration-500 group-hover:border-amber-honey/30 shadow-2xl">
+                <div className="relative aspect-[3/4] rounded-[2.5rem] overflow-hidden">
+                  <img
+                    src="/Images/Inicio_Biografia.jpg"
+                    alt="Ms. Ámbar"
+                    className="object-cover w-full h-full grayscale group-hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-700 ease-out"
+                  />
+                  {/* Decorative dark overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#06070b]/60 via-transparent to-transparent opacity-60" />
+                </div>
+              </div>
+
+              {/* Corner decorative golden lines style (nectarlabs design) */}
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-tl-[2rem]" />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-br-[2rem]" />
+            </motion.div>
+
+            {/* Right Column: Typography & Story */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="lg:col-span-7 space-y-8"
+            >
+              <div className="space-y-3">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
+                  <Sparkles size={10} className="animate-pulse" /> La Cantautora
+                </span>
+                <h3 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-[#F4F6F0]">
+                  Ms. Ambar
+                </h3>
+                <div className="w-16 h-[2px] bg-gradient-to-r from-amber-honey to-transparent" />
+              </div>
+
+              <div className="space-y-6 text-[#F4F6F0]/85 text-sm md:text-base font-medium leading-relaxed font-sans">
+                <p>
+                  Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como <span className="text-[#F4F6F0] font-bold">R&B, soul, regional mexicano y bachata</span>. Su carrera profesional comenzó en 2017 con la banda <span className="text-white/90">"Moonset"</span>, pero consolidó su relevancia al unirse a la gira del rapero mexicano <span className="text-amber-honey font-bold">Charles Ans</span> en 2019, actuando como telonera en grandes escenarios como el <span className="text-white/90">Auditorio Nacional</span>.
+                </p>
+                <p>
+                  Su primer álbum formal, <span className="text-amber-honey font-semibold font-serif italic text-base">"14•28"</span>, fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas, como el 14 de junio, día en que falleció su padre cuando ella tenía cinco años. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.
+                </p>
+                <p>
+                  Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del <span className="text-[#F4F6F0] font-bold">Festival de Viña del Mar 2025</span>, con la canción <span className="text-amber-honey font-bold">"No te voy a llorar"</span>, consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.
+                </p>
+              </div>
+
+              <div className="pt-4 flex flex-wrap gap-6 items-center">
+                <Link
+                  href="/tour"
+                  className="px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-white/5 border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 hover:text-amber-honey transition-all flex items-center gap-2 text-[#F4F6F0]"
+                >
+                  Ver Fechas del Tour <ArrowRight size={12} />
+                </Link>
+                <span className="text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 font-bold">
+                  Hermosillo • México
+                </span>
+              </div>
+            </motion.div>
+
           </div>
         </div>
+      </section>
 
-        {/* Corner decorative golden lines style (nectarlabs design) */}
-        <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-tl-[2rem]" />
-        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-br-[2rem]" />
-      </motion.div>
-
-      {/* Right Column: Typography & Story */}
-      <motion.div
-        initial={{ opacity: 0, x: 50 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8, delay: 0.2 }}
-        className="lg:col-span-7 space-y-8"
-      >
-        <div className="space-y-3">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
-            <Sparkles size={10} className="animate-pulse" /> La Cantautora
-          </span>
-          <h3 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-[#F4F6F0]">
-            Ms. Ambar
-          </h3>
-          <div className="w-16 h-[2px] bg-gradient-to-r from-amber-honey to-transparent" />
-        </div>
-
-        <div className="space-y-6 text-[#F4F6F0]/85 text-sm md:text-base font-medium leading-relaxed font-sans">
-          <p>
-            Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como <span className="text-[#F4F6F0] font-bold">R&B, soul, regional mexicano y bachata</span>. Su carrera profesional comenzó en 2017 con la banda <span className="text-white/90">"Moonset"</span>, pero consolidó su relevancia al unirse a la gira del rapero mexicano <span className="text-amber-honey font-bold">Charles Ans</span> en 2019, actuando como telonera en grandes escenarios como el <span className="text-white/90">Auditorio Nacional</span>.
-          </p>
-          <p>
-            Su primer álbum formal, <span className="text-amber-honey font-semibold font-serif italic text-base">"14•28"</span>, fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas, como el 14 de junio, día en que falleció su padre cuando ella tenía cinco años. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.
-          </p>
-          <p>
-            Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del <span className="text-[#F4F6F0] font-bold">Festival de Viña del Mar 2025</span>, con la canción <span className="text-amber-honey font-bold">"No te voy a llorar"</span>, consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.
-          </p>
-        </div>
-
-        <div className="pt-4 flex flex-wrap gap-6 items-center">
-          <Link
-            href="/tour"
-            className="px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-white/5 border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 hover:text-amber-honey transition-all flex items-center gap-2 text-[#F4F6F0]"
-          >
-            Ver Fechas del Tour <ArrowRight size={12} />
-          </Link>
-          <span className="text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 font-bold">
-            Hermosillo • México
-          </span>
-        </div>
-      </motion.div>
-
-    </div>
-  </div>
-</section>
-
-{/* ─── LIVE MUSIC RELEASES SHOWCASE ─── 
+      {/* ─── LIVE MUSIC RELEASES SHOWCASE ─── 
       <section className="py-16 md:py-24 border-y border-white/10 bg-white/[0.02] relative">
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
@@ -1113,117 +1127,117 @@ const Home = () => {
         </div>
       </section> */}
 
-{/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */ }
-<section className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
-  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
+      {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
+      <section className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
 
-  <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-forest-green border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
-    <div className="space-y-3">
-      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Esto es solo para los reales</span>
-      <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
-      <p className="text-white/60 text-xs max-w-sm mx-auto leading-relaxed">
-        Déja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
-      </p>
-    </div>
-
-    <div className="pt-2">
-      <AnimatePresence mode="wait">
-        {newsletterStatus === 'success' ? (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            className="flex flex-col items-center justify-center gap-3 bg-amber-honey/10 border border-amber-honey/20 text-amber-honey p-8 rounded-[2rem] text-center"
-          >
-            <div className="w-12 h-12 bg-amber-honey/20 rounded-full flex items-center justify-center text-amber-honey">
-              <Check size={20} />
-            </div>
-            <h4 className="font-bold uppercase tracking-wider text-[11px] mt-2">¡Suscripción Completada!</h4>
-            <p className="text-[10px] text-white/80 leading-relaxed">
-              Te has unido con éxito a las cartas de Ms Ambar.
+        <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-forest-green border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
+          <div className="space-y-3">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Esto es solo para los reales</span>
+            <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
+            <p className="text-white/60 text-xs max-w-sm mx-auto leading-relaxed">
+              Déja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
             </p>
-          </motion.div>
-        ) : (
-          <div className="space-y-4">
-            <motion.form
-              key="form"
-              onSubmit={handleSubscribe}
-              className="flex flex-col gap-3 text-left"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="space-y-3">
-                <input
-                  type="text"
-                  placeholder="Nombre"
-                  value={newsletterName}
-                  onChange={e => setNewsletterName(e.target.value)}
-                  required
-                  className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
-                  disabled={newsletterStatus === 'submitting'}
-                />
-                <input
-                  type="email"
-                  placeholder="Dirección de correo electrónico"
-                  value={newsletterEmail}
-                  onChange={e => {
-                    setNewsletterEmail(e.target.value);
-                    if (newsletterStatus === 'error') setNewsletterStatus('idle');
-                  }}
-                  required
-                  className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
-                  disabled={newsletterStatus === 'submitting'}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-gradient-to-r from-amber-honey via-amber-gold to-amber-500 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
-                disabled={newsletterStatus === 'submitting'}
-              >
-                {newsletterStatus === 'submitting' ? (
-                  <span className="flex items-center gap-2">
-                    <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />
-                    Procesando...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    Suscribirse al Club <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
-                  </span>
-                )}
-              </button>
-
-              <p className="text-[9px] text-white/40 tracking-wider text-center pt-2">
-                Respetamos tu privacidad.
-              </p>
-            </motion.form>
-
-            {newsletterStatus === 'error' && (
-              <motion.div
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-amber-honey text-[9px] font-bold uppercase tracking-widest text-center"
-              >
-                ⚠️ {newsletterErrorMessage}
-              </motion.div>
-            )}
           </div>
-        )}
-      </AnimatePresence>
-    </div>
 
-    <div className="pt-2">
-      <Link
-        href="/ambar-te-escribe"
-        className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#F4F6F0]/50 hover:text-amber-honey transition-colors"
-      >
-        Acceder al club<ChevronRight size={12} />
-      </Link>
-    </div>
-  </div>
-</section>
+          <div className="pt-2">
+            <AnimatePresence mode="wait">
+              {newsletterStatus === 'success' ? (
+                <motion.div
+                  key="success"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex flex-col items-center justify-center gap-3 bg-amber-honey/10 border border-amber-honey/20 text-amber-honey p-8 rounded-[2rem] text-center"
+                >
+                  <div className="w-12 h-12 bg-amber-honey/20 rounded-full flex items-center justify-center text-amber-honey">
+                    <Check size={20} />
+                  </div>
+                  <h4 className="font-bold uppercase tracking-wider text-[11px] mt-2">¡Suscripción Completada!</h4>
+                  <p className="text-[10px] text-white/80 leading-relaxed">
+                    Te has unido con éxito a las cartas de Ms Ambar.
+                  </p>
+                </motion.div>
+              ) : (
+                <div className="space-y-4">
+                  <motion.form
+                    key="form"
+                    onSubmit={handleSubscribe}
+                    className="flex flex-col gap-3 text-left"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        placeholder="Nombre"
+                        value={newsletterName}
+                        onChange={e => setNewsletterName(e.target.value)}
+                        required
+                        className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
+                        disabled={newsletterStatus === 'submitting'}
+                      />
+                      <input
+                        type="email"
+                        placeholder="Dirección de correo electrónico"
+                        value={newsletterEmail}
+                        onChange={e => {
+                          setNewsletterEmail(e.target.value);
+                          if (newsletterStatus === 'error') setNewsletterStatus('idle');
+                        }}
+                        required
+                        className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
+                        disabled={newsletterStatus === 'submitting'}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-gradient-to-r from-amber-honey via-amber-gold to-amber-500 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
+                      disabled={newsletterStatus === 'submitting'}
+                    >
+                      {newsletterStatus === 'submitting' ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />
+                          Procesando...
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-2">
+                          Suscribirse al Club <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
+                        </span>
+                      )}
+                    </button>
+
+                    <p className="text-[9px] text-white/40 tracking-wider text-center pt-2">
+                      Respetamos tu privacidad.
+                    </p>
+                  </motion.form>
+
+                  {newsletterStatus === 'error' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-amber-honey text-[9px] font-bold uppercase tracking-widest text-center"
+                    >
+                      ⚠️ {newsletterErrorMessage}
+                    </motion.div>
+                  )}
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="pt-2">
+            <Link
+              href="/ambar-te-escribe"
+              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#F4F6F0]/50 hover:text-amber-honey transition-colors"
+            >
+              Acceder al club<ChevronRight size={12} />
+            </Link>
+          </div>
+        </div>
+      </section>
     </div >
   );
 };
