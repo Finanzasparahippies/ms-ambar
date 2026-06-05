@@ -816,29 +816,62 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
 
     unsubscribe_url = f"{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub_email}"
     
-    if "<p" in campaign.poem_text or "<br" in campaign.poem_text or "<div" in campaign.poem_text:
-        poem_paragraphs = campaign.poem_text
-    else:
-        text_mode = custom_styles.get('text_mode', 'poem')
-        if text_mode == 'letter':
-            paragraphs = []
-            text_normalized = campaign.poem_text.replace('\r\n', '\n').replace('\r', '\n')
-            raw_paragraphs = text_normalized.split('\n\n')
-            for p in raw_paragraphs:
-                if p.strip():
-                    clean_text = " ".join([line.strip() for line in p.split('\n')])
-                    paragraphs.append(f"<p style='margin: 0 0 16px 0; line-height: 1.8; font-family: inherit;'>{clean_text}</p>")
-            poem_paragraphs = "".join(paragraphs)
+    text_mode = custom_styles.get('text_mode', 'poem')
+    
+    def format_campaign_text_python(text, mode, alignment='center'):
+        if not text:
+            return ""
+        
+        # 1. Convert block tags to line breaks, keep inline tags
+        def replace_tag(match_obj):
+            tag_html = match_obj.group(0)
+            tag_name_match = re.match(r'</?([a-zA-Z0-9]+)', tag_html)
+            if tag_name_match:
+                tag_name = tag_name_match.group(1).lower()
+                if tag_name in ['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font']:
+                    return tag_html
+                if tag_name in ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']:
+                    return '\n'
+            return ""
+
+        # Replace specific closing blocks and brs with newlines
+        normalized = re.sub(r'</p>', '\n\n', text, flags=re.IGNORECASE)
+        normalized = re.sub(r'</div>', '\n', normalized, flags=re.IGNORECASE)
+        normalized = re.sub(r'<br\s*/?>', '\n', normalized, flags=re.IGNORECASE)
+        
+        # Clean other tags
+        normalized = re.sub(r'</?[a-zA-Z0-9]+[^>]*>', replace_tag, normalized)
+        
+        # Normalize carriage returns
+        normalized = normalized.replace('\r\n', '\n').replace('\r', '\n')
+        
+        # Split by double/multiple newlines
+        paragraphs = re.split(r'\n\n+', normalized)
+        
+        align_style = f"text-align: {alignment};"
+        
+        formatted_paragraphs = []
+        if mode == 'letter':
+            for p in paragraphs:
+                lines = [line.strip() for line in p.split('\n') if line.strip()]
+                if lines:
+                    clean_text = " ".join(lines)
+                    formatted_paragraphs.append(
+                        f"<p style='margin: 0 0 16px 0; line-height: 1.8; font-family: inherit; {align_style}'>{clean_text}</p>"
+                    )
         else:
-            stanzas = []
-            text_normalized = campaign.poem_text.replace('\r\n', '\n').replace('\r', '\n')
-            raw_stanzas = text_normalized.split('\n\n')
-            for raw_stanza in raw_stanzas:
-                if raw_stanza.strip():
-                    lines = [line.strip() for line in raw_stanza.split('\n')]
+            # poem mode
+            for p in paragraphs:
+                lines = [line.strip() for line in p.split('\n') if line.strip()]
+                if lines:
                     stanza_html = "<br/>".join(lines)
-                    stanzas.append(f"<p style='margin: 0 0 24px 0; font-family: inherit;'>{stanza_html}</p>")
-            poem_paragraphs = "".join(stanzas)
+                    formatted_paragraphs.append(
+                        f"<p style='margin: 0 0 24px 0; line-height: 1.8; font-family: inherit; {align_style}'>{stanza_html}</p>"
+                    )
+                    
+        return "".join(formatted_paragraphs)
+
+    poem_paragraphs = format_campaign_text_python(campaign.poem_text, text_mode, body_alignment_desktop)
 
     # Determine absolute URL for media conversions
     def make_urls_absolute(text):

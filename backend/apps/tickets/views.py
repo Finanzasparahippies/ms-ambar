@@ -250,10 +250,12 @@ class TicketViewSet(viewsets.ModelViewSet):
             session_id = mock_session_id
             session_url = f"{success_url}?success=true&session_id={mock_session_id}"
 
+            from apps.tickets.utils import send_ticket_email, send_ticket_whatsapp
+
             # Create tickets as 'paid' directly for mock so that returning immediately works
             if event.event_type == 'meet_greet':
                 for _ in range(int(quantity)):
-                    Ticket.objects.create(
+                    ticket = Ticket.objects.create(
                         event=event,
                         seat=None,
                         ga_zone=None,
@@ -263,9 +265,16 @@ class TicketViewSet(viewsets.ModelViewSet):
                         has_mg=True,
                         stripe_session_id=mock_session_id
                     )
+                    try:
+                        send_ticket_email(ticket)
+                        if ticket.user_phone:
+                            send_ticket_whatsapp(ticket)
+                    except Exception as e:
+                        import logging
+                        logging.getLogger("apps").warning(f"Error sending mock ticket email: {e}")
             else:
                 for seat in seats:
-                    Ticket.objects.create(
+                    ticket = Ticket.objects.create(
                         event=event,
                         seat=seat,
                         ga_zone=None,
@@ -275,6 +284,13 @@ class TicketViewSet(viewsets.ModelViewSet):
                         has_mg=has_mg,
                         stripe_session_id=mock_session_id
                     )
+                    try:
+                        send_ticket_email(ticket)
+                        if ticket.user_phone:
+                            send_ticket_whatsapp(ticket)
+                    except Exception as e:
+                        import logging
+                        logging.getLogger("apps").warning(f"Error sending mock ticket email: {e}")
         else:
             # Standard Stripe pre-creation of reserved tickets for concert
             if event.event_type != 'meet_greet':
@@ -303,6 +319,25 @@ class TicketViewSet(viewsets.ModelViewSet):
             return Response({'error': 'session_id es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
         
         tickets = Ticket.objects.filter(stripe_session_id=session_id)
+        
+        # Sync fallback: check Stripe directly if webhook was delayed/blocked
+        if not session_id.startswith('mock_'):
+            is_unpaid = not tickets.exists() or any(t.status == 'reserved' for t in tickets)
+            if is_unpaid:
+                try:
+                    import stripe
+                    from django.conf import settings
+                    from apps.shop.views import handle_successful_payment
+                    
+                    stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+                    session = stripe.checkout.Session.retrieve(session_id)
+                    if session.get('payment_status') == 'paid':
+                        handle_successful_payment(session)
+                        tickets = Ticket.objects.filter(stripe_session_id=session_id)
+                except Exception as e:
+                    import logging
+                    logging.getLogger("apps").warning(f"Error checking Stripe session synchronously: {e}")
+
         serializer = self.get_serializer(tickets, many=True)
         return Response(serializer.data)
 

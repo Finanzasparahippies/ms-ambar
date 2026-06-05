@@ -103,30 +103,53 @@ const getHoverColor = (hex: string | null | undefined): string => {
   }
 };
 
-const formatCampaignText = (text: string, mode: 'poem' | 'letter') => {
+const formatCampaignText = (text: string, mode: 'poem' | 'letter', alignment: string = 'center') => {
   if (!text) return '';
-  if (text.includes('<p') || text.includes('<br') || text.includes('<div')) {
-    return text;
-  }
-  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // 1. Convert block tags to line breaks, keeping inline style tags
+  let normalized = text
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/?[a-z0-9]+[^>]*>/gi, (match) => {
+      const tagName = match.replace(/[<\/>]/g, '').split(' ')[0].toLowerCase();
+      if (['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font'].includes(tagName)) {
+        return match;
+      }
+      if (['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'].includes(tagName)) {
+        return '\n';
+      }
+      return '';
+    });
+
+  // Normalize newlines
+  normalized = normalized.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Split into paragraphs by double newlines or more
+  const paragraphs = normalized.split(/\n\n+/);
+
+  const alignStyle = `text-align: ${alignment};`;
+
   if (mode === 'letter') {
-    const paragraphs = normalized.split('\n\n');
     return paragraphs
-      .filter(p => p.trim())
       .map(p => {
-        const clean = p.split('\n').map(line => line.trim()).join(' ');
-        return `<p style="margin: 0 0 16px 0; line-height: 1.8; font-family: inherit;">${clean}</p>`;
+        const lines = p.split('\n').map(line => line.trim()).filter(Boolean);
+        if (lines.length === 0) return '';
+        const clean = lines.join(' ');
+        return `<p style="margin: 0 0 16px 0; line-height: 1.8; font-family: inherit; ${alignStyle}">${clean}</p>`;
       })
+      .filter(Boolean)
       .join('');
   } else {
     // poem mode
-    const stanzas = normalized.split('\n\n');
-    return stanzas
-      .filter(s => s.trim())
-      .map(s => {
-        const lines = s.split('\n').map(line => line.trim()).join('<br/>');
-        return `<p style="margin: 0 0 24px 0; line-height: 1.8; font-family: inherit;">${lines}</p>`;
+    return paragraphs
+      .map(p => {
+        const lines = p.split('\n').map(line => line.trim()).filter(Boolean);
+        if (lines.length === 0) return '';
+        const clean = lines.join('<br/>');
+        return `<p style="margin: 0 0 24px 0; line-height: 1.8; font-family: inherit; ${alignStyle}">${clean}</p>`;
       })
+      .filter(Boolean)
       .join('');
   }
 };
@@ -6478,7 +6501,7 @@ export default function AdminDashboard() {
                                 maxWidth: '90%',
                                 wordBreak: 'break-word'
                               }}
-                              dangerouslySetInnerHTML={{ __html: formatCampaignText(campPoemText, campTextMode) || '<i>El cuerpo del poema aparecerá aquí...</i>' }}
+                              dangerouslySetInnerHTML={{ __html: formatCampaignText(campPoemText, campTextMode, previewViewport === 'mobile' ? campBodyAlignmentMobile : previewViewport === 'tablet' ? campBodyAlignmentTablet : campBodyAlignment) || '<i>El cuerpo del poema aparecerá aquí...</i>' }}
                             />
                           </div>
 
@@ -6904,7 +6927,7 @@ export default function AdminDashboard() {
                             boxSizing: 'border-box',
                             marginBottom: '30px'
                           }}>
-                            <div dangerouslySetInnerHTML={{ __html: formatCampaignText(previewCampaign.poem_text, styles.text_mode || 'poem') || '<i>El cuerpo del poema aparecerá aquí...</i>' }} />
+                            <div dangerouslySetInnerHTML={{ __html: formatCampaignText(previewCampaign.poem_text, styles.text_mode || 'poem', activeBodyAlignment) || '<i>El cuerpo del poema aparecerá aquí...</i>' }} />
                           </div>
 
                           {/* Dynamic CTA Buttons */}
