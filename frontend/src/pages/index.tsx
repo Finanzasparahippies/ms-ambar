@@ -980,6 +980,7 @@ const Home = () => {
           </div>
         </section>
       )}
+
       {/* ─── BIOGRAPHY SECTION ─── */}
       <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden">
         {/* Subtle decorative glowing orb */}
