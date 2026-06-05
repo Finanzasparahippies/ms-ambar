@@ -340,6 +340,40 @@ class TicketViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(tickets, many=True)
         return Response(serializer.data)
+        
+    @action(detail=True, methods=['post'], url_path='send_delivery_email', permission_classes=[permissions.AllowAny])
+    def send_delivery_email(self, request, pk=None):
+        """
+        Gatillo explícito de reenvío de boleto por ID.
+        Nectar Pro Sandbox: Permite forzar la entrega SMTP desde interfaces controladas.
+        """
+        # Nota: El método get_object() ya resuelve búsquedas por PK o por Token UUID
+        try:
+            ticket = self.get_object()
+        except Exception:
+            # Fallback directo al modelo si el queryset de usuario restringe el objeto anónimo en Staging
+            try:
+                ticket = Ticket.objects.get(pk=pk)
+            except Ticket.DoesNotExist:
+                return Response({'error': 'Boleto no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if ticket.status != 'paid':
+            return Response({'error': 'No se puede enviar un boleto que no ha sido pagado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.tickets.utils import send_ticket_email, send_ticket_whatsapp
+        try:
+            send_ticket_email(ticket)
+            if ticket.user_phone:
+                send_ticket_whatsapp(ticket)
+            return Response({
+                'status': 'success',
+                'message': f'Boleto enviado con éxito a {ticket.user_email}',
+                'token': str(ticket.token)
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            import logging
+            logging.getLogger("apps").error(f"Error forzando entrega SMTP en Staging: {str(e)}")
+            return Response({'error': f'Falla en el servidor SMTP: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)        
 
 
 class SiteSettingsView(APIView):
