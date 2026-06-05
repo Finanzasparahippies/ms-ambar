@@ -423,10 +423,6 @@ const TourPage = () => {
                     <CheckCircle size={14} className="text-amber-honey" />
                     Fotografía digital oficial individual
                   </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-amber-honey" />
-                    Monograma Ámbar de edición limitada
-                  </li>
                 </ul>
               </motion.div>
             )}

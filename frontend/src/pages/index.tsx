@@ -779,6 +779,21 @@ const TAROT_CARDS: TarotCard[] = [
   }
 ];
 
+const formatoHoraOficial = (fechaString: string) => {
+  if (!fechaString) return "--:--";
+  try {
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'America/Mexico_City' // 🌟 Forzamos la zona horaria del DF en el render del cliente
+    });
+  } catch (e) {
+    return "--:--";
+  }
+};
+
 const Home = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [newsletterName, setNewsletterName] = useState('');
@@ -972,24 +987,25 @@ const Home = () => {
                     <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-medium text-[#F4F6F0]/60 pt-0.5">
                       {nextEvent.doors_open && (
                         <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
-                          🚪 Puertas: <strong className="text-white">{new Date(nextEvent.doors_open).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })} hrs</strong>
+                          🚪 Puertas: <strong className="text-white">{formatoHoraOficial(nextEvent.doors_open)} hrs</strong>
                         </span>
                       )}
+
                       <span className="bg-amber-honey/10 border border-amber-honey/20 px-2.5 py-1 rounded-md text-amber-honey">
-                        🎸 Show: <strong className="text-amber-honey font-black">{new Date(nextEvent.date).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })} hrs</strong>
+                        🎸 Show: <strong className="text-amber-honey font-black">{formatoHoraOficial(nextEvent.date)} hrs</strong>
                       </span>
 
-                      {/* LOGICA DURATION_MINUTES (Calcula dinámicamente el cierre sumando los minutos recibidos del backend) */}
+                      {/* LOGICA DE CIERRE DINÁMICO CORREGIDA CON TIMEZONE */}
                       {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
                         <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
                           ✨ Cierre: <strong className="text-white">
                             {(() => {
                               if (nextEvent.end_date) {
-                                return new Date(nextEvent.end_date).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+                                return formatoHoraOficial(nextEvent.end_date);
                               }
                               const startDate = new Date(nextEvent.date);
                               const calculatedEndDate = new Date(startDate.getTime() + (Number(nextEvent.duration_minutes || 120) * 60 * 1000));
-                              return calculatedEndDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+                              return formatoHoraOficial(calculatedEndDate.toISOString());
                             })()} hrs
                           </strong>
                         </span>
