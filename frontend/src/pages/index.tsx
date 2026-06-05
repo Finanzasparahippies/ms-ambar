@@ -815,7 +815,7 @@ const Home = () => {
   const getFormattedEventDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
-      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
       const formatted = d.toLocaleDateString('es-MX', options);
       return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     } catch {
@@ -978,15 +978,26 @@ const Home = () => {
                       <span className="bg-amber-honey/10 border border-amber-honey/20 px-2.5 py-1 rounded-md text-amber-honey">
                         🎸 Show: <strong className="text-amber-honey font-black">{new Date(nextEvent.date).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })} hrs</strong>
                       </span>
-                      {nextEvent.end_date && (
+
+                      {/* LOGICA DURATION_MINUTES (Calcula dinámicamente el cierre sumando los minutos recibidos del backend) */}
+                      {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
                         <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
-                          ✨ Cierre: <strong className="text-white">{new Date(nextEvent.end_date).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false })} hrs</strong>
+                          ✨ Cierre: <strong className="text-white">
+                            {(() => {
+                              if (nextEvent.end_date) {
+                                return new Date(nextEvent.end_date).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+                              }
+                              const startDate = new Date(nextEvent.date);
+                              const calculatedEndDate = new Date(startDate.getTime() + (Number(nextEvent.duration_minutes || 120) * 60 * 1000));
+                              return calculatedEndDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false });
+                            })()} hrs
+                          </strong>
                         </span>
                       )}
                     </div>
 
                     <p className="text-xs text-[#F4F6F0]/50 font-normal tracking-normal pt-1">
-                      📍 {nextEvent.venue_name} — <span className="italic">{nextEvent.venue_address}</span>
+                      📍 {nextEvent.venue_name || nextEvent.theater_name} — <span className="italic">{nextEvent.venue_address || nextEvent.theater_location}</span>
                     </p>
                   </div>
 
@@ -1000,11 +1011,12 @@ const Home = () => {
                         <span className="text-amber-honey/70 font-bold text-xs"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2 })} cargo</span>
                       </div>
 
-                      {nextEvent.event_type === 'meet_greet' && nextEvent.mg_limit > 0 && (
+                      {/* MODULO DE CUPO CON EXCLUSIÓN DE MEET & GREET SOLICITADA */}
+                      {nextEvent.event_type !== 'meet_greet' && nextEvent.mg_limit > 0 && (
                         <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
                           <div className="flex items-center gap-2">
                             <div className={`w-2 h-2 rounded-full ${nextEvent.mg_available > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                            <span className="text-[#F4F6F0]/40">Cupo limitado de la convivencia:</span>
+                            <span className="text-[#F4F6F0]/40">Cupo limitado del evento:</span>
                           </div>
                           <span className={`font-black uppercase tracking-wider ${nextEvent.mg_available <= 5 && nextEvent.mg_available > 0 ? 'text-red-400 animate-bounce' : 'text-white'}`}>
                             {nextEvent.mg_available > 0 ? `${nextEvent.mg_available} disponibles` : 'Agotado'}
