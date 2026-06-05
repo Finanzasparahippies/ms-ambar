@@ -934,49 +934,48 @@ const Home = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.8 }}
-              className="relative rounded-[3rem] overflow-hidden border border-amber-honey/15 group shadow-2xl shadow-amber-honey/5"
+              className="relative bg-[#06070b] rounded-[3rem] overflow-hidden border border-amber-honey/15 group shadow-2xl shadow-amber-honey/5 grid grid-cols-1 md:grid-cols-2 gap-8 p-8 md:p-12 items-center"
             >
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/90 via-[#06070b]/50 to-transparent z-10 pointer-events-none" />
-
-              {/* Flyer Image */}
-              <img
-                src={nextEvent.flyer_url}
-                alt={`Flyer: ${nextEvent.title}`}
-                className="w-full h-64 md:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-1000"
-              />
-
-              {/* Content overlay */}
-              <div className="absolute inset-0 z-20 flex flex-col justify-end p-8 md:p-12 pointer-events-none">
-                <div className="max-w-2xl space-y-4">
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
-                    <Sparkles size={10} className="animate-pulse" /> Próximo Evento
-                  </span>
-                  <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-tight">
-                    {nextEvent.title}
-                  </h2>
-                  <p className="text-sm text-[#F4F6F0]/70 font-medium">
-                    {getFormattedEventDate(nextEvent.date)}
-                    {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
-                      <span className="ml-2">
-                        <span className="text-[#F4F6F0]/50 text-xs"> — desde </span>
-                        <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
-                        <span className="text-amber-honey/70 text-xs font-bold"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cargo de servicio</span>
-                        <span className="text-amber-honey font-black text-sm"> = ${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
-                      </span>
-                    )}
-                  </p>
+              {/* Left Column: Content (No longer absolute, naturally takes 50% width on desktop) */}
+              <div className="space-y-4 max-w-2xl order-2 md:order-1 z-20">
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
+                  <Sparkles size={10} className="animate-pulse" /> Próximo Evento
+                </span>
+                <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-tight">
+                  {nextEvent.title}
+                </h2>
+                <p className="text-sm text-[#F4F6F0]/70 font-medium">
+                  {getFormattedEventDate(nextEvent.date)}
+                  {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
+                    <span className="ml-2 block sm:inline mt-1 sm:mt-0">
+                      <span className="text-[#F4F6F0]/50 text-xs"> — desde </span>
+                      <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
+                      <span className="text-amber-honey/70 text-xs font-bold"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cargo de servicio</span>
+                      <span className="text-amber-honey font-black text-sm block sm:inline sm:ml-1"> = ${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
+                    </span>
+                  )}
+                </p>
+                <div className="pt-2">
                   <Link
                     href="/comprar-boletos"
-                    className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/30 hover:scale-105 hover:shadow-amber-honey/50 transition-all pointer-events-auto"
+                    className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/30 hover:scale-105 hover:shadow-amber-honey/50 transition-all"
                   >
                     <Ticket size={14} /> Adquirir Accesos
                   </Link>
                 </div>
               </div>
 
-              {/* Decorative amber glow */}
-              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-amber-honey/5 via-transparent to-transparent pointer-events-none z-10" />
+              {/* Right Column: Flyer Container with Contain */}
+              <div className="w-full h-64 sm:h-80 md:h-[400px] overflow-hidden rounded-2xl order-1 md:order-2 z-20">
+                <img
+                  src={nextEvent.flyer_url}
+                  alt={`Flyer: ${nextEvent.title}`}
+                  className="w-full h-full object-contain object-center md:object-right group-hover:scale-103 transition-transform duration-1000"
+                />
+              </div>
+
+              {/* Decorative ambient amber glow (Kept absolute to blend in the background behind text/image) */}
+              <div className="absolute inset-0 bg-gradient-to-r from-amber-honey/5 via-transparent to-transparent pointer-events-none z-10" />
             </motion.div>
           </div>
         </section>
@@ -1056,7 +1055,7 @@ const Home = () => {
                   Ver Fechas del Tour <ArrowRight size={12} />
                 </Link>
                 <span className="text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 font-bold">
-                  Hermosillo • México • Viña del Mar
+                  Hermosillo • México
                 </span>
               </div>
             </motion.div>
