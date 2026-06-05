@@ -1051,7 +1051,7 @@ const Home = () => {
                 <div className="pt-2 w-full lg:w-auto">
                   <Link
                     href="/comprar-boletos"
-                    className={`inline-flex items-center justify-center gap-3 w-[85%] mx-auto sm:mx-0 sm:w-fit px-13 py-4.5 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 ${nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0
+                    className={`inline-flex items-center justify-center gap-3 w-[100%] mx-auto sm:mx-0 sm:w-fit px-16 py-4.5 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 ${nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0
                       ? 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed pointer-events-none'
                       : 'bg-amber-honey text-[#06070b] shadow-xl shadow-amber-honey/20 hover:bg-white hover:text-black hover:scale-[1.03] hover:shadow-white/10'
                       }`}
