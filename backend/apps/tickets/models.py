@@ -1,4 +1,5 @@
 from django.db import models
+from datetime import timedelta
 import uuid
 
 class Theater(models.Model):
@@ -132,6 +133,13 @@ class Event(models.Model):
     title = models.CharField(max_length=255)
     artist = models.CharField(max_length=255)
     date = models.DateTimeField()
+    doors_open = models.DateTimeField()
+    duration_minutes = models.PositiveIntegerField(
+        default=120, 
+        help_text="Duración estimada del evento en minutos. Útil para calcular la hora de finalización."
+    )
+    venue_name = models.CharField(max_length=255)
+    venue_address = models.CharField(max_length=255)
     theater = models.ForeignKey(Theater, on_delete=models.CASCADE, null=True, blank=True, related_name='events')
     image = models.ImageField(upload_to='events/', null=True, blank=True)
     flyer = models.ImageField(
@@ -243,6 +251,12 @@ class Event(models.Model):
             if min_seat:
                 return float(min_seat.base_price * self.price_multiplier)
         return 0
+    @property
+    def end_date(self):
+        """Calcula de forma dinámica la hora de finalización del show."""
+        if self.date and self.duration_minutes:
+            return self.date + timedelta(minutes=self.duration_minutes)
+        return None
 
 class Seat(models.Model):
     CATEGORY_CHOICES = [
