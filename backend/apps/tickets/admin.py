@@ -20,7 +20,7 @@ class EventAdmin(admin.ModelAdmin):
     list_filter = ('is_active', 'event_type', 'date')
     fieldsets = (
         ('Información del Evento', {
-            'fields': ('title', 'artist', 'date', 'doors_open', 'venue_name', 'venue_address', 'theater', 'is_active', 'event_type', 'price_multiplier')
+            'fields': ('title', 'artist', 'date', 'doors_open', 'duration_minutes', 'venue_name', 'venue_address', 'theater', 'is_active', 'event_type', 'price_multiplier')
         }),
         ('Imágenes', {
             'fields': ('image', 'flyer'),
