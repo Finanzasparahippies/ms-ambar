@@ -927,55 +927,79 @@ const Home = () => {
 
       {/* ─── PRÓXIMO EVENTO FLYER SECTION ─── */}
       {nextEvent?.flyer_url && (
-        <section className="pb-4 md:pb-8">
-          <div className="max-w-[1600px] mx-auto px-6 md:px-10">
+        <section className="pb-6 md:pb-12 bg-[#06070b]">
+          <div className="max-w-[1400px] mx-auto px-6 md:px-10">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.8 }}
-              className="relative bg-[#06070b] rounded-[3rem] overflow-hidden border border-amber-honey/15 group shadow-2xl shadow-amber-honey/5 grid grid-cols-1 lg:grid-cols-3 gap-8 p-8 md:p-12 items-center"
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              className="relative bg-gradient-to-br from-[#0d0e12] to-[#07080c] rounded-[2.5rem] overflow-hidden border border-amber-honey/10 group shadow-[0_0_50px_rgba(6,7,11,0.8)] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 p-8 md:p-14 items-center"
             >
-              {/* Left Column: Content (Takes 2/3 of space on desktop) */}
-              <div className="space-y-4 max-w-3xl order-2 lg:order-1 lg:col-span-2 z-20">
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
-                  <Sparkles size={10} className="animate-pulse" /> Próximo Evento
-                </span>
-                <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-tight">
+              
+              {/* Left Column: Content (7 of 12 Columns) */}
+              <div className="space-y-6 order-2 lg:order-1 lg:col-span-7 z-20 flex flex-col justify-center h-full">
+                
+                {/* Badge premium flotante */}
+                <div className="inline-flex items-center gap-2 bg-amber-honey/5 border border-amber-honey/20 px-3 py-1.5 rounded-full w-fit backdrop-blur-sm">
+                  <Sparkles size={12} className="text-amber-honey animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey/90">
+                    Próximo Evento
+                  </span>
+                </div>
+
+                {/* Título encajonado para forzar balance visual */}
+                <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-[0.95] max-w-md lg:max-w-xl group-hover:text-amber-honey/90 transition-colors duration-500">
                   {nextEvent.title}
                 </h2>
-                <p className="text-sm text-[#F4F6F0]/70 font-medium leading-relaxed">
-                  {getFormattedEventDate(nextEvent.date)}
+
+                {/* Separador sutil de diseño editorial */}
+                <div className="w-12 h-[2px] bg-gradient-to-r from-amber-honey/40 to-transparent" />
+
+                {/* Tarifa y Detalles */}
+                <div className="space-y-2 max-w-lg">
+                  <p className="text-sm md:text-base text-white/90 font-bold tracking-tight">
+                    {getFormattedEventDate(nextEvent.date)}
+                  </p>
+                  
                   {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
-                    <span className="ml-2 block xl:inline mt-1 xl:mt-0">
-                      <span className="text-[#F4F6F0]/50 text-xs"> — desde </span>
+                    <div className="text-xs md:text-sm text-[#F4F6F0]/60 font-medium leading-relaxed bg-[#0d0e12]/40 p-3 rounded-xl border border-white/5 backdrop-blur-sm">
+                      <span className="text-[#F4F6F0]/40">Acceso general — desde </span>
                       <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
-                      <span className="text-amber-honey/70 text-xs font-bold"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cargo de servicio</span>
-                      <span className="text-amber-honey font-black text-sm block sm:inline sm:ml-1"> = ${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
-                    </span>
+                      <span className="text-amber-honey/60 font-medium"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2 })} cargo</span>
+                      <div className="mt-1 pt-1 border-t border-white/5 text-sm">
+                        <span className="text-[#F4F6F0]/40 font-normal">Total final: </span>
+                        <span className="text-amber-honey font-black text-base">${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
+                      </div>
+                    </div>
                   )}
-                </p>
+                </div>
+
+                {/* Botón Call to Action */}
                 <div className="pt-2">
                   <Link
                     href="/comprar-boletos"
-                    className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/30 hover:scale-105 hover:shadow-amber-honey/50 transition-all"
+                    className="inline-flex items-center gap-3 px-10 py-4.5 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-xl shadow-amber-honey/20 hover:bg-white hover:text-black hover:scale-[1.03] hover:shadow-white/10 transition-all duration-300"
                   >
                     <Ticket size={14} /> Adquirir Accesos
                   </Link>
                 </div>
               </div>
 
-              {/* Right Column: Flyer Container (Takes 1/3 of space on desktop) */}
-              <div className="w-full h-72 sm:h-96 lg:h-[420px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-1 z-20">
-                <img
-                  src={nextEvent.flyer_url}
-                  alt={`Flyer: ${nextEvent.title}`}
-                  className="w-full h-full object-contain object-center lg:object-right group-hover:scale-103 transition-transform duration-1000"
-                />
+              {/* Right Column: Flyer Container (5 of 12 Columns) */}
+              <div className="w-full h-80 sm:h-[400px] lg:h-[460px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
+                <div className="relative w-full h-full max-w-[340px] lg:max-w-none rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5">
+                  <img
+                    src={nextEvent.flyer_url}
+                    alt={`Flyer: ${nextEvent.title}`}
+                    className="w-full h-full object-contain object-center lg:object-right group-hover:scale-[1.04] transition-transform duration-1000 ease-out"
+                  />
+                </div>
               </div>
 
-              {/* Decorative ambient amber glow */}
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-honey/5 via-transparent to-transparent pointer-events-none z-10" />
+              {/* El Aura Amber Glow Ultra-premium */}
+              <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-80 h-80 bg-amber-honey/10 rounded-full blur-[120px] pointer-events-none z-10 group-hover:bg-amber-honey/15 transition-colors duration-1000" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/20 via-transparent to-transparent pointer-events-none z-10" />
             </motion.div>
           </div>
         </section>
