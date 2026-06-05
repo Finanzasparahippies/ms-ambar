@@ -135,14 +135,11 @@ const TourPage = () => {
           if (tickets && tickets.length > 0) {
             setCreatedTickets(tickets);
             setEmail(tickets[0].user_email || '');
-            // Corrección de mapeo seguro: lee full_name o retrocede de forma segura
             setFullName(tickets[0].full_name || tickets[0].user_name || '');
             setCheckoutSuccess(true);
             setIsCheckoutOpen(true);
 
-            // Disparar alerta visual premium de confirmación inmediata
             showAlert("Tus accesos oficiales han sido validados con éxito.", "¡Reserva Confirmada!", "success");
-
             router.replace('/comprar-boletos', undefined, { shallow: true });
           }
         })
@@ -223,6 +220,29 @@ const TourPage = () => {
   const baseTotal = seatsBaseTotal + mgBaseTotal;
 
   const { base_price: checkoutBasePrice, service_fee: checkoutServiceFee, total: checkoutTotal } = calculateTotalWithFee(baseTotal);
+
+  // EDGE CASE SUCCESS CALCULATOR: Extrae costos reales del array devuelto por el API tras la compra
+  const getCreatedTicketsTotal = () => {
+    if (!createdTickets || createdTickets.length === 0) return 0;
+
+    // Si fue M&G puro, sumamos el precio configurado del evento por la cantidad de boletos
+    if (createdTickets[0].seat_display === 'Meet & Greet' && !createdTickets[0].seat) {
+      return createdTickets.length * Number(currentEvent?.mg_price || 0);
+    }
+
+    // Si son asientos físicos, sumamos el precio base real de cada asiento asignado
+    return createdTickets.reduce((acc, ticket) => {
+      const baseSeatPrice = ticket.seat_details?.base_price || ticket.base_price || 0;
+      const multiplier = Number(currentEvent?.price_multiplier || 1);
+      let seatCost = Number(baseSeatPrice) * multiplier;
+
+      // Edgecase: Si el asiento de concierto incluyó un upgrade extra de M&G
+      if (ticket.has_mg && currentEvent?.event_type !== 'meet_greet') {
+        seatCost += Ribbon(currentEvent?.mg_price || 0);
+      }
+      return acc + seatCost;
+    }, 0);
+  };
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -548,19 +568,42 @@ const TourPage = () => {
                 )}
 
                 {checkoutSuccess ? (
-                  <div className="text-center space-y-6 py-4">
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-400">
-                      <CheckCircle size={32} />
+                  <div className="text-center space-y-5 py-2">
+                    <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-400">
+                      <CheckCircle size={30} />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       <h3 className="text-2xl font-black uppercase tracking-wider">¡Compra Confirmada!</h3>
-                      <p className="text-xs text-white/60">Tus accesos han sido generados y enviados a su correo:</p>
+                      <p className="text-xs text-white/60">Tus accesos han sido generados y enviados a tu correo:</p>
                       <p className="text-xs font-bold text-amber-honey">{email}</p>
                     </div>
 
-                    <div className="bg-white/5 p-5 rounded-2xl border border-white/10 text-left space-y-3">
+                    {/* DESGLOSE FINANCIERO ADICIONAL DENTRO DEL MODAL (Edge-case Audit) */}
+                    {(() => {
+                      const computedBaseTotal = getCreatedTicketsTotal();
+                      const { base_price, service_fee, total } = calculateTotalWithFee(computedBaseTotal);
+                      if (computedBaseTotal <= 0) return null;
+                      return (
+                        <div className="bg-black/30 border border-white/5 p-4 rounded-xl text-left space-y-1.5 text-[11px]">
+                          <div className="flex justify-between text-white/50">
+                            <span>Monto Base ({createdTickets.length} accesos):</span>
+                            <span className="font-semibold text-white">${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                          </div>
+                          <div className="flex justify-between text-amber-500/80">
+                            <span className="flex items-center gap-1"><Info size={10} /> Tarifa Operativa / Stripe:</span>
+                            <span className="font-semibold">+${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                          </div>
+                          <div className="flex justify-between text-white font-bold border-t border-white/10 pt-1.5 mt-1 text-xs">
+                            <span>Total Cargado:</span>
+                            <span className="text-amber-honey">${Math.ceil(total).toLocaleString('es-MX')} MXN</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-left space-y-3">
                       <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales</h4>
-                      <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                      <div className="space-y-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-1">
                         {createdTickets.map((t, idx) => (
                           <div key={t.id} className="flex justify-between items-center bg-black/40 p-3 rounded-lg border border-white/10">
                             <span className="text-xs font-bold text-white/80">Boleto #{idx + 1} ({t.seat_display || 'Entrada General'})</span>
@@ -585,7 +628,7 @@ const TourPage = () => {
                         setEmail('');
                         setPhone('');
                       }}
-                      className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform"
+                      className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.01] transition-transform shadow-lg shadow-amber-500/10"
                     >
                       Finalizar y Volver
                     </button>
