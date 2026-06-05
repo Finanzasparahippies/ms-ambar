@@ -345,7 +345,7 @@ const TourPage = () => {
               <div className="flex flex-col gap-4 text-xs uppercase tracking-widest font-black">
                 <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <MapPin size={14} className="text-amber-honey" />
-                  <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Plataforma Digital' : 'Cargando Recinto...'}</span>
+                  <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Meet & Greet' : 'Cargando Recinto...'}</span>
                 </div>
                 <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <Calendar size={14} className="text-amber-honey" />
