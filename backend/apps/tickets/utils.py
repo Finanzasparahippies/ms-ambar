@@ -1,10 +1,8 @@
 import qrcode
 import io
-from django.core.mail import EmailMultiAlternatives
-from django.utils.html import strip_tags
 from django.conf import settings
 from django.template.loader import render_to_string
-from email.mime.image import MIMEImage
+from apps.blog.utils import send_failover_email
 
 def generate_ticket_qr(ticket):
     """
@@ -28,9 +26,9 @@ def generate_ticket_qr(ticket):
 
 def send_ticket_email(ticket):
     """
-    Sends the ticket via email with the QR code embedded inline and attached.
+    Sends the ticket via email leveraging Nectar Labs Failover Email Architecture.
     """
-    subject = f"✨ Tu boleto para {ticket.event.title} - Ms Ambar"
+    subject = f"✨ Tu acceso para {ticket.event.title} - Ms Ambar"
     
     context = {
         'ticket': ticket,
@@ -42,13 +40,12 @@ def send_ticket_email(ticket):
     
     html_content = render_to_string('tickets/emails/ticket_delivery.html', context)
     
-    # Plain text fallback
     if ticket.seat:
         seat_str = f"Sección {ticket.seat.section} - Fila {ticket.seat.row}, Asiento {ticket.seat.number}"
     elif ticket.ga_zone:
         seat_str = f"Zona General: {ticket.ga_zone.name}"
     else:
-        seat_str = "Entrada General"
+        seat_str = "Pase Meet & Greet"
         
     theater_name = ticket.event.theater.name if ticket.event.theater else "Convivencia Online / Lugar por confirmar"
     theater_loc = ticket.event.theater.location if ticket.event.theater else "Plataforma Digital"
@@ -66,22 +63,8 @@ def send_ticket_email(ticket):
         f"¡Disfruta del evento!\n\nAtentamente,\nEl equipo de Ms Ambar"
     )
     
-    email = EmailMultiAlternatives(
-        subject,
-        text_content,
-        settings.DEFAULT_FROM_EMAIL,
-        [ticket.user_email],
-    )
-    email.attach_alternative(html_content, "text/html")
-    
-    # Generate QR Image and attach as inline MIMEImage
-    qr_image = generate_ticket_qr(ticket)
-    msg_img = MIMEImage(qr_image)
-    msg_img.add_header('Content-ID', '<ticket_qr>')
-    msg_img.add_header('Content-Disposition', 'inline', filename=f"ticket_{ticket.token}.png")
-    email.attach(msg_img)
-    
-    email.send()
+    # Despachamos usando el backend de contingencia unificado
+    send_failover_email(subject, html_content, text_content, [ticket.user_email])
 
 def send_ticket_whatsapp(ticket):
     """

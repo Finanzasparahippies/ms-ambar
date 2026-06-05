@@ -244,15 +244,17 @@ class TicketViewSet(viewsets.ModelViewSet):
                 use_mock = True
 
         if use_mock:
-            # Mock checkout fallback
             import uuid
+            import threading
+            from apps.tickets.utils import send_ticket_email
+            
             mock_session_id = f"mock_{uuid.uuid4().hex}"
             session_id = mock_session_id
             session_url = f"{success_url}?success=true&session_id={mock_session_id}"
 
-            from apps.tickets.utils import send_ticket_email, send_ticket_whatsapp
+            # Lista temporal para almacenar los boletos creados en esta transacción
+            created_mock_tickets = []
 
-            # Create tickets as 'paid' directly for mock so that returning immediately works
             if event.event_type == 'meet_greet':
                 for _ in range(int(quantity)):
                     ticket = Ticket.objects.create(
@@ -265,13 +267,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                         has_mg=True,
                         stripe_session_id=mock_session_id
                     )
-                    try:
-                        send_ticket_email(ticket)
-                        if ticket.user_phone:
-                            send_ticket_whatsapp(ticket)
-                    except Exception as e:
-                        import logging
-                        logging.getLogger("apps").warning(f"Error sending mock ticket email: {e}")
+                    created_mock_tickets.append(ticket)
             else:
                 for seat in seats:
                     ticket = Ticket.objects.create(
@@ -284,13 +280,21 @@ class TicketViewSet(viewsets.ModelViewSet):
                         has_mg=has_mg,
                         stripe_session_id=mock_session_id
                     )
+                    created_mock_tickets.append(ticket)
+
+            # --- ASYNC FAILOVER DELIVERY (Lógica NectarLabs) ---
+            # Envolvemos el envío en un hilo seguro e independiente (igual que haces en tu blog)
+            # para que la base de datos alcance a hacer el COMMIT completo del stripe_session_id 
+            # antes de que el motor SMTP intente leer el registro.
+            def asynchronous_delivery(tickets_list):
+                for t in tickets_list:
                     try:
-                        send_ticket_email(ticket)
-                        if ticket.user_phone:
-                            send_ticket_whatsapp(ticket)
+                        send_ticket_email(t)
                     except Exception as e:
                         import logging
-                        logging.getLogger("apps").warning(f"Error sending mock ticket email: {e}")
+                        logging.getLogger("apps").error(f"[Staging] Falla crítica al despachar correo asíncrono: {e}")
+
+            threading.Thread(target=asynchronous_delivery, args=(created_mock_tickets,), daemon=True).start()
         else:
             # Standard Stripe pre-creation of reserved tickets for concert
             if event.event_type != 'meet_greet':
@@ -340,7 +344,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(tickets, many=True)
         return Response(serializer.data)
-        
+
     @action(detail=True, methods=['post'], url_path='send_delivery_email', permission_classes=[permissions.AllowAny])
     def send_delivery_email(self, request, pk=None):
         """
