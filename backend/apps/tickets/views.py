@@ -5,6 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Event, Theater, Ticket, Seat, SiteSettings
 from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer, SiteSettingsSerializer
+import logging
+
+delivery_logger = logging.getLogger("apps.tickets.delivery")
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
@@ -214,11 +217,26 @@ class TicketViewSet(viewsets.ModelViewSet):
                 except Seat.DoesNotExist:
                     return Response({'error': f'Asiento con ID {s_id} no existe.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # --- Determinar si usar Stripe real o mock ---
+        # En staging/local sin webhook configurado, siempre usar mock para garantizar entrega.
+        # Solo usar Stripe real si hay webhook secret configurado (producción).
         use_mock = False
         if not getattr(settings, 'TESTING', False):
             stripe_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
-            if not stripe_key or any(p in stripe_key for p in ['change_me', 'replace_me', 'test_mock', 'placeholder']):
+            webhook_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '')
+            # Usar mock si: no hay key, la key es placeholder, o no hay webhook secret configurado
+            # Sin webhook, Stripe no puede confirmar el pago al backend → boletos nunca se crean
+            placeholder_patterns = ['change_me', 'replace_me', 'test_mock', 'placeholder', 'your_']
+            no_key = not stripe_key
+            bad_key = any(p in stripe_key for p in placeholder_patterns)
+            no_webhook = not webhook_secret or any(p in webhook_secret for p in placeholder_patterns)
+            if no_key or bad_key or no_webhook:
                 use_mock = True
+                if no_webhook:
+                    delivery_logger.warning(
+                        "[Checkout] STRIPE_WEBHOOK_SECRET no configurado — usando modo mock. "
+                        "Sin webhook, Stripe no puede confirmar pagos al backend."
+                    )
 
         session_id = None
         session_url = None
@@ -239,20 +257,18 @@ class TicketViewSet(viewsets.ModelViewSet):
                 session_id = session.id
                 session_url = session.url
             except Exception as e:
-                import logging
-                logging.getLogger("apps").warning(f"Error creating Stripe checkout session, falling back to mock: {e}")
+                delivery_logger.warning(f"Error creating Stripe checkout session, falling back to mock: {e}")
                 use_mock = True
 
         if use_mock:
             import uuid
             import threading
             from apps.tickets.utils import send_ticket_email
-            
+
             mock_session_id = f"mock_{uuid.uuid4().hex}"
             session_id = mock_session_id
             session_url = f"{success_url}?success=true&session_id={mock_session_id}"
 
-            # Lista temporal para almacenar los boletos creados en esta transacción
             created_mock_tickets = []
 
             if event.event_type == 'meet_greet':
@@ -282,19 +298,38 @@ class TicketViewSet(viewsets.ModelViewSet):
                     )
                     created_mock_tickets.append(ticket)
 
-            # --- ASYNC FAILOVER DELIVERY (Lógica NectarLabs) ---
-            # Envolvemos el envío en un hilo seguro e independiente (igual que haces en tu blog)
-            # para que la base de datos alcance a hacer el COMMIT completo del stripe_session_id 
-            # antes de que el motor SMTP intente leer el registro.
-            def asynchronous_delivery(tickets_list):
+            delivery_logger.info(
+                f"[Checkout/Mock] Creados {len(created_mock_tickets)} boleto(s) para {email}. "
+                f"Iniciando entrega SMTP..."
+            )
+
+            # --- ENTREGA SINCRÓNICA EN HILO SEPARADO ---
+            # Usamos un hilo NO-daemon para que Docker capture los logs completos.
+            # El join() con timeout evita bloquear la respuesta al cliente.
+            def deliver_tickets(tickets_list):
                 for t in tickets_list:
+                    delivery_logger.info(
+                        f"[Delivery] Enviando boleto {t.token} → {t.user_email}"
+                    )
                     try:
                         send_ticket_email(t)
-                    except Exception as e:
-                        import logging
-                        logging.getLogger("apps").error(f"[Staging] Falla crítica al despachar correo asíncrono: {e}")
+                        delivery_logger.info(
+                            f"[Delivery] ✅ Boleto {t.token} entregado exitosamente a {t.user_email}"
+                        )
+                    except Exception as exc:
+                        delivery_logger.error(
+                            f"[Delivery] ❌ FALLA al enviar boleto {t.token} a {t.user_email}: {exc}",
+                            exc_info=True
+                        )
 
-            threading.Thread(target=asynchronous_delivery, args=(created_mock_tickets,), daemon=True).start()
+            delivery_thread = threading.Thread(
+                target=deliver_tickets,
+                args=(created_mock_tickets,),
+                daemon=False,  # Non-daemon: Docker captura los logs correctamente
+                name=f"ticket-delivery-{mock_session_id[:8]}"
+            )
+            delivery_thread.start()
+            # No bloqueamos la respuesta — el cliente recibe 200 inmediatamente
         else:
             # Standard Stripe pre-creation of reserved tickets for concert
             if event.event_type != 'meet_greet':

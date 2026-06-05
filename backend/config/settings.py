@@ -230,7 +230,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '[\033[94m%(asctime)s\033[0m] %(levelname)s [%(name)s] %(message)s',
+            'format': '[%(asctime)s] %(levelname)s [%(name)s] %(message)s',
             'datefmt': '%H:%M:%S'
         },
     },
@@ -243,13 +243,18 @@ LOGGING = {
     'loggers': {
         'apps': {
             'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': True,
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps.tickets.delivery': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
         'config': {
             'handlers': ['console'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'tests': {
             'handlers': ['console'],

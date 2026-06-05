@@ -115,7 +115,19 @@ def send_ticket_email(ticket):
     # 6. Build failover provider list
     providers = []
 
-    if getattr(settings, 'BREVO_EMAIL_HOST_USER', None) and getattr(settings, 'BREVO_EMAIL_HOST_PASSWORD', None):
+    has_brevo = bool(getattr(settings, 'BREVO_EMAIL_HOST_USER', '') and getattr(settings, 'BREVO_EMAIL_HOST_PASSWORD', ''))
+    has_ses = bool(getattr(settings, 'SES_EMAIL_HOST_USER', '') and getattr(settings, 'SES_EMAIL_HOST_PASSWORD', ''))
+    has_default = bool(getattr(settings, 'EMAIL_HOST_USER', '') and getattr(settings, 'EMAIL_HOST_PASSWORD', ''))
+
+    logger.info(
+        f"[send_ticket_email] Iniciando entrega para {ticket.user_email} | "
+        f"Ticket: {ticket.token} | "
+        f"Brevo: {'✅' if has_brevo else '❌ no configurado'} | "
+        f"SES: {'✅' if has_ses else '❌ no configurado'} | "
+        f"Zoho/Default: {'✅' if has_default else '❌ no configurado'}"
+    )
+
+    if has_brevo:
         providers.append(("Brevo SMTP", {
             'host': settings.BREVO_EMAIL_HOST,
             'port': settings.BREVO_EMAIL_PORT,
@@ -125,7 +137,7 @@ def send_ticket_email(ticket):
             'sender': settings.BREVO_DEFAULT_FROM_EMAIL,
         }))
 
-    if getattr(settings, 'SES_EMAIL_HOST_USER', None) and getattr(settings, 'SES_EMAIL_HOST_PASSWORD', None):
+    if has_ses:
         providers.append(("Amazon SES", {
             'host': settings.SES_EMAIL_HOST,
             'port': settings.SES_EMAIL_PORT,
@@ -135,35 +147,55 @@ def send_ticket_email(ticket):
             'sender': settings.SES_DEFAULT_FROM_EMAIL,
         }))
 
-    # Always include Django default as final fallback
-    providers.append(("Default SMTP", None))
+    if has_default:
+        providers.append(("Zoho/Default SMTP", {
+            'host': settings.EMAIL_HOST,
+            'port': settings.EMAIL_PORT,
+            'username': settings.EMAIL_HOST_USER,
+            'password': settings.EMAIL_HOST_PASSWORD,
+            'use_tls': settings.EMAIL_USE_TLS,
+            'sender': settings.DEFAULT_FROM_EMAIL,
+        }))
+
+    # En tests siempre hay un proveedor locmem disponible, sin importar credenciales
+    if getattr(settings, 'TESTING', False) and not providers:
+        providers.append(("locmem (Test)", {
+            'host': 'localhost', 'port': 25,
+            'username': '', 'password': '',
+            'use_tls': False,
+            'sender': settings.DEFAULT_FROM_EMAIL,
+        }))
+
+    if not providers:
+        logger.error(
+            f"[send_ticket_email] ❌ NINGÚN proveedor SMTP configurado. "
+            f"Configura BREVO_EMAIL_HOST_USER/PASSWORD, SES_EMAIL_HOST_USER/PASSWORD, "
+            f"o EMAIL_HOST_USER/PASSWORD en tu .env.staging"
+        )
+        raise RuntimeError(
+            "No hay proveedores SMTP configurados. "
+            "Agrega credenciales de Brevo, SES o Zoho en .env.staging"
+        )
 
     last_error = None
     for name, config in providers:
         try:
-            logger.info(f"[Ticket] Sending delivery email via {name} to {ticket.user_email}")
+            logger.info(f"[send_ticket_email] Intentando envío via {name}...")
 
-            if config is None:
-                backend_class = 'django.core.mail.backends.smtp.EmailBackend'
-                if getattr(settings, 'TESTING', False):
-                    backend_class = 'django.core.mail.backends.locmem.EmailBackend'
-                active_conn = get_connection(backend=backend_class)
-                sender = settings.DEFAULT_FROM_EMAIL
-            else:
-                backend_class = (
-                    'django.core.mail.backends.locmem.EmailBackend'
-                    if getattr(settings, 'TESTING', False)
-                    else 'django.core.mail.backends.smtp.EmailBackend'
-                )
-                active_conn = get_connection(
-                    backend=backend_class,
-                    host=config['host'],
-                    port=config['port'],
-                    username=config['username'],
-                    password=config['password'],
-                    use_tls=config['use_tls'],
-                )
-                sender = config['sender']
+            backend_class = (
+                'django.core.mail.backends.locmem.EmailBackend'
+                if getattr(settings, 'TESTING', False)
+                else 'django.core.mail.backends.smtp.EmailBackend'
+            )
+            active_conn = get_connection(
+                backend=backend_class,
+                host=config['host'],
+                port=config['port'],
+                username=config['username'],
+                password=config['password'],
+                use_tls=config['use_tls'],
+            )
+            sender = config['sender']
 
             msg = _build_ticket_email_message(
                 ticket=ticket,
@@ -176,14 +208,19 @@ def send_ticket_email(ticket):
             )
             msg.send(fail_silently=False)
 
-            logger.info(f"[Ticket] Delivery email sent successfully via {name} to {ticket.user_email}")
+            logger.info(f"[send_ticket_email] ✅ Enviado exitosamente via {name} a {ticket.user_email}")
             return name
 
         except Exception as e:
-            logger.warning(f"[Ticket] Failed to send via {name}: {e}. Trying next provider...")
+            logger.warning(
+                f"[send_ticket_email] ⚠️ Falló via {name}: {e}. Intentando siguiente proveedor...",
+                exc_info=True
+            )
             last_error = e
 
-    logger.error(f"[Ticket] All email providers failed for ticket {ticket.token} to {ticket.user_email}")
+    logger.error(
+        f"[send_ticket_email] ❌ Todos los proveedores SMTP fallaron para {ticket.token} → {ticket.user_email}"
+    )
     if last_error:
         raise last_error
 
