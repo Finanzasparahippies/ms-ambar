@@ -4,7 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Ticket, ArrowRight, Sparkles, ChevronRight, Play, Check
+  Ticket, ArrowRight, Sparkles, ChevronRight, Play, CheckCircle
 } from 'lucide-react';
 import axios from 'axios';
 
