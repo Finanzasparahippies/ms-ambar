@@ -1047,22 +1047,21 @@ const Home = () => {
                     {nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0 ? 'Cupos Agotados' : 'Adquirir Accesos'}
                   </Link>
                 </div>
-              </div>
 
-              {/* Right Column: Flyer Container (5 of 12 Columns) */}
-              <div className="w-full h-80 sm:h-[400px] lg:h-[460px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
-                <div className="relative w-full h-full max-w-[340px] lg:max-w-none rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5">
-                  <img
-                    src={nextEvent.flyer_url}
-                    alt={`Flyer: ${nextEvent.title}`}
-                    className="w-full h-full object-contain object-center lg:object-right group-hover:scale-[1.04] transition-transform duration-1000 ease-out"
-                  />
+                {/* Right Column: Flyer Container (5 of 12 Columns) */}
+                <div className="w-full h-80 sm:h-[400px] lg:h-[460px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
+                  <div className="relative w-full h-full max-w-[340px] lg:max-w-none rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5">
+                    <img
+                      src={nextEvent.flyer_url}
+                      alt={`Flyer: ${nextEvent.title}`}
+                      className="w-full h-full object-contain object-center lg:object-right group-hover:scale-[1.04] transition-transform duration-1000 ease-out"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* El Aura Amber Glow Ultra-premium */}
-              <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-80 h-80 bg-amber-honey/10 rounded-full blur-[120px] pointer-events-none z-10 group-hover:bg-amber-honey/15 transition-colors duration-1000" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/20 via-transparent to-transparent pointer-events-none z-10" />
+                {/* El Aura Amber Glow Ultra-premium */}
+                <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-80 h-80 bg-amber-honey/10 rounded-full blur-[120px] pointer-events-none z-10 group-hover:bg-amber-honey/15 transition-colors duration-1000" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/20 via-transparent to-transparent pointer-events-none z-10" />
 
             </motion.div>
           </div>
