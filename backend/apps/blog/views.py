@@ -819,15 +819,26 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
     if "<p" in campaign.poem_text or "<br" in campaign.poem_text or "<div" in campaign.poem_text:
         poem_paragraphs = campaign.poem_text
     else:
-        stanzas = []
-        text_normalized = campaign.poem_text.replace('\r\n', '\n').replace('\r', '\n')
-        raw_stanzas = text_normalized.split('\n\n')
-        for raw_stanza in raw_stanzas:
-            if raw_stanza.strip():
-                lines = [line.strip() for line in raw_stanza.split('\n')]
-                stanza_html = "<br/>".join(lines)
-                stanzas.append(f"<p style='margin: 0 0 24px 0; font-family: inherit;'>{stanza_html}</p>")
-        poem_paragraphs = "".join(stanzas)
+        text_mode = custom_styles.get('text_mode', 'poem')
+        if text_mode == 'letter':
+            paragraphs = []
+            text_normalized = campaign.poem_text.replace('\r\n', '\n').replace('\r', '\n')
+            raw_paragraphs = text_normalized.split('\n\n')
+            for p in raw_paragraphs:
+                if p.strip():
+                    clean_text = " ".join([line.strip() for line in p.split('\n')])
+                    paragraphs.append(f"<p style='margin: 0 0 16px 0; line-height: 1.8; font-family: inherit;'>{clean_text}</p>")
+            poem_paragraphs = "".join(paragraphs)
+        else:
+            stanzas = []
+            text_normalized = campaign.poem_text.replace('\r\n', '\n').replace('\r', '\n')
+            raw_stanzas = text_normalized.split('\n\n')
+            for raw_stanza in raw_stanzas:
+                if raw_stanza.strip():
+                    lines = [line.strip() for line in raw_stanza.split('\n')]
+                    stanza_html = "<br/>".join(lines)
+                    stanzas.append(f"<p style='margin: 0 0 24px 0; font-family: inherit;'>{stanza_html}</p>")
+            poem_paragraphs = "".join(stanzas)
 
     # Determine absolute URL for media conversions
     def make_urls_absolute(text):

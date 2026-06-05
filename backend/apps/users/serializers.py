@@ -64,5 +64,5 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'phone', 'first_name', 'last_name')
-        read_only_fields = ('id', 'email')
+        fields = ('id', 'email', 'username', 'phone', 'first_name', 'last_name', 'is_staff')
+        read_only_fields = ('id', 'email', 'is_staff')

@@ -12,6 +12,8 @@ export default function TicketPage() {
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isStaff, setIsStaff] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
 
   const getApiUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL ||
@@ -43,6 +45,82 @@ export default function TicketPage() {
         setLoading(false);
       });
   }, [token]);
+
+  useEffect(() => {
+    const jwtToken = localStorage.getItem('token');
+    if (!jwtToken) return;
+    const apiUrl = getApiUrl();
+    
+    fetch(`${apiUrl}/users/profile/`, {
+      headers: {
+        'Authorization': `Bearer ${jwtToken}`
+      }
+    })
+      .then(res => {
+        if (res.ok) return res.json();
+        throw new Error('Not authorized');
+      })
+      .then(data => {
+        if (data.is_staff) {
+          setIsStaff(true);
+        }
+      })
+      .catch(err => {
+        console.warn("Could not check profile (not logged in or not staff):", err);
+      });
+  }, []);
+
+  const handleValidateTicket = async () => {
+    if (!token || isValidating) return;
+    setIsValidating(true);
+    const apiUrl = getApiUrl();
+    const jwtToken = localStorage.getItem('token');
+    
+    try {
+      const res = await fetch(`${apiUrl}/tickets/tickets/validate/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': jwtToken ? `Bearer ${jwtToken}` : ''
+        },
+        body: JSON.stringify({ token })
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        // Play success chime
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
+          audio.volume = 0.5;
+          audio.play();
+        } catch (e) {
+          console.warn("Audio play blocked/failed:", e);
+        }
+        
+        // Update local ticket state
+        setTicket((prev: any) => ({
+          ...prev,
+          is_scanned: true,
+          scanned_at: new Date().toISOString()
+        }));
+      } else {
+        // Play error buzzer
+        try {
+          const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/911/911-84.wav');
+          audio.volume = 0.5;
+          audio.play();
+        } catch (e) {
+          console.warn("Audio play blocked/failed:", e);
+        }
+        alert(data.message || data.error || 'Error al validar el boleto.');
+      }
+    } catch (err) {
+      console.error("Validation error:", err);
+      alert('Error de red al intentar validar el boleto.');
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Fecha por confirmar';
@@ -82,6 +160,42 @@ export default function TicketPage() {
           Volver a Fechas del Tour
         </Link>
       </div>
+
+      {/* Staff Verification HUD */}
+      {isStaff && ticket && (
+        <div className="w-full max-w-md mb-6 z-10">
+          <div className="bg-neutral-950 border border-amber-500/20 p-5 rounded-3xl shadow-xl flex flex-col gap-3 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-[6rem] pointer-events-none" />
+            <div className="flex items-center gap-2 text-amber-500">
+              <ShieldCheck className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] font-mono">Panel de Control Staff</span>
+            </div>
+            
+            {ticket.is_scanned ? (
+              <div className="bg-red-500/10 border border-red-500/20 p-3.5 rounded-xl text-center">
+                <p className="text-red-400 text-xs font-black uppercase tracking-wider font-mono">Acceso Denegado</p>
+                <p className="text-[10px] text-neutral-400 font-mono mt-1">
+                  Usado el: {formatDate(ticket.scanned_at)}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl text-center">
+                  <p className="text-emerald-400 text-xs font-black uppercase tracking-wider font-mono">Acceso Autorizado</p>
+                  <p className="text-[9px] text-neutral-400 font-medium mt-0.5">Boleto válido y listo para ingreso</p>
+                </div>
+                <button
+                  onClick={handleValidateTicket}
+                  disabled={isValidating}
+                  className="w-full py-3 bg-gradient-to-r from-amber-400 via-amber-50 to-amber-600 text-neutral-950 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] font-mono shadow-lg shadow-amber-500/25 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:pointer-events-none"
+                >
+                  {isValidating ? 'Registrando Acceso...' : 'Registrar Acceso / Validar QR'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {loading ? (
@@ -147,10 +261,17 @@ export default function TicketPage() {
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-full text-amber-500 text-[10px] font-mono uppercase tracking-wider">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Boleto Verificado y Activo
-              </div>
+              {ticket.is_scanned ? (
+                <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 px-3 py-1.5 rounded-full text-red-500 text-[10px] font-mono uppercase tracking-wider font-bold">
+                  <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
+                  Boleto Ya Utilizado
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 px-3 py-1.5 rounded-full text-emerald-400 text-[10px] font-mono uppercase tracking-wider font-bold">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Boleto Verificado y Activo
+                </div>
+              )}
             </div>
 
             {/* Ticket Info Section */}

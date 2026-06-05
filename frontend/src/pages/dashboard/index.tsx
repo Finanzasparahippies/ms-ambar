@@ -103,6 +103,34 @@ const getHoverColor = (hex: string | null | undefined): string => {
   }
 };
 
+const formatCampaignText = (text: string, mode: 'poem' | 'letter') => {
+  if (!text) return '';
+  if (text.includes('<p') || text.includes('<br') || text.includes('<div')) {
+    return text;
+  }
+  const normalized = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  if (mode === 'letter') {
+    const paragraphs = normalized.split('\n\n');
+    return paragraphs
+      .filter(p => p.trim())
+      .map(p => {
+        const clean = p.split('\n').map(line => line.trim()).join(' ');
+        return `<p style="margin: 0 0 16px 0; line-height: 1.8; font-family: inherit;">${clean}</p>`;
+      })
+      .join('');
+  } else {
+    // poem mode
+    const stanzas = normalized.split('\n\n');
+    return stanzas
+      .filter(s => s.trim())
+      .map(s => {
+        const lines = s.split('\n').map(line => line.trim()).join('<br/>');
+        return `<p style="margin: 0 0 24px 0; line-height: 1.8; font-family: inherit;">${lines}</p>`;
+      })
+      .join('');
+  }
+};
+
 export default function AdminDashboard() {
   const resolveFontStack = (fontKey: string) => {
     switch (fontKey) {
@@ -149,6 +177,7 @@ export default function AdminDashboard() {
   const [libraryUploadLoading, setLibraryUploadLoading] = useState(false);
   const [isLibrarySectionOpen, setIsLibrarySectionOpen] = useState(false);
   const [campTemplateType, setCampTemplateType] = useState('minimalist');
+  const [campTextMode, setCampTextMode] = useState<'poem' | 'letter'>('poem');
   const [campImageFile, setCampImageFile] = useState<File | null>(null);
   const [campImagePreview, setCampImagePreview] = useState<string | null>(null);
 
@@ -939,6 +968,7 @@ export default function AdminDashboard() {
     setCampSenderName('Ms Ambar');
     setCampPoemText('');
     setCampTemplateType('minimalist');
+    setCampTextMode('poem');
     setCampImageFile(null);
     setCampImagePreview(null);
     setCampBgImageFile(null);
@@ -1070,6 +1100,7 @@ export default function AdminDashboard() {
     setCampImageRadius(campaign.image_style?.radius || '20px');
 
     const styles = campaign.custom_styles || {};
+    setCampTextMode(styles.text_mode || 'poem');
     setCampSenderName(styles.sender_name || 'Ms Ambar');
     setCampCtaAlignment(styles.cta_alignment || 'center');
     setCampCtaMarginTop(styles.cta_margin_top || '35px');
@@ -1210,6 +1241,7 @@ export default function AdminDashboard() {
     formData.append('ctas', JSON.stringify(campCtas));
 
     const customStyles = {
+      text_mode: campTextMode,
       sender_name: campSenderName,
       cta_alignment: campCtaAlignment,
       cta_margin_top: campCtaMarginTop,
@@ -4735,6 +4767,29 @@ export default function AdminDashboard() {
                             </div>
                           </div>
 
+                          <div className="space-y-2">
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Formato del Texto</label>
+                            <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1 w-full sm:w-fit">
+                              {[
+                                { id: 'poem', label: 'Modo Poema (Saltos de Línea)' },
+                                { id: 'letter', label: 'Modo Carta (Texto Fluyente)' },
+                              ].map(mode => (
+                                <button
+                                  key={mode.id}
+                                  type="button"
+                                  onClick={() => setCampTextMode(mode.id as any)}
+                                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+                                    campTextMode === mode.id
+                                      ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
+                                      : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                                  }`}
+                                >
+                                  {mode.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
                           <div className="space-y-3">
                             <div className="flex justify-between items-center">
                               <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Contenido del Correo</label>
@@ -6423,7 +6478,7 @@ export default function AdminDashboard() {
                                 maxWidth: '90%',
                                 wordBreak: 'break-word'
                               }}
-                              dangerouslySetInnerHTML={{ __html: campPoemText || '<i>El cuerpo del poema aparecerá aquí...</i>' }}
+                              dangerouslySetInnerHTML={{ __html: formatCampaignText(campPoemText, campTextMode) || '<i>El cuerpo del poema aparecerá aquí...</i>' }}
                             />
                           </div>
 
@@ -6849,17 +6904,7 @@ export default function AdminDashboard() {
                             boxSizing: 'border-box',
                             marginBottom: '30px'
                           }}>
-                            {(previewCampaign.poem_text || '').includes('<p') || (previewCampaign.poem_text || '').includes('<br') || (previewCampaign.poem_text || '').includes('<div') ? (
-                              <div dangerouslySetInnerHTML={{ __html: previewCampaign.poem_text }} />
-                            ) : (
-                              (previewCampaign.poem_text || '').split('\n').map((line: string, idx: number) => (
-                                line.trim() ? (
-                                  <p key={idx} style={{ margin: '0 0 12px 0' }}>{line}</p>
-                                ) : (
-                                  <div key={idx} style={{ height: '12px' }} />
-                                )
-                              ))
-                            )}
+                            <div dangerouslySetInnerHTML={{ __html: formatCampaignText(previewCampaign.poem_text, styles.text_mode || 'poem') || '<i>El cuerpo del poema aparecerá aquí...</i>' }} />
                           </div>
 
                           {/* Dynamic CTA Buttons */}

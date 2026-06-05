@@ -108,6 +108,22 @@ class UsersAppTests(APITestCase):
         self.assertEqual(response.data['email'], 'test@example.com')
         self.assertEqual(response.data['username'], 'testuser')
         self.assertEqual(response.data['phone'], '1234567890')
+        self.assertEqual(response.data['is_staff'], False)
+
+    def test_get_user_profile_staff_authenticated(self):
+        """Verify authenticated staff user gets profile details with is_staff=True."""
+        staff_user = User.objects.create_user(
+            email='staff@example.com',
+            username='staffuser',
+            password='staffpassword123',
+            is_staff=True
+        )
+        url = reverse('profile')
+        self.client.force_authenticate(user=staff_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['email'], 'staff@example.com')
+        self.assertEqual(response.data['is_staff'], True)
 
     def test_update_user_profile_authenticated(self):
         """Verify authenticated user can update profile details."""
@@ -128,3 +144,4 @@ class UsersAppTests(APITestCase):
         self.assertEqual(response.data['user']['last_name'], 'Artist')
         # Email must remain the original one
         self.assertEqual(response.data['user']['email'], 'test@example.com')
+        self.assertEqual(response.data['user']['is_staff'], False)

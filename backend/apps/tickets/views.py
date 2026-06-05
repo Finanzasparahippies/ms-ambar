@@ -137,7 +137,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         try:
             ticket = Ticket.objects.get(token=token)
             
-            if ticket.status != 'paid':
+            if ticket.status not in ['paid', 'used']:
                 return Response({
                     'status': 'error',
                     'message': 'Este boleto no ha sido pagado todavía.'
@@ -153,6 +153,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             # Validar y marcar
             ticket.is_scanned = True
             ticket.scanned_at = timezone.now()
+            ticket.status = 'used'
             ticket.save()
             
             return Response({
