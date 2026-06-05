@@ -133,7 +133,7 @@ class Event(models.Model):
     title = models.CharField(max_length=255)
     artist = models.CharField(max_length=255)
     date = models.DateTimeField()
-    doors_open = models.DateTimeField()
+    doors_open = models.DateTimeField(null=True, blank=True)
     duration_minutes = models.PositiveIntegerField(
         default=120, 
         help_text="Duración estimada del evento en minutos. Útil para calcular la hora de finalización."
