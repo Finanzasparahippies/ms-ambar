@@ -857,8 +857,8 @@ const Home = () => {
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-[#F4F6F0]">
       <Head>
-        <title>Ms Ambar | Esencia Artística y Experiencia de Sonidos</title>
-        <meta name="description" content="MS Ambar - Una fusión vanguardista de música, arte digital y escenografía de alta gama. Adquiere boletos oficiales y reserva experiencias exclusivas." />
+        <title>Ms Ambar | Cantautora Mexicana</title>
+        <meta name="description" content="Ms Ambar - Desde Sonora para el mundo, adquiere tus boletos y acompañame en este camino por la musica y los escenarios." />
       </Head>
 
       {/* ─── HERO SECTION (NECTAR LABS STYLE) ─── */}
@@ -883,8 +883,8 @@ const Home = () => {
             <Sparkles size={12} className="text-amber-honey animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
               {nextEvent
-                ? `Mi próximo evento: ${nextEvent.title} — ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
-                : "¡Próximamente nuevo evento!"
+                ? `Mi próximo evento es solo para reales en: ${nextEvent.title} — ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
+                : "¡Próximamente nuevo evento solo para reales!"
               }
             </span>
           </motion.div>
@@ -1077,7 +1077,7 @@ const Home = () => {
                   href="/tour"
                   className="px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-white/5 border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 hover:text-amber-honey transition-all flex items-center gap-2 text-[#F4F6F0]"
                 >
-                  Ver Fechas del Tour <ArrowRight size={12} />
+                  Ver Proximos Eventos <ArrowRight size={12} />
                 </Link>
                 <span className="text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 font-bold">
                   Hermosillo • México
