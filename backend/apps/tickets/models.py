@@ -326,8 +326,14 @@ class Ticket(models.Model):
         unique_together = ('event', 'seat')
 
     def __str__(self):
-        return f"Ticket for {self.event.title} - Seat {self.seat.row}{self.seat.number}"
-
+        if self.seat:
+            seat_info = f"Asiento {self.seat.row}{self.seat.number}"
+        elif self.ga_zone:
+            seat_info = f"Zona GA: {self.ga_zone.name}"
+        else:
+            seat_info = "Pase Meet & Greet"
+            
+        return f"Ticket #{self.id} | {self.event.title} - {seat_info} ({self.user_email})"
 
 class SiteSettings(models.Model):
     """
