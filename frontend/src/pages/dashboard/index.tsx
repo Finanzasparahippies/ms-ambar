@@ -113,7 +113,7 @@ const formatCampaignText = (text: string, mode: 'poem' | 'letter', alignment: st
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/?[a-z0-9]+[^>]*>/gi, (match) => {
       const tagName = match.replace(/[<\/>]/g, '').split(' ')[0].toLowerCase();
-      if (['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font'].includes(tagName)) {
+      if (['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font', 'img'].includes(tagName)) {
         return match;
       }
       if (['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'].includes(tagName)) {

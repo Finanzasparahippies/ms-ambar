@@ -828,7 +828,7 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
             tag_name_match = re.match(r'</?([a-zA-Z0-9]+)', tag_html)
             if tag_name_match:
                 tag_name = tag_name_match.group(1).lower()
-                if tag_name in ['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font']:
+                if tag_name in ['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font', 'img']:
                     return tag_html
                 if tag_name in ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']:
                     return '\n'
