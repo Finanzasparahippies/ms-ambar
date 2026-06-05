@@ -14,7 +14,6 @@ def generate_ticket_qr(ticket):
         box_size=10,
         border=4,
     )
-    # The QR links to the digital ticket page
     data = f"{settings.FRONTEND_URL}/tickets/{ticket.token}"
     qr.add_data(data)
     qr.make(fit=True)
@@ -26,57 +25,57 @@ def generate_ticket_qr(ticket):
 
 def send_ticket_email(ticket):
     """
-    Sends the ticket via email leveraging Nectar Labs Failover Email Architecture.
+    Compiles variables and dispatches confirmation ticket emails 
+    using the unifed Failover SMTP Relay Engine.
     """
-    subject = f"✨ Tu acceso para {ticket.event.title} - Ms Ambar"
+    subject = f"✨ Tus accesos confirmados para {ticket.event.title} - Ms Ambar"
     
+    # 1. Resolver el desglose dinámico de la ubicación
+    if ticket.seat:
+        seat_str = f"Fila {ticket.seat.row} • Asiento {ticket.seat.number}"
+        section_str = ticket.seat.section
+    elif ticket.ga_zone:
+        seat_str = "Zona General Admission"
+        section_str = ticket.ga_zone.name
+    else:
+        seat_str = "Acceso Único Especial"
+        section_str = "Meet & Greet (Convivencia)"
+        
+    theater_name = ticket.event.theater.name if ticket.event.theater else "Plataforma Digital / Streaming"
+    theater_loc = ticket.event.theater.location if ticket.event.theater else "Acceso en Línea"
+    
+    # 2. Formatear Fechas para Contexto de Plantilla
     context = {
         'ticket': ticket,
         'event': ticket.event,
-        'seat': ticket.seat,
-        'ga_zone': ticket.ga_zone,
+        'seat_str': seat_str,
+        'section_str': section_str,
+        'theater_name': theater_name,
+        'theater_loc': theater_loc,
+        'event_date': ticket.event.date.strftime('%d / %m / %Y'),
+        'event_time': ticket.event.date.strftime('%H:%M') + " HRS",
         'frontend_url': settings.FRONTEND_URL,
     }
     
+    # 3. Compilar HTML usando el motor de render de Django
     html_content = render_to_string('tickets/emails/ticket_delivery.html', context)
     
-    if ticket.seat:
-        seat_str = f"Sección {ticket.seat.section} - Fila {ticket.seat.row}, Asiento {ticket.seat.number}"
-    elif ticket.ga_zone:
-        seat_str = f"Zona General: {ticket.ga_zone.name}"
-    else:
-        seat_str = "Pase Meet & Greet"
-        
-    theater_name = ticket.event.theater.name if ticket.event.theater else "Convivencia Online / Lugar por confirmar"
-    theater_loc = ticket.event.theater.location if ticket.event.theater else "Plataforma Digital"
-        
+    # 4. Fallback a texto plano para clientes antiguos
     text_content = (
-        f"¡Hola!\n\nHemos preparado tu acceso para {ticket.event.title}.\n\n"
-        f"Detalles del Evento:\n"
-        f"• Artista: {ticket.event.artist}\n"
-        f"• Fecha: {ticket.event.date.strftime('%d/%m/%Y %H:%M')} hrs\n"
-        f"• Ubicación: {seat_str}\n"
-        f"• Lugar: {theater_name} ({theater_loc})\n\n"
-        f"Puedes ver tu boleto digital en el siguiente enlace:\n"
+        f"¡Hola! Tu acceso para {ticket.event.title} está listo.\n\n"
+        f"Ubicación: {section_str} - {seat_str}\n"
+        f"Lugar: {theater_name}\n"
+        f"Fecha: {context['event_date']} a las {context['event_time']}\n\n"
+        f"Puedes descargar tu boleto oficial en el siguiente enlace:\n"
         f"{settings.FRONTEND_URL}/tickets/{ticket.token}\n\n"
-        f"Presenta el código QR adjunto en la entrada.\n"
-        f"¡Disfruta del evento!\n\nAtentamente,\nEl equipo de Ms Ambar"
+        f"Atentamente, el equipo de Ms Ambar."
     )
     
-    # Despachamos usando el backend de contingencia unificado
+    # 5. Despachar a través del motor de failover unificado de la agencia
     send_failover_email(subject, html_content, text_content, [ticket.user_email])
 
 def send_ticket_whatsapp(ticket):
-    """
-    Placeholder for WhatsApp delivery (e.g. using Twilio).
-    """
-    # Example logic:
-    # client = Client(settings.TWILIO_SID, settings.TWILIO_AUTH)
-    # client.messages.create(...)
     print(f"Enviando boleto {ticket.token} vía WhatsApp a {ticket.user_phone}")
 
 def send_ticket_telegram(ticket):
-    """
-    Placeholder for Telegram delivery.
-    """
     print(f"Enviando boleto {ticket.token} vía Telegram")

@@ -1,100 +1,87 @@
-{% extends "users/emails/base_ambar.html" %}
+{% extends "tickets/emails/base_email.html" %}
 
-{% block email_title %}Tu boleto para {{ event.title }} - Ms Ambar{% endblock %}
+{% block email_title %}Tus Accesos Confirmados - Ms Ambar{% endblock %}
 
-{% block subtitle %}Boletos Digitales{% endblock %}
+{% block subtitle %}Accesos Oficiales{% endblock %}
 
 {% block content %}
-<!-- Welcome Title -->
-<h2
-  style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">
-  ¡Tus accesos están listos!</h2>
+<div style="text-align: center; margin-bottom: 30px;">
+  <h2 style="color: #ffffff; font-size: 22px; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.02em;">¡Tu lugar
+    está asegurado!</h2>
+  <p style="color: rgba(244, 246, 240, 0.7); font-size: 14px; line-height: 1.6; margin: 0;"> Hemos recibido tu pago de
+    forma exitosa. A continuación se desglosan los datos de tus accesos oficiales firmados mediante Néctar Gateway.</p>
+</div>
 
-<p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
-  Hola. Gracias por tu compra. A continuación encontrarás el detalle de tu boleto y el código QR de acceso para el
-  evento.
-</p>
-
-<!-- Event Details Card -->
+<!-- Bloque Boleto Digital -->
 <div
-  style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 30px;">
-  <h3
-    style="color: #f59e0b; font-size: 18px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; text-align: center;">
-    {{ event.title }}</h3>
+  style="background: #11131c; border: 1px solid rgba(229, 169, 59, 0.15); border-radius: 24px; padding: 30px; margin-bottom: 35px; overflow: hidden;">
+  <div style="border-left: 3px solid #E5A93B; padding-left: 15px; margin-bottom: 25px; text-align: left;">
+    <span
+      style="color: #E5A93B; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; display: block; margin-bottom: 2px;">Pase
+      Oficial</span>
+    <h3
+      style="color: #ffffff; font-size: 24px; font-weight: 900; margin: 0; letter-spacing: -0.02em; text-transform: uppercase; font-style: italic;">
+      {{ event.title }}</h3>
+  </div>
 
-  <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
+  <!-- Información del Acceso -->
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; text-align: left;">
     <tr>
-      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4); width: 30%;">Artista:</td>
-      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">{{ event.artist }}</td>
-    </tr>
-    <tr>
-      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Fecha & Hora:</td>
-      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">{{ event.date|date:"d \d\e F \d\e Y" }} - {{
-        event.date|date:"H:i" }} hrs</td>
-    </tr>
-    <tr>
-      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Lugar:</td>
-      <td style="padding: 8px 0; font-weight: bold; color: #ffffff;">
-        {% if event.theater %}
-        {{ event.theater.name }}<br><span
-          style="font-size: 12px; color: rgba(255, 255, 255, 0.5); font-weight: normal;">{{ event.theater.location
-          }}</span>
-        {% else %}
-        Convivencia Online / Lugar por confirmar<br><span
-          style="font-size: 12px; color: rgba(255, 255, 255, 0.5); font-weight: normal;">Plataforma Digital</span>
-        {% endif %}
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Ubicación:</td>
-      <td style="padding: 8px 0; font-weight: bold; color: #f59e0b;">
-        {% if ticket.seat %}
-        Sección {{ ticket.seat.section }} | Fila {{ ticket.seat.row }} | Asiento {{ ticket.seat.number }}
-        {% elif ticket.ga_zone %}
-        Zona General: {{ ticket.ga_zone.name }}
-        {% else %}
-        Entrada General
-        {% endif %}
-      </td>
-    </tr>
-    {% if ticket.has_mg %}
-    <tr>
-      <td style="padding: 8px 0; color: rgba(255, 255, 255, 0.4);">Pase Especial:</td>
-      <td style="padding: 8px 0;">
+      <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); width: 50%;">
         <span
-          style="background-color: #f59e0b; color: #030303; font-size: 11px; font-weight: 900; padding: 4px 10px; border-radius: 8px; text-transform: uppercase; letter-spacing: 0.5px; display: inline-block;">
-          ✨ M&G INCLUIDO
-        </span>
+          style="color: rgba(244, 246, 240, 0.4); font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; letter-spacing: 1px;">Fecha</span>
+        <strong style="color: #ffffff; font-size: 14px; font-weight: 700;">{{ event_date }}</strong>
+      </td>
+      <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); width: 50%;">
+        <span
+          style="color: rgba(244, 246, 240, 0.4); font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; letter-spacing: 1px;">Horario</span>
+        <strong style="color: #ffffff; font-size: 14px; font-weight: 700;">{{ event_time }}</strong>
       </td>
     </tr>
-    {% endif %}
+    <tr>
+      <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+        <span
+          style="color: rgba(244, 246, 240, 0.4); font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; letter-spacing: 1px;">Sección
+          / Zona</span>
+        <strong style="color: #E5A93B; font-size: 14px; font-weight: 800; text-transform: uppercase;">{{ section_str
+          }}</strong>
+      </td>
+      <td style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+        <span
+          style="color: rgba(244, 246, 240, 0.4); font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; letter-spacing: 1px;">Asignación</span>
+        <strong style="color: #ffffff; font-size: 14px; font-weight: 700;">{{ seat_str }}</strong>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding: 15px 0 0 0;">
+        <span
+          style="color: rgba(244, 246, 240, 0.4); font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; letter-spacing: 1px;">Recinto
+          / Venue</span>
+        <strong style="color: #ffffff; font-size: 14px; font-weight: 600;">{{ theater_name }} <span
+            style="color: rgba(244,246,240,0.5); font-weight: 400;">({{ theater_loc }})</span></strong>
+      </td>
+    </tr>
   </table>
 </div>
 
-<!-- QR Section -->
-<div style="text-align: center; margin-bottom: 30px;">
-  <p style="color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 15px;">Muestra este código QR en tu celular al
-    ingresar:</p>
-  <div
-    style="display: inline-block; padding: 15px; background-color: #ffffff; border-radius: 24px; border: 4px solid #f59e0b; box-shadow: 0 10px 30px rgba(245,158,11,0.2);">
-    <img src="cid:ticket_qr" style="width: 180px; height: 180px; display: block;" alt="Código QR de Acceso">
-  </div>
-</div>
-
-<!-- CTA Button -->
-<div style="text-align: center; margin-bottom: 30px;">
-  <a href="{{ frontend_url }}/tickets/{{ ticket.token }}"
-    style="background-color: #f59e0b; color: #030303; padding: 16px 32px; border-radius: 16px; font-size: 13px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
-    Ver Boleto Digital
+<!-- Botón Call To Action -->
+<div style="text-align: center; margin-bottom: 20px;">
+  <a href="{{ frontend_url }}/tickets {{ ticket.token }}"
+    style="background-color: #E5A93B; color: #080C0A; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 2px; box-shadow: 0 10px 30px rgba(229, 169, 59, 0.2);">
+    Descargar Boleto Digital
   </a>
+  <p
+    style="color: rgba(244, 246, 240, 0.4); font-size: 10px; margin-top: 15px; margin-bottom: 0; font-weight: bold; uppercase; letter-spacing: 1px;">
+    Presenta el código dinámico QR desde tu dispositivo al ingresar.</p>
 </div>
+{% endblock %}
 
-<!-- Notes / Instructions -->
-<div
-  style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-  <p style="margin: 0 0 8px 0;"><strong>Instrucciones importantes:</strong></p>
-  <p style="margin: 0 0 5px 0;">• Cada código QR es único y da acceso a una sola persona.</p>
-  <p style="margin: 0 0 5px 0;">• Te sugerimos subir el brillo de tu pantalla al máximo en la entrada.</p>
-  <p style="margin: 0;">• No compartas este correo ni el código QR con nadie.</p>
-</div>
+{% block footer_links %}
+<p style="margin: 0 0 15px 0; color: rgba(244, 246, 240, 0.4);">
+  Este acceso fue emitido para: <strong style="color: rgba(244, 246, 240, 0.7);">{{ ticket.user_email }}</strong><br />
+  Firma digital de autenticidad: <span style="font-family: monospace; color: #E5A93B;">{{ ticket.token }}</span>
+</p>
+<a href="{{ frontend_url }}"
+  style="color: #E5A93B; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.25); font-weight: 700; margin: 0 12px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">Soporte
+  Gateway</a>
 {% endblock %}
