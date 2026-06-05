@@ -961,8 +961,7 @@ const Home = () => {
               </div>
             </div>
           )}
-        </div>
-
+          
         {/* Botón Call to Action */}
         <div className="pt-2 w-full lg:w-auto">
           <Link
