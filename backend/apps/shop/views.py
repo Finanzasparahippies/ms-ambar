@@ -6,7 +6,6 @@ from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from django.utils.html import strip_tags
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,6 +17,8 @@ from rest_framework.response import Response
 from apps.tickets.models import Ticket, Event, Seat
 from .models import Category, Product, Order, OrderItem
 from .serializers import CategorySerializer, ProductSerializer, OrderSerializer
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -80,14 +81,17 @@ from apps.tickets.utils import send_ticket_email, send_ticket_whatsapp, send_tic
 
 def handle_successful_payment(session):
     metadata = session.get('metadata', {})
+    session_id = session.get('id')
+
+    # --- CASO A: COMPRA DE BOLETOS ---
     if metadata.get('type') == 'ticket_purchase':
         event_id = metadata.get('event_id')
         seat_ids_raw = metadata.get('seat_ids', '')
         user_email = metadata.get('user_email')
         phone = metadata.get('phone', '')
         has_mg = metadata.get('has_mg') == 'True'
-        session_id = session.get('id')
-        
+        quantity = int(metadata.get('quantity', 1))
+
         event = Event.objects.get(id=event_id)
         seat_ids = [s for s in seat_ids_raw.split(',') if s.strip()] if seat_ids_raw else []
 
@@ -106,8 +110,6 @@ def handle_successful_payment(session):
                     ticket.user_email = user_email
                     ticket.user_phone = phone
                     ticket.has_mg = has_mg
-                    if session_id:
-                        ticket.stripe_session_id = session_id
                     ticket.save()
                 else:
                     ticket = Ticket.objects.create(
@@ -126,16 +128,9 @@ def handle_successful_payment(session):
                     if ticket.user_phone:
                         send_ticket_whatsapp(ticket)
                 except Exception as e:
-                    print(f"Error delivering ticket: {e}")
-                
-                print(f"Payment confirmed and ticket delivered: {ticket.token}")
+                    logger.error(f"Error entregando boleto numerado: {e}")
         else:
-            quantity = int(metadata.get('quantity', 1))
-            # Check if tickets under this session_id already exist to prevent duplicate creation
-            existing_count = 0
-            if session_id:
-                existing_count = Ticket.objects.filter(stripe_session_id=session_id).count()
-            
+            existing_count = Ticket.objects.filter(stripe_session_id=session_id).count() if session_id else 0
             to_create = quantity - existing_count
             for _ in range(max(0, to_create)):
                 ticket = Ticket.objects.create(
@@ -155,10 +150,34 @@ def handle_successful_payment(session):
                     if ticket.user_phone:
                         send_ticket_whatsapp(ticket)
                 except Exception as e:
-                    print(f"Error delivering ticket: {e}")
-                
-                print(f"Payment confirmed and ticket delivered: {ticket.token}")
+                    logger.error(f"Error entregando boleto general: {e}")
 
+    # --- CASO B: COMPRA DE MERCHANDISE / TIENDA ---
+    elif metadata.get('type') == 'shop_purchase':
+        order_id = metadata.get('order_id')
+        try:
+            with transaction.atomic():
+                # Bloqueamos la orden para evitar condiciones de carrera
+                order = Order.objects.select_for_update().get(id=order_id)
+                
+                if order.status == 'pending':
+                    order.status = 'paid'
+                    order.stripe_session_id = session_id
+                    order.save()
+                    
+                    # Decrementar el stock de forma segura hasta este momento
+                    for item in order.items.all():
+                        product = Product.objects.select_for_update().get(id=item.product.id)
+                        product.stock -= item.quantity
+                        product.save()
+                        
+                    # Enviar el correo cuando la transacción se confirme en la Base de Datos
+                    transaction.on_commit(lambda: send_order_confirmation_email(order))
+                    logger.info(f"Pedido #{order.id} pagado con éxito vía Webhook.")
+        except Order.DoesNotExist:
+            logger.error(f"Pedido con ID {order_id} no encontrado en el webhook.")
+        except Exception as e:
+            logger.error(f"Error procesando el pago del pedido #{order_id}: {e}", exc_info=True)
 
 def send_order_confirmation_email(order):
     try:
@@ -215,9 +234,10 @@ class ShopCheckoutView(APIView):
 
         # Validate products and stock
         total_amount = 0
-        order_items_to_create = []
-        products_to_update = []
+order_items_to_prepare = []
+        line_items = []
 
+        # 1. Validar Stock e inventario antes de crear la pasarela
         for item in items_data:
             prod_id = item.get('product_id')
             qty = int(item.get('quantity', 1))
@@ -228,23 +248,21 @@ class ShopCheckoutView(APIView):
                 return Response({"error": f"Producto con ID {prod_id} no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
             if product.stock < qty:
-                return Response({"error": f"Stock insuficiente para {product.name}. Disponibles: {product.stock}."}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": f"Stock insuficiente para {product.name}."}, status=status.HTTP_400_BAD_REQUEST)
 
-            item_price = product.price
-            total_amount += item_price * qty
+            total_amount += product.price * qty
+            order_items_to_prepare.append({'product': product, 'quantity': qty, 'price': product.price})
 
-            # Prepare models
-            products_to_update.append((product, qty))
-            order_items_to_create.append({
-                'product': product,
+            # Formatear el item para Stripe usando los Price IDs dinámicos que creas al guardar el modelo
+            line_items.append({
+                'price': product.stripe_price_id,
                 'quantity': qty,
-                'price': item_price
             })
 
-        # Create Order
+        # 2. Registrar la orden en estado 'pending'
         order = Order.objects.create(
             user_email=email,
-            status='paid', # Set to paid immediately so it lands on "Pedidos Pendientes"
+            status='pending',
             total_amount=total_amount,
             full_name=full_name,
             address=address,
@@ -252,8 +270,8 @@ class ShopCheckoutView(APIView):
             country=country
         )
 
-        # Create OrderItems and decrement stock
-        for item_data in order_items_to_create:
+        # Enlazar los artículos de la orden
+        for item_data in order_items_to_prepare:
             OrderItem.objects.create(
                 order=order,
                 product=item_data['product'],
@@ -261,16 +279,27 @@ class ShopCheckoutView(APIView):
                 price=item_data['price']
             )
 
-        for product, qty in products_to_update:
-            product.stock -= qty
-            product.save()
-
-        # Send confirmation email on successful transaction commit
-        transaction.on_commit(lambda: send_order_confirmation_email(order))
-
-        return Response({
-            "message": "Pedido realizado exitosamente.",
-            "order_id": order.id,
-            "total_amount": float(total_amount),
-            "status": order.status
-        }, status=status.HTTP_201_CREATED)
+        # 3. Construir la pasarela de Stripe Checkout
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                payment_method_types=['card'],
+                line_items=line_items,
+                mode='payment',
+                success_url=settings.FRONTEND_URL + "/shop/success?session_id={CHECKOUT_SESSION_ID}",
+                cancel_url=settings.FRONTEND_URL + "/shop/cart",
+                customer_email=email,
+                metadata={
+                    'order_id': str(order.id),
+                    'type': 'shop_purchase'
+                }
+            )
+            
+            # Devolvemos la URL a Next.js para que el frontend redirija al usuario
+            return Response({
+                "checkout_url": checkout_session.url,
+                "order_id": order.id
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error creando Stripe Session para la tienda: {e}")
+            return Response({"error": "No se pudo procesar la pasarela de pago."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

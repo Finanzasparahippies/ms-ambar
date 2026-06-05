@@ -150,6 +150,8 @@ class Event(models.Model):
     )
     is_active = models.BooleanField(default=True)
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default='concert')
+    #discount code to validate purchase
+    discount_code = models.CharField(max_length=255, blank=True, null=True)
 
     # Meet & Greet Logic
     mg_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -200,13 +202,23 @@ class Event(models.Model):
                         stripe.Product.modify(product.id, **updates)
 
                 self.stripe_product_id = product.id
+                discount_product = stripe.Product.create(
+                    name=f"[Descuento] {self.title}",
+                    description=f"Descuento para el evento {self.title} de {self.artist}.",
+                    metadata={"event_id": str(self.id), "event_slug": event_slug}
+                )
 
                 if self.event_type == 'meet_greet':
                     # Fetch active prices for this product to avoid duplicates
                     prices = stripe.Price.list(product=product.id, active=True)
                     price_id = None
+                    discount_price_id = None
+                    discount_amount_cents = int(self.mg_price * 100 * 0.9)
                     amount_cents = int(self.mg_price * 100)
                     for p in prices.data:
+                        if not p.recurring and p.unit_amount == discount_amount_cents and p.currency == "mxn":
+                            discount_price_id = p.id
+                            break
                         if not p.recurring and p.unit_amount == amount_cents and p.currency == "mxn":
                             price_id = p.id
                             break
@@ -218,6 +230,14 @@ class Event(models.Model):
                             product=product.id,
                         )
                         price_id = price_obj.id
+
+                    if not discount_price_id:
+                        discount_price_obj = stripe.Price.create(
+                            unit_amount=discount_amount_cents,
+                            currency="mxn",
+                            product=discount_product.id,
+                        )
+                        discount_price_id = discount_price_obj.id
 
                     self.stripe_price_id = price_id
                 else:
