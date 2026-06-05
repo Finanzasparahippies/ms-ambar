@@ -934,20 +934,20 @@ const Home = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.8 }}
-              className="relative bg-[#06070b] rounded-[3rem] overflow-hidden border border-amber-honey/15 group shadow-2xl shadow-amber-honey/5 grid grid-cols-1 md:grid-cols-2 gap-8 p-8 md:p-12 items-center"
+              className="relative bg-[#06070b] rounded-[3rem] overflow-hidden border border-amber-honey/15 group shadow-2xl shadow-amber-honey/5 grid grid-cols-1 lg:grid-cols-3 gap-8 p-8 md:p-12 items-center"
             >
-              {/* Left Column: Content (No longer absolute, naturally takes 50% width on desktop) */}
-              <div className="space-y-4 max-w-2xl order-2 md:order-1 z-20">
+              {/* Left Column: Content (Takes 2/3 of space on desktop) */}
+              <div className="space-y-4 max-w-3xl order-2 lg:order-1 lg:col-span-2 z-20">
                 <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
                   <Sparkles size={10} className="animate-pulse" /> Próximo Evento
                 </span>
                 <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-tight">
                   {nextEvent.title}
                 </h2>
-                <p className="text-sm text-[#F4F6F0]/70 font-medium">
+                <p className="text-sm text-[#F4F6F0]/70 font-medium leading-relaxed">
                   {getFormattedEventDate(nextEvent.date)}
                   {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
-                    <span className="ml-2 block sm:inline mt-1 sm:mt-0">
+                    <span className="ml-2 block xl:inline mt-1 xl:mt-0">
                       <span className="text-[#F4F6F0]/50 text-xs"> — desde </span>
                       <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
                       <span className="text-amber-honey/70 text-xs font-bold"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cargo de servicio</span>
@@ -965,22 +965,21 @@ const Home = () => {
                 </div>
               </div>
 
-              {/* Right Column: Flyer Container with Contain */}
-              <div className="w-full h-64 sm:h-80 md:h-[400px] overflow-hidden rounded-2xl order-1 md:order-2 z-20">
+              {/* Right Column: Flyer Container (Takes 1/3 of space on desktop) */}
+              <div className="w-full h-72 sm:h-96 lg:h-[420px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-1 z-20">
                 <img
                   src={nextEvent.flyer_url}
                   alt={`Flyer: ${nextEvent.title}`}
-                  className="w-full h-full object-contain object-center md:object-right group-hover:scale-103 transition-transform duration-1000"
+                  className="w-full h-full object-contain object-center lg:object-right group-hover:scale-103 transition-transform duration-1000"
                 />
               </div>
 
-              {/* Decorative ambient amber glow (Kept absolute to blend in the background behind text/image) */}
+              {/* Decorative ambient amber glow */}
               <div className="absolute inset-0 bg-gradient-to-r from-amber-honey/5 via-transparent to-transparent pointer-events-none z-10" />
             </motion.div>
           </div>
         </section>
       )}
-
       {/* ─── BIOGRAPHY SECTION ─── */}
       <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden">
         {/* Subtle decorative glowing orb */}
