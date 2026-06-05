@@ -2,6 +2,7 @@ import base64
 import logging
 from io import BytesIO
 from fpdf import FPDF
+from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
