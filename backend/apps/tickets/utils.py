@@ -89,8 +89,10 @@ def send_ticket_email(ticket):
         'theater_name': theater_name,
         'theater_loc': theater_loc,
         'event_date': ticket.event.date.strftime('%d / %m / %Y'),
-        'event_time': ticket.event.date.strftime('%H:%M') + " HRS",
+        'event_time': ticket.event.doors_open.strftime('%H:%M') + " HRS",
         'frontend_url': settings.FRONTEND_URL,
+        'venue_location': ticket.event.venue_address,
+        'venue_name': ticket.event.venue_name,
     }
 
     # 3. Render HTML template
