@@ -822,6 +822,7 @@ const Home = () => {
               setNextEvent(activeEvents[0]);
             }
           }
+          console.log("Upcoming events:", upcoming);
         }
       })
       .catch(err => console.error("Error fetching next event:", err));
