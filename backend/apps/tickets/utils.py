@@ -1,10 +1,12 @@
 import qrcode
 import io
 import logging
+from django.utils.timezone import localtime
 from email.mime.image import MIMEImage
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,7 @@ def generate_ticket_qr(ticket):
 
 
 def send_ticket_email(ticket):
+    
     """
     Compiles content and dispatches the ticket confirmation email.
     The routing and multi-provider failover is handled globally by settings.EMAIL_BACKEND.
@@ -47,8 +50,15 @@ def send_ticket_email(ticket):
         seat_str = "Acceso Único Especial"
         section_str = "Meet & Greet (Convivencia)"
 
+    local_event_date = localtime(ticket.event.date)
     theater_name = ticket.event.theater.name if ticket.event.theater else "Plataforma Digital / Streaming"
     theater_loc = ticket.event.theater.location if ticket.event.theater else "Acceso en Línea"
+
+    if ticket.event.doors_open:
+        local_doors_open = localtime(ticket.event.doors_open)
+        event_time_str = local_doors_open.strftime('%H:%M') + " HRS"
+    else:
+        event_time_str = local_event_date.strftime('%H:%M') + " HRS"
 
     # 2. Construir contexto para la plantilla de Django
     context = {
@@ -59,7 +69,7 @@ def send_ticket_email(ticket):
         'theater_name': theater_name,
         'theater_loc': theater_loc,
         'event_date': ticket.event.date.strftime('%d / %m / %Y'),
-        'event_time': ticket.event.doors_open.strftime('%H:%M') + " HRS" if ticket.event.doors_open else ticket.event.date.strftime('%H:%M') + " HRS",
+        'event_time': event_time_str,
         'frontend_url': settings.FRONTEND_URL,
         'venue_location': ticket.event.venue_address,
         'venue_name': ticket.event.venue_name,
