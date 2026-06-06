@@ -104,7 +104,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
 
     def get_permissions(self):
-        if self.action in ['checkout', 'by_session']:
+        if self.action in ['checkout', 'by_session', 'retrieve']:
             return [permissions.AllowAny()]
         elif self.action == 'validate':
             return [permissions.IsAdminUser()]

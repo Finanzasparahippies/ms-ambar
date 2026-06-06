@@ -103,7 +103,7 @@ def send_ticket_email(ticket):
         f"¡Hola! Tu acceso para {ticket.event.title} está listo.\n\n"
         f"Fecha: {context['event_date']} a las {context['event_time']}\n"
         f"Ubicación: {section_str} — {seat_str}\n"
-        f"Lugar: {theater_name} ({theater_loc})\n\n"
+        f"Lugar: {ticket.event.venue_name} ({ticket.event.venue_address})\n\n"
         f"Tu código QR de acceso único está disponible en:\n"
         f"{settings.FRONTEND_URL}/tickets/{ticket.token}\n\n"
         f"IMPORTANTE: Solo puede escanearse una vez. No compartas este enlace.\n\n"
