@@ -898,7 +898,7 @@ const Home = () => {
             <Sparkles size={12} className="text-amber-honey animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
               {nextEvent
-                ? `Mi próximo evento es solo para reales, nos vemos en ${nextEvent.slug} el ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
+                ? `Mi próximo evento es solo para reales, nos vemos en ${nextEvent.venue} el ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
                 : "¡Próximamente nuevo evento solo para reales!"
               }
             </span>
