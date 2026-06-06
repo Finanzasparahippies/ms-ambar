@@ -82,7 +82,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="max-w-[1200px] mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-[#F4F6F0]/40 font-black gap-4">
           <span>&copy; {new Date().getFullYear()} Ms Ambar</span>
           <span className="flex flex-wrap items-center justify-center gap-1.5">
-            <span>Hecho con Ámbar en México</span>
+            <span>Hecho en colaboración para Ms Ambar en México</span>
             <span className="opacity-30">•</span>
             <span>Desarrollado por</span>
             <a

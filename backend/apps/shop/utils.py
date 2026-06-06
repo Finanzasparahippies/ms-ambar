@@ -69,8 +69,7 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
         'payment_method_types': ['card'],
         'line_items': line_items,
         'mode': 'payment',
-        'success_url': success_url + "?session_id={CHECKOUT_SESSION_ID}",
-        'cancel_url': cancel_url,
+        'success_url': success_url + "?success=true&session_id={CHECKOUT_SESSION_ID}",        'cancel_url': cancel_url,
         'customer_email': user_email,
         'metadata': {
             'event_id': event.id,

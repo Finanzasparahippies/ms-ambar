@@ -2,6 +2,7 @@ import base64
 import logging
 from io import BytesIO
 from fpdf import FPDF
+from django.template.loader import render_to_string
 from django.core.files.base import ContentFile
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
@@ -151,7 +152,7 @@ def send_booking_contract_emails(contract):
             )
             
             # Send proposal email to client
-            email_client = EmailMultiAlternatives(client_subject, client_text, settings.DEFAULT_FROM_EMAIL, [inquiry.email])
+            email_client = EmailMultiAlternatives(client_subject, client_text, settings.EMAIL_HOST_USER, [inquiry.email])
             email_client.attach_alternative(client_html, "text/html")
             if contract.pdf_file:
                 contract.pdf_file.seek(0)
@@ -174,7 +175,7 @@ def send_booking_contract_emails(contract):
                 f"Mensaje: {inquiry.message}\n\n"
                 f"Se generó la propuesta #{contract.id} con honorarios de ${contract.fee} MXN. Firma del cliente pendiente."
             )
-            email_manager = EmailMultiAlternatives(manager_subject, manager_text, settings.DEFAULT_FROM_EMAIL, [settings.DEFAULT_FROM_EMAIL])
+            email_manager = EmailMultiAlternatives(manager_subject, manager_text, settings.EMAIL_HOST_USER, [settings.EMAIL_HOST_USER])
             email_manager.attach_alternative(manager_html, "text/html")
             email_manager.send()
             
@@ -195,9 +196,9 @@ def send_booking_contract_emails(contract):
                 f"MS AMBAR Management"
             )
             
-            recipients = [inquiry.email, settings.DEFAULT_FROM_EMAIL]
+            recipients = [inquiry.email, settings.EMAIL_HOST_USER]
             for dest in recipients:
-                email = EmailMultiAlternatives(final_subject, final_text, settings.DEFAULT_FROM_EMAIL, [dest])
+                email = EmailMultiAlternatives(final_subject, final_text, settings.EMAIL_HOST_USER, [dest])
                 email.attach_alternative(final_html, "text/html")
                 if contract.pdf_file:
                     contract.pdf_file.seek(0)

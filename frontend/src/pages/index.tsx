@@ -4,7 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Ticket, ArrowRight, Sparkles, ChevronRight, Play, Check
+  Ticket, ArrowRight, Sparkles, ChevronRight, Play, CheckCircle
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -779,6 +779,21 @@ const TAROT_CARDS: TarotCard[] = [
   }
 ];
 
+const formatoHoraOficial = (fechaString: string) => {
+  if (!fechaString) return "--:--";
+  try {
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'America/Mexico_City' // 🌟 Forzamos la zona horaria del DF en el render del cliente
+    });
+  } catch (e) {
+    return "--:--";
+  }
+};
+
 const Home = () => {
   const [isMounted, setIsMounted] = useState(false);
   const [newsletterName, setNewsletterName] = useState('');
@@ -815,7 +830,7 @@ const Home = () => {
   const getFormattedEventDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
-      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
       const formatted = d.toLocaleDateString('es-MX', options);
       return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     } catch {
@@ -855,10 +870,10 @@ const Home = () => {
   if (!isMounted) return null;
 
   return (
-    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-[#F4F6F0]">
+    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-[#F4F6F0] bg-[#06070b] min-h-screen">
       <Head>
-        <title>Ms Ambar | Esencia Artística y Experiencia de Sonidos</title>
-        <meta name="description" content="MS Ambar - Una fusión vanguardista de música, arte digital y escenografía de alta gama. Adquiere boletos oficiales y reserva experiencias exclusivas." />
+        <title>Ms Ambar | Cantautora Mexicana</title>
+        <meta name="description" content="Ms Ambar - Desde Sonora para el mundo, adquiere tus boletos y acompáñame en este camino por la música y los escenarios." />
       </Head>
 
       {/* ─── HERO SECTION (NECTAR LABS STYLE) ─── */}
@@ -883,8 +898,8 @@ const Home = () => {
             <Sparkles size={12} className="text-amber-honey animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
               {nextEvent
-                ? `Mi próximo evento es solo para reales, noes vemos en ${nextEvent.slug} el ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
-                : "¡Próximamente nuevo evento!"
+                ? `Mi próximo evento es solo para reales, nos vemos en ${nextEvent.slug} el ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
+                : "¡Próximamente nuevo evento solo para reales!"
               }
             </span>
           </motion.div>
@@ -927,70 +942,152 @@ const Home = () => {
 
       {/* ─── PRÓXIMO EVENTO FLYER SECTION ─── */}
       {nextEvent?.flyer_url && (
-        <section className="pb-4 md:pb-8">
-          <div className="max-w-[1600px] mx-auto px-6 md:px-10">
+        <section className="pb-16 md:pb-24 bg-[#06070b]">
+          <div className="max-w-[1400px] mx-auto px-6 md:px-10">
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 40 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.8 }}
-              className="relative rounded-[3rem] overflow-hidden border border-amber-honey/15 group shadow-2xl shadow-amber-honey/5"
+              transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+              className="relative bg-gradient-to-br from-[#0d0e12] to-[#07080c] rounded-[2.5rem] overflow-hidden border border-amber-honey/10 group shadow-[0_0_50px_rgba(6,7,11,0.8)] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 p-8 md:p-14 items-center"
             >
-              {/* Gradient overlay */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/90 via-[#06070b]/50 to-transparent z-10 pointer-events-none" />
+              {/* Left Column: Content */}
+              <div className="space-y-6 order-2 lg:order-1 lg:col-span-7 z-20 flex flex-col items-center lg:items-start text-center lg:text-left justify-center h-full w-full">
+                <div className="flex flex-wrap items-center gap-3 justify-center lg:justify-start">
+                  <div className="inline-flex items-center gap-2 bg-amber-honey/5 border border-amber-honey/20 px-3 py-1.5 rounded-full w-fit backdrop-blur-sm">
+                    <Sparkles size={12} className="text-amber-honey animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey/90">
+                      Próximo Evento
+                    </span>
+                  </div>
 
-              {/* Flyer Image */}
-              <img
-                src={nextEvent.flyer_url}
-                alt={`Flyer: ${nextEvent.title}`}
-                className="w-full h-64 md:h-96 object-cover object-top group-hover:scale-105 transition-transform duration-1000"
-              />
+                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-[0.25em] backdrop-blur-sm ${nextEvent.event_type === 'meet_greet'
+                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
+                    : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                    }`}>
+                    {nextEvent.event_type === 'meet_greet' ? '🤝 Convivencia M&G' : '🎸 En Vivo / Concert'}
+                  </div>
+                </div>
 
-              {/* Content overlay */}
-              <div className="absolute inset-0 z-20 flex flex-col justify-end p-8 md:p-12 pointer-events-none">
-                <div className="max-w-2xl space-y-4">
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey flex items-center gap-2">
-                    <Sparkles size={10} className="animate-pulse" /> Próximo Evento
-                  </span>
-                  <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-tight">
+                <div className="space-y-1 flex flex-col items-center lg:items-start">
+                  <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-[0.95] max-w-md lg:max-w-xl group-hover:text-amber-honey/90 transition-colors duration-500">
                     {nextEvent.title}
                   </h2>
-                  <p className="text-sm text-[#F4F6F0]/70 font-medium">
-                    {getFormattedEventDate(nextEvent.date)}
-                    {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
-                      <span className="ml-2">
-                        <span className="text-[#F4F6F0]/50 text-xs"> — desde </span>
-                        <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
-                        <span className="text-amber-honey/70 text-xs font-bold"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} cargo de servicio</span>
-                        <span className="text-amber-honey font-black text-sm"> = ${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
-                      </span>
-                    )}
+                  <p className="text-amber-honey/60 font-serif italic text-lg tracking-wide md:text-xl pt-1">
+                    por {nextEvent.artist}
                   </p>
+                </div>
+
+                <div className="w-12 h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent lg:from-amber-honey/40 lg:to-transparent" />
+
+                <div className="space-y-4 w-full max-w-md lg:max-w-lg flex flex-col items-center lg:items-start">
+                  <div className="text-sm md:text-base text-white/90 font-bold tracking-tight space-y-2 w-full text-center lg:text-left">
+                    <p>{getFormattedEventDate(nextEvent.date)}</p>
+
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-medium text-[#F4F6F0]/60 pt-0.5">
+                      {nextEvent.doors_open && (
+                        <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
+                          🚪 Puertas: <strong className="text-white">{formatoHoraOficial(nextEvent.doors_open)} hrs</strong>
+                        </span>
+                      )}
+
+                      <span className="bg-amber-honey/10 border border-amber-honey/20 px-2.5 py-1 rounded-md text-amber-honey">
+                        🎸 Show: <strong className="text-amber-honey font-black">{formatoHoraOficial(nextEvent.date)} hrs</strong>
+                      </span>
+
+                      {/* LOGICA DE CIERRE DINÁMICO CORREGIDA CON TIMEZONE */}
+                      {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
+                        <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
+                          ✨ Cierre: <strong className="text-white">
+                            {(() => {
+                              if (nextEvent.end_date) {
+                                return formatoHoraOficial(nextEvent.end_date);
+                              }
+                              const startDate = new Date(nextEvent.date);
+                              const calculatedEndDate = new Date(startDate.getTime() + (Number(nextEvent.duration_minutes || 120) * 60 * 1000));
+                              return formatoHoraOficial(calculatedEndDate.toISOString());
+                            })()} hrs
+                          </strong>
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-[#F4F6F0]/50 font-normal tracking-normal pt-1">
+                      📍 {nextEvent.venue_name || nextEvent.theater_name} — <span className="italic">{nextEvent.venue_address || nextEvent.theater_location}</span>
+                    </p>
+                  </div>
+
+                  {nextEvent.price_with_fee && nextEvent.price_with_fee.base_price > 0 && (
+                    <div className="text-xs md:text-sm text-[#F4F6F0]/60 font-medium leading-relaxed bg-[#0d0e12]/40 p-4 rounded-2xl border border-white/5 backdrop-blur-sm w-full text-center lg:text-left space-y-3">
+                      <div>
+                        <span className="text-[#F4F6F0]/40">
+                          {nextEvent.event_type === 'meet_greet' ? 'Acceso M&G — ' : 'Boleto base — desde '}
+                        </span>
+                        <span className="text-white font-black">${Math.round(nextEvent.price_with_fee.base_price).toLocaleString('es-MX')} MXN</span>
+                        <span className="text-amber-honey/70 font-bold text-xs"> + ${nextEvent.price_with_fee.service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2 })} cargo</span>
+                      </div>
+
+                      {/* MODULO DE CUPO CON EXCLUSIÓN DE MEET & GREET SOLICITADA */}
+                      {nextEvent.event_type !== 'meet_greet' && nextEvent.mg_limit > 0 && (
+                        <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${nextEvent.mg_available > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                            <span className="text-[#F4F6F0]/40">Cupo limitado del evento:</span>
+                          </div>
+                          <span className={`font-black uppercase tracking-wider ${nextEvent.mg_available <= 5 && nextEvent.mg_available > 0 ? 'text-red-400 animate-bounce' : 'text-white'}`}>
+                            {nextEvent.mg_available > 0 ? `${nextEvent.mg_available} disponibles` : 'Agotado'}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-white/5 text-sm flex items-center justify-between">
+                        <span className="text-[#F4F6F0]/40 font-normal">Total final por acceso: </span>
+                        <span className="text-amber-honey font-black text-base">${Math.ceil(nextEvent.price_with_fee.total).toLocaleString('es-MX')} MXN</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 w-full lg:w-auto">
                   <Link
                     href="/comprar-boletos"
-                    className="inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/30 hover:scale-105 hover:shadow-amber-honey/50 transition-all pointer-events-auto"
+                    className={`inline-flex items-center justify-center gap-3 w-[90%] mx-auto sm:mx-0 sm:w-fit px-24 py-2 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 ${nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0
+                      ? 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed pointer-events-none'
+                      : 'bg-amber-honey text-[#06070b] shadow-xl shadow-amber-honey/20 hover:bg-white hover:text-black hover:scale-[1.03] hover:shadow-white/10'
+                      }`}
                   >
-                    <Ticket size={14} /> Adquirir Accesos
+                    <Ticket size={14} />
+                    {nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0 ? 'Cupos Agotados' : 'Adquirir Accesos'}
                   </Link>
                 </div>
               </div>
 
-              {/* Decorative amber glow */}
-              <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-amber-honey/5 via-transparent to-transparent pointer-events-none z-10" />
+              {/* Right Column: Flyer Container */}
+              <div className="w-full h-80 sm:h-[400px] lg:h-[460px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
+                <div className="relative w-full h-full max-w-[340px] lg:max-w-none rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5">
+                  <img
+                    src={nextEvent.flyer_url}
+                    alt={`Flyer: ${nextEvent.title}`}
+                    className="w-full h-full object-contain object-center lg:object-right group-hover:scale-[1.04] transition-transform duration-1000 ease-out"
+                  />
+                </div>
+              </div>
+
+              {/* El Aura Amber Glow Ultra-premium */}
+              <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-80 h-80 bg-amber-honey/10 rounded-full blur-[120px] pointer-events-none z-10 group-hover:bg-amber-honey/15 transition-colors duration-1000" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/20 via-transparent to-transparent pointer-events-none z-10" />
             </motion.div>
           </div>
         </section>
       )}
 
       {/* ─── BIOGRAPHY SECTION ─── */}
-      <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden">
-        {/* Subtle decorative glowing orb */}
+      <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden bg-[#06070b]">
         <div className="absolute top-1/2 left-[-10%] w-[35%] h-[35%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-center">
-
-            {/* Left Column: Image with premium frame and drop-shadow */}
+            {/* Left Column: Image with premium frame */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -998,7 +1095,6 @@ const Home = () => {
               transition={{ duration: 0.8 }}
               className="lg:col-span-5 relative group max-w-md mx-auto lg:max-w-none w-full"
             >
-              {/* Golden neon glow frame behind image */}
               <div className="absolute inset-0 bg-gradient-to-tr from-amber-honey/20 to-transparent rounded-[3rem] blur-2xl opacity-30 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none" />
 
               <div className="relative rounded-[3rem] overflow-hidden border border-white/10 p-3 bg-white/[0.02] backdrop-blur-md transition-all duration-500 group-hover:border-amber-honey/30 shadow-2xl">
@@ -1008,12 +1104,10 @@ const Home = () => {
                     alt="Ms. Ámbar"
                     className="object-cover w-full h-full grayscale group-hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-700 ease-out"
                   />
-                  {/* Decorative dark overlay gradient */}
                   <div className="absolute inset-0 bg-gradient-to-t from-[#06070b]/60 via-transparent to-transparent opacity-60" />
                 </div>
               </div>
 
-              {/* Corner decorative golden lines style (nectarlabs design) */}
               <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-tl-[2rem]" />
               <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-honey/30 group-hover:border-amber-honey transition-colors duration-500 rounded-br-[2rem]" />
             </motion.div>
@@ -1053,66 +1147,27 @@ const Home = () => {
                   href="/tour"
                   className="px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-white/5 border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 hover:text-amber-honey transition-all flex items-center gap-2 text-[#F4F6F0]"
                 >
-                  Ver Fechas del Tour <ArrowRight size={12} />
+                  Ver Próximos Eventos <ArrowRight size={12} />
                 </Link>
                 <span className="text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 font-bold">
-                  Hermosillo • México • Viña del Mar
+                  Hermosillo • México
                 </span>
               </div>
             </motion.div>
-
           </div>
         </div>
       </section>
-
-      {/* ─── LIVE MUSIC RELEASES SHOWCASE ─── 
-      <section className="py-16 md:py-24 border-y border-white/10 bg-white/[0.02] relative">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-10">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
-            <div>
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Lanzamientos Recientes</span>
-              <h3 className="text-3xl md:text-5xl font-black uppercase tracking-tight mt-2">Música & Producción</h3>
-            </div>
-            <Link href="/musica" className="text-xs font-bold uppercase tracking-widest text-[#F4F6F0]/50 hover:text-amber-honey transition-colors flex items-center gap-2 mt-4 md:mt-0">
-              Escuchar Discografía Completa <ChevronRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {[
-              { title: 'Eclipse', desc: 'LP Álbum de Estudio • 2026', img: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500&q=80' },
-              { title: 'Ambar Vision', desc: 'LP Álbum de Estudio • 2024', img: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=500&q=80' },
-              { title: 'Desierto de Cristal', desc: 'LP Álbum de Estudio • 2023', img: 'https://images.unsplash.com/photo-1514525253361-bee8a48790c3?w=500&q=80' }
-            ].map((track, i) => (
-              <div key={i} className="group relative p-4 pb-6 rounded-[2.5rem] border border-white/10 bg-white/[0.01] hover:border-amber-honey/20 transition-all flex flex-col justify-between">
-                <div className="relative aspect-square rounded-[2rem] overflow-hidden mb-4 border border-white/10">
-                  <img src={track.img} alt={track.title} className="object-cover w-full h-full grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Link href="/musica" className="w-16 h-16 rounded-full bg-amber-honey text-black flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                      <Play size={24} className="fill-current ml-1" />
-                    </Link>
-                  </div>
-                </div>
-                <div className="px-2 space-y-1">
-                  <h4 className="font-black uppercase text-sm text-[#F4F6F0] group-hover:text-amber-honey transition-colors">{track.title}</h4>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#F4F6F0]/50">{track.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
 
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
       <section className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
 
-        <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-forest-green border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
+        <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-[#0c140f] border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
           <div className="space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Esto es solo para los reales</span>
             <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
             <p className="text-white/60 text-xs max-w-sm mx-auto leading-relaxed">
-              Déja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
+              Deja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
             </p>
           </div>
 
@@ -1127,7 +1182,7 @@ const Home = () => {
                   className="flex flex-col items-center justify-center gap-3 bg-amber-honey/10 border border-amber-honey/20 text-amber-honey p-8 rounded-[2rem] text-center"
                 >
                   <div className="w-12 h-12 bg-amber-honey/20 rounded-full flex items-center justify-center text-amber-honey">
-                    <Check size={20} />
+                    <CheckCircle size={20} />
                   </div>
                   <h4 className="font-bold uppercase tracking-wider text-[11px] mt-2">¡Suscripción Completada!</h4>
                   <p className="text-[10px] text-white/80 leading-relaxed">
@@ -1170,17 +1225,17 @@ const Home = () => {
 
                     <button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-amber-honey via-amber-gold to-amber-500 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
+                      className="w-full bg-gradient-to-r from-amber-honey via-amber-gold to-amber-500 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#06070b] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
                       disabled={newsletterStatus === 'submitting'}
                     >
                       {newsletterStatus === 'submitting' ? (
                         <span className="flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 border-2 border-[#1E2B22]/20 border-t-[#1E2B22] rounded-full animate-spin" />
+                          <div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
                           Procesando...
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Suscribirse al Club <Sparkles size={11} className="text-[#1E2B22] fill-current animate-pulse" />
+                          Suscribirse al Club <Sparkles size={11} className="text-[#06070b] fill-current animate-pulse" />
                         </span>
                       )}
                     </button>

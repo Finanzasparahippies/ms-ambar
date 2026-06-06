@@ -120,38 +120,58 @@ const TourPage = () => {
         : 'http://localhost:8000/api');
   };
 
-  // Handle returning from Stripe Checkout — FIXED CONTEXT AND ROUTING CRASH
+  // ── Handle returning from Stripe Checkout (Asynchronous Resilient Webhook Sync) ──
   useEffect(() => {
     if (!router.isReady) return;
     const { success, session_id } = router.query;
+
     if (success === 'true' && session_id) {
       setIsLoading(true);
       const apiUrl = getApiUrl();
-      fetch(`${apiUrl}/tickets/tickets/by_session/?session_id=${session_id}`)
-        .then(res => {
+      let attempts = 0;
+      const maxAttempts = 5;
+
+      // Función de Polling para esperar pacientemente a que el Webhook procese el pago
+      const checkTicketsStatus = async () => {
+        try {
+          const res = await fetch(`${apiUrl}/tickets/tickets/by_session/?session_id=${session_id}`);
+
+          if (res.status === 204 || res.status === 404) {
+            // El Webhook aún se está ejecutando en el backend de Django
+            if (attempts < maxAttempts) {
+              attempts++;
+              setTimeout(checkTicketsStatus, 1500); // Reintentar en 1.5 segundos
+              return;
+            } else {
+              throw new Error('El pago se procesó, pero los boletos están tardando en generarse. Por favor revisa tu correo electrónico.');
+            }
+          }
+
           if (!res.ok) throw new Error('No se pudieron recuperar los boletos.');
-          return res.json();
-        })
-        .then(tickets => {
+
+          const tickets = await res.json();
           if (tickets && tickets.length > 0) {
             setCreatedTickets(tickets);
             setEmail(tickets[0].user_email || '');
-            // Corrección de propiedad cruzada: evita que explote la asignación de UI
             setFullName(tickets[0].full_name || tickets[0].user_name || '');
             setCheckoutSuccess(true);
             setIsCheckoutOpen(true);
 
             showAlert("Tus accesos oficiales han sido validados con éxito.", "¡Reserva Confirmada!", "success");
+
+            // Limpiar la URL del navegador sin recargar para estética premium
             router.replace('/comprar-boletos', undefined, { shallow: true });
+            setIsLoading(false);
           }
-        })
-        .catch(err => {
+        } catch (err: any) {
           console.error("Error retrieving tickets by session:", err);
-          showAlert("Hubo un error al recuperar tus boletos. Por favor revisa tu correo electrónico.", "Error", "error");
-        })
-        .finally(() => {
+          showAlert(err.message || "Hubo un error al recuperar tus boletos.", "Verificación en Proceso", "warning");
           setIsLoading(false);
-        });
+        }
+      };
+
+      // Iniciamos la verificación
+      checkTicketsStatus();
     }
   }, [router.isReady, router.query]);
 
@@ -345,7 +365,7 @@ const TourPage = () => {
               <div className="flex flex-col gap-4 text-xs uppercase tracking-widest font-black">
                 <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <MapPin size={14} className="text-amber-honey" />
-                  <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Plataforma Digital' : 'Cargando Recinto...'}</span>
+                  <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Meet & Greet' : 'Cargando Recinto...'}</span>
                 </div>
                 <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
                   <Calendar size={14} className="text-amber-honey" />
@@ -402,10 +422,6 @@ const TourPage = () => {
                   <li className="flex items-center gap-2">
                     <CheckCircle size={14} className="text-amber-honey" />
                     Fotografía digital oficial individual
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-amber-honey" />
-                    Monograma Ámbar de edición limitada
                   </li>
                 </ul>
               </motion.div>
