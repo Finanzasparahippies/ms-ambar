@@ -1,8 +1,9 @@
 {% extends "tickets/emails/base_email.html" %}
 
 {% block email_title %}Tus Accesos Confirmados — Ms Ambar{% endblock %}
-{% block preheader %}¡Tu lugar está asegurado! Aquí está tu boleto digital con código QR para {{ event.title }}.{%
-endblock %}
+{% block preheader %}
+¡Tu lugar está asegurado! Aquí está tu boleto digital con código QR para {{ event.title }}.
+{% endblock %}
 {% block subtitle %}Accesos Oficiales{% endblock %}
 
 {% block content %}
@@ -66,8 +67,8 @@ endblock %}
           style="color: rgba(244,246,240,0.35); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; display: block; margin-bottom: 4px;">Recinto
           / Venue</span>
         <strong style="color: #F4F6F0; font-size: 14px; font-weight: 600;">
-          {{ theater_name }} <span style="color: rgba(244,246,240,0.45); font-weight: 400; font-size: 13px;">— {{
-            theater_loc }}</span>
+          {{ venue_name }} <span style="color: rgba(244,246,240,0.45); font-weight: 400; font-size: 13px;">
+            {{ venue_address }}</span>
         </strong>
       </td>
     </tr>
