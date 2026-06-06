@@ -991,11 +991,6 @@ const Home = () => {
                           🚪 Puertas: <strong className="text-white">{formatoHoraOficial(nextEvent.doors_open)} hrs</strong>
                         </span>
                       )}
-
-                      <span className="bg-amber-honey/10 border border-amber-honey/20 px-2.5 py-1 rounded-md text-amber-honey">
-                        🎸 Show: <strong className="text-amber-honey font-black">{formatoHoraOficial(nextEvent.date)} hrs</strong>
-                      </span>
-
                       {/* LOGICA DE CIERRE DINÁMICO CORREGIDA CON TIMEZONE */}
                       {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
                         <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
