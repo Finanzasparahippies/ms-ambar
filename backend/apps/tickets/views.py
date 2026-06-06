@@ -112,6 +112,8 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if self.action in ['retrieve', 'by_session']:
+            return Ticket.objects.all()
         if not user or user.is_anonymous:
             return Ticket.objects.none()
         if user.is_staff or user.is_superuser:
