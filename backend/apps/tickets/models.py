@@ -130,6 +130,7 @@ class Event(models.Model):
         ('meet_greet', 'Meet & Greet (Convivencia)'),
     ]
     title = models.CharField(max_length=255)
+    slug = models.CharField(max_length=255, default='alguna parte del mundo.')
     artist = models.CharField(max_length=255)
     date = models.DateTimeField()
     theater = models.ForeignKey(Theater, on_delete=models.CASCADE, null=True, blank=True, related_name='events')
