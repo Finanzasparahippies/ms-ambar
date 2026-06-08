@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,9 +17,14 @@
   <![endif]-->
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
-    body, table, td, a {
+
+    body,
+    table,
+    td,
+    a {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
+
     body {
       margin: 0;
       padding: 0;
@@ -26,11 +32,26 @@
       -webkit-text-size-adjust: 100%;
       -ms-text-size-adjust: 100%;
     }
-    table { border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0; }
-    img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-    a { color: #E5A93B; }
+
+    table {
+      border-collapse: collapse;
+      mso-table-lspace: 0;
+      mso-table-rspace: 0;
+    }
+
+    img {
+      border: 0;
+      outline: none;
+      text-decoration: none;
+      -ms-interpolation-mode: bicubic;
+    }
+
+    a {
+      color: #E5A93B;
+    }
   </style>
 </head>
+
 <body style="background-color: #080C0A; margin: 0; padding: 0;">
   <!-- Preheader text (hidden) -->
   <div style="display:none;max-height:0;overflow:hidden;">
@@ -38,7 +59,8 @@
   </div>
 
   <!-- Outer wrapper -->
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #080C0A; padding: 40px 20px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+    style="background-color: #080C0A; padding: 40px 20px;">
     <tr>
       <td align="center">
         <!-- Main card -->
@@ -51,13 +73,17 @@
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 36px;">
                 <tr>
                   <td align="center">
-                    <div style="display: inline-block; width: 64px; height: 64px; background-color: #080C0A; border: 1px solid rgba(229,169,59,0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 8px; box-sizing: border-box; box-shadow: 0 0 24px rgba(229,169,59,0.14);">
+                    <div
+                      style="display: inline-block; width: 64px; height: 64px; background-color: #080C0A; border: 1px solid rgba(229,169,59,0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 8px; box-sizing: border-box; box-shadow: 0 0 24px rgba(229,169,59,0.14);">
                       <img src="{{ frontend_url }}/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" width="48" height="48"
                         style="width: 48px; height: 48px; object-fit: contain; display: block;" />
                     </div>
-                    <h1 style="color: #F4F6F0; font-size: 22px; font-weight: 900; letter-spacing: -0.04em; margin: 14px 0 4px 0; text-transform: uppercase; font-style: italic;">Ms Ambar</h1>
+                    <h1
+                      style="color: #F4F6F0; font-size: 22px; font-weight: 900; letter-spacing: -0.04em; margin: 14px 0 4px 0; text-transform: uppercase; font-style: italic;">
+                      Ms Ambar</h1>
                     <div style="height: 1px; width: 36px; background: rgba(229,169,59,0.4); margin: 6px auto;"></div>
-                    <p style="color: #E5A93B; font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">
+                    <p
+                      style="color: #E5A93B; font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">
                       {% block subtitle %}Comunicación Oficial{% endblock %}
                     </p>
                   </td>
@@ -76,7 +102,7 @@
               {% block footer_links %}{% endblock %}
               <p style="color: rgba(244,246,240,0.22); font-size: 10px; margin: 16px 0 0 0; line-height: 1.6;">
                 Recibiste este correo porque realizaste una compra o te suscribiste en Ms Ambar.<br>
-                © 2025 Ms Ambar · Todos los derechos reservados · Powered by Néctar Labs
+                © 2026 Ms Ambar · Todos los derechos reservados · Powered by Néctar Labs
               </p>
             </td>
           </tr>
@@ -86,4 +112,5 @@
     </tr>
   </table>
 </body>
+
 </html>

@@ -119,6 +119,10 @@ class TicketsAppTests(APITestCase):
         data = {
             'title': 'Nuevo Evento Admin',
             'artist': 'MS AMBAR',
+            'venue_name': 'Teatro Degollado',
+            'venue_address': 'Guadalajara, Jalisco',
+            'theater': self.theater.id,  
+            'duration_minutes': 120,
             'date': (timezone.now() + timezone.timedelta(days=5)).isoformat(),
             'event_type': 'concert',
             'price_multiplier': '1.50'

@@ -822,6 +822,7 @@ const Home = () => {
               setNextEvent(activeEvents[0]);
             }
           }
+          console.log("Upcoming events:", upcoming);
         }
       })
       .catch(err => console.error("Error fetching next event:", err));
@@ -898,7 +899,7 @@ const Home = () => {
             <Sparkles size={12} className="text-amber-honey animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
               {nextEvent
-                ? `Mi próximo evento es solo para reales en: ${nextEvent.title} — ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN`
+                ? `Mi próximo evento es solo para reales, nos vemos en ${nextEvent.venue_name} el ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN.`
                 : "¡Próximamente nuevo evento solo para reales!"
               }
             </span>
@@ -930,12 +931,12 @@ const Home = () => {
             >
               <Ticket size={14} /> Adquirir Boletos
             </Link>
-            <Link
+            {/*<Link
               href="/contacto"
               className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border border-white/20 text-[#F4F6F0] hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all flex items-center gap-3"
             >
               Contacto <ArrowRight size={14} />
-            </Link>
+            </Link>*/}
           </motion.div>
         </div>
       </section>
@@ -990,11 +991,6 @@ const Home = () => {
                           🚪 Puertas: <strong className="text-white">{formatoHoraOficial(nextEvent.doors_open)} hrs</strong>
                         </span>
                       )}
-
-                      <span className="bg-amber-honey/10 border border-amber-honey/20 px-2.5 py-1 rounded-md text-amber-honey">
-                        🎸 Show: <strong className="text-amber-honey font-black">{formatoHoraOficial(nextEvent.date)} hrs</strong>
-                      </span>
-
                       {/* LOGICA DE CIERRE DINÁMICO CORREGIDA CON TIMEZONE */}
                       {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
                         <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">

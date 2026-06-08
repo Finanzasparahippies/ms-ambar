@@ -1,0 +1,20 @@
+2026-06-05 19:13:32,194 [INFO] 🚀 Starting Ms Ambar Image Optimization Process
+2026-06-05 19:13:32,194 [INFO] Input Directory:  .
+2026-06-05 19:13:32,194 [INFO] Output Directory: optimizadas
+2026-06-05 19:13:32,194 [INFO] In-place mode:    False
+2026-06-05 19:13:32,194 [INFO] Convert to WebP:  False
+2026-06-05 19:13:32,194 [INFO] Quality target:   50
+2026-06-05 19:13:32,195 [INFO] Max dimension:    720px
+2026-06-05 19:13:32,195 [INFO] ⚙️ Optimizing: flyer_post.png (2.95 MB)
+2026-06-05 19:13:32,264 [INFO]    Resized from 1080x1350 to 576x720
+2026-06-05 19:13:32,410 [INFO]    Saved: 3018.7KB → 707.5KB (-2311.2KB / -76.6%)
+2026-06-05 19:13:32,411 [INFO] ⚙️ Optimizing: optimizadas/flyer_post.png (0.69 MB)
+2026-06-05 19:13:32,574 [INFO]    Saved: 707.5KB → 707.5KB (-0.0KB / -0.0%)
+2026-06-05 19:13:32,574 [INFO] 📊 ===== IMAGE OPTIMIZATION REPORT =====
+2026-06-05 19:13:32,574 [INFO] Files Processed:   2
+2026-06-05 19:13:32,574 [INFO] Files Skipped:     0
+2026-06-05 19:13:32,574 [INFO] Original Size:     3.64 MB
+2026-06-05 19:13:32,574 [INFO] Optimized Size:    1.38 MB
+2026-06-05 19:13:32,575 [INFO] Disk Space Saved:  2.26 MB (62.0% reduction)
+2026-06-05 19:13:32,575 [INFO] Log saved at:      logs/optimize_20260605_191332.log
+2026-06-05 19:13:32,575 [INFO] Manifest updated:  /home/saul/Documentos/Proyectos/ms-ambar/scripts/.optimized_manifest.json

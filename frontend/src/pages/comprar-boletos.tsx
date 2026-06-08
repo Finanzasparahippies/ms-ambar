@@ -542,12 +542,14 @@ const TourPage = () => {
                 </div>
               )}
 
-              <div className="mt-6">
+              <div className="mt-6 w-full sm:w-auto">
                 <PremiumCTAButton
                   disabled={isMeetGreet ? false : selectedSeats.length === 0}
                   onClick={() => setIsCheckoutOpen(true)}
                 >
-                  Proceder al Pago
+                  <span className="text-xl font-black uppercase tracking-[0.15em] block transition-transform duration-300 group-hover:scale-[1.02]">
+                    Proceder al Pago
+                  </span>
                 </PremiumCTAButton>
               </div>
             </motion.div>
@@ -574,192 +576,194 @@ const TourPage = () => {
             )}
           </div>
 
-        </div>
+        </div >
 
         {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */}
         <AnimatePresence>
-          {isCheckoutOpen && (
-            <div className="fixed inset-0 z-[110] bg-nature-night/60 backdrop-blur-md flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white border border-nature-night/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/10 rounded-bl-[8rem] pointer-events-none" />
+          {
+            isCheckoutOpen && (
+              <div className="fixed inset-0 z-[110] bg-nature-night/60 backdrop-blur-md flex items-center justify-center p-4">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  className="bg-white border border-nature-night/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/10 rounded-bl-[8rem] pointer-events-none" />
 
-                {!checkoutSuccess && (
-                  <button
-                    onClick={() => {
-                      setIsCheckoutOpen(false);
-                      setFullName('');
-                      setEmail('');
-                      setPhone('');
-                    }}
-                    className="absolute top-6 right-6 text-nature-night/50 hover:text-nature-night transition-colors"
-                  >
-                    <X size={18} />
-                  </button>
-                )}
-
-                {checkoutSuccess ? (
-                  <div className="text-center space-y-6 py-4">
-                    <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
-                      <CheckCircle size={32} />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-2xl font-black uppercase tracking-wider">¡Compra Confirmada!</h3>
-                      <p className="text-xs text-nature-night/60">Tus accesos han sido generados y enviados a su correo:</p>
-                      <p className="text-xs font-bold text-amber-honey">{email}</p>
-                    </div>
-
-                    {/* DESGLOSE FINANCIERO CORREGIDO — MATCHING DESKTOP ASYMMETRIC FLYER SPEC */}
-                    {(() => {
-                      const totalCargado = getCreatedTicketsTotalAmount();
-                      const { base_price: costoNetoBoleto, service_fee: comisionPlataforma } = calculateTotalWithFee(totalCargado);
-                      if (totalCargado <= 0) return null;
-                      return (
-                        <div className="bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-xl text-left space-y-1.5 text-[11px]">
-                          <div className="flex justify-between text-nature-night/60">
-                            <span>Costo del Boleto ({createdTickets.length} accesos):</span>
-                            <span className="font-semibold text-nature-night">${costoNetoBoleto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
-                          </div>
-                          <div className="flex justify-between text-amber-600">
-                            <span className="flex items-center gap-1"><Info size={10} /> Cargo de servicio (Stripe MX):</span>
-                            <span className="font-semibold">+${comisionPlataforma.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
-                          </div>
-                          <div className="flex justify-between text-nature-night font-bold border-t border-nature-night/10 pt-1.5 mt-1 text-xs">
-                            <span>Total Pagado:</span>
-                            <span className="text-amber-honey">${Math.ceil(totalCargado).toLocaleString('es-MX')} MXN</span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    <div className="bg-nature-night/[0.02] p-5 rounded-2xl border border-nature-night/10 text-left space-y-3">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales</h4>
-                      <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-                        {createdTickets.map((t, idx) => (
-                          <div key={t.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-nature-night/10">
-                            <span className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</span>
-                            <Link
-                              href={`/tickets/${t.token}`}
-                              className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors"
-                              target="_blank"
-                            >
-                              Ver Boleto
-                            </Link>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
+                  {!checkoutSuccess && (
                     <button
                       onClick={() => {
                         setIsCheckoutOpen(false);
-                        setCheckoutSuccess(false);
-                        setCreatedTickets([]);
                         setFullName('');
                         setEmail('');
                         setPhone('');
                       }}
-                      className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform"
+                      className="absolute top-6 right-6 text-nature-night/50 hover:text-nature-night transition-colors"
                     >
-                      Finalizar y Volver
+                      <X size={18} />
                     </button>
-                  </div>
-                ) : (
-                  <form onSubmit={handleCheckoutSubmit} className="space-y-6">
-                    <div className="border-b border-nature-night/10 pb-4">
-                      <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">Pasarela Segura</span>
-                      <h3 className="text-2xl font-black uppercase tracking-tight mt-1">Confirmar Reserva</h3>
-                    </div>
+                  )}
 
-                    <div className="bg-nature-night/[0.02] border border-nature-night/10 p-5 rounded-2xl space-y-2">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-nature-night/50">Resumen del Evento</p>
-                      <h4 className="text-sm font-black text-nature-night">{currentEvent?.title}</h4>
-                      <p className="text-xs text-nature-night/60">
-                        {isMeetGreet
-                          ? `${mgQuantity} Pase(s) de Convivencia Meet & Greet`
-                          : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
-                        }
-                        {wantsMG && !isMeetGreet && " (Incluye Meet & Greet)"}
-                      </p>
+                  {checkoutSuccess ? (
+                    <div className="text-center space-y-6 py-4">
+                      <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
+                        <CheckCircle size={32} />
+                      </div>
+                      <div className="space-y-2">
+                        <h3 className="text-2xl font-black uppercase tracking-wider">¡Compra Confirmada!</h3>
+                        <p className="text-xs text-nature-night/60">Tus accesos han sido generados y enviados a su correo:</p>
+                        <p className="text-xs font-bold text-amber-honey">{email}</p>
+                      </div>
 
-                      {baseTotal > 0 && (
-                        <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
-                            <span className="font-extrabold text-nature-night">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                      {/* DESGLOSE FINANCIERO CORREGIDO — MATCHING DESKTOP ASYMMETRIC FLYER SPEC */}
+                      {(() => {
+                        const totalCargado = getCreatedTicketsTotalAmount();
+                        const { base_price: costoNetoBoleto, service_fee: comisionPlataforma } = calculateTotalWithFee(totalCargado);
+                        if (totalCargado <= 0) return null;
+                        return (
+                          <div className="bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-xl text-left space-y-1.5 text-[11px]">
+                            <div className="flex justify-between text-nature-night/60">
+                              <span>Costo del Boleto ({createdTickets.length} accesos):</span>
+                              <span className="font-semibold text-nature-night">${costoNetoBoleto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                            </div>
+                            <div className="flex justify-between text-amber-600">
+                              <span className="flex items-center gap-1"><Info size={10} /> Cargo de servicio (Stripe MX):</span>
+                              <span className="font-semibold">+${comisionPlataforma.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                            </div>
+                            <div className="flex justify-between text-nature-night font-bold border-t border-nature-night/10 pt-1.5 mt-1 text-xs">
+                              <span>Total Pagado:</span>
+                              <span className="text-amber-honey">${Math.ceil(totalCargado).toLocaleString('es-MX')} MXN</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
-                              <Info size={9} /> Cargo de servicio
-                            </span>
-                            <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
-                          </div>
-                          <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
-                            <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
-                            <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
-                          </div>
+                        );
+                      })()}
+
+                      <div className="bg-nature-night/[0.02] p-5 rounded-2xl border border-nature-night/10 text-left space-y-3">
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales</h4>
+                        <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                          {createdTickets.map((t, idx) => (
+                            <div key={t.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-nature-night/10">
+                              <span className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</span>
+                              <Link
+                                href={`/tickets/${t.token}`}
+                                className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors"
+                                target="_blank"
+                              >
+                                Ver Boleto
+                              </Link>
+                            </div>
+                          ))}
                         </div>
-                      )}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          setIsCheckoutOpen(false);
+                          setCheckoutSuccess(false);
+                          setCreatedTickets([]);
+                          setFullName('');
+                          setEmail('');
+                          setPhone('');
+                        }}
+                        className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform"
+                      >
+                        Finalizar y Volver
+                      </button>
                     </div>
-
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Nombre Completo</label>
-                        <input
-                          type="text"
-                          required
-                          value={fullName}
-                          onChange={e => setFullName(e.target.value)}
-                          placeholder="Juan Pérez..."
-                          className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
-                        />
+                  ) : (
+                    <form onSubmit={handleCheckoutSubmit} className="space-y-6">
+                      <div className="border-b border-nature-night/10 pb-4">
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">Pasarela Segura</span>
+                        <h3 className="text-2xl font-black uppercase tracking-tight mt-1">Confirmar Reserva</h3>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Correo Electrónico</label>
-                        <input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={e => setEmail(e.target.value)}
-                          placeholder="juan@example.com..."
-                          className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
-                        />
+                      <div className="bg-nature-night/[0.02] border border-nature-night/10 p-5 rounded-2xl space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-nature-night/50">Resumen del Evento</p>
+                        <h4 className="text-sm font-black text-nature-night">{currentEvent?.title}</h4>
+                        <p className="text-xs text-nature-night/60">
+                          {isMeetGreet
+                            ? `${mgQuantity} Pase(s) de Convivencia Meet & Greet`
+                            : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
+                          }
+                          {wantsMG && !isMeetGreet && " (Incluye Meet & Greet)"}
+                        </p>
+
+                        {baseTotal > 0 && (
+                          <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
+                              <span className="font-extrabold text-nature-night">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px]">
+                              <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                                <Info size={9} /> Cargo de servicio
+                              </span>
+                              <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                            </div>
+                            <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
+                              <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
+                              <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Teléfono (WhatsApp)</label>
-                        <input
-                          type="tel"
-                          value={phone}
-                          onChange={e => setPhone(e.target.value)}
-                          placeholder="+52 55 1234 5678..."
-                          className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
-                        />
-                      </div>
-                    </div>
+                      <div className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Nombre Completo</label>
+                          <input
+                            type="text"
+                            required
+                            value={fullName}
+                            onChange={e => setFullName(e.target.value)}
+                            placeholder="Juan Pérez..."
+                            className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
+                          />
+                        </div>
 
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-5 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black disabled:opacity-30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-amber-honey/20"
-                    >
-                      <ShieldCheck size={14} />
-                      {isSubmitting ? 'Procesando Pago...' : 'Confirmar y Pagar Boletos'}
-                      {!isSubmitting && <Sparkles size={12} className="animate-pulse" />}
-                    </button>
-                  </form>
-                )}
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-      </section>
-    </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Correo Electrónico</label>
+                          <input
+                            type="email"
+                            required
+                            value={email}
+                            onChange={e => setEmail(e.target.value)}
+                            placeholder="juan@example.com..."
+                            className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Teléfono (WhatsApp)</label>
+                          <input
+                            type="tel"
+                            value={phone}
+                            onChange={e => setPhone(e.target.value)}
+                            placeholder="+52 55 1234 5678..."
+                            className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="w-full py-5 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black disabled:opacity-30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-amber-honey/20"
+                      >
+                        <ShieldCheck size={14} />
+                        {isSubmitting ? 'Procesando Pago...' : 'Confirmar y Pagar Boletos'}
+                        {!isSubmitting && <Sparkles size={12} className="animate-pulse" />}
+                      </button>
+                    </form>
+                  )}
+                </motion.div>
+              </div>
+            )
+          }
+        </AnimatePresence >
+      </section >
+    </div >
   );
 };
 

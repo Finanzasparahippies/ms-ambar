@@ -58,7 +58,7 @@ const Layout = ({ children }: LayoutProps) => {
               <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-10 w-auto object-contain hover:opacity-80 transition-opacity duration-300" />
             </Link>
             <p className="opacity-50 text-sm max-w-sm leading-relaxed">
-              Explorando la intersección entre la naturaleza, la historia y el sonido. Artista independiente desde México para el mundo.
+              Cantautora sonorense; artista independiente de México para el mundo.
             </p>
           </div>
           <div>
