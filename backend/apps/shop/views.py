@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 import logging
+from .shipping import generate_shipping_label
 
 logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status
@@ -215,7 +216,45 @@ def send_order_confirmation_email(order):
     except Exception as e:
         logger.error(f"Error sending order confirmation email for order {order.id}: {e}", exc_info=True)
 
+def handle_successful_payment(session):
+    metadata = session.get('metadata', {})
+    session_id = session.get('id')
 
+    # --- CASO A: COMPRA DE BOLETOS --- (Queda igual)
+    if metadata.get('type') == 'ticket_purchase':
+        pass # Tu código de boletos original...
+
+    # --- CASO B: COMPRA DE MERCHANDISE / TIENDA ---
+    elif metadata.get('type') == 'shop_purchase':
+        order_id = metadata.get('order_id')
+        try:
+            with transaction.atomic():
+                order = Order.objects.select_for_update().get(id=order_id)
+                
+                if order.status == 'pending':
+                    order.status = 'paid'
+                    order.stripe_session_id = session_id
+                    order.save()
+                    
+                    # Descontar stock
+                    for item in order.items.all():
+                        product = Product.objects.select_for_update().get(id=item.product.id)
+                        product.stock -= item.quantity
+                        product.save()
+                        
+                    # Encadenar la logística y el correo fuera del bloqueo de la base de datos
+                    transaction.on_commit(lambda: process_fulfillment(order))
+                    logger.info(f"Pedido #{order.id} pagado con éxito.")
+        except Order.DoesNotExist:
+            logger.error(f"Pedido con ID {order_id} no encontrado.")
+        except Exception as e:
+            logger.error(f"Error procesando pedido #{order_id}: {e}", exc_info=True)
+
+def process_fulfillment(order):
+    """Ejecuta la automatización de la guía e inyecta los datos en el mail final"""
+    generate_shipping_label(order)
+    send_order_confirmation_email(order)
+    
 class ShopCheckoutView(APIView):
     permission_classes = [AllowAny]
 
@@ -224,12 +263,16 @@ class ShopCheckoutView(APIView):
         data = request.data
         email = data.get('email')
         full_name = data.get('full_name')
-        address = data.get('address')
+        phone = data.get('phone', '')
+        street_and_number = data.get('street_and_number')
+        suburb = data.get('suburb')
         city = data.get('city')
+        state = data.get('state')
+        postal_code = data.get('postal_code')
         country = data.get('country')
         items_data = data.get('items', [])
 
-        if not all([email, full_name, address, city, country, items_data]):
+        if not all([email, full_name, phone, street_and_number, suburb, city, state, postal_code, country, items_data]):
             return Response({"error": "Todos los campos de entrega e ítems son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate products and stock
@@ -265,8 +308,12 @@ class ShopCheckoutView(APIView):
             status='pending',
             total_amount=total_amount,
             full_name=full_name,
-            address=address,
+            phone=phone,
+            street_and_number=street_and_number,
+            suburb=suburb,
             city=city,
+            state=state,
+            postal_code=postal_code,
             country=country
         )
 

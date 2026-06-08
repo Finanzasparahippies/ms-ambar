@@ -116,9 +116,19 @@ class Order(models.Model):
     
     # Address Info
     full_name = models.CharField(max_length=255)
-    address = models.TextField()
-    city = models.CharField(max_length=100)
-    country = models.CharField(max_length=100)
+    phone = models.CharField(max_length=20, default="", help_text="Teléfono del cliente")
+    street_and_number = models.TextField(default="", help_text="Calle, número exterior e interior")
+    suburb = models.CharField(max_length=255, default="", verbose_name="Colonia")
+    city = models.CharField(max_length=100, default="", verbose_name="Ciudad")
+    state = models.CharField(max_length=100, default="", verbose_name="Estado")
+    postal_code = models.CharField(max_length=10, default="", verbose_name="Código Postal")
+    country = models.CharField(max_length=100, default="", verbose_name="País")
+
+    # Datos de la Guía Automatizada
+    shipping_provider = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: FedEx, DHL")
+    tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    tracking_url = models.URLField(max_length=500, blank=True, null=True)
+    shipping_label_pdf = models.URLField(max_length=500, blank=True, null=True)
 
     def __str__(self):
         return f"Order {self.id} - {self.user_email}"
