@@ -10,6 +10,7 @@ export default function TicketPage() {
   const router = useRouter();
   const { token } = router.query;
   const [ticket, setTicket] = useState<any>(null);
+  const [event, setEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isStaff, setIsStaff] = useState(false);
@@ -26,6 +27,24 @@ export default function TicketPage() {
     if (!token) return;
     const apiUrl = getApiUrl();
     setLoading(true);
+    fetch(`${apiUrl}/tickets/events/${event.event_id}/`)
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('El evento especificado no existe o es inválido.');
+        }
+        return res.json();
+      })
+      .then(data => {
+        setEvent(data);
+        setError(null);
+      })
+      .catch(err => {
+        console.error("Error fetching event:", err);
+        setError(err.message || 'Error de conexión al recuperar el evento.');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
     fetch(`${apiUrl}/tickets/tickets/${token}/`)
       .then(res => {
         if (!res.ok) {
@@ -292,7 +311,7 @@ export default function TicketPage() {
                     <Calendar className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                     <div>
                       <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Fecha y Hora</span>
-                      <span className="text-xs text-neutral-200 font-medium capitalize">{formatDate(ticket.doors_open)}</span>
+                      <span className="text-xs text-neutral-200 font-medium capitalize">{formatDate(event.doors_open)}</span>
                     </div>
                   </div>
                 </div>
@@ -302,8 +321,8 @@ export default function TicketPage() {
                     <MapPin className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                     <div>
                       <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Lugar</span>
-                      <span className="text-xs text-neutral-200 font-medium block">{ticket.venue_name}</span>
-                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{ticket.venue_location}</span>
+                      <span className="text-xs text-neutral-200 font-medium block">{event.venue_name}</span>
+                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{event.venue_location}</span>
                     </div>
                   </div>
                 </div>
