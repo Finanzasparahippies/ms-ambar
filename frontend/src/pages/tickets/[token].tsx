@@ -6,6 +6,38 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Calendar, MapPin, Armchair, Mail, ChevronLeft, ShieldCheck, AlertCircle } from 'lucide-react';
 
+const formatoHoraOficial = (fechaString: string) => {
+  if (!fechaString) return "--:--";
+  try {
+    const fecha = new Date(fechaString);
+    return fecha.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'America/Mexico_City'
+    });
+  } catch (e) {
+    return "--:--";
+  }
+};
+
+const formatoDiaOficial = (fechaString: string) => {
+  if (!fechaString) return "Fecha por confirmar";
+  try {
+    const fecha = new Date(fechaString);
+    const formatted = fecha.toLocaleDateString('es-MX', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'America/Mexico_City'
+    });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  } catch (e) {
+    return "Fecha por confirmar";
+  }
+};
+
 export default function TicketPage() {
   const router = useRouter();
   const { token } = router.query;
@@ -41,7 +73,6 @@ export default function TicketPage() {
         setTicket(ticketData);
 
         // Paso 2: Usar el ID del evento que viene en el boleto para traer el recinto seguro
-        // Nota: Si tu serializador manda el objeto directo o el ID, asegúrate de mapear ticketData.event
         const eventId = ticketData.event?.id || ticketData.event;
         if (!eventId) {
           throw new Error('No se pudo asociar el evento vinculado a este acceso.');
@@ -59,7 +90,7 @@ export default function TicketPage() {
         setEvent(eventData);
       })
       .catch(err => {
-        console.error("Falla en el pipeline logístico de accesos:", err);
+        console.error("Falla en el pipeline de accesos:", err);
         setError(err.message || 'Error de conexión al validar tus accesos oficiales.');
       })
       .finally(() => {
@@ -85,7 +116,6 @@ export default function TicketPage() {
 
       const data = await res.json();
       if (res.ok && data.status === 'success') {
-        // Play success chime
         try {
           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
           audio.volume = 0.5;
@@ -94,14 +124,12 @@ export default function TicketPage() {
           console.warn("Audio play blocked/failed:", e);
         }
 
-        // Update local ticket state
         setTicket((prev: any) => ({
           ...prev,
           is_scanned: true,
           scanned_at: new Date().toISOString()
         }));
       } else {
-        // Play error buzzer
         try {
           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/911/911-84.wav');
           audio.volume = 0.5;
@@ -116,24 +144,6 @@ export default function TicketPage() {
       alert('Error de red al intentar validar el boleto.');
     } finally {
       setIsValidating(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Fecha por confirmar';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('es-MX', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-    } catch (e) {
-      return dateString;
     }
   };
 
@@ -172,7 +182,7 @@ export default function TicketPage() {
               <div className="bg-red-500/10 border border-red-500/20 p-3.5 rounded-xl text-center">
                 <p className="text-red-400 text-xs font-black uppercase tracking-wider font-mono">Acceso Denegado</p>
                 <p className="text-[10px] text-neutral-400 font-mono mt-1">
-                  Usado el: {formatDate(ticket.scanned_at)}
+                  Usado el: {formatoDiaOficial(ticket.scanned_at)} a las {formatoHoraOficial(ticket.scanned_at)} hrs
                 </p>
               </div>
             ) : (
@@ -242,7 +252,6 @@ export default function TicketPage() {
 
             {/* QR Section */}
             <div className="p-8 flex flex-col items-center border-b border-dashed border-neutral-800 relative">
-              {/* Ticket cutouts on the sides */}
               <div className="absolute left-[-12px] bottom-[-12px] w-6 h-6 rounded-full bg-neutral-950 border border-neutral-800" />
               <div className="absolute right-[-12px] bottom-[-12px] w-6 h-6 rounded-full bg-neutral-950 border border-neutral-800" />
 
@@ -272,8 +281,6 @@ export default function TicketPage() {
             </div>
 
             {/* Ticket Info Section */}
-
-            {/* Aseguramos que los objetos existan antes de renderizar las propiedades */}
             {ticket && event && (
               <div className="p-8 space-y-6">
                 <div className="grid grid-cols-2 gap-y-6 gap-x-4">
@@ -292,7 +299,6 @@ export default function TicketPage() {
                       <Calendar className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                       <div>
                         <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Fecha y Hora</span>
-                        {/* Pintamos el día oficial del DF y el horario de puertas de forma explícita */}
                         <span className="text-xs text-neutral-200 font-medium block capitalize">
                           {formatoDiaOficial(event.date)}
                         </span>
@@ -314,49 +320,46 @@ export default function TicketPage() {
                     </div>
                   </div>
 
-                  <div>
+                  <div className="col-span-2">
                     <div className="flex items-start gap-2.5">
                       <Armchair className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                       <div>
                         <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Ubicación</span>
-                        <span className="text-xs font-semibold text-amber-500 block uppercase tracking-wide">
+                        <span className="text-xs text-neutral-200 font-medium block">
                           {ticket.seat_display || (ticket.seat ? `Fila ${ticket.seat_row} • Asiento ${ticket.seat_number}` : 'Pase General')}
                         </span>
                       </div>
                     </div>
                   </div>
+
+                  <div className="col-span-2 pt-4 border-t border-neutral-800/80">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-neutral-500 shrink-0" />
+                      <div>
+                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block">Propietario</span>
+                        <span className="text-xs text-neutral-300 font-mono break-all">{ticket.user_email}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dotted separator for footer */}
+                <div className="pt-6 border-t border-dashed border-neutral-800">
+                  <span className="text-[9px] uppercase text-neutral-600 font-mono tracking-widest block text-center mb-1">ID Único de Entrada</span>
+                  <span className="font-mono text-[10px] text-center text-neutral-400 block break-all tracking-wider">{ticket.token}</span>
                 </div>
               </div>
             )}
 
-            <div className="col-span-2 pt-4 border-t border-neutral-800/80">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-neutral-500 shrink-0" />
-                <div>
-                  <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block">Propietario</span>
-                  <span className="text-xs text-neutral-300 font-mono break-all">{ticket.user_email}</span>
-                </div>
-              </div>
+            {/* Accent Footer */}
+            <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-center">
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-950">
+                PRESENTA ESTE CÓDIGO QR EN LA ENTRADA
+              </span>
             </div>
-          </div>
-
-              {/* Dotted separator for footer */}
-        <div className="pt-6 border-t border-dashed border-neutral-800">
-          <span className="text-[9px] uppercase text-neutral-600 font-mono tracking-widest block text-center mb-1">ID Único de Entrada</span>
-          <span className="font-mono text-[10px] text-center text-neutral-400 block break-all tracking-wider">{ticket.token}</span>
-        </div>
-
-        {/* Accent Footer */}
-        <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-center">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-950">
-            PRESENTA ESTE CÓDIGO QR EN LA ENTRADA
-          </span>
-        </div>
-      </motion.div >
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
-  )
-}
-      </AnimatePresence >
-    </div >
   );
 }
