@@ -50,7 +50,7 @@ export default function TicketPage() {
     const jwtToken = localStorage.getItem('token');
     if (!jwtToken) return;
     const apiUrl = getApiUrl();
-    
+
     fetch(`${apiUrl}/users/profile/`, {
       headers: {
         'Authorization': `Bearer ${jwtToken}`
@@ -75,7 +75,7 @@ export default function TicketPage() {
     setIsValidating(true);
     const apiUrl = getApiUrl();
     const jwtToken = localStorage.getItem('token');
-    
+
     try {
       const res = await fetch(`${apiUrl}/tickets/tickets/validate/`, {
         method: 'POST',
@@ -85,7 +85,7 @@ export default function TicketPage() {
         },
         body: JSON.stringify({ token })
       });
-      
+
       const data = await res.json();
       if (res.ok && data.status === 'success') {
         // Play success chime
@@ -96,7 +96,7 @@ export default function TicketPage() {
         } catch (e) {
           console.warn("Audio play blocked/failed:", e);
         }
-        
+
         // Update local ticket state
         setTicket((prev: any) => ({
           ...prev,
@@ -170,7 +170,7 @@ export default function TicketPage() {
               <ShieldCheck className="w-4 h-4" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] font-mono">Panel de Control Staff</span>
             </div>
-            
+
             {ticket.is_scanned ? (
               <div className="bg-red-500/10 border border-red-500/20 p-3.5 rounded-xl text-center">
                 <p className="text-red-400 text-xs font-black uppercase tracking-wider font-mono">Acceso Denegado</p>
@@ -292,7 +292,7 @@ export default function TicketPage() {
                     <Calendar className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                     <div>
                       <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Fecha y Hora</span>
-                      <span className="text-xs text-neutral-200 font-medium capitalize">{formatDate(ticket.event_date)}</span>
+                      <span className="text-xs text-neutral-200 font-medium capitalize">{formatDate(ticket.doors_open)}</span>
                     </div>
                   </div>
                 </div>
@@ -302,8 +302,8 @@ export default function TicketPage() {
                     <MapPin className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                     <div>
                       <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Lugar</span>
-                      <span className="text-xs text-neutral-200 font-medium block">{ticket.theater_name}</span>
-                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{ticket.theater_location}</span>
+                      <span className="text-xs text-neutral-200 font-medium block">{ticket.venue_name}</span>
+                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{ticket.venue_location}</span>
                     </div>
                   </div>
                 </div>
