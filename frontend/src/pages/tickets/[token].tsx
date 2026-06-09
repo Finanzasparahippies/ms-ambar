@@ -27,7 +27,7 @@ export default function TicketPage() {
     if (!token) return;
     const apiUrl = getApiUrl();
     setLoading(true);
-    fetch(`${apiUrl}/tickets/events/${event.event_id}/`)
+    fetch(`${apiUrl}/tickets/events/${event?.id}/`)
       .then(res => {
         if (!res.ok) {
           throw new Error('El evento especificado no existe o es inválido.');
@@ -322,7 +322,7 @@ export default function TicketPage() {
                     <div>
                       <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Lugar</span>
                       <span className="text-xs text-neutral-200 font-medium block">{event.venue_name}</span>
-                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{event.venue_location}</span>
+                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{event.venue_address}</span>
                     </div>
                   </div>
                 </div>
