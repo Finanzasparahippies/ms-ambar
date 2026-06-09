@@ -27,24 +27,9 @@ export default function TicketPage() {
     if (!token) return;
     const apiUrl = getApiUrl();
     setLoading(true);
-    fetch(`${apiUrl}/tickets/events/${event?.id}/`)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('El evento especificado no existe o es inválido.');
-        }
-        return res.json();
-      })
-      .then(data => {
-        setEvent(data);
-        setError(null);
-      })
-      .catch(err => {
-        console.error("Error fetching event:", err);
-        setError(err.message || 'Error de conexión al recuperar el evento.');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    setError(null);
+
+    // Paso 1: Recuperar el boleto digital por Token UUID
     fetch(`${apiUrl}/tickets/tickets/${token}/`)
       .then(res => {
         if (!res.ok) {
@@ -52,42 +37,35 @@ export default function TicketPage() {
         }
         return res.json();
       })
-      .then(data => {
-        setTicket(data);
-        setError(null);
+      .then(ticketData => {
+        setTicket(ticketData);
+
+        // Paso 2: Usar el ID del evento que viene en el boleto para traer el recinto seguro
+        // Nota: Si tu serializador manda el objeto directo o el ID, asegúrate de mapear ticketData.event
+        const eventId = ticketData.event?.id || ticketData.event;
+        if (!eventId) {
+          throw new Error('No se pudo asociar el evento vinculado a este acceso.');
+        }
+
+        return fetch(`${apiUrl}/tickets/events/${eventId}/`);
+      })
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('El concierto asociado a este boleto no está disponible.');
+        }
+        return res.json();
+      })
+      .then(eventData => {
+        setEvent(eventData);
       })
       .catch(err => {
-        console.error("Error fetching ticket:", err);
-        setError(err.message || 'Error de conexión al recuperar el boleto.');
+        console.error("Falla en el pipeline logístico de accesos:", err);
+        setError(err.message || 'Error de conexión al validar tus accesos oficiales.');
       })
       .finally(() => {
         setLoading(false);
       });
   }, [token]);
-
-  useEffect(() => {
-    const jwtToken = localStorage.getItem('token');
-    if (!jwtToken) return;
-    const apiUrl = getApiUrl();
-
-    fetch(`${apiUrl}/users/profile/`, {
-      headers: {
-        'Authorization': `Bearer ${jwtToken}`
-      }
-    })
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Not authorized');
-      })
-      .then(data => {
-        if (data.is_staff) {
-          setIsStaff(true);
-        }
-      })
-      .catch(err => {
-        console.warn("Could not check profile (not logged in or not staff):", err);
-      });
-  }, []);
 
   const handleValidateTicket = async () => {
     if (!token || isValidating) return;
@@ -294,78 +272,91 @@ export default function TicketPage() {
             </div>
 
             {/* Ticket Info Section */}
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                <div className="col-span-2">
-                  <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Artista</span>
-                  <span className="font-semibold text-lg text-white block">{ticket.event_artist || 'Ms Ambar'}</span>
-                </div>
 
-                <div className="col-span-2">
-                  <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Evento</span>
-                  <span className="font-semibold text-sm text-neutral-200 block">{ticket.event_title}</span>
-                </div>
+            {/* Aseguramos que los objetos existan antes de renderizar las propiedades */}
+            {ticket && event && (
+              <div className="p-8 space-y-6">
+                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                  <div className="col-span-2">
+                    <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Artista</span>
+                    <span className="font-semibold text-lg text-white block">{ticket.event_artist || event.artist || 'Ms Ambar'}</span>
+                  </div>
 
-                <div className="col-span-2">
-                  <div className="flex items-start gap-2.5">
-                    <Calendar className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Fecha y Hora</span>
-                      <span className="text-xs text-neutral-200 font-medium capitalize">{formatDate(event.doors_open)}</span>
+                  <div className="col-span-2">
+                    <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1">Evento</span>
+                    <span className="font-semibold text-sm text-neutral-200 block">{ticket.event_title || event.title}</span>
+                  </div>
+
+                  <div className="col-span-2">
+                    <div className="flex items-start gap-2.5">
+                      <Calendar className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Fecha y Hora</span>
+                        {/* Pintamos el día oficial del DF y el horario de puertas de forma explícita */}
+                        <span className="text-xs text-neutral-200 font-medium block capitalize">
+                          {formatoDiaOficial(event.date)}
+                        </span>
+                        <span className="text-[10px] text-amber-500 font-bold block tracking-wider uppercase mt-1">
+                          🚪 Acceso: {formatoHoraOficial(event.doors_open)} hrs • 🎸 Show: {formatoHoraOficial(event.date)} hrs
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <div className="flex items-start gap-2.5">
-                    <MapPin className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Lugar</span>
-                      <span className="text-xs text-neutral-200 font-medium block">{event.venue_name}</span>
-                      <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{event.venue_address}</span>
+                  <div className="col-span-2">
+                    <div className="flex items-start gap-2.5">
+                      <MapPin className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Lugar</span>
+                        <span className="text-xs text-neutral-200 font-medium block">{event.venue_name}</span>
+                        <span className="text-[10px] text-neutral-500 block leading-tight mt-0.5">{event.venue_address}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <div className="flex items-start gap-2.5">
-                    <Armchair className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                    <div>
-                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Ubicación</span>
-                      <span className="text-xs font-semibold text-amber-500 block uppercase tracking-wide">
-                        {ticket.seat_display}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-span-2 pt-4 border-t border-neutral-800/80">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-neutral-500 shrink-0" />
-                    <div>
-                      <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block">Propietario</span>
-                      <span className="text-xs text-neutral-300 font-mono break-all">{ticket.user_email}</span>
+                  <div>
+                    <div className="flex items-start gap-2.5">
+                      <Armchair className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                      <div>
+                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Ubicación</span>
+                        <span className="text-xs font-semibold text-amber-500 block uppercase tracking-wide">
+                          {ticket.seat_display || (ticket.seat ? `Fila ${ticket.seat_row} • Asiento ${ticket.seat_number}` : 'Pase General')}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+            )}
+
+            <div className="col-span-2 pt-4 border-t border-neutral-800/80">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-neutral-500 shrink-0" />
+                <div>
+                  <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block">Propietario</span>
+                  <span className="text-xs text-neutral-300 font-mono break-all">{ticket.user_email}</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
               {/* Dotted separator for footer */}
-              <div className="pt-6 border-t border-dashed border-neutral-800">
-                <span className="text-[9px] uppercase text-neutral-600 font-mono tracking-widest block text-center mb-1">ID Único de Entrada</span>
-                <span className="font-mono text-[10px] text-center text-neutral-400 block break-all tracking-wider">{ticket.token}</span>
-              </div>
-            </div>
+        <div className="pt-6 border-t border-dashed border-neutral-800">
+          <span className="text-[9px] uppercase text-neutral-600 font-mono tracking-widest block text-center mb-1">ID Único de Entrada</span>
+          <span className="font-mono text-[10px] text-center text-neutral-400 block break-all tracking-wider">{ticket.token}</span>
+        </div>
 
-            {/* Accent Footer */}
-            <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-center">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-950">
-                PRESENTA ESTE CÓDIGO QR EN LA ENTRADA
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Accent Footer */}
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 p-4 text-center">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-950">
+            PRESENTA ESTE CÓDIGO QR EN LA ENTRADA
+          </span>
+        </div>
+      </motion.div >
     </div>
+  )
+}
+      </AnimatePresence >
+    </div >
   );
 }
