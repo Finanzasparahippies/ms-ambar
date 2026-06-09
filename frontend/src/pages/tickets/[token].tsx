@@ -303,7 +303,7 @@ export default function TicketPage() {
                           {formatoDiaOficial(event.date)}
                         </span>
                         <span className="text-[10px] text-amber-500 font-bold block tracking-wider uppercase mt-1">
-                          🚪 Acceso: {formatoHoraOficial(event.doors_open)} hrs • 🎸 Show: {formatoHoraOficial(event.date)} hrs
+                          🚪 Acceso: {formatoHoraOficial(event.doors_open)} hrs🎸
                         </span>
                       </div>
                     </div>
