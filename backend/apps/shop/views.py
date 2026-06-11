@@ -160,25 +160,41 @@ def handle_successful_payment(session):
                     except Exception as e:
                         logger.error(f"Error entregando boleto numerado: {e}")
         else:
+            # 🌟 LOGS DE CONTROL NÉCTAR LABS
+            logger.info(f"[Webhook] Procesando Boleto General para Evento #{event_id}")
             existing_count = Ticket.objects.filter(stripe_session_id=session_id).count() if session_id else 0
             to_create = quantity - existing_count
+            logger.info(f"[Webhook] Conteo de control: quantity={quantity}, existing={existing_count}, a_crear={to_create}")
+            
+            if to_create <= 0:
+                logger.warning(f"[Webhook] Alerta: to_create es 0 o menor. Posible evento duplicado o ya procesado. Forzando reenvío de mail.")
+                ticket_existente = Ticket.objects.filter(stripe_session_id=session_id).first()
+                if ticket_existente:
+                    try:
+                        send_ticket_email(ticket_existente)
+                        if ticket_existente.user_phone:
+                            send_ticket_whatsapp(ticket_existente)
+                        logger.info(f"[Webhook] Reenvío de boletos exitoso a {user_email}")
+                    except Exception as e:
+                        logger.error(f"Error reenviando correo/whatsapp en bloque general: {e}")
+            
             for _ in range(max(0, to_create)):
                 ticket = Ticket.objects.create(
                     event=event,
                     seat=None,
-                    ga_zone=None,
                     user_email=user_email,
                     user_phone=phone,
                     status='paid',
-                    has_mg=True,
+                    has_mg=has_mg,
                     stripe_session_id=session_id
                 )
+                logger.info(f"[Webhook] Boleto General #{ticket.id} creado con éxito.")
                 
-                # Trigger delivery
                 try:
                     send_ticket_email(ticket)
                     if ticket.user_phone:
                         send_ticket_whatsapp(ticket)
+                    logger.info(f"[Webhook] Correo/WhatsApp enviado a {user_email}")
                 except Exception as e:
                     logger.error(f"Error entregando boleto general: {e}")
 
