@@ -91,12 +91,13 @@ class ShopAppTests(APITestCase):
         
         # Verify order exists
         order = Order.objects.get(user_email='buyer@example.com')
+        self.assertEqual(order.status, 'pending')
         self.assertEqual(order.total_amount, 1200.00)
         self.assertEqual(order.items.count(), 1)
         
-        # Verify stock updated
+        # Verify stock not updated yet (still 10)
         self.product_active.refresh_from_db()
-        self.assertEqual(self.product_active.stock, 8)
+        self.assertEqual(self.product_active.stock, 10)
 
     def test_checkout_insufficient_stock(self):
         """Verify checkout fails if stock is insufficient."""
