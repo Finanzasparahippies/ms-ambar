@@ -37,9 +37,13 @@ class DashboardAppTests(APITestCase):
             status='paid',
             total_amount=1200.00,
             full_name='Carlos Santana',
-            address='Av. Juárez 123',
+            street_and_number='Av. Juárez 123',
+            suburb='Centro',
             city='Guadalajara',
-            country='México'
+            state='Jalisco',
+            postal_code='44100',
+            country='México',
+            phone='3331234567'
         )
         self.order_item = OrderItem.objects.create(
             order=self.order,

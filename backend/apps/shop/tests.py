@@ -67,8 +67,12 @@ class ShopAppTests(APITestCase):
         data = {
             'email': 'buyer@example.com',
             'full_name': 'Carlos Santana',
-            'address': 'Av. Juárez 123',
+            'phone': '3331234567',
+            'street_and_number': 'Av. Juárez 123',
+            'suburb': 'Centro',
             'city': 'Guadalajara',
+            'state': 'Jalisco',
+            'postal_code': '44100',
             'country': 'México',
             'items': [
                 {'product_id': self.product_active.id, 'quantity': 2}
@@ -94,8 +98,12 @@ class ShopAppTests(APITestCase):
         data = {
             'email': 'buyer@example.com',
             'full_name': 'Carlos Santana',
-            'address': 'Av. Juárez 123',
+            'phone': '3331234567',
+            'street_and_number': 'Av. Juárez 123',
+            'suburb': 'Centro',
             'city': 'Guadalajara',
+            'state': 'Jalisco',
+            'postal_code': '44100',
             'country': 'México',
             'items': [
                 {'product_id': self.product_active.id, 'quantity': 15}

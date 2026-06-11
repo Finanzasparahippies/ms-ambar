@@ -80,6 +80,17 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
             'quantity': str(quantity),
             'type': 'ticket_purchase'
         },
+        'payment_intent_data': {
+            'metadata': {
+                'event_id': event.id,
+                'seat_ids': ",".join([str(s.id) for s in seats]),
+                'user_email': user_email,
+                'phone': phone,
+                'has_mg': str(has_mg),
+                'quantity': str(quantity),
+                'type': 'ticket_purchase'
+            }
+        },
     }
     
     session = stripe.checkout.Session.create(**session_data)

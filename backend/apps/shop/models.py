@@ -130,6 +130,11 @@ class Order(models.Model):
     tracking_url = models.URLField(max_length=500, blank=True, null=True)
     shipping_label_pdf = models.URLField(max_length=500, blank=True, null=True)
 
+    @property
+    def address(self):
+        parts = [self.street_and_number, self.suburb, self.city, self.state, self.postal_code, self.country]
+        return ", ".join([p for p in parts if p])
+
     def __str__(self):
         return f"Order {self.id} - {self.user_email}"
 

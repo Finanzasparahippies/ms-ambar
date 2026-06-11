@@ -67,12 +67,9 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/app:ro
     working_dir: /app
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: [ "/bin/sh", "-c" ]
     command: >
-      sh -c "echo 'Staging environment auto-stop timer started. Interval: ${AUTO_STOP_INTERVAL:-24h}...' &&
-      sleep ${AUTO_STOP_INTERVAL:-24h} &&
-      echo 'Time limit reached. Automatically stopping staging environment...' &&
-      docker compose -f docker-compose.staging.yml down"
+      sh -c "echo 'Staging environment auto-stop timer started. Interval: ${AUTO_STOP_INTERVAL:-24h}...' && sleep ${AUTO_STOP_INTERVAL:-24h} && echo 'Time limit reached. Automatically stopping staging environment...' && docker compose -f docker-compose.staging.yml down"
     restart: "no"
     networks:
       - default

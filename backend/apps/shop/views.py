@@ -71,8 +71,8 @@ def stripe_webhook(request):
         except Exception:
             return HttpResponse("Event processing in progress", status=200)
 
-    # Handle the checkout.session.completed event
-    if event['type'] == 'checkout.session.completed':
+    # Handle the checkout.session.completed and payment_intent.succeeded events
+    if event['type'] in ['checkout.session.completed', 'payment_intent.succeeded']:
         session = event['data']['object']
         handle_successful_payment(session)
 
@@ -83,6 +83,31 @@ from apps.tickets.utils import send_ticket_email, send_ticket_whatsapp, send_tic
 def handle_successful_payment(session):
     metadata = session.get('metadata', {})
     session_id = session.get('id')
+
+    # 🌟 CONTROL DE SEGURIDAD NÉCTAR LABS:
+    # Si el objeto es un PaymentIntent y la metadata está vacía, 
+    # recuperamos la Checkout Session original usando la API de Stripe
+    if not metadata and (session.get('object') == 'payment_intent' or (session_id and session_id.startswith('pi_'))):
+        payment_details = session.get('payment_details', {})
+        checkout_ref = payment_details.get('order_reference') # cs_live_...
+        
+        # Fallback: list sessions by payment intent ID if order_reference is not in payload
+        if not checkout_ref and session_id:
+            try:
+                sessions = stripe.checkout.Session.list(payment_intent=session_id, limit=1)
+                if sessions and sessions.data:
+                    checkout_ref = sessions.data[0].id
+            except Exception as e:
+                logger.error(f"[Webhook] Error listando Checkout Sessions para PI {session_id}: {e}")
+
+        if checkout_ref:
+            try:
+                logger.info(f"[Webhook] Recuperando Metadata desde Checkout Session: {checkout_ref}")
+                checkout_session = stripe.checkout.Session.retrieve(checkout_ref)
+                metadata = checkout_session.get('metadata', {})
+                session_id = checkout_session.get('id')
+            except Exception as e:
+                logger.error(f"[Webhook] Error recuperando sesión madre de Stripe: {e}")
 
     # --- CASO A: COMPRA DE BOLETOS ---
     if metadata.get('type') == 'ticket_purchase':
@@ -106,7 +131,10 @@ def handle_successful_payment(session):
                 if not ticket:
                     ticket = Ticket.objects.filter(event=event, seat=seat).first()
                 
+                ticket_already_paid = False
                 if ticket:
+                    if ticket.status == 'paid':
+                        ticket_already_paid = True
                     ticket.status = 'paid'
                     ticket.user_email = user_email
                     ticket.user_phone = phone
@@ -123,13 +151,14 @@ def handle_successful_payment(session):
                         stripe_session_id=session_id
                     )
                 
-                # Trigger delivery
-                try:
-                    send_ticket_email(ticket)
-                    if ticket.user_phone:
-                        send_ticket_whatsapp(ticket)
-                except Exception as e:
-                    logger.error(f"Error entregando boleto numerado: {e}")
+                # Trigger delivery only if it wasn't already paid
+                if not ticket_already_paid:
+                    try:
+                        send_ticket_email(ticket)
+                        if ticket.user_phone:
+                            send_ticket_whatsapp(ticket)
+                    except Exception as e:
+                        logger.error(f"Error entregando boleto numerado: {e}")
         else:
             existing_count = Ticket.objects.filter(stripe_session_id=session_id).count() if session_id else 0
             to_create = quantity - existing_count
@@ -158,7 +187,6 @@ def handle_successful_payment(session):
         order_id = metadata.get('order_id')
         try:
             with transaction.atomic():
-                # Bloqueamos la orden para evitar condiciones de carrera
                 order = Order.objects.select_for_update().get(id=order_id)
                 
                 if order.status == 'pending':
@@ -166,19 +194,19 @@ def handle_successful_payment(session):
                     order.stripe_session_id = session_id
                     order.save()
                     
-                    # Decrementar el stock de forma segura hasta este momento
+                    # Descontar stock
                     for item in order.items.all():
                         product = Product.objects.select_for_update().get(id=item.product.id)
                         product.stock -= item.quantity
                         product.save()
                         
-                    # Enviar el correo cuando la transacción se confirme en la Base de Datos
-                    transaction.on_commit(lambda: send_order_confirmation_email(order))
-                    logger.info(f"Pedido #{order.id} pagado con éxito vía Webhook.")
+                    # Encadenar la logística y el correo fuera del bloqueo de la base de datos
+                    transaction.on_commit(lambda: process_fulfillment(order))
+                    logger.info(f"Pedido #{order.id} pagado con éxito.")
         except Order.DoesNotExist:
-            logger.error(f"Pedido con ID {order_id} no encontrado en el webhook.")
+            logger.error(f"Pedido con ID {order_id} no encontrado.")
         except Exception as e:
-            logger.error(f"Error procesando el pago del pedido #{order_id}: {e}", exc_info=True)
+            logger.error(f"Error procesando pedido #{order_id}: {e}", exc_info=True)
 
 def send_order_confirmation_email(order):
     try:
@@ -215,40 +243,6 @@ def send_order_confirmation_email(order):
         logger.info(f"Order confirmation email sent for order {order.id} to {order.user_email}")
     except Exception as e:
         logger.error(f"Error sending order confirmation email for order {order.id}: {e}", exc_info=True)
-
-def handle_successful_payment(session):
-    metadata = session.get('metadata', {})
-    session_id = session.get('id')
-
-    # --- CASO A: COMPRA DE BOLETOS --- (Queda igual)
-    if metadata.get('type') == 'ticket_purchase':
-        pass # Tu código de boletos original...
-
-    # --- CASO B: COMPRA DE MERCHANDISE / TIENDA ---
-    elif metadata.get('type') == 'shop_purchase':
-        order_id = metadata.get('order_id')
-        try:
-            with transaction.atomic():
-                order = Order.objects.select_for_update().get(id=order_id)
-                
-                if order.status == 'pending':
-                    order.status = 'paid'
-                    order.stripe_session_id = session_id
-                    order.save()
-                    
-                    # Descontar stock
-                    for item in order.items.all():
-                        product = Product.objects.select_for_update().get(id=item.product.id)
-                        product.stock -= item.quantity
-                        product.save()
-                        
-                    # Encadenar la logística y el correo fuera del bloqueo de la base de datos
-                    transaction.on_commit(lambda: process_fulfillment(order))
-                    logger.info(f"Pedido #{order.id} pagado con éxito.")
-        except Order.DoesNotExist:
-            logger.error(f"Pedido con ID {order_id} no encontrado.")
-        except Exception as e:
-            logger.error(f"Error procesando pedido #{order_id}: {e}", exc_info=True)
 
 def process_fulfillment(order):
     """Ejecuta la automatización de la guía e inyecta los datos en el mail final"""
@@ -329,13 +323,18 @@ class ShopCheckoutView(APIView):
         # 3. Construir la pasarela de Stripe Checkout
         try:
             checkout_session = stripe.checkout.Session.create(
-                
                 payment_method_types=['card'],
                 line_items=line_items,
                 mode='payment',
                 success_url=settings.FRONTEND_URL + "/shop/success?session_id={CHECKOUT_SESSION_ID}",
                 cancel_url=settings.FRONTEND_URL + "/shop/cart",
                 customer_email=email,
+                payment_intent_data={
+                    'metadata': {
+                        'order_id': str(order.id),
+                        'type': 'shop_purchase'
+                    }
+                },
                 metadata={
                     'order_id': str(order.id),
                     'type': 'shop_purchase'
