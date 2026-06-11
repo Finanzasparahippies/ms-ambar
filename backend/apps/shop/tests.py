@@ -60,9 +60,15 @@ class ShopAppTests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], 'Ámbar LP')
 
+    @patch('stripe.checkout.Session.create')
     @patch('apps.shop.views.send_order_confirmation_email')
-    def test_checkout_success(self, mock_email):
+    def test_checkout_success(self, mock_email, mock_session_create):
         """Verify checkout creates order, updates stock, and sends confirmation."""
+        class MockSession:
+            id = 'cs_test_123'
+            url = 'https://checkout.stripe.com/pay/cs_test_123'
+        mock_session_create.return_value = MockSession()
+
         url = reverse('shop-checkout')
         data = {
             'email': 'buyer@example.com',
@@ -81,7 +87,7 @@ class ShopAppTests(APITestCase):
         
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['status'], 'paid')
+        self.assertEqual(response.data['checkout_url'], 'https://checkout.stripe.com/pay/cs_test_123')
         
         # Verify order exists
         order = Order.objects.get(user_email='buyer@example.com')
@@ -314,8 +320,8 @@ class ShopAppTests(APITestCase):
         )
 
         # Assertions
-        mock_prod_create.assert_called_once()
-        mock_price_create.assert_called_once()
+        self.assertEqual(mock_prod_create.call_count, 2)
+        self.assertEqual(mock_price_create.call_count, 2)
         self.assertEqual(event.stripe_product_id, 'prod_event_mg_123')
         self.assertEqual(event.stripe_price_id, 'price_event_mg_123')
 

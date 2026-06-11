@@ -126,12 +126,24 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         try:
             import uuid
-            # Try parsing as UUID to lookup by token in user's permitted queryset
+            # Try parsing as UUID to lookup by token across all tickets (since UUID token is secure/unguessable)
             uuid.UUID(str(lookup_value))
-            return self.get_queryset().get(token=lookup_value)
+            return Ticket.objects.get(token=lookup_value)
         except (ValueError, Ticket.DoesNotExist, TypeError):
-            # Fallback to default primary key lookup
-            return super().get_object()
+            # Fallback to default primary key lookup, but restrict to permitted queryset
+            from django.http import Http404
+            user = self.request.user
+            if user and user.is_authenticated and (user.is_staff or user.is_superuser):
+                queryset = Ticket.objects.all()
+            elif user and user.is_authenticated:
+                queryset = Ticket.objects.filter(user_email=user.email)
+            else:
+                queryset = Ticket.objects.none()
+            
+            try:
+                return queryset.get(**{self.lookup_field: lookup_value})
+            except (Ticket.DoesNotExist, ValueError):
+                raise Http404("No ticket matches the given query.")
 
     @action(detail=False, methods=['post'], url_path='validate')
     def validate(self, request):
