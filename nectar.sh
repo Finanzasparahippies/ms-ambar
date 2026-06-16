@@ -91,6 +91,7 @@ show_help() {
     echo "  logs-prod               - Show real-time production logs"
     echo "  makemigrations-prod     - Generate database migrations (Prod)"
     echo "  migrate-prod            - Run database migrations in prod"
+    echo "  shell-prod              - Open backend python shell in prod"
     echo "  collectstatic           - Compile static assets in prod"
     echo "  certbot                 - Request Let's Encrypt SSL certificate"
     echo "  clean                   - Safe Docker and VPS cleanup"
@@ -224,6 +225,9 @@ case $COMMAND in
         ;;
     migrate-prod)
         run_django_cmd_prod migrate "$@"
+        ;;
+    shell-prod)
+        run_django_cmd_prod shell "$@"
         ;;
     collectstatic)
         echo "Running collectstatic..."
