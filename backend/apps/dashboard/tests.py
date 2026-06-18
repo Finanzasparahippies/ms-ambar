@@ -22,6 +22,12 @@ class DashboardAppTests(APITestCase):
             username='regular',
             password='regularpassword'
         )
+        self.staff_only_user = User.objects.create_user(
+            email='staff@example.com',
+            username='staff',
+            password='staffpassword',
+            is_staff=True
+        )
 
         # Create category, product, order
         self.category = Category.objects.create(name='Vinilos')
@@ -270,3 +276,29 @@ class DashboardAppTests(APITestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_non_superuser_staff_restricted_access(self):
+        """Verify that staff members who are not superusers cannot view financial/sales metrics."""
+        # Authenticate as staff-only user
+        self.client.force_authenticate(user=self.staff_only_user)
+
+        # 1. Analytics Overview check
+        url_analytics = reverse('analytics_overview')
+        response_analytics = self.client.get(url_analytics)
+        self.assertEqual(response_analytics.status_code, status.HTTP_200_OK)
+        # Check financial figures are zero
+        self.assertEqual(response_analytics.data['financials']['gross_sales'], 0.0)
+        self.assertEqual(response_analytics.data['financials']['ticket_sales'], 0.0)
+        self.assertEqual(response_analytics.data['financials']['net_profit'], 0.0)
+        # Check chart is empty
+        self.assertEqual(len(response_analytics.data['charts']['daily_sales']), 0)
+        self.assertTrue(response_analytics.data.get('is_restricted'))
+
+        # 2. Expenses check
+        url_expenses = reverse('dashboard_expenses')
+        response_expenses_get = self.client.get(url_expenses)
+        self.assertEqual(response_expenses_get.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_expenses_get.data, [])
+
+        response_expenses_post = self.client.post(url_expenses, {'title': 'New Rent', 'amount': 100})
+        self.assertEqual(response_expenses_post.status_code, status.HTTP_403_FORBIDDEN)

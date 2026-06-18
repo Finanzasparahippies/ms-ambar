@@ -53,6 +53,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         token['is_staff'] = user.is_staff
+        token['is_superuser'] = user.is_superuser
         token['email'] = user.email
         token['username'] = user.username
         return token
@@ -61,5 +62,5 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'phone', 'first_name', 'last_name', 'is_staff')
-        read_only_fields = ('id', 'email', 'is_staff')
+        fields = ('id', 'email', 'username', 'phone', 'first_name', 'last_name', 'is_staff', 'is_superuser')
+        read_only_fields = ('id', 'email', 'is_staff', 'is_superuser')

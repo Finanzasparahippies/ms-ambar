@@ -358,6 +358,7 @@ export default function AdminDashboard() {
   const [clientTickets, setClientTickets] = useState<any[]>([]);
   const [clientProfile, setClientProfile] = useState<any>(null);
   const [clientActiveTab, setClientActiveTab] = useState<'tickets' | 'profile'>('tickets');
+  const isSuperuser = currentUser?.is_superuser || clientProfile?.is_superuser || false;
 
   const executeCommand = (command: string, value: string = '') => {
     if (typeof document !== 'undefined') {
@@ -589,11 +590,13 @@ export default function AdminDashboard() {
     // Determine if user is staff or client
     const userStr = localStorage.getItem('user');
     let staffFlag = false;
+    let superuserFlag = false;
     if (userStr) {
       try {
         const u = JSON.parse(userStr);
         setCurrentUser(u);
         staffFlag = u.is_staff || false;
+        superuserFlag = u.is_superuser || false;
         setIsStaff(staffFlag);
       } catch (e) { }
     }
@@ -603,6 +606,9 @@ export default function AdminDashboard() {
 
     try {
       if (staffFlag) {
+        if (!superuserFlag && activeTab === 'summary') {
+          setActiveTab('orders');
+        }
         // Staff/Admin Data Fetching
         const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes, siteSettingsRes] = await Promise.all([
           axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
@@ -641,6 +647,22 @@ export default function AdminDashboard() {
         }
         if (profileRes && profileRes.data) {
           setClientProfile(profileRes.data);
+          const realSuperuser = profileRes.data.is_superuser || false;
+          if (!realSuperuser && activeTab === 'summary') {
+            setActiveTab('orders');
+          }
+          // Sync superuser status in currentUser and localStorage
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            try {
+              const u = JSON.parse(userStr);
+              if (u.is_superuser !== realSuperuser) {
+                u.is_superuser = realSuperuser;
+                localStorage.setItem('user', JSON.stringify(u));
+                setCurrentUser(u);
+              }
+            } catch (err) {}
+          }
         }
         if (systemRes.data) {
           setSysMetrics(systemRes.data);
@@ -2370,15 +2392,17 @@ export default function AdminDashboard() {
 
           {/* Navigation Tabs Bar */}
           <div className="flex gap-4 mb-8 amber-glass border border-white/10 p-2 rounded-2xl w-fit relative z-10 shadow-lg flex-wrap">
-            <button
-              onClick={() => setActiveTab('summary')}
-              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'summary'
-                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
-                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                }`}
-            >
-              📊 Resumen General
-            </button>
+            {isSuperuser && (
+              <button
+                onClick={() => setActiveTab('summary')}
+                className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'summary'
+                  ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                  : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                  }`}
+              >
+                📊 Resumen General
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('orders')}
               className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'orders'
@@ -2393,15 +2417,17 @@ export default function AdminDashboard() {
                 </span>
               )}
             </button>
-            <button
-              onClick={() => setActiveTab('expenses')}
-              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'expenses'
-                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
-                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                }`}
-            >
-              💸 Control de Gastos
-            </button>
+            {isSuperuser && (
+              <button
+                onClick={() => setActiveTab('expenses')}
+                className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'expenses'
+                  ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                  : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                  }`}
+              >
+                💸 Control de Gastos
+              </button>
+            )}
             <button
               onClick={() => setActiveTab('catalog')}
               className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'catalog'

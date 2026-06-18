@@ -47,7 +47,8 @@ export default function SignupPage() {
       localStorage.setItem('user', JSON.stringify({
         email: res.data.user.email,
         id: res.data.user.id,
-        is_staff: res.data.user.is_staff
+        is_staff: res.data.user.is_staff,
+        is_superuser: false
       }));
 
       setSuccess(true);

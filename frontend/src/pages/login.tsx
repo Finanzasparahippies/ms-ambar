@@ -41,7 +41,8 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify({
         email: email,
         id: payload.user_id,
-        is_staff: payload.is_staff || false
+        is_staff: payload.is_staff || false,
+        is_superuser: payload.is_superuser || false
       }));
 
       setSuccess(true);
