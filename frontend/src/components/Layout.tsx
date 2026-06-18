@@ -51,7 +51,7 @@ const Layout = ({ children }: LayoutProps) => {
       </main>
 
       {/* Footer (Nature inspired) */}
-      <footer className="relative z-10 py-20 px-10 mt-20 border-t border-white/5 amber-glass rounded-t-[4rem]">
+      <footer className="relative z-10 py-12 px-6 mt-12 border-t border-amber-honey/20 dark:border-amber-honey/25 bg-[#0c0f0d] rounded-t-[2.5rem] md:rounded-t-[4rem] md:py-20 md:px-10 md:mt-20 md:bg-white/10 md:dark:bg-[#0c0f0d]/95 md:backdrop-blur-xl shadow-xl dark:shadow-2xl dark:shadow-black">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-4 gap-12">
           <div className="col-span-2">
             <Link href="/" className="inline-block mb-6">
@@ -79,7 +79,7 @@ const Layout = ({ children }: LayoutProps) => {
             </ul>
           </div>
         </div>
-        <div className="max-w-[1200px] mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-[#F4F6F0]/40 font-black gap-4">
+        <div className="max-w-[1200px] mx-auto mt-10 md:mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-[#F4F6F0]/40 font-black gap-4">
           <span>&copy; {new Date().getFullYear()} Ms Ambar</span>
           <span className="flex flex-wrap items-center justify-center gap-1.5">
             <span>Hecho en colaboración para Ms Ambar en México</span>
