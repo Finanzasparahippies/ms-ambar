@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import ThemeToggle from './ThemeToggle';
-import { LogOut, Shield, Layers, Menu, X } from 'lucide-react';
+import { LogOut, Shield, Layers, Menu, X, Camera } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /** Decodes a JWT payload client-side (no signature verification). */
@@ -157,10 +157,21 @@ const Navbar = () => {
                   >
                     <Layers size={10} /> Studio
                   </Link>
+                  {/* Ticket Scanner — staff only */}
+                  <Link
+                    href="/dashboard/scan-tickets"
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/dashboard/scan-tickets'
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      }`}
+                    title="Escáner de Boletos"
+                  >
+                    <Camera size={10} /> Escáner
+                  </Link>
                   {/* Admin Dashboard */}
                   <Link
                     href="/dashboard"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard')
+                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
                         ? 'bg-amber-honey text-nature-night border-amber-honey'
                         : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                       }`}
@@ -226,24 +237,35 @@ const Navbar = () => {
             {isAuthenticated ? (
               <div className="flex flex-col gap-3 pt-3 border-t border-white/10">
                 {isAdmin && (
-                  <div className="flex gap-3">
+                  <div className="flex flex-col gap-2 w-full mb-1">
+                    <div className="flex gap-3">
+                      <Link
+                        href="/designer"
+                        className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname === '/designer'
+                            ? 'bg-amber-honey text-nature-night border-amber-honey'
+                            : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                          }`}
+                      >
+                        <Layers size={12} /> Studio
+                      </Link>
+                      <Link
+                        href="/dashboard"
+                        className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
+                            ? 'bg-amber-honey text-nature-night border-amber-honey'
+                            : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                          }`}
+                      >
+                        <Shield size={12} /> Admin
+                      </Link>
+                    </div>
                     <Link
-                      href="/designer"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname === '/designer'
+                      href="/dashboard/scan-tickets"
+                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all w-full ${router.pathname === '/dashboard/scan-tickets'
                           ? 'bg-amber-honey text-nature-night border-amber-honey'
                           : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                         }`}
                     >
-                      <Layers size={12} /> Studio
-                    </Link>
-                    <Link
-                      href="/dashboard"
-                      className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname.startsWith('/dashboard')
-                          ? 'bg-amber-honey text-nature-night border-amber-honey'
-                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
-                        }`}
-                    >
-                      <Shield size={12} /> Admin
+                      <Camera size={12} /> Escáner de Boletos
                     </Link>
                   </div>
                 )}

@@ -52,7 +52,8 @@ import {
   Monitor,
   Tablet,
   Smartphone,
-  Smile
+  Smile,
+  Camera
 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -2346,6 +2347,12 @@ export default function AdminDashboard() {
                 Salir
               </button>
               <Link
+                href="/dashboard/scan-tickets"
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#1E2B22] font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(229,169,59,0.15)]"
+              >
+                <Camera size={14} /> Escanear Boletos
+              </Link>
+              <Link
                 href="/dashboard/performance"
                 className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-3 rounded-xl shadow-lg transition-all text-xs font-bold uppercase tracking-widest text-[#F4F6F0]"
               >
@@ -2635,6 +2642,7 @@ export default function AdminDashboard() {
                         <Layers size={18} className="text-amber-honey" /> Operaciones Rápidas
                       </h3>
                       <QuickActionBtn href="/designer" title="Diseñador de Mapas" desc="Editor de Seating Chart 2D" icon={<Layers size={18} />} />
+                      <QuickActionBtn href="/dashboard/scan-tickets" title="Escáner de Boletos" desc="Validar y registrar entradas en tiempo real" icon={<Camera size={18} />} />
                       <QuickActionBtn href="/dashboard/performance" title="Monitor Core Web Vitals" desc="Tiempos del Servidor y Logs" icon={<Activity size={18} />} />
                       <QuickActionBtn href="/admin/shop/product/" title="Catálogo de Productos" desc="Editar Stock de Mercancía" icon={<ShoppingBag size={18} />} external />
                       <QuickActionBtn href="/admin/tickets/event/" title="Fechas & Conciertos" desc="Programar nuevos eventos" icon={<Ticket size={18} />} external />

@@ -164,7 +164,9 @@ class TicketViewSet(viewsets.ModelViewSet):
                 return Response({
                     'status': 'already_used',
                     'message': f'Boleto ya utilizado el {ticket.scanned_at.strftime("%d/%m %H:%M")}',
-                    'scanned_at': ticket.scanned_at
+                    'scanned_at': ticket.scanned_at,
+                    'event': ticket.event.title,
+                    'seat': f"{ticket.seat.row}{ticket.seat.number}" if ticket.seat else "Meet & Greet"
                 }, status=400)
                 
             # Validar y marcar
