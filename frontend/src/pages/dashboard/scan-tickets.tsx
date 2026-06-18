@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { 
+import {
   Camera, ShieldCheck, AlertCircle, CheckCircle, ArrowLeft, RefreshCw, Smartphone, Keyboard, Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,7 @@ export default function ScanTicketsPage() {
   const router = useRouter();
   const [isStaff, setIsStaff] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Scanner states
   const [scannerActive, setScannerActive] = useState(false);
   const [cameras, setCameras] = useState<any[]>([]);
@@ -101,13 +101,13 @@ export default function ScanTicketsPage() {
   const startCameraScan = async () => {
     // Dynamic import to avoid SSR errors with html5-qrcode
     const { Html5Qrcode } = await import('html5-qrcode');
-    
+
     try {
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
         setCameras(devices);
-        const backCamera = devices.find(d => 
-          d.label.toLowerCase().includes('back') || 
+        const backCamera = devices.find(d =>
+          d.label.toLowerCase().includes('back') ||
           d.label.toLowerCase().includes('trasera') ||
           d.label.toLowerCase().includes('environment') ||
           d.label.toLowerCase().includes('entorno')
@@ -130,7 +130,7 @@ export default function ScanTicketsPage() {
 
   const initScannerInstance = (Html5QrcodeClass: any, cameraConfig: any) => {
     stopScanner();
-    
+
     const html5QrCode = new Html5QrcodeClass(readerId);
     html5QrCodeRef.current = html5QrCode;
     setScannerActive(true);
@@ -274,7 +274,7 @@ export default function ScanTicketsPage() {
     setScanError(null);
     setScanStatusType(null);
     setManualToken('');
-    
+
     // Resume camera scanning using either manually overridden camera or facingMode environment
     import('html5-qrcode').then(({ Html5Qrcode }) => {
       initScannerInstance(Html5Qrcode, isManualCameraSelect && selectedCameraId ? selectedCameraId : { facingMode: "environment" });
@@ -294,7 +294,8 @@ export default function ScanTicketsPage() {
     <div className="min-h-screen bg-[#07080a] text-[#F4F6F0] flex flex-col p-6 font-sans relative overflow-x-hidden select-none selection:bg-amber-honey/20">
       <Head>
         <title>Escáner de Boletos | Ms Ambar</title>
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           #qr-reader-container {
             width: 100% !important;
             height: 100% !important;
@@ -321,8 +322,8 @@ export default function ScanTicketsPage() {
 
       {/* Top navigation */}
       <header className="max-w-4xl mx-auto w-full flex items-center justify-between mb-8 z-10">
-        <Link 
-          href="/dashboard" 
+        <Link
+          href="/dashboard"
           onClick={stopScanner}
           className="inline-flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-[#F4F6F0]/50 hover:text-amber-honey transition-colors"
         >
@@ -332,11 +333,10 @@ export default function ScanTicketsPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setAudioEnabled(!audioEnabled)}
-            className={`p-2.5 rounded-xl border transition-all ${
-              audioEnabled 
-                ? 'bg-amber-honey/10 border-amber-honey/20 text-amber-honey' 
-                : 'bg-white/5 border-white/10 text-white/30'
-            }`}
+            className={`p-2.5 rounded-xl border transition-all ${audioEnabled
+              ? 'bg-amber-honey/10 border-amber-honey/20 text-amber-honey'
+              : 'bg-white/5 border-white/10 text-white/30'
+              }`}
             title={audioEnabled ? "Silenciar alertas de audio" : "Activar alertas de audio"}
           >
             <Volume2 size={14} />
@@ -352,7 +352,7 @@ export default function ScanTicketsPage() {
       <main className="max-w-md mx-auto w-full flex-1 flex flex-col justify-center z-10">
         <div className="amber-glass rounded-[2.5rem] p-6 border border-white/5 space-y-6 shadow-2xl relative overflow-hidden flex flex-col">
           <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/30 to-transparent" />
-          
+
           <div className="text-center">
             <h2 className="text-2xl font-black uppercase tracking-tight italic text-[#F4F6F0]">Control de Accesos</h2>
             <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-black mt-1">Escaneo de códigos QR oficiales</p>
@@ -430,11 +430,11 @@ export default function ScanTicketsPage() {
             <div className="text-center mb-1">
               <span className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-[0.25em] font-black">¿La cámara no lee el código?</span>
             </div>
-            <form 
+            <form
               onSubmit={e => {
                 e.preventDefault();
                 validateTicketToken(manualToken.trim());
-              }} 
+              }}
               className="flex gap-2"
             >
               <div className="relative flex-1">
@@ -472,35 +472,32 @@ export default function ScanTicketsPage() {
               className="w-full max-w-sm rounded-[2.5rem] overflow-hidden border shadow-2xl text-center flex flex-col relative bg-neutral-900 border-white/5"
             >
               {/* Colored status bar */}
-              <div className={`h-2.5 w-full ${
-                scanStatusType === 'success' ? 'bg-emerald-500' :
+              <div className={`h-2.5 w-full ${scanStatusType === 'success' ? 'bg-emerald-500' :
                 scanStatusType === 'already_used' ? 'bg-orange-500' : 'bg-red-600'
-              }`} />
+                }`} />
 
               <div className="p-8 space-y-6">
                 {/* Result icon & title */}
                 <div className="space-y-3">
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${
-                    scanStatusType === 'success' ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-400' :
-                    scanStatusType === 'already_used' ? 'bg-orange-500/10 border border-orange-500/25 text-orange-400' : 
-                    'bg-red-500/10 border border-red-500/25 text-red-500'
-                  }`}>
-                    {scanStatusType === 'success' ? <CheckCircle size={32} /> : 
-                     scanStatusType === 'already_used' ? <AlertCircle size={32} /> :
-                     <AlertCircle size={32} />}
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto ${scanStatusType === 'success' ? 'bg-emerald-500/10 border border-emerald-500/25 text-emerald-400' :
+                    scanStatusType === 'already_used' ? 'bg-orange-500/10 border border-orange-500/25 text-orange-400' :
+                      'bg-red-500/10 border border-red-500/25 text-red-500'
+                    }`}>
+                    {scanStatusType === 'success' ? <CheckCircle size={32} /> :
+                      scanStatusType === 'already_used' ? <AlertCircle size={32} /> :
+                        <AlertCircle size={32} />}
                   </div>
-                  
-                  <h3 className={`text-xl font-black uppercase tracking-tight italic ${
-                    scanStatusType === 'success' ? 'text-emerald-400' :
+
+                  <h3 className={`text-xl font-black uppercase tracking-tight italic ${scanStatusType === 'success' ? 'text-emerald-400' :
                     scanStatusType === 'already_used' ? 'text-orange-400' : 'text-red-500'
-                  }`}>
+                    }`}>
                     {scanStatusType === 'success' ? 'Acceso Autorizado' :
-                     scanStatusType === 'already_used' ? 'Acceso Denegado' : 'Boleto Inválido'}
+                      scanStatusType === 'already_used' ? 'Acceso Denegado' : 'Boleto Inválido'}
                   </h3>
-                  
+
                   <p className="text-[10px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold font-mono">
                     {scanStatusType === 'success' ? 'Boleto Validado Correctamente' :
-                     scanStatusType === 'already_used' ? 'Boleto ya Utilizado' : 'Error de Autenticidad'}
+                      scanStatusType === 'already_used' ? 'Boleto ya Utilizado' : 'Error de Autenticidad'}
                   </p>
                 </div>
 
@@ -538,11 +535,10 @@ export default function ScanTicketsPage() {
                 {/* Action button */}
                 <button
                   onClick={resetScannerHUD}
-                  className={`w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] font-mono transition-transform duration-200 hover:scale-102 shadow-lg ${
-                    scanStatusType === 'success' ? 'bg-emerald-500 text-neutral-950 shadow-emerald-500/20' :
+                  className={`w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] font-mono transition-transform duration-200 hover:scale-102 shadow-lg ${scanStatusType === 'success' ? 'bg-emerald-500 text-neutral-950 shadow-emerald-500/20' :
                     scanStatusType === 'already_used' ? 'bg-orange-500 text-neutral-950 shadow-orange-500/20' :
-                    'bg-red-600 text-neutral-200 shadow-red-600/20'
-                  }`}
+                      'bg-red-600 text-neutral-200 shadow-red-600/20'
+                    }`}
                 >
                   Siguiente Boleto
                 </button>

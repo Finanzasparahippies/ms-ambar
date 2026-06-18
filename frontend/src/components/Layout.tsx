@@ -75,7 +75,7 @@ const Layout = ({ children }: LayoutProps) => {
             <h4 className="text-xs font-black uppercase tracking-widest mb-6 text-amber-honey">Contacto</h4>
             <ul className="space-y-4 text-xs font-bold opacity-60">
               <li>promociones@msambar.com</li>
-              <li>@msambar_oficial</li>
+              <li>@ms.ambarc</li>
             </ul>
           </div>
         </div>
