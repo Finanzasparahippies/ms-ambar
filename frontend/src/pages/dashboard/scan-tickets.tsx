@@ -16,6 +16,7 @@ export default function ScanTicketsPage() {
   const [scannerActive, setScannerActive] = useState(false);
   const [cameras, setCameras] = useState<any[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
+  const [isManualCameraSelect, setIsManualCameraSelect] = useState(false);
   const [manualToken, setManualToken] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -105,32 +106,51 @@ export default function ScanTicketsPage() {
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
         setCameras(devices);
-        const backCamera = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('trasera'));
+        const backCamera = devices.find(d => 
+          d.label.toLowerCase().includes('back') || 
+          d.label.toLowerCase().includes('trasera') ||
+          d.label.toLowerCase().includes('environment') ||
+          d.label.toLowerCase().includes('entorno')
+        );
         const defaultCamId = backCamera ? backCamera.id : devices[0].id;
         setSelectedCameraId(defaultCamId);
-        initScannerInstance(Html5Qrcode, defaultCamId);
-      } else {
-        alert("No se encontraron cámaras disponibles en este dispositivo.");
       }
+      // Start with environment facingMode to force rear-facing camera autofocus
+      initScannerInstance(Html5Qrcode, { facingMode: "environment" });
     } catch (e) {
-      console.error("Camera access failed:", e);
-      alert("Error al acceder a las cámaras del dispositivo. Por favor concede permisos.");
+      console.warn("Camera enumeration failed, fallback directly to facingMode:", e);
+      try {
+        initScannerInstance(Html5Qrcode, { facingMode: "environment" });
+      } catch (err) {
+        console.error("Camera access failed:", err);
+        alert("Error al acceder a la cámara. Por favor concede permisos.");
+      }
     }
   };
 
-  const initScannerInstance = (Html5QrcodeClass: any, cameraId: string) => {
+  const initScannerInstance = (Html5QrcodeClass: any, cameraConfig: any) => {
     stopScanner();
     
     const html5QrCode = new Html5QrcodeClass(readerId);
     html5QrCodeRef.current = html5QrCode;
     setScannerActive(true);
 
-    html5QrCode.start(
-      cameraId,
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 }
+    const config = {
+      fps: 15, // Higher frame rate for faster detection
+      qrbox: (width: number, height: number) => {
+        const minEdge = Math.min(width, height);
+        const qrboxSize = Math.floor(minEdge * 0.7);
+        return { width: qrboxSize, height: qrboxSize };
       },
+      aspectRatio: 1.0,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true // Native hardware acceleration
+      }
+    };
+
+    html5QrCode.start(
+      cameraConfig,
+      config,
       (decodedText: string) => {
         // Successfully scanned code
         handleQrDecoded(decodedText);
@@ -159,6 +179,7 @@ export default function ScanTicketsPage() {
 
   const handleCameraChange = (cameraId: string) => {
     setSelectedCameraId(cameraId);
+    setIsManualCameraSelect(true);
     if (scannerActive && html5QrCodeRef.current) {
       import('html5-qrcode').then(({ Html5Qrcode }) => {
         initScannerInstance(Html5Qrcode, cameraId);
@@ -254,12 +275,10 @@ export default function ScanTicketsPage() {
     setScanStatusType(null);
     setManualToken('');
     
-    // Resume camera scanning if it was previously active
-    if (selectedCameraId) {
-      import('html5-qrcode').then(({ Html5Qrcode }) => {
-        initScannerInstance(Html5Qrcode, selectedCameraId);
-      });
-    }
+    // Resume camera scanning using either manually overridden camera or facingMode environment
+    import('html5-qrcode').then(({ Html5Qrcode }) => {
+      initScannerInstance(Html5Qrcode, isManualCameraSelect && selectedCameraId ? selectedCameraId : { facingMode: "environment" });
+    });
   };
 
   if (isLoading || isStaff === null) {
@@ -275,6 +294,25 @@ export default function ScanTicketsPage() {
     <div className="min-h-screen bg-[#07080a] text-[#F4F6F0] flex flex-col p-6 font-sans relative overflow-x-hidden select-none selection:bg-amber-honey/20">
       <Head>
         <title>Escáner de Boletos | Ms Ambar</title>
+        <style dangerouslySetInnerHTML={{ __html: `
+          #qr-reader-container {
+            width: 100% !important;
+            height: 100% !important;
+            border: none !important;
+          }
+          #qr-reader-container video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover !important;
+            border-radius: 1.8rem !important;
+          }
+          #qr-reader-container__header_message {
+            display: none !important;
+          }
+          #qr-reader-container__scan_region {
+            border: none !important;
+          }
+        `}} />
       </Head>
 
       {/* Background gradients */}
