@@ -186,6 +186,11 @@ export default function AdminDashboard() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [marketingLists, setMarketingLists] = useState<any[]>([]);
   const [campMarketingList, setCampMarketingList] = useState<string>('');
+  const [isListModalOpen, setIsListModalOpen] = useState(false);
+  const [listName, setListName] = useState('');
+  const [listDescription, setListDescription] = useState('');
+  const [listLoading, setListLoading] = useState(false);
+  const [listErrorMsg, setListErrorMsg] = useState<string | null>(null);
   const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers' | 'lists'>('campaigns');
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
@@ -1232,6 +1237,37 @@ export default function AdminDashboard() {
         campaignEditorRef.current.innerHTML = campaign.poem_text || '';
       }
     }, 100);
+  };
+
+  const handleListSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!listName.trim()) {
+      setListErrorMsg('El nombre de la lista es obligatorio.');
+      return;
+    }
+    setListLoading(true);
+    setListErrorMsg(null);
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    try {
+      await axios.post(`${API_URL}/blog/marketing-lists/`, {
+        name: listName,
+        description: listDescription
+      }, { headers });
+
+      // Refresh list data
+      const listsRes = await axios.get(`${API_URL}/blog/marketing-lists/`, { headers });
+      setMarketingLists(listsRes.data);
+
+      setListName('');
+      setListDescription('');
+      setIsListModalOpen(false);
+      showToast.success('Lista de marketing creada con éxito!');
+    } catch (err: any) {
+      setListErrorMsg(err.response?.data?.error || err.response?.data?.detail || 'Error al crear la lista.');
+    } finally {
+      setListLoading(false);
+    }
   };
 
   const handleCampaignSubmit = async (e: React.FormEvent) => {
@@ -4223,9 +4259,17 @@ export default function AdminDashboard() {
                         <Plus size={14} /> Nueva Campaña
                       </button>
                     ) : campaignSubTab === 'lists' ? (
-                      <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black pr-4">
-                        Segmentos de Marketing Activos
-                      </span>
+                      <button
+                        onClick={() => {
+                          setListName('');
+                          setListDescription('');
+                          setListErrorMsg(null);
+                          setIsListModalOpen(true);
+                        }}
+                        className="bg-amber-honey text-black px-5 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-gold transition-all flex items-center gap-2"
+                      >
+                        <Plus size={14} /> Nueva Lista
+                      </button>
                     ) : (
                       <span className="text-[10px] text-[#F4F6F0]/50 uppercase tracking-widest font-black pr-4">
                         Importación y Gestión de Contactos
@@ -6755,6 +6799,86 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
+                </motion.div>
+              </div>
+            )}
+
+            {isListModalOpen && (
+              <div
+                onClick={() => setIsListModalOpen(false)}
+                className="fixed inset-0 bg-black/70 backdrop-blur-md z-[200] flex items-center justify-center p-6"
+              >
+                <motion.div
+                  onClick={e => e.stopPropagation()}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="amber-glass w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl relative flex flex-col gap-6"
+                >
+                  <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent" />
+                  <button
+                    type="button"
+                    onClick={() => setIsListModalOpen(false)}
+                    className="absolute top-6 right-6 w-9 h-9 rounded-xl border border-white/10 text-[#F4F6F0]/40 hover:text-[#F4F6F0] flex items-center justify-center transition-all hover:bg-white/5"
+                  >
+                    <X size={16} />
+                  </button>
+
+                  <div>
+                    <h3 className="text-xl font-black uppercase italic tracking-tight text-[#F4F6F0]">
+                      Nueva Lista de Contactos
+                    </h3>
+                    <p className="text-[9px] text-[#F4F6F0]/55 uppercase tracking-widest font-bold mt-1">
+                      Crea un segmento personalizado de marketing
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleListSubmit} className="space-y-4">
+                    {listErrorMsg && (
+                      <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-[10px] font-bold uppercase tracking-wide">
+                        ⚠️ {listErrorMsg}
+                      </div>
+                    )}
+
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Nombre de la Lista *</label>
+                      <input
+                        type="text"
+                        value={listName}
+                        onChange={e => setListName(e.target.value)}
+                        placeholder="Ej. Clientes VIP de Guadalajara"
+                        required
+                        className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Descripción</label>
+                      <textarea
+                        value={listDescription}
+                        onChange={e => setListDescription(e.target.value)}
+                        placeholder="Describe el propósito de este segmento de destinatarios..."
+                        rows={3}
+                        className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30 resize-none"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsListModalOpen(false)}
+                        className="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 border border-white/10 text-[#F4F6F0]/60 hover:bg-white/10 transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={listLoading}
+                        className="flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.2em] bg-gradient-to-r from-amber-500 to-amber-600 text-black flex items-center justify-center gap-2 shadow-[0_2px_15px_rgba(245,158,11,0.2)] disabled:opacity-50"
+                      >
+                        {listLoading ? 'Creando...' : 'Crear Lista'}
+                      </button>
+                    </div>
+                  </form>
                 </motion.div>
               </div>
             )}
