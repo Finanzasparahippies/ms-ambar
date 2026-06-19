@@ -336,6 +336,14 @@ export default function AdminDashboard() {
   const [isBgSectionOpen, setIsBgSectionOpen] = useState(false);
   const [isCtaSectionOpen, setIsCtaSectionOpen] = useState(false);
   const campaignEditorRef = React.useRef<HTMLDivElement>(null);
+  const syncEditorState = () => {
+    if (campaignEditorRef.current) {
+      const html = campaignEditorRef.current.innerHTML;
+      if (editorActiveTab === 'body') setCampPoemText(html);
+      else if (editorActiveTab === 'title') setCampEmailTitle(html);
+      else if (editorActiveTab === 'footer') setCampFooterText(html);
+    }
+  };
   const isDraftPending = React.useRef(false);
 
   const [modalPreviewViewport, setModalPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
@@ -752,7 +760,7 @@ export default function AdminDashboard() {
         campaignEditorRef.current.innerHTML = campFooterText || '';
       }
     }
-  }, [editorActiveTab]);
+  }, [editorActiveTab, settingsTab]);
 
   useEffect(() => {
     if (previewCampaign) {
@@ -1569,40 +1577,55 @@ export default function AdminDashboard() {
 
   const insertImageAtCursor = (imageUrl: string) => {
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-      campaignEditorRef.current?.focus();
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const img = document.createElement('img');
-        img.src = imageUrl;
-        img.style.maxWidth = '100%';
-        img.style.height = 'auto';
-        img.style.borderRadius = '12px';
-        img.style.margin = '15px auto';
-        img.style.display = 'block';
-        img.style.border = '1px solid rgba(255,255,255,0.05)';
+      const imgHtml = `<img src="${imageUrl}" style="max-width:100%; height:auto; border-radius:12px; margin:15px auto; display:block; border:1px solid rgba(255,255,255,0.05);" />`;
 
-        range.deleteContents();
-        range.insertNode(img);
+      // Si el editor está en la pestaña "Contenido" y el tab activo es el "Cuerpo":
+      if (settingsTab === 'content' && editorActiveTab === 'body' && campaignEditorRef.current) {
+        campaignEditorRef.current.focus();
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          
+          // Verificar que la selección esté realmente dentro del editor
+          if (campaignEditorRef.current.contains(range.commonAncestorContainer)) {
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.borderRadius = '12px';
+            img.style.margin = '15px auto';
+            img.style.display = 'block';
+            img.style.border = '1px solid rgba(255,255,255,0.05)';
 
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
+            range.deleteContents();
+            range.insertNode(img);
 
-        if (campaignEditorRef.current) {
-          const html = campaignEditorRef.current.innerHTML;
-          if (editorActiveTab === 'body') setCampPoemText(html);
-          else if (editorActiveTab === 'title') setCampEmailTitle(html);
-          else if (editorActiveTab === 'footer') setCampFooterText(html);
+            range.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            setCampPoemText(campaignEditorRef.current.innerHTML);
+            return;
+          }
         }
+        
+        // Si no hay selección válida, añadir al final de la vista y actualizar estado
+        campaignEditorRef.current.innerHTML += imgHtml;
+        setCampPoemText(campaignEditorRef.current.innerHTML);
       } else {
-        if (campaignEditorRef.current) {
-          campaignEditorRef.current.innerHTML += `<img src="${imageUrl}" style="max-width:100%; height:auto; border-radius:12px; margin:15px auto; display:block; border:1px solid rgba(255,255,255,0.05);" />`;
-          const html = campaignEditorRef.current.innerHTML;
-          if (editorActiveTab === 'body') setCampPoemText(html);
-          else if (editorActiveTab === 'title') setCampEmailTitle(html);
-          else if (editorActiveTab === 'footer') setCampFooterText(html);
-        }
+        // Si está en otra sección (Diseño, Portada, Biblioteca) o en otro tab (Título, Pie):
+        // 1. Guardar estado del editor actual si es que hay algo montado
+        syncEditorState();
+        
+        // 2. Cambiar de sección al cuerpo del email
+        setSettingsTab('content');
+        setEditorActiveTab('body');
+        
+        // 3. Añadir la imagen al final del estado del cuerpo
+        setCampPoemText(prev => {
+          const base = prev || '';
+          return base + imgHtml;
+        });
       }
     }
   };
@@ -4911,7 +4934,10 @@ export default function AdminDashboard() {
                         <button
                           key={tab.id}
                           type="button"
-                          onClick={() => setSettingsTab(tab.id as any)}
+                          onClick={() => {
+                            syncEditorState();
+                            setSettingsTab(tab.id as any);
+                          }}
                           className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 whitespace-nowrap ${
                             settingsTab === tab.id
                               ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'

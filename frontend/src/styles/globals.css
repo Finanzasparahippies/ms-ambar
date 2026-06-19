@@ -144,3 +144,39 @@ body.hide-navbar nav {
   pointer-events: none;
 }
 
+/* Nectar Labs Custom Scrollbars */
+.custom-scroll::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scroll::-webkit-scrollbar-track,
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb,
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(229, 169, 59, 0.2) !important;
+  border-radius: 99px;
+  transition: all 0.2s ease;
+}
+
+.custom-scroll::-webkit-scrollbar-thumb:hover,
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(229, 169, 59, 0.4) !important;
+}
+
+/* Hide native horizontal scrollbars for menus, tabs, and carousels */
+.overflow-x-auto.custom-scroll,
+.overflow-x-auto.custom-scrollbar {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.overflow-x-auto.custom-scroll::-webkit-scrollbar,
+.overflow-x-auto.custom-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+
