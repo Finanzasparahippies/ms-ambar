@@ -53,7 +53,11 @@ import {
   Tablet,
   Smartphone,
   Smile,
-  Camera
+  Camera,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify
 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -107,52 +111,77 @@ const getHoverColor = (hex: string | null | undefined): string => {
 const formatCampaignText = (text: string, mode: 'poem' | 'letter', alignment: string = 'center') => {
   if (!text) return '';
 
-  // 1. Convert block tags to line breaks, keeping inline style tags
-  let normalized = text
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/?[a-z0-9]+[^>]*>/gi, (match) => {
-      const tagName = match.replace(/[<\/>]/g, '').split(' ')[0].toLowerCase();
-      if (['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font', 'img'].includes(tagName)) {
-        return match;
-      }
-      if (['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'].includes(tagName)) {
-        return '\n';
-      }
-      return '';
-    });
-
-  // Normalize newlines
-  normalized = normalized.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-
-  // Split into paragraphs by double newlines or more
-  const paragraphs = normalized.split(/\n\n+/);
-
-  const alignStyle = `text-align: ${alignment};`;
-
-  if (mode === 'letter') {
+  // Si no hay etiquetas HTML de bloque al inicio, formateamos como texto plano
+  if (!text.includes('<p') && !text.includes('<div') && !text.includes('<h')) {
+    const paragraphs = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split(/\n\n+/);
+    const marginBottom = mode === 'poem' ? '24px' : '16px';
     return paragraphs
       .map(p => {
-        const lines = p.split('\n').map(line => line.trim()).filter(Boolean);
+        const lines = p.split('\n').map(l => l.trim()).filter(Boolean);
         if (lines.length === 0) return '';
-        const clean = lines.join(' ');
-        return `<p style="margin: 0 0 16px 0; line-height: 1.8; font-family: inherit; ${alignStyle}">${clean}</p>`;
-      })
-      .filter(Boolean)
-      .join('');
-  } else {
-    // poem mode
-    return paragraphs
-      .map(p => {
-        const lines = p.split('\n').map(line => line.trim()).filter(Boolean);
-        if (lines.length === 0) return '';
-        const clean = lines.join('<br/>');
-        return `<p style="margin: 0 0 24px 0; line-height: 1.8; font-family: inherit; ${alignStyle}">${clean}</p>`;
+        const content = mode === 'poem' ? lines.join('<br/>') : lines.join(' ');
+        return `<p style="margin: 0 0 ${marginBottom} 0; line-height: 1.8; font-family: inherit; text-align: ${alignment};">${content}</p>`;
       })
       .filter(Boolean)
       .join('');
   }
+
+  // Procesamos etiquetas block del HTML conservando y ajustando sus formatos y alineación
+  const blockRegex = /<(p|div|h2|h3|blockquote|li)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+
+  return text.replace(blockRegex, (match, tag, attrs, content) => {
+    const t = tag.toLowerCase();
+    
+    // Determinar la alineación de este bloque específico
+    let textAlign = alignment;
+    const styleMatch = attrs.match(/text-align\s*:\s*(left|center|right|justify)/i);
+    const alignMatch = attrs.match(/\balign\s*=\s*["']?(left|center|right|justify)/i);
+    
+    if (styleMatch) {
+      textAlign = styleMatch[1].toLowerCase();
+    } else if (alignMatch) {
+      textAlign = alignMatch[1].toLowerCase();
+    }
+
+    // Limpiar y conservar otros estilos inline (como color de texto o estilos de fuente)
+    let extraStyle = '';
+    const existingStyleMatch = attrs.match(/style\s*=\s*["']([^"']*)["']/i);
+    if (existingStyleMatch) {
+      extraStyle = existingStyleMatch[1]
+        .split(';')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s && !s.startsWith('text-align') && !s.startsWith('margin') && !s.startsWith('line-height') && !s.startsWith('font-family'))
+        .join('; ');
+      if (extraStyle && !extraStyle.endsWith(';')) {
+        extraStyle += ';';
+      }
+    }
+
+    // Estilos inline base compatibles con emails
+    let inlineStyle = `text-align: ${textAlign}; font-family: inherit; line-height: 1.8; `;
+    if (t === 'p' || t === 'div') {
+      const marginBottom = mode === 'poem' ? '24px' : '16px';
+      inlineStyle += `margin: 0 0 ${marginBottom} 0; `;
+    } else if (t === 'h2') {
+      inlineStyle += `font-size: 22px; font-weight: 900; margin: 30px 0 15px 0; color: inherit; font-style: italic; `;
+    } else if (t === 'h3') {
+      inlineStyle += `font-size: 18px; font-weight: 800; margin: 25px 0 12px 0; color: inherit; font-style: italic; `;
+    } else if (t === 'blockquote') {
+      inlineStyle += `margin: 20px 0; padding: 10px 20px; border-left: 3px solid #E5A93B; background: rgba(255,255,255,0.02); font-style: italic; `;
+    } else if (t === 'li') {
+      inlineStyle += `margin-bottom: 8px; `;
+    }
+
+    if (extraStyle) {
+      inlineStyle += ' ' + extraStyle;
+    }
+
+    if (mode === 'poem' && (t === 'p' || t === 'div')) {
+      content = content.replace(/\n/g, '<br/>');
+    }
+
+    return `<${t} style="${inlineStyle.trim()}">${content}</${t}>`;
+  });
 };
 
 export default function AdminDashboard() {
@@ -5082,6 +5111,41 @@ export default function AdminDashboard() {
                                 title="Subrayado"
                               >
                                 <Underline size={14} />
+                              </button>
+
+                              <div className="w-px h-6 bg-white/10 mx-1" />
+
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('justifyLeft')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Alinear Izquierda"
+                              >
+                                <AlignLeft size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('justifyCenter')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Alinear Centro"
+                              >
+                                <AlignCenter size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('justifyRight')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Alinear Derecha"
+                              >
+                                <AlignRight size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => executeCommand('justifyFull')}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Justificar"
+                              >
+                                <AlignJustify size={14} />
                               </button>
 
                               <div className="w-px h-6 bg-white/10 mx-1" />

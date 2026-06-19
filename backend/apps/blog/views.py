@@ -832,59 +832,84 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
     unsubscribe_url = f"{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub_email}"
     
     text_mode = custom_styles.get('text_mode', 'poem')
-    
     def format_campaign_text_python(text, mode, alignment='center'):
         if not text:
             return ""
         
-        # 1. Convert block tags to line breaks, keep inline tags
-        def replace_tag(match_obj):
-            tag_html = match_obj.group(0)
-            tag_name_match = re.match(r'</?([a-zA-Z0-9]+)', tag_html)
-            if tag_name_match:
-                tag_name = tag_name_match.group(1).lower()
-                if tag_name in ['strong', 'b', 'em', 'i', 'u', 'span', 'a', 'font', 'img']:
-                    return tag_html
-                if tag_name in ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li']:
-                    return '\n'
-            return ""
-
-        # Replace specific closing blocks and brs with newlines
-        normalized = re.sub(r'</p>', '\n\n', text, flags=re.IGNORECASE)
-        normalized = re.sub(r'</div>', '\n', normalized, flags=re.IGNORECASE)
-        normalized = re.sub(r'<br\s*/?>', '\n', normalized, flags=re.IGNORECASE)
-        
-        # Clean other tags
-        normalized = re.sub(r'</?[a-zA-Z0-9]+[^>]*>', replace_tag, normalized)
-        
-        # Normalize carriage returns
-        normalized = normalized.replace('\r\n', '\n').replace('\r', '\n')
-        
-        # Split by double/multiple newlines
-        paragraphs = re.split(r'\n\n+', normalized)
-        
-        align_style = f"text-align: {alignment};"
-        
-        formatted_paragraphs = []
-        if mode == 'letter':
+        # Si no hay etiquetas HTML de bloque, convertimos texto plano a párrafos
+        if '<p' not in text.lower() and '<div' not in text.lower() and '<h' not in text.lower():
+            paragraphs = re.split(r'\n\n+', text.replace('\r\n', '\n').replace('\r', '\n'))
+            margin_bottom = '24px' if mode == 'poem' else '16px'
+            formatted_paragraphs = []
             for p in paragraphs:
                 lines = [line.strip() for line in p.split('\n') if line.strip()]
                 if lines:
-                    clean_text = " ".join(lines)
+                    content = "<br/>".join(lines) if mode == 'poem' else " ".join(lines)
                     formatted_paragraphs.append(
-                        f"<p style='margin: 0 0 16px 0; line-height: 1.8; font-family: inherit; {align_style}'>{clean_text}</p>"
+                        f'<p style="margin: 0 0 {margin_bottom} 0; line-height: 1.8; font-family: inherit; text-align: {alignment};">{content}</p>'
                     )
-        else:
-            # poem mode
-            for p in paragraphs:
-                lines = [line.strip() for line in p.split('\n') if line.strip()]
-                if lines:
-                    stanza_html = "<br/>".join(lines)
-                    formatted_paragraphs.append(
-                        f"<p style='margin: 0 0 24px 0; line-height: 1.8; font-family: inherit; {align_style}'>{stanza_html}</p>"
-                    )
-                    
-        return "".join(formatted_paragraphs)
+            return "".join(formatted_paragraphs)
+        
+        # Si ya es HTML structured, procesamos sus etiquetas block
+        block_pattern = r'<(p|div|h2|h3|blockquote|li)\b([^>]*)>([\s\S]*?)<\/\1>'
+        
+        def replace_block(match):
+            tag = match.group(1).lower()
+            attrs = match.group(2)
+            content = match.group(3)
+            
+            # Determinar alineación
+            text_align = alignment
+            style_match = re.search(r'text-align\s*:\s*(left|center|right|justify)', attrs, re.IGNORECASE)
+            align_match = re.search(r'\balign\s*=\s*["\']?(left|center|right|justify)', attrs, re.IGNORECASE)
+            
+            if style_match:
+                text_align = style_match.group(1).lower()
+            elif align_match:
+                text_align = align_match.group(1).lower()
+                
+            # Limpiar otros estilos
+            extra_style = ""
+            existing_style_match = re.search(r'style\s*=\s*["\']([^"\']*)["\']', attrs, re.IGNORECASE)
+            if not existing_style_match:
+                # Try single quotes
+                existing_style_match = re.search(r"style\s*=\s*[']([^']*)[']", attrs, re.IGNORECASE)
+                
+            if existing_style_match:
+                styles = existing_style_match.group(1).split(';')
+                cleaned_styles = []
+                for s in styles:
+                    s_clean = s.strip()
+                    if s_clean and not any(s_clean.startswith(prefix) for prefix in ('text-align', 'margin', 'line-height', 'font-family')):
+                        cleaned_styles.append(s_clean)
+                extra_style = "; ".join(cleaned_styles)
+                if extra_style and not extra_style.endswith(';'):
+                    extra_style += ';'
+            
+            # Construir estilos compatibles
+            inline_style = f"text-align: {text_align}; font-family: inherit; line-height: 1.8; "
+            if tag in ('p', 'div'):
+                margin_bottom = '24px' if mode == 'poem' else '16px'
+                inline_style += f"margin: 0 0 {margin_bottom} 0; "
+            elif tag == 'h2':
+                inline_style += "font-size: 22px; font-weight: 900; margin: 30px 0 15px 0; color: inherit; font-style: italic; "
+            elif tag == 'h3':
+                inline_style += "font-size: 18px; font-weight: 800; margin: 25px 0 12px 0; color: inherit; font-style: italic; "
+            elif tag == 'blockquote':
+                inline_style += "margin: 20px 0; padding: 10px 20px; border-left: 3px solid #E5A93B; background: rgba(255,255,255,0.02); font-style: italic; "
+            elif tag == 'li':
+                inline_style += "margin-bottom: 8px; "
+                
+            if extra_style:
+                inline_style += " " + extra_style
+                
+            if mode == 'poem' and tag in ('p', 'div'):
+                # Conservamos saltos de línea como <br/>
+                content = content.replace('\n', '<br/>')
+                
+            return f'<{tag} style="{inline_style.strip()}">{content}</{tag}>'
+            
+        return re.sub(block_pattern, replace_block, text, flags=re.IGNORECASE)
 
     poem_paragraphs = format_campaign_text_python(campaign.poem_text, text_mode, body_alignment_desktop)
 
