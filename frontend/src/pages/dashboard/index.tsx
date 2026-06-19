@@ -416,6 +416,13 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleImageInsert = () => {
+    const url = prompt('Ingresa la URL de la imagen:');
+    if (url) {
+      insertImageAtCursor(url);
+    }
+  };
+
   const handleEditorPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
     const text = e.clipboardData.getData('text/plain');
@@ -5211,6 +5218,14 @@ export default function AdminDashboard() {
                                 title="Insertar Enlace"
                               >
                                 <Link2 size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={handleImageInsert}
+                                className="w-8 h-8 rounded-lg text-white/70 hover:text-white hover:bg-white/5 flex items-center justify-center"
+                                title="Insertar Imagen por URL"
+                              >
+                                <ImageIcon size={14} />
                               </button>
                               <div className="relative">
                                 <button
