@@ -127,7 +127,7 @@ const formatCampaignText = (text: string, mode: 'poem' | 'letter', alignment: st
   }
 
   // Procesamos etiquetas block del HTML conservando y ajustando sus formatos y alineación
-  const blockRegex = /<(p|div|h2|h3|blockquote|li)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+  const blockRegex = /<(p|div|h2|h3|blockquote|ul|ol|li)\b([^>]*)>([\s\S]*?)<\/\1>/gi;
 
   return text.replace(blockRegex, (match, tag, attrs, content) => {
     const t = tag.toLowerCase();
@@ -168,6 +168,10 @@ const formatCampaignText = (text: string, mode: 'poem' | 'letter', alignment: st
       inlineStyle += `font-size: 18px; font-weight: 800; margin: 25px 0 12px 0; color: inherit; font-style: italic; `;
     } else if (t === 'blockquote') {
       inlineStyle += `margin: 20px 0; padding: 10px 20px; border-left: 3px solid #E5A93B; background: rgba(255,255,255,0.02); font-style: italic; `;
+    } else if (t === 'ul') {
+      inlineStyle += `list-style-type: disc; padding-left: 20px; margin: 0 0 16px 0; `;
+    } else if (t === 'ol') {
+      inlineStyle += `list-style-type: decimal; padding-left: 20px; margin: 0 0 16px 0; `;
     } else if (t === 'li') {
       inlineStyle += `margin-bottom: 8px; `;
     }

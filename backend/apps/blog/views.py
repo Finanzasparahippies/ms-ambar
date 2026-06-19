@@ -851,7 +851,7 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
             return "".join(formatted_paragraphs)
         
         # Si ya es HTML structured, procesamos sus etiquetas block
-        block_pattern = r'<(p|div|h2|h3|blockquote|li)\b([^>]*)>([\s\S]*?)<\/\1>'
+        block_pattern = r'<(p|div|h2|h3|blockquote|ul|ol|li)\b([^>]*)>([\s\S]*?)<\/\1>'
         
         def replace_block(match):
             tag = match.group(1).lower()
@@ -897,6 +897,10 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
                 inline_style += "font-size: 18px; font-weight: 800; margin: 25px 0 12px 0; color: inherit; font-style: italic; "
             elif tag == 'blockquote':
                 inline_style += "margin: 20px 0; padding: 10px 20px; border-left: 3px solid #E5A93B; background: rgba(255,255,255,0.02); font-style: italic; "
+            elif tag == 'ul':
+                inline_style += "list-style-type: disc; padding-left: 20px; margin: 0 0 16px 0; "
+            elif tag == 'ol':
+                inline_style += "list-style-type: decimal; padding-left: 20px; margin: 0 0 16px 0; "
             elif tag == 'li':
                 inline_style += "margin-bottom: 8px; "
                 
