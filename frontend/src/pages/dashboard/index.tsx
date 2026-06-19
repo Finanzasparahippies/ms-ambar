@@ -493,6 +493,7 @@ export default function AdminDashboard() {
 
   // CSV Import State
   const [importCsvFile, setImportCsvFile] = useState<File | null>(null);
+  const [importCsvMarketingList, setImportCsvMarketingList] = useState<string>('');
   const [importCsvLoading, setImportCsvLoading] = useState(false);
   const [importCsvError, setImportCsvError] = useState<string | null>(null);
   const [importCsvSuccess, setImportCsvSuccess] = useState<string | null>(null);
@@ -1585,10 +1586,14 @@ export default function AdminDashboard() {
     };
     const formData = new FormData();
     formData.append('file', importCsvFile);
+    if (importCsvMarketingList) {
+      formData.append('marketing_list_id', importCsvMarketingList);
+    }
     try {
       const res = await axios.post(`${API_URL}/blog/subscribers/import_csv/`, formData, { headers });
       setImportCsvSuccess(res.data.message || 'Importación completada con éxito.');
       setImportCsvFile(null);
+      setImportCsvMarketingList('');
       const fileInput = document.getElementById('csv-file-input') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
       fetchDashboardData();
@@ -4428,6 +4433,22 @@ export default function AdminDashboard() {
                                 }}
                                 className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold file:bg-white/10 file:border-0 file:rounded-lg file:text-[#F4F6F0]/70 file:px-3 file:py-1 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-white/20"
                               />
+                            </div>
+
+                            <div className="space-y-1.5 flex-1 w-full">
+                              <label className="text-[9px] text-amber-honey uppercase tracking-widest font-bold block pl-1">🎯 Lista de Destino (Opcional)</label>
+                              <select
+                                value={importCsvMarketingList}
+                                onChange={e => setImportCsvMarketingList(e.target.value)}
+                                className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all [color-scheme:dark]"
+                              >
+                                <option value="">-- Importar a contactos generales --</option>
+                                {marketingLists.map((list: any) => (
+                                  <option key={list.id} value={list.id}>
+                                    {list.name} ({list.subscriber_count} suscriptores)
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                             <button
                               type="submit"

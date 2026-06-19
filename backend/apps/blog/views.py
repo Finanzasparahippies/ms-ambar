@@ -234,6 +234,15 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
         from django.db import transaction
         
         file = request.FILES.get('file')
+        marketing_list_id = request.data.get('marketing_list_id')
+        marketing_list = None
+        if marketing_list_id:
+            try:
+                from .models import MarketingList
+                marketing_list = MarketingList.objects.get(id=marketing_list_id)
+            except MarketingList.DoesNotExist:
+                return Response({"error": "La lista de marketing especificada no existe."}, status=status.HTTP_400_BAD_REQUEST)
+        
         if not file:
             logger.warning("[import_csv] No se proporcionó ningún archivo CSV.")
             return Response({"error": "No se proporcionó ningún archivo CSV."}, status=status.HTTP_400_BAD_REQUEST)
@@ -384,6 +393,12 @@ class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
                     logger.info(f"[import_csv] Actualizando en lote (bulk_update) {len(subscribers_to_update)} suscriptores existentes...")
                     fields_to_update = ['is_active', 'name', 'subscriber_id', 'api_subscription_id', 'tags', 'is_premium', 'created_at']
                     NewsletterSubscriber.objects.bulk_update(subscribers_to_update, fields_to_update)
+                
+                # Si se especificó una lista de marketing, asociamos los suscriptores a ella
+                if marketing_list:
+                    all_imported_subs = NewsletterSubscriber.objects.filter(email__in=emails_list)
+                    marketing_list.subscribers.add(*all_imported_subs)
+                    logger.info(f"[import_csv] Vinculados {all_imported_subs.count()} suscriptores a la lista: {marketing_list.name}")
             
             logger.info(f"[import_csv] Importación completada con éxito. Creados: {len(subscribers_to_create)}, Actualizados: {len(subscribers_to_update)}, Errores: {len(errors)}")
         except Exception as e:

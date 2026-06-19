@@ -817,6 +817,45 @@ class BlogAppTests(APITestCase):
         self.assertIn('target2@example.com', called_emails)
         self.assertNotIn('not_target@example.com', called_emails)
 
+    def test_import_csv_to_specific_marketing_list(self):
+        """Verify importing a CSV with a marketing_list_id associates imported subscribers to that list."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from apps.blog.models import MarketingList, NewsletterSubscriber
+        
+        self.client.force_authenticate(user=self.admin_user)
+        
+        # Create marketing list
+        marketing_list = MarketingList.objects.create(name="Lista Especial CSV", slug="lista-especial-csv")
+        
+        csv_content = (
+            "email,name,status\n"
+            "csv_import_1@example.com,Importado Uno,active\n"
+            "csv_import_2@example.com,Importado Dos,active\n"
+        ).encode('utf-8')
+        
+        uploaded_file = SimpleUploadedFile('subscribers.csv', csv_content, content_type='text/csv')
+        url = reverse('subscriber-import-csv')
+        
+        response = self.client.post(
+            url,
+            {
+                'file': uploaded_file,
+                'marketing_list_id': marketing_list.id
+            },
+            format='multipart'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("Se procesaron 2 suscriptores con éxito", response.data['message'])
+        
+        # Verify subscribers are associated with the marketing list
+        sub1 = NewsletterSubscriber.objects.get(email='csv_import_1@example.com')
+        sub2 = NewsletterSubscriber.objects.get(email='csv_import_2@example.com')
+        
+        self.assertIn(sub1, marketing_list.subscribers.all())
+        self.assertIn(sub2, marketing_list.subscribers.all())
+
+
 
 
 
