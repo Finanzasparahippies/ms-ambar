@@ -722,5 +722,101 @@ class BlogAppTests(APITestCase):
         # Verify rich text background-image: url() is resolved with base_url
         self.assertIn("background-image: url('http://dynamic-host:3080/media/styles/bg.png')", html)
 
+    def test_marketing_list_creation_on_event_save(self):
+        """Verify that saving an Event automatically creates its associated MarketingList."""
+        from apps.tickets.models import Event
+        import datetime
+        from django.utils import timezone
+        
+        event = Event.objects.create(
+            title="Concierto Íntimo de Otoño",
+            artist="Ms Ambar",
+            date=timezone.now() + datetime.timedelta(days=10),
+            venue_name="Foro Hilvana",
+            venue_address="Av. México 123",
+            is_active=True
+        )
+        
+        # Check that MarketingList was created and linked
+        self.assertTrue(hasattr(event, 'marketing_list'))
+        self.assertIsNotNone(event.marketing_list)
+        self.assertEqual(event.marketing_list.name, f"Compradores - {event.title}")
+        self.assertEqual(event.marketing_list.slug, f"compradores-concierto-intimo-de-otono-{event.id}")
+
+    def test_add_buyer_to_marketing_list(self):
+        """Verify utility adds subscriber to event marketing list dynamically."""
+        from apps.tickets.models import Event
+        from apps.blog.utils import add_buyer_to_event_marketing_list
+        from apps.blog.models import MarketingList, NewsletterSubscriber
+        import datetime
+        from django.utils import timezone
+        
+        event = Event.objects.create(
+            title="Concierto de Metal",
+            artist="Ms Ambar",
+            date=timezone.now() + datetime.timedelta(days=10),
+            venue_name="Foro Hilvana",
+            venue_address="Av. México 123",
+            is_active=True
+        )
+        
+        email = "buyer_rock@example.com"
+        add_buyer_to_event_marketing_list(email, event)
+        
+        # Verify subscriber exists
+        subscriber = NewsletterSubscriber.objects.get(email=email)
+        self.assertTrue(subscriber.is_active)
+        
+        # Verify subscriber is in list
+        marketing_list = MarketingList.objects.get(event=event)
+        self.assertIn(subscriber, marketing_list.subscribers.all())
+
+    @patch('apps.blog.views.send_failover_email')
+    def test_campaign_send_segmentation(self, mock_send_email):
+        """Verify sending a campaign with a marketing list targets only its subscribers."""
+        from apps.blog.models import MarketingList, NewsletterSubscriber, EmailCampaign
+        from apps.blog.views import send_campaign_emails
+        from apps.tickets.models import Event
+        import datetime
+        from django.utils import timezone
+        
+        # Create subscribers
+        sub1 = NewsletterSubscriber.objects.create(email='target1@example.com', is_active=True)
+        sub2 = NewsletterSubscriber.objects.create(email='target2@example.com', is_active=True)
+        sub3 = NewsletterSubscriber.objects.create(email='not_target@example.com', is_active=True)
+        
+        event = Event.objects.create(
+            title="Tour Acústico",
+            artist="Ms Ambar",
+            date=timezone.now() + datetime.timedelta(days=10),
+            venue_name="Foro Hilvana",
+            venue_address="Av. México 123",
+            is_active=True
+        )
+        
+        # MarketingList is automatically created. Add sub1 and sub2
+        m_list = event.marketing_list
+        m_list.subscribers.add(sub1, sub2)
+        
+        campaign = EmailCampaign.objects.create(
+            subject='Segmented Campaign',
+            poem_text='Letras privadas...',
+            template_type='minimalist',
+            marketing_list=m_list
+        )
+        
+        send_campaign_emails(campaign)
+        
+        campaign.refresh_from_db()
+        self.assertTrue(campaign.is_sent)
+        
+        # Should call send_failover_email only for sub1 and sub2
+        self.assertEqual(mock_send_email.call_count, 2)
+        called_emails = [call[0][3][0] for call in mock_send_email.call_args_list]
+        self.assertIn('target1@example.com', called_emails)
+        self.assertIn('target2@example.com', called_emails)
+        self.assertNotIn('not_target@example.com', called_emails)
+
+
 
 

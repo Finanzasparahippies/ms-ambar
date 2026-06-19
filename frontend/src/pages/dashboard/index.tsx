@@ -184,7 +184,9 @@ export default function AdminDashboard() {
 
   // Campaigns & Subscribers State
   const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers'>('campaigns');
+  const [marketingLists, setMarketingLists] = useState<any[]>([]);
+  const [campMarketingList, setCampMarketingList] = useState<string>('');
+  const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers' | 'lists'>('campaigns');
   const [subscribers, setSubscribers] = useState<any[]>([]);
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'content' | 'theme' | 'cover' | 'sections' | 'ctas' | 'library'>('content');
@@ -610,7 +612,7 @@ export default function AdminDashboard() {
           setActiveTab('orders');
         }
         // Staff/Admin Data Fetching
-        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes, siteSettingsRes] = await Promise.all([
+        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes, siteSettingsRes, marketingListsRes] = await Promise.all([
           axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
           axios.get(`${API_URL}/dashboard/system/`, { headers }).catch(err => {
             console.error("System metrics fetch failed, using fallback", err);
@@ -628,6 +630,7 @@ export default function AdminDashboard() {
           axios.get(`${API_URL}/blog/campaign-template-images/`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_URL}/tickets/events/`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_URL}/tickets/settings/`).catch(() => ({ data: null })),
+          axios.get(`${API_URL}/blog/marketing-lists/`, { headers }).catch(() => ({ data: [] })),
         ]);
 
         setStats(analyticsRes.data);
@@ -641,6 +644,7 @@ export default function AdminDashboard() {
         setSubscribers(Array.isArray(subscribersRes.data) ? subscribersRes.data : []);
         setTemplateImages(Array.isArray(templateImagesRes.data) ? templateImagesRes.data : []);
         setEvents(Array.isArray(eventsRes.data) ? eventsRes.data : []);
+        setMarketingLists(Array.isArray(marketingListsRes.data) ? marketingListsRes.data : []);
         if (siteSettingsRes?.data) {
           if (siteSettingsRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(siteSettingsRes.data.tickets_page_subtitle);
           if (siteSettingsRes.data.homepage_cta_text) setSiteSettingsCta(siteSettingsRes.data.homepage_cta_text);
@@ -1011,6 +1015,7 @@ export default function AdminDashboard() {
     setEditingCampaign(null);
     setCampId(null);
     setCampSubject('');
+    setCampMarketingList('');
     setCampSenderName('Ms Ambar');
     setCampPoemText('');
     setCampTemplateType('minimalist');
@@ -1124,6 +1129,7 @@ export default function AdminDashboard() {
     setEditingCampaign(campaign);
     setCampId(campaign.id);
     setCampSubject(campaign.subject);
+    setCampMarketingList(campaign.marketing_list || '');
     setCampPoemText(campaign.poem_text);
     setEditorActiveTab('body');
     setCampEmailTitle(campaign.email_title || '');
@@ -1257,6 +1263,9 @@ export default function AdminDashboard() {
 
     const formData = new FormData();
     formData.append('subject', campSubject);
+    if (campMarketingList) {
+      formData.append('marketing_list', campMarketingList);
+    }
     formData.append('poem_text', finalPoemText);
     formData.append('email_title', finalEmailTitle);
     formData.append('footer_text', finalFooterText);
@@ -4195,6 +4204,15 @@ export default function AdminDashboard() {
                       >
                         👥 Lista de Suscriptores ({subscribers.length})
                       </button>
+                      <button
+                        onClick={() => setCampaignSubTab('lists')}
+                        className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${campaignSubTab === 'lists'
+                          ? 'bg-amber-honey text-[#1E2B22] shadow-sm'
+                          : 'text-[#F4F6F0]/50 hover:text-[#F4F6F0] hover:bg-white/5'
+                          }`}
+                      >
+                        🎯 Listas de Contactos ({marketingLists.length})
+                      </button>
                     </div>
 
                     {campaignSubTab === 'campaigns' ? (
@@ -4204,6 +4222,10 @@ export default function AdminDashboard() {
                       >
                         <Plus size={14} /> Nueva Campaña
                       </button>
+                    ) : campaignSubTab === 'lists' ? (
+                      <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black pr-4">
+                        Segmentos de Marketing Activos
+                      </span>
                     ) : (
                       <span className="text-[10px] text-[#F4F6F0]/50 uppercase tracking-widest font-black pr-4">
                         Importación y Gestión de Contactos
@@ -4255,6 +4277,19 @@ export default function AdminDashboard() {
                                   <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-widest font-mono">
                                     Enviado: {new Date(c.sent_at).toLocaleDateString('es-MX')}
                                   </p>
+                                )}
+                                {c.marketing_list_name ? (
+                                  <div className="mt-2 flex items-center gap-1.5">
+                                    <span className="text-[8.5px] font-black uppercase tracking-widest text-amber-honey bg-amber-honey/10 border border-amber-honey/20 px-2 py-0.5 rounded-lg">
+                                      🎯 {c.marketing_list_name}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="mt-2 flex items-center gap-1.5">
+                                    <span className="text-[8.5px] font-black uppercase tracking-widest text-[#F4F6F0]/40 bg-white/5 border border-white/10 px-2 py-0.5 rounded-lg">
+                                      🌍 Todos los suscriptores
+                                    </span>
+                                  </div>
                                 )}
                               </div>
 
@@ -4435,6 +4470,59 @@ export default function AdminDashboard() {
                                 ))}
                               </tbody>
                             </table>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {campaignSubTab === 'lists' && (
+                    <div className="space-y-6">
+                      <div className="amber-glass border border-white/10 rounded-[2rem] p-6 overflow-hidden shadow-lg shadow-black/20">
+                        <div className="flex justify-between items-center mb-6">
+                          <div>
+                            <h4 className="text-sm font-black uppercase tracking-wider text-[#F4F6F0]">Listas de Contactos y Segmentación</h4>
+                            <p className="text-[9px] text-[#F4F6F0]/50 uppercase tracking-widest font-bold mt-1">
+                              Administra los segmentos de contactos a los que puedes dirigir tus campañas de marketing
+                            </p>
+                          </div>
+                        </div>
+
+                        {marketingLists.length === 0 ? (
+                          <div className="p-12 text-center text-xs text-[#F4F6F0]/40 italic">
+                            No hay listas de marketing registradas en el sistema.
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {marketingLists.map((list: any) => (
+                              <div key={list.id} className="p-6 rounded-[2rem] border border-white/10 bg-white/5 space-y-4 hover:border-amber-honey/40 transition-all flex flex-col justify-between shadow-lg shadow-black/20">
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-start">
+                                    <span className="text-[8.5px] font-black uppercase tracking-widest text-amber-honey bg-amber-honey/10 border border-amber-honey/20 px-2.5 py-1 rounded-lg">
+                                      List ID: {list.id}
+                                    </span>
+                                    <span className="text-[8.5px] font-black uppercase tracking-widest text-[#F4F6F0]/50 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">
+                                      👥 {list.subscriber_count} suscriptores
+                                    </span>
+                                  </div>
+                                  <h4 className="text-base font-black text-[#F4F6F0] leading-snug">{list.name}</h4>
+                                  <p className="text-xs text-[#F4F6F0]/70 min-h-[40px] italic">
+                                    {list.description || 'Sin descripción.'}
+                                  </p>
+                                  {list.event_title && (
+                                    <div className="pt-2 border-t border-white/5 space-y-1">
+                                      <span className="text-[7.5px] font-black uppercase tracking-wider text-[#F4F6F0]/40 block">Evento Vinculado</span>
+                                      <span className="text-[10px] font-bold text-amber-honey/90 flex items-center gap-1.5">
+                                        🎟️ {list.event_title}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="text-[8.5px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider">
+                                    Creado: {new Date(list.created_at).toLocaleDateString('es-MX')}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -4822,6 +4910,25 @@ export default function AdminDashboard() {
                                 className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-medium focus:outline-none focus:border-amber-honey transition-all placeholder:text-[#F4F6F0]/30"
                               />
                             </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-[9px] text-amber-honey uppercase tracking-widest font-black block">🎯 Lista de Destinatarios (Segmentación)</label>
+                            <select
+                              value={campMarketingList}
+                              onChange={e => setCampMarketingList(e.target.value)}
+                              className="w-full bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-4 py-3 text-xs font-semibold focus:outline-none focus:border-amber-honey transition-all [color-scheme:dark]"
+                            >
+                              <option value="">-- Enviar a todos los suscriptores activos --</option>
+                              {marketingLists.map((list: any) => (
+                                <option key={list.id} value={list.id}>
+                                  {list.name} ({list.subscriber_count} suscriptores) {list.event_title ? `[Evento: ${list.event_title}]` : ''}
+                                </option>
+                              ))}
+                            </select>
+                            <p className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">
+                              Selecciona una lista para dirigir la campaña solo a esos contactos. Si no seleccionas ninguna, se enviará a todos los suscriptores activos.
+                            </p>
                           </div>
 
                           <div className="space-y-2">

@@ -82,3 +82,32 @@ def send_failover_email(subject, html_content, text_content, recipient_list, rep
         logger.error(f"All email providers failed to send email to {recipients_log}")
         raise last_error
     return None
+
+def add_buyer_to_event_marketing_list(email, event):
+    from apps.blog.models import NewsletterSubscriber, MarketingList
+    from django.utils.text import slugify
+
+    # 1. Obtener o crear suscriptor de newsletter
+    subscriber, created = NewsletterSubscriber.objects.get_or_create(
+        email=email,
+        defaults={
+            'is_active': True,
+            'tags': 'comprador',
+        }
+    )
+
+    # 2. Obtener o crear la lista de marketing asociada al evento
+    event_slug = slugify(event.title)
+    list_name = f"Compradores - {event.title}"
+    marketing_list, created_list = MarketingList.objects.get_or_create(
+        event=event,
+        defaults={
+            'name': list_name,
+            'description': f"Contactos que adquirieron boletos para el evento: {event.title}",
+            'slug': f"compradores-{event_slug}-{event.id}"
+        }
+    )
+
+    # 3. Vincular el suscriptor a la lista de marketing
+    marketing_list.subscribers.add(subscriber)
+    logger.info(f"Subscriber {email} added to Marketing List: {list_name}")

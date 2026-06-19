@@ -314,6 +314,13 @@ class TicketViewSet(viewsets.ModelViewSet):
                     )
                     created_mock_tickets.append(ticket)
 
+            # Registrar al comprador en la lista de marketing del evento
+            try:
+                from apps.blog.utils import add_buyer_to_event_marketing_list
+                add_buyer_to_event_marketing_list(email, event)
+            except Exception as e:
+                delivery_logger.warning(f"Error registering mock buyer to marketing list: {e}")
+
             delivery_logger.info(
                 f"[Checkout/Mock] Creados {len(created_mock_tickets)} boleto(s) para {email}. "
                 f"Iniciando entrega SMTP..."

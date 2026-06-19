@@ -50,6 +50,24 @@ class NewsletterSubscriber(models.Model):
     def __str__(self):
         return self.email
 
+class MarketingList(models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, default='')
+    slug = models.SlugField(unique=True, blank=True)
+    # Evitar importación circular usando la cadena de app y modelo
+    event = models.OneToOneField('tickets.Event', on_delete=models.SET_NULL, null=True, blank=True, related_name='marketing_list')
+    subscribers = models.ManyToManyField(NewsletterSubscriber, related_name='marketing_lists', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
 class SESIdentityVerification(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending DNS Setup'),
@@ -88,6 +106,7 @@ class EmailCampaign(models.Model):
         ('mist', 'Mystic Mist'),
     ]
 
+    marketing_list = models.ForeignKey(MarketingList, on_delete=models.SET_NULL, null=True, blank=True, related_name='campaigns')
     subject = models.CharField(max_length=255)
     poem_text = models.TextField()
     template_type = models.CharField(max_length=50, choices=TEMPLATE_CHOICES, default='minimalist')

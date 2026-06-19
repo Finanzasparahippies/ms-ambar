@@ -4,8 +4,8 @@ from rest_framework.response import Response
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
-from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification, EmailCampaign, CampaignTemplateImage
-from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer, EmailCampaignSerializer, CampaignTemplateImageSerializer
+from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification, EmailCampaign, CampaignTemplateImage, MarketingList
+from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer, EmailCampaignSerializer, CampaignTemplateImageSerializer, MarketingListSerializer
 from .utils import send_failover_email
 import logging
 import requests
@@ -1079,7 +1079,11 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
 
 
 def send_campaign_emails(campaign, base_url=None):
-    subscribers = NewsletterSubscriber.objects.filter(is_active=True)
+    if campaign.marketing_list:
+        subscribers = campaign.marketing_list.subscribers.filter(is_active=True)
+    else:
+        subscribers = NewsletterSubscriber.objects.filter(is_active=True)
+
     if not subscribers.exists():
         campaign.is_sent = True
         campaign.sent_at = timezone.now()
@@ -1097,6 +1101,12 @@ def send_campaign_emails(campaign, base_url=None):
             send_failover_email(campaign.subject, html_content, text_content, [sub.email])
         except Exception as e:
             logger.error(f"Error sending campaign email to {sub.email} via all failover providers: {e}")
+
+
+class MarketingListViewSet(viewsets.ModelViewSet):
+    queryset = MarketingList.objects.all().order_by('-created_at')
+    serializer_class = MarketingListSerializer
+    permission_classes = [permissions.IsAdminUser]
 
 
 class EmailCampaignViewSet(viewsets.ModelViewSet):

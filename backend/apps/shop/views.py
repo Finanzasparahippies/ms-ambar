@@ -198,6 +198,13 @@ def handle_successful_payment(session):
                 except Exception as e:
                     logger.error(f"Error entregando boleto general: {e}")
 
+        # Registrar al comprador en la lista de marketing del evento
+        try:
+            from apps.blog.utils import add_buyer_to_event_marketing_list
+            add_buyer_to_event_marketing_list(user_email, event)
+        except Exception as e:
+            logger.warning(f"Error registering real buyer to marketing list: {e}")
+
     # --- CASO B: COMPRA DE MERCHANDISE / TIENDA ---
     elif metadata.get('type') == 'shop_purchase':
         order_id = metadata.get('order_id')

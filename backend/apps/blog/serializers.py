@@ -17,7 +17,7 @@ class NewsletterSubscriberSerializer(serializers.ModelSerializer):
         model = NewsletterSubscriber
         fields = '__all__'
 
-from .models import SESIdentityVerification, EmailCampaign, CampaignTemplateImage
+from .models import SESIdentityVerification, EmailCampaign, CampaignTemplateImage, MarketingList
 
 class SESIdentityVerificationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -29,7 +29,17 @@ class CampaignTemplateImageSerializer(serializers.ModelSerializer):
         model = CampaignTemplateImage
         fields = '__all__'
 
+class MarketingListSerializer(serializers.ModelSerializer):
+    subscriber_count = serializers.IntegerField(source='subscribers.count', read_only=True)
+    event_title = serializers.ReadOnlyField(source='event.title')
+
+    class Meta:
+        model = MarketingList
+        fields = '__all__'
+
 class EmailCampaignSerializer(serializers.ModelSerializer):
+    marketing_list_name = serializers.ReadOnlyField(source='marketing_list.name')
+
     class Meta:
         model = EmailCampaign
         fields = '__all__'

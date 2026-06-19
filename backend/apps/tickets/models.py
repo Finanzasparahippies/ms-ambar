@@ -253,6 +253,23 @@ class Event(models.Model):
         if updated:
             super().save(update_fields=['stripe_product_id', 'stripe_price_id'])
 
+        # Asegurar creación de la MarketingList para el evento
+        try:
+            from apps.blog.models import MarketingList
+            from django.utils.text import slugify
+            event_slug = slugify(self.title)
+            MarketingList.objects.get_or_create(
+                event=self,
+                defaults={
+                    'name': f"Compradores - {self.title}",
+                    'description': f"Contactos que adquirieron boletos para el evento: {self.title}",
+                    'slug': f"compradores-{event_slug}-{self.id}"
+                }
+            )
+        except Exception as e:
+            import logging
+            logging.getLogger("apps").warning(f"Error creating MarketingList for Event {self.title}: {e}")
+
     def __str__(self):
         return f"{self.title} - {self.date.strftime('%Y-%m-%d')}"
 
