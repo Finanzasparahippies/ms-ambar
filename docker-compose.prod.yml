@@ -9,6 +9,7 @@ services:
       - static_volume:/staticfiles
       - media_volume:/media_files
     environment:
+      - PYTHONUNBUFFERED=1
       - STATIC_ROOT=/staticfiles
       - MEDIA_ROOT=/media_files
     env_file:
