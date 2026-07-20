@@ -137,6 +137,7 @@ export default function DesignerPage() {
   const handleTheaterFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!theaterForm.name.trim()) { setTheaterModalError('El nombre del teatro es obligatorio.'); return; }
+    const finalLocation = theaterForm.location.trim() || 'Ubicación por definir';
     setTheaterModalLoading(true);
     setTheaterModalError(null);
     try {
@@ -145,13 +146,13 @@ export default function DesignerPage() {
         response = await fetch(`${apiUrl}/tickets/theaters/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: theaterForm.name, location: theaterForm.location, layout: { seats: [], map_elements: [] } }),
+          body: JSON.stringify({ name: theaterForm.name, location: finalLocation, layout: { seats: [], map_elements: [] } }),
         });
       } else {
         response = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: theaterForm.name, location: theaterForm.location }),
+          body: JSON.stringify({ name: theaterForm.name, location: finalLocation }),
         });
       }
       if (!response.ok) throw new Error(`Error ${response.status}`);

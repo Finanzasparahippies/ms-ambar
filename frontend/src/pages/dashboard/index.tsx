@@ -1690,20 +1690,21 @@ export default function AdminDashboard() {
   const handleTheaterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!theaterName.trim()) { setTheaterErrorMsg('El nombre del teatro es obligatorio.'); return; }
+    const finalLocation = theaterLocation.trim() || 'Ubicación por definir';
     setTheaterLoading(true);
     setTheaterErrorMsg(null);
     try {
       if (editingTheater) {
-        await axios.patch(`${API_URL}/tickets/theaters/${editingTheater.id}/`, { name: theaterName, location: theaterLocation });
+        await axios.patch(`${API_URL}/tickets/theaters/${editingTheater.id}/`, { name: theaterName, location: finalLocation });
         setTheaterSuccessMsg('¡Teatro actualizado con éxito!');
       } else {
-        await axios.post(`${API_URL}/tickets/theaters/`, { name: theaterName, location: theaterLocation, layout: { seats: [], map_elements: [] } });
+        await axios.post(`${API_URL}/tickets/theaters/`, { name: theaterName, location: finalLocation, layout: { seats: [], map_elements: [] } });
         setTheaterSuccessMsg('¡Teatro creado! Ábrelo en Nectar Studio para diseñar su planta.');
       }
       setIsTheaterModalOpen(false);
       fetchDashboardData();
     } catch (err: any) {
-      setTheaterErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al procesar el teatro.');
+      setTheaterErrorMsg(err.response?.data ? (typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : String(err.response.data)) : 'Error al procesar el teatro.');
     } finally {
       setTheaterLoading(false);
     }

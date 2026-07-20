@@ -4,7 +4,7 @@ import uuid
 
 class Theater(models.Model):
     name = models.CharField(max_length=255)
-    location = models.CharField(max_length=255)
+    location = models.CharField(max_length=255, blank=True, default='')
     layout = models.JSONField(help_text="JSON representation of sections and rows", null=True, blank=True, default=dict)
 
     def __str__(self):
@@ -139,8 +139,8 @@ class Event(models.Model):
         default=120, 
         help_text="Duración estimada del evento en minutos. Útil para calcular la hora de finalización."
     )
-    venue_name = models.CharField(max_length=255)
-    venue_address = models.CharField(max_length=255)
+    venue_name = models.CharField(max_length=255, blank=True, default='')
+    venue_address = models.CharField(max_length=255, blank=True, default='')
     theater = models.ForeignKey(Theater, on_delete=models.CASCADE, null=True, blank=True, related_name='events')
     image = models.ImageField(upload_to='events/', null=True, blank=True)
     flyer = models.ImageField(
@@ -165,6 +165,11 @@ class Event(models.Model):
     stripe_price_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del precio en Stripe (solo para Meet & Greet o general)")
 
     def save(self, *args, **kwargs):
+        if self.theater:
+            if not self.venue_name:
+                self.venue_name = self.theater.name
+            if not self.venue_address:
+                self.venue_address = self.theater.location
         super().save(*args, **kwargs)
 
         from django.conf import settings
