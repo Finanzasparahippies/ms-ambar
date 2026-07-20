@@ -3966,41 +3966,86 @@ export default function AdminDashboard() {
                         {/* Pricing Configuration */}
                         <div className="grid grid-cols-2 gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
                           {eventType === 'concert' ? (
-                            <div className="space-y-1 col-span-2">
-                              <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Multiplicador de Precios *</label>
-                              <input
-                                type="number" step="0.01" min="0.1" required value={eventPriceMultiplier} onChange={(e) => setEventPriceMultiplier(e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
-                              />
-                              <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Multiplica los precios base de los asientos del teatro.</span>
-                            </div>
-                          ) : null}
+                            <>
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Precio Base del Boleto ($ MXN) *</label>
+                                <input
+                                  type="number" step="10" min="0" required
+                                  value={
+                                    (() => {
+                                      const minSeat = (() => {
+                                        const t = theaters.find((x: any) => x.id?.toString() === eventTheater?.toString());
+                                        if (!t || !t.seats || t.seats.length === 0) return 1000;
+                                        const prices = t.seats.map((s: any) => Number(s.base_price || 1000));
+                                        return Math.min(...prices) || 1000;
+                                      })();
+                                      return Math.round(minSeat * parseFloat(eventPriceMultiplier || '1.0'));
+                                    })()
+                                  }
+                                  onChange={(e) => {
+                                    const desired = parseFloat(e.target.value) || 0;
+                                    const minSeat = (() => {
+                                      const t = theaters.find((x: any) => x.id?.toString() === eventTheater?.toString());
+                                      if (!t || !t.seats || t.seats.length === 0) return 1000;
+                                      const prices = t.seats.map((s: any) => Number(s.base_price || 1000));
+                                      return Math.min(...prices) || 1000;
+                                    })();
+                                    const newMult = (desired / minSeat).toFixed(2);
+                                    setEventPriceMultiplier(newMult);
+                                  }}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Precio base estimado por entrada.</span>
+                              </div>
 
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">
-                              {eventType === 'concert' ? 'Precio Meet & Greet Upgrade' : 'Precio del Boleto *'}
-                            </label>
-                            <input
-                              type="number" step="0.01" min="0" required value={eventMgPrice} onChange={(e) => setEventMgPrice(e.target.value)}
-                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
-                            />
-                            <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">
-                              {eventType === 'concert' ? 'Dejar en 0 si no se ofrece upgrade.' : 'Precio por acceso de convivencia.'}
-                            </span>
-                          </div>
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Multiplicador de Precios</label>
+                                <input
+                                  type="number" step="0.01" min="0.1" required value={eventPriceMultiplier} onChange={(e) => setEventPriceMultiplier(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Factor de escala sobre mapa del teatro.</span>
+                              </div>
 
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">
-                              {eventType === 'concert' ? 'Límite de upgrades M&G' : 'Límite de Boletos *'}
-                            </label>
-                            <input
-                              type="number" min="0" required value={eventMgLimit} onChange={(e) => setEventMgLimit(e.target.value)}
-                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
-                            />
-                            <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">
-                              {eventType === 'concert' ? 'Capacidad máxima de upgrades.' : 'Límite total de ventas para la convivencia.'}
-                            </span>
-                          </div>
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Upgrade VIP Meet & Greet ($ MXN)</label>
+                                <input
+                                  type="number" step="10" min="0" required value={eventMgPrice} onChange={(e) => setEventMgPrice(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Dejar en 0 si no se ofrece upgrade.</span>
+                              </div>
+
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Límite Upgrades VIP M&G</label>
+                                <input
+                                  type="number" min="0" required value={eventMgLimit} onChange={(e) => setEventMgLimit(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Capacidad máxima de pases VIP.</span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Precio del Boleto ($ MXN) *</label>
+                                <input
+                                  type="number" step="10" min="0" required value={eventMgPrice} onChange={(e) => setEventMgPrice(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Precio por acceso de convivencia.</span>
+                              </div>
+
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Límite de Boletos (Capacidad) *</label>
+                                <input
+                                  type="number" min="0" required value={eventMgLimit} onChange={(e) => setEventMgLimit(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Total de accesos disponibles.</span>
+                              </div>
+                            </>
+                          )}
                         </div>
 
                         {/* Flyer Upload */}
