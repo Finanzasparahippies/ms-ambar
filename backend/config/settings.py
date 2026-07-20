@@ -189,9 +189,26 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3000",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
+    "http://localhost",
+    "http://127.0.0.1",
     "https://*.github.dev",
     "https://*.app.github.dev",
 ]
+
+frontend_url = env("FRONTEND_URL", default="")
+if frontend_url and frontend_url not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(frontend_url)
+
+for host in ALLOWED_HOSTS:
+    if host and host not in ['*', 'localhost', '127.0.0.1', 'backend', 'backend-staging', 'nginx-staging']:
+        if not host.startswith("http://") and not host.startswith("https://"):
+            CSRF_TRUSTED_ORIGINS.append(f"https://{host}")
+            CSRF_TRUSTED_ORIGINS.append(f"http://{host}")
+
+extra_csrf = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+for origin in extra_csrf:
+    if origin and origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 CORS_EXPOSE_HEADERS = ['Content-Type', 'X-CSRFToken']
 CORS_ALLOW_METHODS = [
