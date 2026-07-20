@@ -317,31 +317,44 @@ const TourPage = () => {
       setIsSubmitting(false);
     }
   };
+  const availableSeatsCount = React.useMemo(() => {
+    if (!seats || seats.length === 0) return 0;
+    return seats.filter(s => s.status === 'available').length;
+  }, [seats]);
+
+  const totalSeatsCount = React.useMemo(() => {
+    return seats ? seats.length : 0;
+  }, [seats]);
+
+  const occupancyPercentage = React.useMemo(() => {
+    if (totalSeatsCount === 0) return 0;
+    return Math.round(((totalSeatsCount - availableSeatsCount) / totalSeatsCount) * 100);
+  }, [availableSeatsCount, totalSeatsCount]);
 
   return (
-    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen">
+    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen pb-24 lg:pb-12">
       <Head>
         <title>Ms Ambar | Accesos Oficiales 2026</title>
         <meta name="description" content="MS Ambar Accesos Oficiales 2026. Reserva tus entradas y vive la experiencia acústico-visual de vanguardia." />
       </Head>
 
       {/* ─── Header Section ─── */}
-      <section className="pt-10 pb-16 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative overflow-hidden">
+      <section className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative overflow-hidden">
         <div className="absolute top-[-10%] left-[-15%] w-[45%] h-[45%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-4xl mx-auto space-y-4">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center justify-center gap-2 bg-amber-honey/10 border border-amber-honey/20 px-4 py-2 rounded-full w-fit mx-auto"
           >
             <Sparkles size={12} className="text-amber-honey animate-spin" />
-            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">Experiencia Inmersiva</span>
+            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">Reserva Oficial</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-6xl md:text-8xl font-black tracking-tighter uppercase italic leading-tight px-4 md:px-8 py-2 md:py-4"
+            className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase italic leading-tight px-2 py-2"
           >
             ACCESOS <span className="text-glow text-gradient bg-gradient-to-r from-amber-400 via-amber-honey to-amber-700 bg-clip-text text-transparent px-2">OFICIALES 2026</span>
           </motion.h1>
@@ -349,7 +362,7 @@ const TourPage = () => {
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-nature-night/70 dark:text-[#F4F6F0]/70 text-xs md:text-sm uppercase tracking-[0.4em] max-w-2xl mx-auto leading-relaxed"
+            className="text-nature-night/70 dark:text-[#F4F6F0]/70 text-xs md:text-sm uppercase tracking-[0.35em] max-w-2xl mx-auto leading-relaxed"
           >
             {pageSubtitle}
           </motion.p>
@@ -357,7 +370,7 @@ const TourPage = () => {
       </section>
 
       {/* ─── Main Reservation Section ─── */}
-      <section className="pb-32 max-w-[1600px] mx-auto px-6 md:px-10">
+      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
         <TourTimeline
           events={events}
           onEventSelect={(event) => {
@@ -371,248 +384,102 @@ const TourPage = () => {
           currentEvent={currentEvent}
         />
 
-        <div className="grid lg:grid-cols-12 gap-12 xl:gap-20 mt-12 items-start">
+        {/* Side-by-Side Main Container (Seating Canvas Left, Cart Summary Right) */}
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-12 mt-10 items-start">
 
-          {/* Left Column: Event details + Flyer */}
-          <div className="lg:col-span-4 space-y-8">
-            <header className="mb-10 text-left">
-              <motion.h2
-                key={currentEvent?.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-4xl md:text-5xl font-black tracking-tight mb-8 uppercase italic leading-tight"
-              >
-                {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
-              </motion.h2>
-              <div className="flex flex-col gap-4 text-xs uppercase tracking-widest font-black">
-                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
-                  <MapPin size={14} className="text-amber-honey" />
-                  <span>{currentEvent && currentEvent.theater_name ? currentEvent.theater_name : isMeetGreet ? 'Meet & Greet' : 'Cargando Recinto...'}</span>
+          {/* ══════ LEFT COLUMN: Event Details + Seating Chart (col-span-7/8) ══════ */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6">
+
+            {/* Event Info Card & Remaining Tickets Counter Header */}
+            <div className="p-6 md:p-8 rounded-[2.5rem] bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 backdrop-blur-md space-y-6">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <motion.h2
+                    key={currentEvent?.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase italic leading-tight"
+                  >
+                    {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
+                  </motion.h2>
+                  <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-widest font-black mt-3">
+                    <div className="flex items-center gap-2 bg-nature-night/5 dark:bg-white/5 border border-nature-night/10 dark:border-white/10 px-4 py-2 rounded-full">
+                      <MapPin size={13} className="text-amber-honey" />
+                      <span>{currentEvent?.theater_name || (isMeetGreet ? 'Meet & Greet' : 'Cargando Recinto...')}</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-nature-night/5 dark:bg-white/5 border border-nature-night/10 dark:border-white/10 px-4 py-2 rounded-full">
+                      <Calendar size={13} className="text-amber-honey" />
+                      <span>{currentEvent?.date ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 px-6 py-3 rounded-full backdrop-blur-md w-fit">
-                  <Calendar size={14} className="text-amber-honey" />
-                  <span>{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
-                </div>
-                {isCurrentEventPast && (
-                  <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-5 py-2.5 rounded-full w-fit">
-                    <CalendarX size={14} className="text-amber-600 dark:text-amber-400" />
-                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">Evento Concluido (Modo Informativo)</span>
+
+                {/* Remaining Tickets Counter Badge */}
+                {!isMeetGreet && totalSeatsCount > 0 && (
+                  <div className="flex flex-col items-start md:items-end gap-1.5 p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-honey">Disponibilidad en Vivo</span>
+                    </div>
+                    <p className="text-xl font-black uppercase text-nature-night dark:text-white leading-none">
+                      {availableSeatsCount} <span className="text-xs text-nature-night/50 dark:text-white/50 font-semibold">/ {totalSeatsCount} Butacas</span>
+                    </p>
+                    <div className="w-full bg-black/20 rounded-full h-1.5 overflow-hidden mt-1">
+                      <div className="bg-gradient-to-r from-amber-400 to-emerald-400 h-full rounded-full transition-all duration-700" style={{ width: `${100 - occupancyPercentage}%` }} />
+                    </div>
+                  </div>
+                )}
+
+                {isMeetGreet && (
+                  <div className="flex flex-col items-start md:items-end gap-1.5 p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Star size={14} className="text-amber-honey fill-current animate-pulse" />
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-honey">Pases de Convivencia</span>
+                    </div>
+                    <p className="text-xl font-black uppercase text-nature-night dark:text-white leading-none">
+                      {currentEvent?.mg_available || 0} <span className="text-xs text-nature-night/50 dark:text-white/50 font-semibold">Disponibles</span>
+                    </p>
                   </div>
                 )}
               </div>
-            </header>
 
-            <AnimatePresence mode="wait">
-              {currentEvent?.flyer_url && (
-                <motion.div
-                  key={`flyer-${currentEvent.id}`}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-xl shadow-amber-honey/5 w-full aspect-[3/4]"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-nature-night/20 to-transparent z-10 pointer-events-none" />
-                  <img
-                    src={currentEvent.flyer_url}
-                    alt={`Flyer oficial: ${currentEvent.title}`}
-                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute bottom-6 left-8 z-20">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
-                    <h3 className="text-xl font-black text-white uppercase italic">{currentEvent.title}</h3>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {isMeetGreet && (
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-6"
-              >
-                <div className="flex items-center gap-3 text-amber-honey">
-                  <Star className="fill-current animate-pulse" size={20} />
-                  <h3 className="text-lg font-black uppercase tracking-wider">Detalles de la Convivencia</h3>
+              {isCurrentEventPast && (
+                <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-5 py-2.5 rounded-full w-fit">
+                  <CalendarX size={14} className="text-amber-600 dark:text-amber-400" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">Evento Concluido (Modo Informativo)</span>
                 </div>
-                <p className="text-xs leading-relaxed opacity-80">
-                  Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales con la artista.
-                </p>
-                <ul className="space-y-3 text-[10px] font-bold uppercase tracking-wider opacity-75">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-amber-honey" />
-                    Acceso exclusivo al venue de convivencia
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-amber-honey" />
-                    Firma de autógrafos y posters de colección
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle size={14} className="text-amber-honey" />
-                    Fotografía digital oficial individual
-                  </li>
-                </ul>
-              </motion.div>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* Right Column: Booking Panel + Seating Chart */}
-          <div className="lg:col-span-8 flex flex-col gap-8">
-            <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-xl shadow-nature-night/5 p-8 rounded-[3rem]">
-              <div className="text-center mb-8 border-b border-nature-night/10 pb-6">
-                <h3 className="text-2xl font-black uppercase tracking-wider mb-2">Reserva Digital</h3>
-                <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
-              </div>
-
-              {isCurrentEventPast ? (
-                <div className="my-6 p-8 rounded-[2.5rem] bg-nature-night/[0.03] border border-amber-honey/30 text-center space-y-4">
-                  <div className="w-14 h-14 rounded-full bg-amber-honey/15 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg">
-                    <CalendarX size={24} />
-                  </div>
-                  <div className="space-y-1">
-                    <h4 className="text-xl font-black uppercase tracking-wider text-nature-night">Venta Cerrada</h4>
-                    <p className="text-xs text-nature-night/70 leading-relaxed max-w-md mx-auto font-medium">
-                      Este evento ya ha finalizado. La venta de accesos se encuentra cerrada y la información se presenta únicamente de carácter informativo.
-                    </p>
-                  </div>
-                  <div className="pt-2">
-                    <span className="inline-block px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-honey/20 text-nature-night border border-amber-honey/40">
-                      Fecha del Evento: {new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+            {/* Seating Chart Interactive Canvas Container */}
+            {!isMeetGreet && (
+              <div className="relative group rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
+                {/* Header Toolbar Legend for Canvas */}
+                <div className="px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] font-black uppercase tracking-wider text-white/70">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30" /> Disponible
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-full bg-white/20 border border-white/10" /> Reservado
                     </span>
                   </div>
-                </div>
-              ) : (
-                <>
-                  {isMeetGreet && (
-                    <div className="mb-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
-                      <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
-                      <div className="flex items-center justify-center gap-6">
-                        <button
-                          onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
-                          className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
-                        <button
-                          onClick={() => setMgQuantity(mgQuantity + 1)}
-                          className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
-                        <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isMeetGreet && (
-                    <div
-                      onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
-                      className={cn(
-                        "mb-6 p-5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
-                        wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
-                      )}
-                    >
-                      <div className="flex items-center gap-4 relative z-10">
-                        <div className={cn(
-                          "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500",
-                          wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
-                        )}>
-                          <Star size={20} fill="currentColor" />
-                        </div>
-                        <div>
-                          <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet</h4>
-                          <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
-                            {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
-                          </p>
-                        </div>
-                      </div>
-                      {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
-                        {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
-                      </span>}
-                    </div>
-                  )}
-
-                  <div className="space-y-3 mb-6 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                    {isMeetGreet ? (
-                      <div className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10">
-                        <div>
-                          <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Meet & Greet</p>
-                          <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
-                        </div>
-                        <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
-                      </div>
-                    ) : (
-                      <>
-                        <AnimatePresence mode="popLayout">
-                          {selectedSeats.map(seat => (
-                            <motion.div
-                              key={seat.id}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, scale: 0.8 }}
-                              className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10"
-                            >
-                              <div>
-                                <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
-                                <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
-                              </div>
-                              <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-
-                        {selectedSeats.length === 0 && (
-                          <div className="py-12 text-center border border-dashed border-nature-night/20 rounded-2xl opacity-40">
-                            <Ticket className="mx-auto mb-2 text-nature-night/40" size={32} />
-                            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-nature-night/40">Elige un asiento en el mapa</p>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {baseTotal > 0 ? (
-                    <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
-                  ) : (
-                    <div className="pt-6 border-t border-nature-night/10 mb-6">
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-2">Total</p>
-                          <p className="text-4xl font-black leading-none text-amber-honey">$0 MXN</p>
-                        </div>
-                        <Users size={18} className="text-nature-night/30 mb-1" />
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="mt-6 w-full sm:w-auto">
-                <PremiumCTAButton
-                  disabled={isCurrentEventPast || (isMeetGreet ? false : selectedSeats.length === 0)}
-                  onClick={() => !isCurrentEventPast && setIsCheckoutOpen(true)}
-                >
-                  <span className="text-xl font-black uppercase tracking-[0.15em] block transition-transform duration-300 group-hover:scale-[1.02]">
-                    {isCurrentEventPast ? 'Venta Finalizada' : 'Proceder al Pago'}
+                  <span className="text-[9px] text-white/40 tracking-widest hidden sm:block">
+                    Arrastra o usa rueda del ratón para explorar
                   </span>
-                </PremiumCTAButton>
-              </div>
-            </motion.div>
+                </div>
 
-            {!isMeetGreet && (
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-honey/10 to-amber-600/10 rounded-[3.6rem] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000"></div>
                 {isLoading ? (
-                  <div className="h-[450px] md:h-[600px] flex items-center justify-center border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.01] dark:bg-white/[0.01] rounded-[3.5rem]">
-                    <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em]">Tejiendo la Planta...</div>
+                  <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
+                    <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+                    <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
                   </div>
                 ) : (
                   <div className={cn(
-                    "h-[450px] md:h-[600px] rounded-[3.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 relative",
+                    "h-[480px] lg:h-[580px] relative w-full",
                     isCurrentEventPast && "pointer-events-none opacity-85"
                   )}>
                     {isCurrentEventPast && (
@@ -634,11 +501,226 @@ const TourPage = () => {
                 )}
               </div>
             )}
+
+            {/* Flyer / Meet & Greet Details Card */}
+            <div className="grid md:grid-cols-2 gap-6 items-stretch">
+              {currentEvent?.flyer_url && (
+                <div className="relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-xl shadow-amber-honey/5 aspect-[4/3] md:aspect-auto">
+                  <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-nature-night/20 to-transparent z-10 pointer-events-none" />
+                  <img
+                    src={currentEvent.flyer_url}
+                    alt={`Flyer oficial: ${currentEvent.title}`}
+                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                  />
+                  <div className="absolute bottom-6 left-8 z-20">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
+                    <h3 className="text-xl font-black text-white uppercase italic">{currentEvent.title}</h3>
+                  </div>
+                </div>
+              )}
+
+              {isMeetGreet && (
+                <div className="p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-5">
+                  <div className="flex items-center gap-3 text-amber-honey">
+                    <Star className="fill-current animate-pulse" size={20} />
+                    <h3 className="text-lg font-black uppercase tracking-wider">Experiencia Convivencia</h3>
+                  </div>
+                  <p className="text-xs leading-relaxed opacity-80">
+                    Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales.
+                  </p>
+                  <ul className="space-y-2.5 text-[10px] font-bold uppercase tracking-wider opacity-75">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle size={14} className="text-amber-honey" />
+                      Acceso exclusivo al venue de convivencia
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle size={14} className="text-amber-honey" />
+                      Firma de autógrafos y posters de colección
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle size={14} className="text-amber-honey" />
+                      Fotografía digital oficial individual
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
+
           </div>
 
-        </div >
+          {/* ══════ RIGHT COLUMN: Sticky Cart Summary Side Panel (col-span-5/4) ══════ */}
+          <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 space-y-6">
+            <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-2xl shadow-nature-night/10 p-6 md:p-8 rounded-[3rem]">
+              <div className="text-center mb-6 border-b border-nature-night/10 pb-5">
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Ticket size={16} className="text-amber-honey" />
+                  <h3 className="text-2xl font-black uppercase tracking-wider">Reserva Digital</h3>
+                </div>
+                <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
+              </div>
 
-        {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */}
+              {isCurrentEventPast ? (
+                <div className="my-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-amber-honey/30 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-amber-honey/15 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg">
+                    <CalendarX size={20} />
+                  </div>
+                  <h4 className="text-lg font-black uppercase tracking-wider text-nature-night">Venta Cerrada</h4>
+                  <p className="text-xs text-nature-night/70 leading-relaxed font-medium">
+                    Este evento ha finalizado. La venta de accesos se encuentra cerrada.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {isMeetGreet && (
+                    <div className="mb-6 p-5 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
+                      <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
+                      <div className="flex items-center justify-center gap-6">
+                        <button
+                          onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
+                          className="w-11 h-11 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
+                        <button
+                          onClick={() => setMgQuantity(mgQuantity + 1)}
+                          className="w-11 h-11 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      <div className="space-y-0.5">
+                        <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
+                        <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isMeetGreet && (
+                    <div
+                      onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
+                      className={cn(
+                        "mb-5 p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
+                        wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-3.5 relative z-10">
+                        <div className={cn(
+                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500",
+                          wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
+                        )}>
+                          <Star size={18} fill="currentColor" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet Pase</h4>
+                          <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
+                            {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
+                          </p>
+                        </div>
+                      </div>
+                      {!wantsMG && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
+                        {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
+                      </span>}
+                    </div>
+                  )}
+
+                  {/* Selected Seats List */}
+                  <div className="space-y-2.5 mb-5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                    {isMeetGreet ? (
+                      <div className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10">
+                        <div>
+                          <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Meet & Greet</p>
+                          <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
+                        </div>
+                        <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
+                      </div>
+                    ) : (
+                      <>
+                        <AnimatePresence mode="popLayout">
+                          {selectedSeats.map(seat => (
+                            <motion.div
+                              key={seat.id}
+                              initial={{ opacity: 0, x: -15 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10"
+                            >
+                              <div>
+                                <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
+                                <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
+                              </div>
+                              <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+
+                        {selectedSeats.length === 0 && (
+                          <div className="py-10 text-center border border-dashed border-nature-night/20 rounded-2xl opacity-50">
+                            <Ticket className="mx-auto mb-2 text-nature-night/40" size={28} />
+                            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-nature-night/60">Toca un asiento en el mapa interactivo</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* Price Breakdown */}
+                  {baseTotal > 0 ? (
+                    <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
+                  ) : (
+                    <div className="pt-4 border-t border-nature-night/10 mb-4">
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-1">Total</p>
+                          <p className="text-3xl font-black leading-none text-amber-honey">$0 MXN</p>
+                        </div>
+                        <Users size={18} className="text-nature-night/30 mb-1" />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="mt-6 w-full">
+                <PremiumCTAButton
+                  disabled={isCurrentEventPast || (isMeetGreet ? false : selectedSeats.length === 0)}
+                  onClick={() => !isCurrentEventPast && setIsCheckoutOpen(true)}
+                >
+                  <span className="text-base md:text-lg font-black uppercase tracking-[0.15em] block">
+                    {isCurrentEventPast ? 'Venta Finalizada' : 'Proceder al Pago'}
+                  </span>
+                </PremiumCTAButton>
+              </div>
+            </motion.div>
+          </div>
+
+        </div>
+
+        {/* ─── MOBILE STICKY BOTTOM BAR (Celulares / Dispositivos Móviles) ─── */}
+        {!isCurrentEventPast && (selectedSeats.length > 0 || isMeetGreet) && (
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-nature-night/95 dark:bg-[#0B0F0D]/95 backdrop-blur-xl border-t border-white/10 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <div className="max-w-md mx-auto flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">
+                  {isMeetGreet ? `${mgQuantity} Pase(s)` : `${selectedSeats.length} Seleccionado(s)`}
+                </p>
+                <p className="text-2xl font-black text-white leading-none mt-0.5">
+                  ${Math.ceil(checkoutTotal).toLocaleString('es-MX')} <span className="text-[10px] font-bold text-white/50">MXN</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setIsCheckoutOpen(true)}
+                className="bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-amber-honey/20 active:scale-95 transition-all flex items-center gap-2"
+              >
+                <ShieldCheck size={16} />
+                Reservar Ahora
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */}
         <AnimatePresence>
           {
             isCheckoutOpen && (
@@ -821,9 +903,8 @@ const TourPage = () => {
               </div>
             )
           }
-        </AnimatePresence >
-      </section >
-    </div >
+        </AnimatePresence>
+    </div>
   );
 };
 
