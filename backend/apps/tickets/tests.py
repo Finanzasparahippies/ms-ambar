@@ -100,6 +100,31 @@ class TicketsAppTests(APITestCase):
         self.assertIn("Concierto Cancelado", titles)
         self.assertIn("Sinfonía Ámbar 2026", titles)
 
+    def test_event_list_filters_past_events_for_public_users(self):
+        """Verify public users do not see events whose day has passed, while staff see all."""
+        past_event = Event.objects.create(
+            title="Concierto Pasado",
+            artist="MS AMBAR Ensemble",
+            date=timezone.now() - timezone.timedelta(days=2),
+            theater=self.theater,
+            is_active=True
+        )
+        url = reverse('event-list')
+
+        # Non-staff user / Anonymous -> should NOT see past event
+        response_anon = self.client.get(url)
+        self.assertEqual(response_anon.status_code, status.HTTP_200_OK)
+        anon_titles = [e['title'] for e in response_anon.data]
+        self.assertNotIn("Concierto Pasado", anon_titles)
+        self.assertIn("Sinfonía Ámbar 2026", anon_titles)
+
+        # Staff user -> should see past event in queryset for administration
+        self.client.force_authenticate(user=self.admin_user)
+        response_admin = self.client.get(url)
+        self.assertEqual(response_admin.status_code, status.HTTP_200_OK)
+        admin_titles = [e['title'] for e in response_admin.data]
+        self.assertIn("Concierto Pasado", admin_titles)
+
     def test_event_creation_restricted(self):
         """Verify normal users cannot create events."""
         url = reverse('event-list')

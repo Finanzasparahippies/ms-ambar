@@ -23,7 +23,8 @@ class EventViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user and user.is_authenticated and user.is_staff:
             return Event.objects.all()
-        return Event.objects.filter(is_active=True)
+        start_of_today = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
+        return Event.objects.filter(is_active=True, date__gte=start_of_today)
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'seats']:

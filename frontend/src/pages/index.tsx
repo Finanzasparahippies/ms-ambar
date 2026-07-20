@@ -808,19 +808,17 @@ const Home = () => {
       .then(res => {
         if (res.data && res.data.length > 0) {
           const now = new Date();
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
           const upcoming = res.data
             .filter((e: any) => e.is_active !== false)
             .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
-            .filter((e: any) => e.dateObj >= now)
+            .filter((e: any) => e.dateObj >= startOfToday)
             .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
 
           if (upcoming.length > 0) {
             setNextEvent(upcoming[0]);
           } else {
-            const activeEvents = res.data.filter((e: any) => e.is_active !== false);
-            if (activeEvents.length > 0) {
-              setNextEvent(activeEvents[0]);
-            }
+            setNextEvent(null);
           }
           console.log("Upcoming events:", upcoming);
         }

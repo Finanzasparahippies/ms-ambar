@@ -185,9 +185,23 @@ const TourPage = () => {
       fetch(`${apiUrl}/tickets/events/`).then(r => r.json()),
       fetch(`${apiUrl}/tickets/settings/`).then(r => r.json()).catch(() => null),
     ]).then(([eventsData, settingsData]) => {
-      if (eventsData && eventsData.length > 0) {
-        setEvents(eventsData);
-        setCurrentEvent(eventsData[0]);
+      if (eventsData && Array.isArray(eventsData) && eventsData.length > 0) {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const activeUpcomingEvents = eventsData.filter((e: any) => {
+          if (e.is_active === false) return false;
+          if (!e.date) return true;
+          const eventDate = new Date(e.date);
+          return eventDate >= startOfToday;
+        });
+
+        if (activeUpcomingEvents.length > 0) {
+          setEvents(activeUpcomingEvents);
+          setCurrentEvent(activeUpcomingEvents[0]);
+        } else {
+          setEvents([]);
+          setCurrentEvent(null);
+        }
       }
       if (settingsData?.tickets_page_subtitle) {
         setPageSubtitle(settingsData.tickets_page_subtitle);

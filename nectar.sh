@@ -1,37 +1,84 @@
 #!/bin/bash
 
 # Nectar Labs CLI for MS AMBAR
-# Script to manage MS AMBAR docker environment easily
+# Script to manage MS AMBAR docker/podman environment easily
 
 COMMAND=$1
 if [ $# -gt 0 ]; then
     shift
 fi
 
+# Detect Container runtime (docker or podman)
+if command -v docker &> /dev/null; then
+    DOCKER_BIN="docker"
+elif command -v podman &> /dev/null; then
+    DOCKER_BIN="podman"
+else
+    echo "==========================================="
+    echo "  [ERROR] No container runtime detected!   "
+    echo "==========================================="
+    echo "No se encontró ni 'docker' ni 'podman' en el PATH del sistema."
+    echo ""
+    echo "Si estás en Fedora Linux, instala Podman + Compose ejecutando:"
+    echo "  sudo dnf install -y podman-docker podman-compose"
+    echo ""
+    echo "O bien instala Docker Engine oficial."
+    exit 1
+fi
+
+# Detect Compose provider
+COMPOSE_BIN=""
+if [ "$DOCKER_BIN" = "docker" ]; then
+    if docker compose version &> /dev/null; then
+        COMPOSE_BIN="docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        COMPOSE_BIN="docker-compose"
+    fi
+elif [ "$DOCKER_BIN" = "podman" ]; then
+    if command -v podman-compose &> /dev/null; then
+        COMPOSE_BIN="podman-compose"
+    elif podman compose version &> /dev/null 2>&1; then
+        COMPOSE_BIN="podman compose"
+    fi
+fi
+
+if [ -z "$COMPOSE_BIN" ]; then
+    echo "==========================================="
+    echo "  [ERROR] No Compose provider detected!    "
+    echo "==========================================="
+    echo "Se detectó '${DOCKER_BIN}', pero no se encontró un proveedor de Compose (docker-compose / podman-compose)."
+    echo ""
+    echo "Si estás en Fedora Linux, instala podman-compose y podman-docker ejecutando:"
+    echo "  sudo dnf install -y podman-compose podman-docker"
+    echo ""
+    echo "O si prefieres Docker oficial, instala docker-ce y docker-compose-plugin."
+    exit 1
+fi
+
 # Helper function to run Django commands in dev (using exec if running, run --rm if not)
 run_django_cmd_dev() {
-    if docker compose ps --services --filter "status=running" | grep -q "^backend$"; then
-        docker compose exec backend python manage.py "$@"
+    if $COMPOSE_BIN ps --services --filter "status=running" 2>/dev/null | grep -q "^backend$"; then
+        $COMPOSE_BIN exec backend python manage.py "$@"
     else
-        docker compose run --rm backend python manage.py "$@"
+        $COMPOSE_BIN run --rm backend python manage.py "$@"
     fi
 }
 
 # Helper function to run Django commands in staging (using exec if running, run --rm if not)
 run_django_cmd_staging() {
-    if docker compose --env-file .env.staging -f docker-compose.staging.yml ps --services --filter "status=running" | grep -q "^backend-staging$"; then
-        docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py "$@"
+    if $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps --services --filter "status=running" 2>/dev/null | grep -q "^backend-staging$"; then
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py "$@"
     else
-        docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm backend-staging python manage.py "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm backend-staging python manage.py "$@"
     fi
 }
 
 # Helper function to run Django commands in prod (using exec if running, run --rm if not)
 run_django_cmd_prod() {
-    if docker compose -f docker-compose.prod.yml ps --services --filter "status=running" | grep -q "^backend$"; then
-        docker compose -f docker-compose.prod.yml exec backend python manage.py "$@"
+    if $COMPOSE_BIN -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null | grep -q "^backend$"; then
+        $COMPOSE_BIN -f docker-compose.prod.yml exec backend python manage.py "$@"
     else
-        docker compose -f docker-compose.prod.yml run --rm backend python manage.py "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml run --rm backend python manage.py "$@"
     fi
 }
 
@@ -39,10 +86,10 @@ run_django_cmd_prod() {
 remove_conflicting_containers() {
     local container_names=("$@")
     for container in "${container_names[@]}"; do
-        if docker ps -a --format '{{.Name}}' | grep -q "^${container}$"; then
+        if $DOCKER_BIN ps -a --format '{{.Name}}' 2>/dev/null | grep -q "^${container}$"; then
             echo "Warning: Container '${container}' already exists (possibly from a different or older Docker Compose project/run)."
             echo "Removing existing container '${container}' to prevent naming conflicts..."
-            docker rm -f "${container}"
+            $DOCKER_BIN rm -f "${container}"
         fi
     done
 }
@@ -100,23 +147,23 @@ show_help() {
 
 case $COMMAND in
     dev)
-        echo "Starting MS AMBAR Dev Environment..."
+        echo "Starting MS AMBAR Dev Environment using ${COMPOSE_BIN}..."
         remove_conflicting_containers ambar_dev_db ambar_dev_backend ambar_dev_frontend ambar_dev_nginx
-        docker compose up -d --build "$@"
+        $COMPOSE_BIN up -d --build "$@"
         ;;
     stop)
         echo "Stopping Dev Environment..."
-        docker compose down "$@"
+        $COMPOSE_BIN down "$@"
         ;;
     restart)
         echo "Restarting Dev Environment..."
-        docker compose restart "$@"
+        $COMPOSE_BIN restart "$@"
         ;;
     logs)
         if [ $# -eq 0 ]; then
-            docker compose logs -f --tail=100
+            $COMPOSE_BIN logs -f --tail=100
         else
-            docker compose logs "$@"
+            $COMPOSE_BIN logs "$@"
         fi
         ;;
     makemigrations|makemigrations-dev)
@@ -136,37 +183,37 @@ case $COMMAND in
         ;;
     typecheck)
         echo "Running TypeScript type-check in Dev frontend..."
-        docker compose exec frontend npx tsc --noEmit "$@"
+        $COMPOSE_BIN exec frontend npx tsc --noEmit "$@"
         ;;
     buildcheck)
         echo "Running Next.js build-check in Dev frontend..."
-        docker compose exec frontend npm run build "$@"
+        $COMPOSE_BIN exec frontend npm run build "$@"
         ;;
     frontend)
         cd frontend && npm run dev "$@"
         ;;
     build-staging)
         echo "Building MS AMBAR Staging Images..."
-        docker compose --env-file .env.staging -f docker-compose.staging.yml build "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml build "$@"
         ;;
     up-staging)
         echo "Starting MS AMBAR Staging Environment..."
         remove_conflicting_containers ambar_staging_backend ambar_staging_frontend ambar_staging_nginx ambar_staging_autostop
-        docker compose --env-file .env.staging -f docker-compose.staging.yml up -d --build "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml up -d --build "$@"
         ;;
     down-staging|stop-staging)
         echo "Stopping Staging Environment..."
-        docker compose --env-file .env.staging -f docker-compose.staging.yml down "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml down "$@"
         ;;
     restart-staging)
         echo "Restarting Staging Environment..."
-        docker compose --env-file .env.staging -f docker-compose.staging.yml restart "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml restart "$@"
         ;;
     logs-staging)
         if [ $# -eq 0 ]; then
-            docker compose --env-file .env.staging -f docker-compose.staging.yml logs -f --tail=100
+            $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml logs -f --tail=100
         else
-            docker compose --env-file .env.staging -f docker-compose.staging.yml logs "$@"
+            $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml logs "$@"
         fi
         ;;
     migrate-staging)
@@ -190,34 +237,34 @@ case $COMMAND in
         ;;
     typecheck-staging)
         echo "Running TypeScript type-check for Staging frontend..."
-        docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npx tsc --noEmit "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npx tsc --noEmit "$@"
         ;;
     buildcheck-staging)
         echo "Running Next.js build-check for Staging frontend..."
-        docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npm run build "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npm run build "$@"
         ;;
     build)
         echo "Building MS AMBAR Production Images..."
-        docker compose -f docker-compose.prod.yml build "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml build "$@"
         ;;
     up-prod)
         echo "Starting MS AMBAR Production Environment..."
         remove_conflicting_containers ambar_backend ambar_frontend
-        docker compose -f docker-compose.prod.yml up -d "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml up -d "$@"
         ;;
     down-prod)
         echo "Stopping Production Environment..."
-        docker compose -f docker-compose.prod.yml down "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml down "$@"
         ;;
     restart-prod)
         echo "Restarting Production Environment..."
-        docker compose -f docker-compose.prod.yml restart "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml restart "$@"
         ;;
     logs-prod)
         if [ $# -eq 0 ]; then
-            docker compose -f docker-compose.prod.yml logs -f --tail=100
+            $COMPOSE_BIN -f docker-compose.prod.yml logs -f --tail=100
         else
-            docker compose -f docker-compose.prod.yml logs "$@"
+            $COMPOSE_BIN -f docker-compose.prod.yml logs "$@"
         fi
         ;;
     makemigrations-prod)
@@ -231,9 +278,9 @@ case $COMMAND in
         ;;
     collectstatic)
         echo "Running collectstatic..."
-        if docker compose ps --format json | grep -q "ambar_dev_backend"; then
+        if $COMPOSE_BIN ps --format json 2>/dev/null | grep -q "ambar_dev_backend"; then
             run_django_cmd_dev collectstatic --no-input "$@"
-        elif docker compose --env-file .env.staging -f docker-compose.staging.yml ps --format json | grep -q "ambar_staging_backend"; then
+        elif $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps --format json 2>/dev/null | grep -q "ambar_staging_backend"; then
             run_django_cmd_staging collectstatic --no-input "$@"
         else
             run_django_cmd_prod collectstatic --no-input "$@"
@@ -245,30 +292,30 @@ case $COMMAND in
             echo "Usage: ./nectar.sh certbot example.com"
             exit 1
         fi
-        docker compose -f docker-compose.prod.yml run --rm certbot certonly --webroot --webroot-path=/var/www/certbot -d $DOMAIN -d www.$DOMAIN
+        $COMPOSE_BIN -f docker-compose.prod.yml run --rm certbot certonly --webroot --webroot-path=/var/www/certbot -d $DOMAIN -d www.$DOMAIN
         ;;
     clean)
-        echo "Starting comprehensive and safe VPS/Docker cleanup..."
+        echo "Starting comprehensive and safe VPS/Container cleanup..."
         echo ""
         echo "1. Removing stopped containers..."
-        docker container prune -f
+        $DOCKER_BIN container prune -f
         
         echo "2. Removing dangling networks..."
-        docker network prune -f
+        $DOCKER_BIN network prune -f
         
         echo "3. Removing dangling volumes (only unused/anonymous volumes)..."
-        docker volume prune -f
+        $DOCKER_BIN volume prune -f
         
         echo "4. Removing dangling/untagged images..."
-        docker image prune -f
+        $DOCKER_BIN image prune -f
         
-        echo "5. Removing Docker build cache..."
-        docker builder prune -f
+        echo "5. Removing build cache..."
+        $DOCKER_BIN builder prune -f 2>/dev/null || true
         
-        echo "6. Checking for legacy/conflicting Docker Compose project 'ms-ambar'..."
-        if docker compose -p ms-ambar ps -q &>/dev/null || [ -n "$(docker ps -a --filter 'label=com.docker.compose.project=ms-ambar' -q)" ]; then
+        echo "6. Checking for legacy/conflicting Compose project 'ms-ambar'..."
+        if $COMPOSE_BIN -p ms-ambar ps -q &>/dev/null || [ -n "$($DOCKER_BIN ps -a --filter 'label=com.docker.compose.project=ms-ambar' -q 2>/dev/null)" ]; then
             echo "   Stopping and removing legacy 'ms-ambar' project containers and networks..."
-            docker compose -p ms-ambar down
+            $COMPOSE_BIN -p ms-ambar down
         else
             echo "   No legacy 'ms-ambar' project containers found."
         fi
