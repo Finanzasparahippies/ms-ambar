@@ -1814,8 +1814,13 @@ export default function AdminDashboard() {
 
     if (eventType === 'concert') {
       formData.append('theater', eventTheater);
+      const selectedT = theaters.find((t: any) => t.id?.toString() === eventTheater?.toString());
+      formData.append('venue_name', selectedT?.name || 'Recinto Principal');
+      formData.append('venue_address', selectedT?.location || 'Ubicación por definir');
     } else {
       formData.append('theater', '');
+      formData.append('venue_name', 'Evento Convivencia');
+      formData.append('venue_address', 'Plataforma Digital');
     }
 
     if (eventImageFile) {
@@ -2291,7 +2296,7 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          <AnimatePresence mode="wait">
+          <AnimatePresence>
             {clientActiveTab === 'tickets' && (
               <motion.div
                 key="client-tickets-tab"
@@ -2596,7 +2601,7 @@ export default function AdminDashboard() {
 
           {/* Main Administrative Views Context */}
           <div className="relative z-10">
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
 
               {/* TAB 1: SUMMARY DASHBOARD */}
               {activeTab === 'summary' && (
@@ -3701,12 +3706,12 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {theaters.map((theater: any) => {
+                      {theaters.map((theater: any, idx: number) => {
                         const seatCount = theater.seats?.length ?? 0;
                         const syncSt = theaterSyncStatus[theater.id] || 'idle';
                         return (
                           <motion.div
-                            key={theater.id}
+                            key={theater.id ? `theater-${theater.id}` : `theater-idx-${idx}`}
                             whileHover={{ y: -4 }}
                             className="bg-white/5 border border-white/10 hover:border-amber-honey/40 rounded-[2rem] p-6 flex flex-col gap-5 transition-all shadow-lg shadow-black/20"
                           >
@@ -4759,9 +4764,9 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                      {events.map((event: any) => (
+                      {events.map((event: any, idx: number) => (
                         <motion.div
-                          key={event.id}
+                          key={event.id ? `event-${event.id}` : `event-idx-${idx}`}
                           whileHover={{ y: -4 }}
                           className="bg-white/5 border border-white/10 hover:border-amber-honey/40 rounded-[2rem] p-6 flex flex-col gap-4 transition-all shadow-lg shadow-black/20"
                         >

@@ -44,6 +44,10 @@ class EventSerializer(serializers.ModelSerializer):
             'stripe_product_id', 'stripe_price_id',
             'base_price', 'price_with_fee',
         ]
+        extra_kwargs = {
+            'venue_name': {'required': False, 'allow_blank': True},
+            'venue_address': {'required': False, 'allow_blank': True},
+        }
 
     def get_theater_name(self, obj):
         return obj.theater.name if obj.theater else None
