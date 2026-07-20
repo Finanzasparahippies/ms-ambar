@@ -571,7 +571,10 @@ export default function DesignerPage() {
     rotationRef.current = null;
     addToHistory(seats, elements);
   };
-  const firstSelected = seats.find(s => selectedIds.includes(String(s.id))) || elements.find(e => selectedIds.includes(String(e.id)));
+
+  const selectedElement = elements.find(e => selectedIds.includes(String(e.id)));
+  const selectedSeat = seats.find(s => selectedIds.includes(String(s.id)));
+  const firstSelected = selectedElement || selectedSeat;
   const isDark = theme === 'dark';
 
   // ── Auth Guard screens ──
@@ -812,6 +815,9 @@ export default function DesignerPage() {
                                   const shape = e.target.value;
                                   let sides = 4;
                                   if (shape === 'circle' || shape === 'table') sides = 0;
+                                  else if (shape === 'triangle') sides = 3;
+                                  else if (shape === 'hexagon') sides = 6;
+                                  else if (shape === 'octagon') sides = 8;
                                   else if (shape === 'rounded' || shape === 'rect') sides = 4;
                                   updateSelectedProperty('type', shape);
                                   updateSelectedProperty('sides', sides);
@@ -823,6 +829,9 @@ export default function DesignerPage() {
                                 <option value="rounded">Rectángulo Redondeado</option>
                                 <option value="circle">Círculo / Ovalado</option>
                                 <option value="table">Mesa / Cabaret</option>
+                                <option value="triangle">Triángulo (3 Lados)</option>
+                                <option value="hexagon">Hexágono (6 Lados)</option>
+                                <option value="octagon">Octágono (8 Lados)</option>
                               </select>
                             </div>
 
