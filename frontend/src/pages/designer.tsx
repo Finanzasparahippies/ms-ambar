@@ -274,6 +274,15 @@ export default function DesignerPage() {
     if (!selectedTheaterId) return;
     setGenerateSeatsStatus('loading');
     try {
+      // 1. Guardar primero el layout actual (elementos y asientos del lienzo) en el servidor
+      const saveRes = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ layout: { map_elements: elements, seats: seats } })
+      });
+      if (!saveRes.ok) throw new Error(`Save layout failed HTTP ${saveRes.status}`);
+
+      // 2. Ejecutar la sincronización de asientos en la base de datos PostgreSQL
       const res = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/generate_seats/`, {
         method: 'POST',
         headers: { ...getAuthHeaders() }

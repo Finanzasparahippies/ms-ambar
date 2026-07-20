@@ -3795,7 +3795,11 @@ export default function AdminDashboard() {
               {/* ══════ THEATER MODAL (Dashboard) ══════ */}
               <AnimatePresence>
                 {isTheaterModalOpen && (
-                  <div
+                  <motion.div
+                    key="theater-modal-wrapper"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#0B0F0D]/60 backdrop-blur-md"
                     onClick={() => setIsTheaterModalOpen(false)}
                   >
@@ -3874,7 +3878,11 @@ export default function AdminDashboard() {
               {/* ══════ EVENT MODAL (Dashboard) ══════ */}
               <AnimatePresence>
                 {isEventModalOpen && (
-                  <div
+                  <motion.div
+                    key="event-modal-wrapper"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-[#0B0F0D]/60 backdrop-blur-md overflow-y-auto"
                     onClick={() => setIsEventModalOpen(false)}
                   >
