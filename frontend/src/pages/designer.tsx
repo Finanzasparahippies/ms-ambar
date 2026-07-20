@@ -266,10 +266,26 @@ export default function DesignerPage() {
     addToHistory([], []);
   };
 
-  const recalculateTableSeats = (tableEl: any, shape: string = 'circle', count: number = 4) => {
-    const w = tableEl.w || 100;
-    const h = tableEl.h || 100;
+  const recalculateTableSeats = (tableEl: any, shape: string = 'circle', count: number = 4, targetW?: number, targetH?: number) => {
+    const w = targetW || tableEl.w || 100;
+    const h = targetH || tableEl.h || 100;
     const tableId = tableEl.id;
+
+    const updatedEls = elements.map(el => {
+      if (el.id === tableId) {
+        return {
+          ...el,
+          type: 'table',
+          tableShape: shape,
+          table_shape: shape,
+          capacity: count,
+          seatsCount: count,
+          w, h
+        };
+      }
+      return el;
+    });
+
     const remainingSeats = seats.filter(s => s.tableId !== tableId);
     const tableSeats: any[] = [];
 
@@ -281,20 +297,20 @@ export default function DesignerPage() {
         const dist = frac * perim;
         let sx = 0, sy = 0, angle = 0;
         if (dist <= w) {
-          sx = tableEl.x - w/2 + dist;
-          sy = tableEl.y - h/2 - pad;
+          sx = tableEl.x - w / 2 + dist;
+          sy = tableEl.y - h / 2 - pad;
           angle = 180;
         } else if (dist <= w + h) {
-          sx = tableEl.x + w/2 + pad;
-          sy = tableEl.y - h/2 + (dist - w);
+          sx = tableEl.x + w / 2 + pad;
+          sy = tableEl.y - h / 2 + (dist - w);
           angle = 270;
-        } else if (dist <= 2*w + h) {
-          sx = tableEl.x + w/2 - (dist - (w + h));
-          sy = tableEl.y + h/2 + pad;
+        } else if (dist <= 2 * w + h) {
+          sx = tableEl.x + w / 2 - (dist - (w + h));
+          sy = tableEl.y + h / 2 + pad;
           angle = 0;
         } else {
-          sx = tableEl.x - w/2 - pad;
-          sy = tableEl.y + h/2 - (dist - (2*w + h));
+          sx = tableEl.x - w / 2 - pad;
+          sy = tableEl.y + h / 2 - (dist - (2 * w + h));
           angle = 90;
         }
         tableSeats.push({
@@ -330,8 +346,9 @@ export default function DesignerPage() {
     }
 
     const updatedSeats = [...remainingSeats, ...tableSeats];
+    setElements(updatedEls);
     setSeats(updatedSeats);
-    addToHistory(updatedSeats, elements);
+    addToHistory(updatedSeats, updatedEls);
     return updatedSeats;
   };
 
@@ -857,28 +874,39 @@ export default function DesignerPage() {
                         <div className="space-y-4">
                           <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Forma / Geometría</label>
                           <div className={cn("p-5 rounded-2xl border space-y-5", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}>
-                            <div className="space-y-1">
+                             <div className="space-y-1">
                               <span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Tipo de Figura</span>
                               <select
-                                value={(firstSelected as any).type || 'rect'}
+                                value={(firstSelected as any).type === 'table' ? ((firstSelected as any).tableShape || 'table') : ((firstSelected as any).type || 'rect')}
                                 onChange={(e) => {
                                   const shape = e.target.value;
-                                  let sides = 4;
-                                  if (shape === 'circle' || shape === 'table') sides = 0;
-                                  else if (shape === 'triangle') sides = 3;
-                                  else if (shape === 'hexagon') sides = 6;
-                                  else if (shape === 'octagon') sides = 8;
-                                  else if (shape === 'rounded' || shape === 'rect') sides = 4;
-                                  updateSelectedProperty('type', shape);
-                                  updateSelectedProperty('sides', sides);
-                                  commitPropertyChange();
+                                  const isTable = (firstSelected as any).type === 'table' || !!(firstSelected as any).tableShape || shape === 'table' || shape === 'square' || shape === 'rect_table';
+                                  if (isTable || shape === 'square' || shape === 'rect_table') {
+                                    const tShape = shape === 'square' ? 'square' : shape === 'rect_table' ? 'rect' : shape === 'table' ? 'circle' : shape;
+                                    updateSelectedProperty('type', 'table');
+                                    updateSelectedProperty('tableShape', tShape);
+                                    updateSelectedProperty('table_shape', tShape);
+                                    recalculateTableSeats(firstSelected, tShape, (firstSelected as any).capacity || 4);
+                                  } else {
+                                    let sides = 4;
+                                    if (shape === 'circle') sides = 0;
+                                    else if (shape === 'triangle') sides = 3;
+                                    else if (shape === 'hexagon') sides = 6;
+                                    else if (shape === 'octagon') sides = 8;
+                                    else if (shape === 'rounded' || shape === 'rect') sides = 4;
+                                    updateSelectedProperty('type', shape);
+                                    updateSelectedProperty('sides', sides);
+                                    commitPropertyChange();
+                                  }
                                 }}
                                 className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900")}
                               >
                                 <option value="rect">Rectángulo (Escenario / Zona)</option>
                                 <option value="rounded">Rectángulo Redondeado</option>
                                 <option value="circle">Círculo / Ovalado</option>
-                                <option value="table">Mesa / Cabaret</option>
+                                <option value="table">Mesa Redonda</option>
+                                <option value="square">Mesa Cuadrada / Cabaret</option>
+                                <option value="rect_table">Mesa Rectangular / Imperial</option>
                                 <option value="triangle">Triángulo (3 Lados)</option>
                                 <option value="hexagon">Hexágono (6 Lados)</option>
                                 <option value="octagon">Octágono (8 Lados)</option>
@@ -891,7 +919,13 @@ export default function DesignerPage() {
                                 <input
                                   type="number" min="20" max="1000"
                                   value={(firstSelected as any).w || 100}
-                                  onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value) || 100)}
+                                  onChange={(e) => {
+                                    const nw = parseInt(e.target.value) || 100;
+                                    updateSelectedProperty('w', nw);
+                                    if ((firstSelected as any).type === 'table' || (firstSelected as any).tableShape) {
+                                      recalculateTableSeats(firstSelected, (firstSelected as any).tableShape || 'circle', (firstSelected as any).capacity || 4, nw, (firstSelected as any).h || 100);
+                                    }
+                                  }}
                                   onBlur={commitPropertyChange}
                                   className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900")}
                                 />
@@ -901,14 +935,20 @@ export default function DesignerPage() {
                                 <input
                                   type="number" min="20" max="1000"
                                   value={(firstSelected as any).h || 100}
-                                  onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value) || 100)}
+                                  onChange={(e) => {
+                                    const nh = parseInt(e.target.value) || 100;
+                                    updateSelectedProperty('h', nh);
+                                    if ((firstSelected as any).type === 'table' || (firstSelected as any).tableShape) {
+                                      recalculateTableSeats(firstSelected, (firstSelected as any).tableShape || 'circle', (firstSelected as any).capacity || 4, (firstSelected as any).w || 100, nh);
+                                    }
+                                  }}
                                   onBlur={commitPropertyChange}
                                   className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900")}
                                 />
                               </div>
                             </div>
 
-                            {((firstSelected as any).type === 'table' || (firstSelected as any).seatsCount) && (
+                            {((firstSelected as any).type === 'table' || (firstSelected as any).seatsCount || (firstSelected as any).tableShape) && (
                               <div className="space-y-4 pt-2 border-t border-white/10">
                                 <div className="space-y-1">
                                   <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey block">Forma Específica de la Mesa</span>
@@ -923,8 +963,8 @@ export default function DesignerPage() {
                                     className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-amber-honey" : "bg-white border-slate-200 text-amber-600")}
                                   >
                                     <option value="circle">Mesa Redonda / Círculo</option>
-                                    <option value="rect">Mesa Rectangular / Imperial</option>
                                     <option value="square">Mesa Cuadrada / Cabaret</option>
+                                    <option value="rect">Mesa Rectangular / Imperial</option>
                                     <option value="ellipse">Mesa Ovalada / Elíptica</option>
                                   </select>
                                 </div>
