@@ -3871,7 +3871,7 @@ export default function AdminDashboard() {
                         </div>
                       </form>
                     </motion.div>
-                  </div>
+                  </motion.div>
                 )}
               </AnimatePresence>
 
@@ -4152,7 +4152,7 @@ export default function AdminDashboard() {
                         </div>
                       </form>
                     </motion.div>
-                  </div>
+                  </motion.div>
                 )}
               </AnimatePresence>
 
