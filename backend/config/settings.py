@@ -9,6 +9,11 @@ from datetime import timedelta
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+import sys
+BASE_DIR_STR = str(BASE_DIR)
+if BASE_DIR_STR not in sys.path:
+    sys.path.insert(0, BASE_DIR_STR)
+
 import os
 env = environ.Env()
 # Read environment-specific .env file

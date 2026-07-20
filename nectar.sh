@@ -57,28 +57,34 @@ fi
 
 # Helper function to run Django commands in dev (using exec if running, run --rm if not)
 run_django_cmd_dev() {
-    if $COMPOSE_BIN ps --services --filter "status=running" 2>/dev/null | grep -q "^backend$"; then
+    if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_backend"; then
+        $DOCKER_BIN exec ambar_dev_backend python manage.py "$@"
+    elif $COMPOSE_BIN ps 2>/dev/null | grep -q "backend"; then
         $COMPOSE_BIN exec backend python manage.py "$@"
     else
-        $COMPOSE_BIN run --rm backend python manage.py "$@"
+        $COMPOSE_BIN run --rm -w /app backend python manage.py "$@"
     fi
 }
 
 # Helper function to run Django commands in staging (using exec if running, run --rm if not)
 run_django_cmd_staging() {
-    if $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps --services --filter "status=running" 2>/dev/null | grep -q "^backend-staging$"; then
+    if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_staging_backend"; then
+        $DOCKER_BIN exec ambar_staging_backend python manage.py "$@"
+    elif $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps 2>/dev/null | grep -q "backend-staging"; then
         $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py "$@"
     else
-        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm backend-staging python manage.py "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm -w /app backend-staging python manage.py "$@"
     fi
 }
 
 # Helper function to run Django commands in prod (using exec if running, run --rm if not)
 run_django_cmd_prod() {
-    if $COMPOSE_BIN -f docker-compose.prod.yml ps --services --filter "status=running" 2>/dev/null | grep -q "^backend$"; then
+    if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_backend"; then
+        $DOCKER_BIN exec ambar_backend python manage.py "$@"
+    elif $COMPOSE_BIN -f docker-compose.prod.yml ps 2>/dev/null | grep -q "backend"; then
         $COMPOSE_BIN -f docker-compose.prod.yml exec backend python manage.py "$@"
     else
-        $COMPOSE_BIN -f docker-compose.prod.yml run --rm backend python manage.py "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml run --rm -w /app backend python manage.py "$@"
     fi
 }
 
@@ -183,11 +189,19 @@ case $COMMAND in
         ;;
     typecheck)
         echo "Running TypeScript type-check in Dev frontend..."
-        $COMPOSE_BIN exec frontend npx tsc --noEmit "$@"
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_frontend"; then
+            $DOCKER_BIN exec ambar_dev_frontend npx tsc --noEmit "$@"
+        else
+            $COMPOSE_BIN exec frontend npx tsc --noEmit "$@"
+        fi
         ;;
     buildcheck)
         echo "Running Next.js build-check in Dev frontend..."
-        $COMPOSE_BIN exec frontend npm run build "$@"
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_frontend"; then
+            $DOCKER_BIN exec ambar_dev_frontend npm run build "$@"
+        else
+            $COMPOSE_BIN exec frontend npm run build "$@"
+        fi
         ;;
     frontend)
         cd frontend && npm run dev "$@"
@@ -278,9 +292,9 @@ case $COMMAND in
         ;;
     collectstatic)
         echo "Running collectstatic..."
-        if $COMPOSE_BIN ps --format json 2>/dev/null | grep -q "ambar_dev_backend"; then
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_backend"; then
             run_django_cmd_dev collectstatic --no-input "$@"
-        elif $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps --format json 2>/dev/null | grep -q "ambar_staging_backend"; then
+        elif $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_staging_backend"; then
             run_django_cmd_staging collectstatic --no-input "$@"
         else
             run_django_cmd_prod collectstatic --no-input "$@"
