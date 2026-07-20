@@ -266,6 +266,75 @@ export default function DesignerPage() {
     addToHistory([], []);
   };
 
+  const recalculateTableSeats = (tableEl: any, shape: string = 'circle', count: number = 4) => {
+    const w = tableEl.w || 100;
+    const h = tableEl.h || 100;
+    const tableId = tableEl.id;
+    const remainingSeats = seats.filter(s => s.tableId !== tableId);
+    const tableSeats: any[] = [];
+
+    if (shape === 'rect' || shape === 'square') {
+      const perim = 2 * (w + h);
+      const pad = 20;
+      for (let i = 0; i < count; i++) {
+        const frac = i / count;
+        const dist = frac * perim;
+        let sx = 0, sy = 0, angle = 0;
+        if (dist <= w) {
+          sx = tableEl.x - w/2 + dist;
+          sy = tableEl.y - h/2 - pad;
+          angle = 180;
+        } else if (dist <= w + h) {
+          sx = tableEl.x + w/2 + pad;
+          sy = tableEl.y - h/2 + (dist - w);
+          angle = 270;
+        } else if (dist <= 2*w + h) {
+          sx = tableEl.x + w/2 - (dist - (w + h));
+          sy = tableEl.y + h/2 + pad;
+          angle = 0;
+        } else {
+          sx = tableEl.x - w/2 - pad;
+          sy = tableEl.y + h/2 - (dist - (2*w + h));
+          angle = 90;
+        }
+        tableSeats.push({
+          id: `seat-${crypto.randomUUID()}`,
+          x: Math.round(sx),
+          y: Math.round(sy),
+          row: tableEl.label || 'Mesa',
+          number: i + 1,
+          status: 'available',
+          category: 'vip',
+          angle,
+          tableId
+        });
+      }
+    } else {
+      const rx = (w / 2) + 18;
+      const ry = (h / 2) + 18;
+      for (let i = 0; i < count; i++) {
+        const ang = (i * (360 / count) - 90) * Math.PI / 180;
+        const sx = Math.round(tableEl.x + Math.cos(ang) * rx);
+        const sy = Math.round(tableEl.y + Math.sin(ang) * ry);
+        tableSeats.push({
+          id: `seat-${crypto.randomUUID()}`,
+          x: sx, y: sy,
+          row: tableEl.label || 'Mesa',
+          number: i + 1,
+          status: 'available',
+          category: 'vip',
+          angle: Math.round(ang * 180 / Math.PI + 90),
+          tableId
+        });
+      }
+    }
+
+    const updatedSeats = [...remainingSeats, ...tableSeats];
+    setSeats(updatedSeats);
+    addToHistory(updatedSeats, elements);
+    return updatedSeats;
+  };
+
   const addTable = (seatsCount: number = 4, x: number = 500, y: number = 500) => {
     const tableId = `table-${crypto.randomUUID()}`;
     const tableNum = elements.filter(e => e.type === 'table').length + 1;
@@ -274,6 +343,8 @@ export default function DesignerPage() {
     const newTableEl = {
       id: tableId,
       type: 'table',
+      tableShape: 'circle',
+      table_shape: 'circle',
       x, y,
       w: 100, h: 100,
       label,
@@ -285,31 +356,10 @@ export default function DesignerPage() {
       seatsCount
     };
 
-    const tableSeats: any[] = [];
-    const radius = 60;
-    for (let i = 0; i < seatsCount; i++) {
-      const ang = (i * (360 / seatsCount) - 90) * Math.PI / 180;
-      const sx = Math.round(x + Math.cos(ang) * radius);
-      const sy = Math.round(y + Math.sin(ang) * radius);
-      tableSeats.push({
-        id: `seat-${crypto.randomUUID()}`,
-        x: sx,
-        y: sy,
-        row: label,
-        number: i + 1,
-        status: 'available',
-        category: 'vip',
-        angle: Math.round(ang * 180 / Math.PI + 90),
-        tableId
-      });
-    }
-
     const updatedEls = [...elements, newTableEl];
-    const updatedSeats = [...seats, ...tableSeats];
     setElements(updatedEls);
-    setSeats(updatedSeats);
+    recalculateTableSeats(newTableEl, 'circle', seatsCount);
     setSelectedIds([newTableEl.id]);
-    addToHistory(updatedSeats, updatedEls);
     setActiveTool('select');
   };
 
@@ -775,9 +825,9 @@ export default function DesignerPage() {
 
         <AnimatePresence>
           {selectedIds.length > 0 && (
-            <motion.aside initial={{ x: 400, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 400, opacity: 0 }} className={cn("w-80 backdrop-blur-3xl border-l flex flex-col z-40 shadow-2xl", isDark ? "bg-[#0b0d17]/80 border-white/10" : "bg-white/90 border-slate-200")}>
-              <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
-                <div className="flex items-center justify-between mb-10"><div className="flex flex-col"><h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Properties</h3><span className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", isDark ? "text-white/20" : "text-slate-400")}>{selectedIds.length} Object(s) Selected</span></div><button onClick={() => { const ns = seats.filter(s => !selectedIds.includes(String(s.id))); const ne = elements.filter(e => !selectedIds.includes(String(e.id))); setSeats(ns); setElements(ne); setSelectedIds([]); addToHistory(ns, ne); }} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button></div>
+            <motion.aside initial={{ x: 400, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 400, opacity: 0 }} className={cn("w-80 h-full max-h-screen border-l flex flex-col z-40 shadow-2xl overflow-hidden", isDark ? "bg-[#0b0d17]/90 border-white/10" : "bg-white/95 border-slate-200")}>
+              <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-8 pb-40">
+                <div className="flex items-center justify-between mb-8"><div className="flex flex-col"><h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Properties</h3><span className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", isDark ? "text-white/20" : "text-slate-400")}>{selectedIds.length} Object(s) Selected</span></div><button onClick={() => { const ns = seats.filter(s => !selectedIds.includes(String(s.id))); const ne = elements.filter(e => !selectedIds.includes(String(e.id))); setSeats(ns); setElements(ne); setSelectedIds([]); addToHistory(ns, ne); }} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button></div>
                 <div className="space-y-10">
                   {selectedIds.length > 1 && (
                     <div className="space-y-4"><label className="text-[9px] font-bold uppercase tracking-[0.2em] flex items-center gap-2 text-white/30"><AlignLeft size={12} /> Alignment</label><div className="grid grid-cols-4 gap-2">{['left', 'center', 'right', 'top'].map(act => (<button key={act} onClick={() => alignSelected(act)} className={cn("h-12 rounded-xl transition-all flex items-center justify-center", isDark ? "bg-white/5 hover:bg-white/10" : "bg-slate-100 hover:bg-slate-200")}><AlignLeft size={16} style={{ transform: act === 'top' ? 'rotate(90deg)' : '' }} /></button>))}</div></div>
@@ -859,45 +909,46 @@ export default function DesignerPage() {
                             </div>
 
                             {((firstSelected as any).type === 'table' || (firstSelected as any).seatsCount) && (
-                              <div className="space-y-1">
-                                <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey">Personas por Mesa</span>
-                                <select
-                                  value={(firstSelected as any).capacity || 4}
-                                  onChange={(e) => {
-                                    const count = parseInt(e.target.value);
-                                    updateSelectedProperty('capacity', count);
-                                    updateSelectedProperty('seatsCount', count);
-                                    const tableEl = firstSelected as any;
-                                    const radius = 60;
-                                    const remainingSeats = seats.filter(s => s.tableId !== tableEl.id);
-                                    const tableSeats: any[] = [];
-                                    for (let i = 0; i < count; i++) {
-                                      const ang = (i * (360 / count) - 90) * Math.PI / 180;
-                                      const sx = Math.round(tableEl.x + Math.cos(ang) * radius);
-                                      const sy = Math.round(tableEl.y + Math.sin(ang) * radius);
-                                      tableSeats.push({
-                                        id: `seat-${crypto.randomUUID()}`,
-                                        x: sx, y: sy,
-                                        row: tableEl.label || 'Mesa',
-                                        number: i + 1,
-                                        status: 'available',
-                                        category: 'vip',
-                                        angle: Math.round(ang * 180 / Math.PI + 90),
-                                        tableId: tableEl.id
-                                      });
-                                    }
-                                    setSeats([...remainingSeats, ...tableSeats]);
-                                    commitPropertyChange();
-                                  }}
-                                  className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-amber-honey" : "bg-white border-slate-200 text-amber-600")}
-                                >
-                                  <option value={2}>2 Personas (Mesa Pareja)</option>
-                                  <option value={4}>4 Personas (Mesa Estándar)</option>
-                                  <option value={6}>6 Personas (Mesa Mediana)</option>
-                                  <option value={8}>8 Personas (Mesa Grande)</option>
-                                  <option value={10}>10 Personas (Mesa VIP)</option>
-                                  <option value={12}>12 Personas (Mesa Imperial)</option>
-                                </select>
+                              <div className="space-y-4 pt-2 border-t border-white/10">
+                                <div className="space-y-1">
+                                  <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey block">Forma Específica de la Mesa</span>
+                                  <select
+                                    value={(firstSelected as any).tableShape || (firstSelected as any).table_shape || 'circle'}
+                                    onChange={(e) => {
+                                      const newShape = e.target.value;
+                                      updateSelectedProperty('tableShape', newShape);
+                                      updateSelectedProperty('table_shape', newShape);
+                                      recalculateTableSeats(firstSelected, newShape, (firstSelected as any).capacity || 4);
+                                    }}
+                                    className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-amber-honey" : "bg-white border-slate-200 text-amber-600")}
+                                  >
+                                    <option value="circle">Mesa Redonda / Círculo</option>
+                                    <option value="rect">Mesa Rectangular / Imperial</option>
+                                    <option value="square">Mesa Cuadrada / Cabaret</option>
+                                    <option value="ellipse">Mesa Ovalada / Elíptica</option>
+                                  </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey block">Personas por Mesa</span>
+                                  <select
+                                    value={(firstSelected as any).capacity || 4}
+                                    onChange={(e) => {
+                                      const count = parseInt(e.target.value);
+                                      updateSelectedProperty('capacity', count);
+                                      updateSelectedProperty('seatsCount', count);
+                                      recalculateTableSeats(firstSelected, (firstSelected as any).tableShape || 'circle', count);
+                                    }}
+                                    className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-amber-honey" : "bg-white border-slate-200 text-amber-600")}
+                                  >
+                                    <option value={2}>2 Personas (Mesa Pareja)</option>
+                                    <option value={4}>4 Personas (Mesa Estándar)</option>
+                                    <option value={6}>6 Personas (Mesa Mediana)</option>
+                                    <option value={8}>8 Personas (Mesa Grande)</option>
+                                    <option value={10}>10 Personas (Mesa VIP)</option>
+                                    <option value={12}>12 Personas (Mesa Imperial)</option>
+                                  </select>
+                                </div>
                               </div>
                             )}
                           </div>

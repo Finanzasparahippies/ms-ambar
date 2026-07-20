@@ -133,22 +133,47 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const shapeType = el.type || 'rect';
 
       if (shapeType === 'table') {
-        const radius = Math.min(w, h) / 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, radius, 0, Math.PI * 2);
-        ctx.fill(); ctx.stroke();
+        const tableShape = el.tableShape || el.table_shape || 'circle';
+        if (tableShape === 'rect' || tableShape === 'square') {
+          ctx.beginPath();
+          ctx.roundRect(-w / 2, -h / 2, w, h, 8);
+          ctx.fill(); ctx.stroke();
+        } else if (tableShape === 'ellipse') {
+          ctx.beginPath();
+          ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        } else {
+          const radius = Math.min(w, h) / 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, radius, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        }
 
         // Render seats ring around table
         const seatsCount = el.capacity || 4;
-        const seatDist = radius + 14;
         ctx.fillStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,191,0,0.7)' : 'rgba(217,119,6,0.8)');
-        for (let i = 0; i < seatsCount; i++) {
-          const ang = (i * (360 / seatsCount) - 90) * Math.PI / 180;
-          const sx = Math.cos(ang) * seatDist;
-          const sy = Math.sin(ang) * seatDist;
-          ctx.beginPath();
-          ctx.arc(sx, sy, 7, 0, Math.PI * 2);
-          ctx.fill();
+        if (tableShape === 'rect' || tableShape === 'square') {
+          const perim = 2 * (w + h);
+          for (let i = 0; i < seatsCount; i++) {
+            const frac = i / seatsCount;
+            const dist = frac * perim;
+            let sx = 0, sy = 0;
+            const pad = 14;
+            if (dist <= w) { sx = -w/2 + dist; sy = -h/2 - pad; }
+            else if (dist <= w + h) { sx = w/2 + pad; sy = -h/2 + (dist - w); }
+            else if (dist <= 2*w + h) { sx = w/2 - (dist - (w + h)); sy = h/2 + pad; }
+            else { sx = -w/2 - pad; sy = h/2 - (dist - (2*w + h)); }
+            ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
+          }
+        } else {
+          const rx = (w / 2) + 14;
+          const ry = (h / 2) + 14;
+          for (let i = 0; i < seatsCount; i++) {
+            const ang = (i * (360 / seatsCount) - 90) * Math.PI / 180;
+            const sx = Math.cos(ang) * rx;
+            const sy = Math.sin(ang) * ry;
+            ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
+          }
         }
       } else if (sides === 0 || shapeType === 'circle') {
         ctx.beginPath();
@@ -441,7 +466,9 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
     if (draggedItem) {
       if (draggedItem.handle === 'br') {
-        setElements(prev => prev.map(el => el.id === draggedItem.id ? { ...el, w: Math.max(20, (x - el.x) * 2), h: Math.max(20, (y - el.y) * 2) } : el));
+        const nextEls = elements.map(el => el.id === draggedItem.id ? { ...el, w: Math.max(20, Math.round((x - el.x) * 2)), h: Math.max(20, Math.round((y - el.y) * 2)) } : el);
+        setElements(nextEls);
+        if (onUpdate) onUpdate(seats, nextEls);
       } else if (draggedItem.groupSnapshot) {
         const snap = draggedItem.groupSnapshot.get(draggedItem.id);
         if (snap) {
@@ -456,6 +483,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
             return eSnap ? { ...el, x: eSnap.x + dx, y: eSnap.y + dy } : el;
           });
           setSeats(updatedSeats); setElements(updatedEls);
+          if (onUpdate) onUpdate(updatedSeats, updatedEls);
         }
       }
       return;
