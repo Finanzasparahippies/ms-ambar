@@ -23,9 +23,77 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
     return JSON.parse(atob(base64));
-  } catch {
+  } catch (err) {
+    console.warn('[JWT Decode Warning] Unable to parse token payload:', err);
     return null;
   }
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+/**
+ * Calculates a smart, non-overlapping position for any newly added element or matrix.
+ * If default coordinates collide with existing elements or seats, it shifts to an open area.
+ */
+function findNonOverlappingPosition(
+  w: number,
+  h: number,
+  defaultX: number,
+  defaultY: number,
+  existingElements: any[],
+  existingSeats: any[],
+  padding: number = 40
+): { x: number, y: number } {
+  const allItems = [
+    ...existingElements.map(e => ({ x: e.x, y: e.y, w: e.w || 100, h: e.h || 100 })),
+    ...existingSeats.map(s => ({ x: s.x, y: s.y, w: 30, h: 30 }))
+  ];
+
+  if (allItems.length === 0) {
+    return { x: defaultX, y: defaultY };
+  }
+
+  const checkOverlap = (cx: number, cy: number) => {
+    const minX1 = cx - w / 2 - padding;
+    const maxX1 = cx + w / 2 + padding;
+    const minY1 = cy - h / 2 - padding;
+    const maxY1 = cy + h / 2 + padding;
+
+    return allItems.some(item => {
+      const minX2 = item.x - item.w / 2;
+      const maxX2 = item.x + item.w / 2;
+      const minY2 = item.y - item.h / 2;
+      const maxY2 = item.y + item.h / 2;
+
+      return !(maxX1 < minX2 || minX1 > maxX2 || maxY1 < minY2 || minY1 > maxY2);
+    });
+  };
+
+  if (!checkOverlap(defaultX, defaultY)) {
+    return { x: defaultX, y: defaultY };
+  }
+
+  let maxY = -Infinity;
+  let maxX = -Infinity;
+  allItems.forEach(item => {
+    if (item.y + item.h / 2 > maxY) maxY = item.y + item.h / 2;
+    if (item.x + item.w / 2 > maxX) maxX = item.x + item.w / 2;
+  });
+
+  const candY = Math.round(maxY + h / 2 + padding);
+  if (!checkOverlap(defaultX, candY)) {
+    return { x: defaultX, y: candY };
+  }
+
+  const candX = Math.round(maxX + w / 2 + padding);
+  if (!checkOverlap(candX, defaultY)) {
+    return { x: candX, y: defaultY };
+  }
+
+  return { x: candX, y: candY };
 }
 
 export default function DesignerPage() {
@@ -84,6 +152,17 @@ export default function DesignerPage() {
   const [clipboard, setClipboard] = useState<{ seats: any[], elements: any[] } | null>(null);
   const rotationRef = useRef<{ centroid: { x: number, y: number }, initialStates: Map<string, any> } | null>(null);
 
+  const [tableMatrixModal, setTableMatrixModal] = useState({
+    isOpen: false,
+    rows: 3,
+    cols: 4,
+    spacingX: 160,
+    spacingY: 160,
+    seatsCount: 4,
+    shape: 'square',
+    arrangement: '4_sides'
+  });
+
   // ─── Theater Management Modal (Nectar Studio Pro) ───
   const [theaterModal, setTheaterModal] = useState<{ isOpen: boolean; mode: 'create' | 'edit' }>({ isOpen: false, mode: 'create' });
   const [theaterForm, setTheaterForm] = useState({ name: '', location: '' });
@@ -98,7 +177,9 @@ export default function DesignerPage() {
 
   const fetchTheaters = async () => {
     try {
-      const res = await fetch(`${apiUrl}/tickets/theaters/`);
+      const res = await fetch(`${apiUrl}/tickets/theaters/`, {
+        headers: { ...getAuthHeaders() }
+      });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       setTheaters(data);
@@ -145,13 +226,13 @@ export default function DesignerPage() {
       if (theaterModal.mode === 'create') {
         response = await fetch(`${apiUrl}/tickets/theaters/`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify({ name: theaterForm.name, location: finalLocation, layout: { seats: [], map_elements: [] } }),
         });
       } else {
         response = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
           body: JSON.stringify({ name: theaterForm.name, location: finalLocation }),
         });
       }
@@ -178,7 +259,10 @@ export default function DesignerPage() {
     );
     if (!isConfirmed) return;
     try {
-      await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, { method: 'DELETE' });
+      await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
+        method: 'DELETE',
+        headers: { ...getAuthHeaders() }
+      });
       const updatedList = await fetchTheaters();
       if (updatedList.length > 0) { setSelectedTheaterId(updatedList[0].id); loadTheater(updatedList[0]); }
       else { setSelectedTheaterId(''); setSeats([]); setElements([]); }
@@ -190,11 +274,15 @@ export default function DesignerPage() {
     if (!selectedTheaterId) return;
     setGenerateSeatsStatus('loading');
     try {
-      const res = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/generate_seats/`, { method: 'POST' });
-      if (!res.ok) throw new Error();
+      const res = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/generate_seats/`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders() }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setGenerateSeatsStatus('success');
       setTimeout(() => setGenerateSeatsStatus('idle'), 3500);
-    } catch {
+    } catch (err: any) {
+      console.error('[Generate Seats Error] Sincronización de asientos fallida:', err);
       setGenerateSeatsStatus('error');
       setTimeout(() => setGenerateSeatsStatus('idle'), 3500);
     }
@@ -266,63 +354,151 @@ export default function DesignerPage() {
     addToHistory([], []);
   };
 
-  const recalculateTableSeats = (tableEl: any, shape: string = 'circle', count: number = 4, targetW?: number, targetH?: number) => {
+  const recalculateTableSeats = (tableEl: any, shape: string = 'circle', count: number = 4, targetW?: number, targetH?: number, currentEls?: any[], targetArrangement?: string, targetAngle?: number, currentSeats?: any[]) => {
+    const baseEls = currentEls || elements;
+    const baseSeats = currentSeats || seats;
     const w = targetW || tableEl.w || 100;
     const h = targetH || tableEl.h || 100;
+    const angleDeg = targetAngle !== undefined ? targetAngle : (tableEl.angle || 0);
     const tableId = tableEl.id;
+    const arrangement = targetArrangement || tableEl.seatArrangement || tableEl.seat_arrangement || '4_sides';
 
-    const updatedEls = elements.map(el => {
-      if (el.id === tableId) {
-        return {
-          ...el,
-          type: 'table',
-          tableShape: shape,
-          table_shape: shape,
-          capacity: count,
-          seatsCount: count,
-          w, h
-        };
-      }
-      return el;
-    });
+    const hasEl = baseEls.some(e => e.id === tableId);
+    let updatedEls = baseEls;
+    if (hasEl) {
+      updatedEls = baseEls.map(el => {
+        if (el.id === tableId) {
+          return {
+            ...el,
+            type: 'table',
+            tableShape: shape,
+            table_shape: shape,
+            seatArrangement: arrangement,
+            seat_arrangement: arrangement,
+            capacity: count,
+            seatsCount: count,
+            w, h,
+            angle: angleDeg
+          };
+        }
+        return el;
+      });
+    } else {
+      updatedEls = [...baseEls, {
+        ...tableEl,
+        type: 'table',
+        tableShape: shape,
+        table_shape: shape,
+        seatArrangement: arrangement,
+        seat_arrangement: arrangement,
+        capacity: count,
+        seatsCount: count,
+        w, h,
+        angle: angleDeg
+      }];
+    }
 
-    const remainingSeats = seats.filter(s => s.tableId !== tableId);
+    const remainingSeats = baseSeats.filter(s => s.tableId !== tableId);
     const tableSeats: any[] = [];
 
+    const rotatePoint = (dx: number, dy: number, baseAngle: number) => {
+      const rad = angleDeg * Math.PI / 180;
+      const rx = dx * Math.cos(rad) - dy * Math.sin(rad);
+      const ry = dx * Math.sin(rad) + dy * Math.cos(rad);
+      return {
+        x: Math.round(tableEl.x + rx),
+        y: Math.round(tableEl.y + ry),
+        angle: Math.round((baseAngle + angleDeg) % 360)
+      };
+    };
+
     if (shape === 'rect' || shape === 'square') {
-      const perim = 2 * (w + h);
-      const pad = 20;
-      for (let i = 0; i < count; i++) {
-        const frac = i / count;
-        const dist = frac * perim;
-        let sx = 0, sy = 0, angle = 0;
-        if (dist <= w) {
-          sx = tableEl.x - w / 2 + dist;
-          sy = tableEl.y - h / 2 - pad;
-          angle = 180;
-        } else if (dist <= w + h) {
-          sx = tableEl.x + w / 2 + pad;
-          sy = tableEl.y - h / 2 + (dist - w);
-          angle = 270;
-        } else if (dist <= 2 * w + h) {
-          sx = tableEl.x + w / 2 - (dist - (w + h));
-          sy = tableEl.y + h / 2 + pad;
-          angle = 0;
+      const pad = 18;
+      let tc = 1, rc = 1, bc = 1, lc = 1;
+      if (arrangement === '2_vs_2' || arrangement === 'opposite') {
+        if (w >= h) {
+          tc = Math.ceil(count / 2);
+          bc = Math.floor(count / 2);
+          lc = 0; rc = 0;
         } else {
-          sx = tableEl.x - w / 2 - pad;
-          sy = tableEl.y + h / 2 - (dist - (2 * w + h));
-          angle = 90;
+          lc = Math.ceil(count / 2);
+          rc = Math.floor(count / 2);
+          tc = 0; bc = 0;
         }
+      } else if (arrangement === '4_sides' && count === 4) {
+        tc = 1; rc = 1; bc = 1; lc = 1;
+      } else {
+        if (count === 2) { tc = 0; bc = 0; lc = 1; rc = 1; }
+        else if (count === 4) { tc = 1; rc = 1; bc = 1; lc = 1; }
+        else if (count === 6) { tc = 2; bc = 2; lc = 1; rc = 1; }
+        else if (count === 8) { tc = 2; rc = 2; bc = 2; lc = 2; }
+        else if (count === 10) { tc = 3; bc = 3; lc = 2; rc = 2; }
+        else if (count === 12) { tc = 4; bc = 4; lc = 2; rc = 2; }
+        else {
+          const base = Math.floor(count / 4);
+          const rem = count % 4;
+          tc = base + (rem >= 1 ? 1 : 0);
+          bc = base + (rem >= 2 ? 1 : 0);
+          lc = base + (rem >= 3 ? 1 : 0);
+          rc = base;
+        }
+      }
+
+      let seatNumber = 1;
+
+      // Top Side
+      for (let j = 0; j < tc; j++) {
+        const dx = -w / 2 + (w / (tc + 1)) * (j + 1);
+        const dy = -h / 2 - pad;
+        const pt = rotatePoint(dx, dy, 180);
         tableSeats.push({
           id: `seat-${crypto.randomUUID()}`,
-          x: Math.round(sx),
-          y: Math.round(sy),
+          x: pt.x, y: pt.y,
           row: tableEl.label || 'Mesa',
-          number: i + 1,
-          status: 'available',
-          category: 'vip',
-          angle,
-          tableId
+          number: seatNumber++,
+          status: 'available', category: 'vip', angle: pt.angle, tableId
+        });
+      }
+
+      // Right Side
+      for (let j = 0; j < rc; j++) {
+        const dx = w / 2 + pad;
+        const dy = -h / 2 + (h / (rc + 1)) * (j + 1);
+        const pt = rotatePoint(dx, dy, 270);
+        tableSeats.push({
+          id: `seat-${crypto.randomUUID()}`,
+          x: pt.x, y: pt.y,
+          row: tableEl.label || 'Mesa',
+          number: seatNumber++,
+          status: 'available', category: 'vip', angle: pt.angle, tableId
+        });
+      }
+
+      // Bottom Side
+      for (let j = 0; j < bc; j++) {
+        const dx = w / 2 - (w / (bc + 1)) * (j + 1);
+        const dy = h / 2 + pad;
+        const pt = rotatePoint(dx, dy, 0);
+        tableSeats.push({
+          id: `seat-${crypto.randomUUID()}`,
+          x: pt.x, y: pt.y,
+          row: tableEl.label || 'Mesa',
+          number: seatNumber++,
+          status: 'available', category: 'vip', angle: pt.angle, tableId
+        });
+      }
+
+      // Left Side
+      for (let j = 0; j < lc; j++) {
+        const dx = -w / 2 - pad;
+        const dy = h / 2 - (h / (lc + 1)) * (j + 1);
+        const pt = rotatePoint(dx, dy, 90);
+        tableSeats.push({
+          id: `seat-${crypto.randomUUID()}`,
+          x: pt.x, y: pt.y,
+          row: tableEl.label || 'Mesa',
+          number: seatNumber++,
+          status: 'available', category: 'vip', angle: pt.angle, tableId
         });
       }
     } else {
@@ -330,16 +506,18 @@ export default function DesignerPage() {
       const ry = (h / 2) + 18;
       for (let i = 0; i < count; i++) {
         const ang = (i * (360 / count) - 90) * Math.PI / 180;
-        const sx = Math.round(tableEl.x + Math.cos(ang) * rx);
-        const sy = Math.round(tableEl.y + Math.sin(ang) * ry);
+        const dx = Math.cos(ang) * rx;
+        const dy = Math.sin(ang) * ry;
+        const baseAngle = Math.round(ang * 180 / Math.PI + 90);
+        const pt = rotatePoint(dx, dy, baseAngle);
         tableSeats.push({
           id: `seat-${crypto.randomUUID()}`,
-          x: sx, y: sy,
+          x: pt.x, y: pt.y,
           row: tableEl.label || 'Mesa',
           number: i + 1,
           status: 'available',
           category: 'vip',
-          angle: Math.round(ang * 180 / Math.PI + 90),
+          angle: pt.angle,
           tableId
         });
       }
@@ -352,20 +530,21 @@ export default function DesignerPage() {
     return updatedSeats;
   };
 
-  const addTable = (seatsCount: number = 4, x: number = 500, y: number = 500) => {
+  const addTable = (seatsCount: number = 4, defaultX: number = 500, defaultY: number = 500) => {
     const tableId = `table-${crypto.randomUUID()}`;
     const tableNum = elements.filter(e => e.type === 'table').length + 1;
     const label = `Mesa ${tableNum}`;
+    const pos = findNonOverlappingPosition(140, 140, defaultX, defaultY, elements, seats);
 
     const newTableEl = {
       id: tableId,
       type: 'table',
       tableShape: 'circle',
       table_shape: 'circle',
-      x, y,
+      x: pos.x, y: pos.y,
       w: 100, h: 100,
       label,
-      color: 'rgba(255, 191, 0, 0.15)',
+      color: 'rgba(255, 191, 0, 0.25)',
       angle: 0,
       sides: 0,
       isGA: false,
@@ -374,9 +553,58 @@ export default function DesignerPage() {
     };
 
     const updatedEls = [...elements, newTableEl];
-    setElements(updatedEls);
-    recalculateTableSeats(newTableEl, 'circle', seatsCount);
+    recalculateTableSeats(newTableEl, 'circle', seatsCount, 100, 100, updatedEls);
     setSelectedIds([newTableEl.id]);
+    setActiveTool('select');
+  };
+
+  const confirmTableMatrix = () => {
+    const { rows, cols, spacingX, spacingY, seatsCount, shape, arrangement } = tableMatrixModal;
+    let currentElements = [...elements];
+    let currentSeats = [...seats];
+    const newTableIds: string[] = [];
+
+    const matrixW = (cols - 1) * spacingX + 140;
+    const matrixH = (rows - 1) * spacingY + 140;
+    const smartPos = findNonOverlappingPosition(matrixW, matrixH, 400, 350, elements, seats);
+
+    const startX = smartPos.x - ((cols - 1) * spacingX) / 2;
+    const startY = smartPos.y - ((rows - 1) * spacingY) / 2;
+    let tableIndex = elements.filter(e => e.type === 'table').length + 1;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const tableId = `table-${crypto.randomUUID()}`;
+        newTableIds.push(tableId);
+        const label = `Mesa ${tableIndex++}`;
+        const x = Math.round(startX + c * spacingX);
+        const y = Math.round(startY + r * spacingY);
+
+        const newTableEl = {
+          id: tableId,
+          type: 'table',
+          tableShape: shape,
+          table_shape: shape,
+          seatArrangement: arrangement,
+          seat_arrangement: arrangement,
+          x, y,
+          w: 100, h: 100,
+          label,
+          color: 'rgba(255, 191, 0, 0.25)',
+          angle: 0,
+          sides: 0,
+          isGA: false,
+          capacity: seatsCount,
+          seatsCount
+        };
+
+        currentElements = [...currentElements, newTableEl];
+        currentSeats = recalculateTableSeats(newTableEl, shape, seatsCount, 100, 100, currentElements, arrangement, 0, currentSeats);
+      }
+    }
+
+    setSelectedIds(newTableIds);
+    setTableMatrixModal({ ...tableMatrixModal, isOpen: false });
     setActiveTool('select');
   };
 
@@ -431,11 +659,24 @@ export default function DesignerPage() {
     try {
       const response = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ layout: { map_elements: elements, seats: seats } })
       });
-      if (response.ok) { setSaveStatus('success'); setTimeout(() => setSaveStatus('idle'), 3000); } else { setSaveStatus('error'); }
-    } catch (error) { setSaveStatus('error'); } finally { setIsSaving(false); }
+      if (response.ok) {
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      } else {
+        console.error('[Save Layout Error] HTTP status:', response.status);
+        setSaveStatus('error');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      }
+    } catch (error: any) {
+      console.error('[Save Layout Error] Exception in saveToDB:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const alignSelected = (type: string) => {
@@ -466,12 +707,16 @@ export default function DesignerPage() {
     setElements(newEls); addToHistory(seats, newEls);
   };
 
-  const addElement = (type: string, label: string, color: string, x: number = 500, y: number = 500) => {
-    const newEl = { id: `el-${crypto.randomUUID()}`, type: 'rect', x, y, w: 150, h: 100, label, color, angle: 0, sides: 4 };
+  const addElement = (type: string, label: string, color: string, defaultX: number = 500, defaultY: number = 500, extra?: any) => {
+    const pos = findNonOverlappingPosition(150, 100, defaultX, defaultY, elements, seats);
+    const newEl = { id: `el-${crypto.randomUUID()}`, type, x: pos.x, y: pos.y, w: 150, h: 100, label, color, angle: 0, sides: type === 'circle' ? 0 : 4, ...extra };
     const newEls = [...elements, newEl]; setElements(newEls); setSelectedIds([newEl.id]); addToHistory(seats, newEls); setActiveTool('select');
   };
 
-  const confirmBatchSeats = (x: number = 500, y: number = 500) => {
+  const confirmBatchSeats = (defaultX: number = 500, defaultY: number = 500) => {
+    const pos = findNonOverlappingPosition(400, 250, defaultX, defaultY, elements, seats);
+    const x = pos.x;
+    const y = pos.y;
     const { rowLabel, category, rowsCount, rowSpacing, aisleCount, arcAngle } = batchConfig;
     const type = batchPanel.type;
     let allNewSeats: any[] = [];
@@ -628,6 +873,12 @@ export default function DesignerPage() {
       setElements(newEls);
       return;
     }
+
+    if (key === 'angle' && selectedElement && ((selectedElement as any).type === 'table' || (selectedElement as any).tableShape || seats.some(s => s.tableId === selectedElement.id))) {
+      recalculateTableSeats(selectedElement, (selectedElement as any).tableShape || 'circle', (selectedElement as any).capacity || 4, undefined, undefined, elements, (selectedElement as any).seatArrangement || '4_sides', value as number);
+      return;
+    }
+
     const newSeats = seats.map(s => selectedIds.includes(String(s.id)) ? { ...s, [key]: value } : s);
     const newEls = elements.map(el => selectedIds.includes(String(el.id)) ? { ...el, [key]: value } : el);
     setSeats(newSeats);
@@ -743,19 +994,20 @@ export default function DesignerPage() {
           </div>
         </div>
 
-        <div className={cn("absolute left-1/2 -translate-x-1/2 flex p-1.5 rounded-2xl border backdrop-blur-3xl shadow-2xl transition-all", isDark ? "bg-white/5 border-white/10" : "bg-white/80 border-slate-200")}>
+        <div className={cn("absolute left-1/2 -translate-x-1/2 flex p-1 rounded-2xl border backdrop-blur-3xl shadow-2xl transition-all z-40 gap-1 scale-90 2xl:scale-100", isDark ? "bg-white/5 border-white/10" : "bg-white/80 border-slate-200")}>
           {[
             { id: 'select', icon: MousePointer2, label: 'Select' },
-            { id: 'grid', icon: Grid3X3, label: 'Add Row', action: () => { setBatchPanel({ type: 'grid', isOpen: true }); setActiveTool('grid'); } },
+            { id: 'table_matrix', icon: Grid3X3, label: 'Matriz Mesas', action: () => { setTableMatrixModal({ ...tableMatrixModal, isOpen: true }); } },
+            { id: 'table', icon: Coffee, label: 'Mesa', action: () => setActiveTool('table') },
+            { id: 'grid', icon: Layers, label: 'Filas Asientos', action: () => { setBatchPanel({ type: 'grid', isOpen: true }); setActiveTool('grid'); } },
             { id: 'arc', icon: Compass, label: 'Add Arc', action: () => { setBatchPanel({ type: 'arc', isOpen: true }); setActiveTool('arc'); } },
             { id: 'stadium', icon: Zap, label: 'Stadium', action: () => { setBatchPanel({ type: 'stadium', isOpen: true }); setActiveTool('stadium'); } },
             { id: 'zone', icon: Square, label: 'Zona Rect', action: () => setActiveTool('zone') },
             { id: 'circle_zone', icon: CircleIcon, label: 'Zona Circular', action: () => setActiveTool('circle_zone') },
-            { id: 'table', icon: Coffee, label: 'Mesa', action: () => setActiveTool('table') },
             { id: 'stage', icon: Maximize, label: 'Stage', action: () => setActiveTool('stage') },
           ].map(tool => (
-            <button key={tool.id} onClick={tool.action || (() => setActiveTool(tool.id))} className={cn("w-11 h-11 rounded-xl flex items-center justify-center transition-all relative group", activeTool === tool.id ? "bg-amber-honey text-nature-night shadow-glow" : isDark ? "text-white/40 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-slate-900 hover:bg-slate-100")}>
-              <tool.icon size={18} /><div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-black/90 text-[8px] font-black uppercase rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap tracking-widest z-50">{tool.label}</div>
+            <button key={tool.id} onClick={tool.action || (() => setActiveTool(tool.id))} className={cn("w-9 h-9 rounded-xl flex items-center justify-center transition-all relative group", activeTool === tool.id ? "bg-amber-honey text-nature-night shadow-glow" : isDark ? "text-white/40 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-slate-900 hover:bg-slate-100")}>
+              <tool.icon size={16} /><div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-black/90 text-[8px] font-black uppercase rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap tracking-widest z-50">{tool.label}</div>
             </button>
           ))}
         </div>
@@ -969,7 +1221,7 @@ export default function DesignerPage() {
                                   </select>
                                 </div>
 
-                                <div className="space-y-1">
+                                 <div className="space-y-1">
                                   <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey block">Personas por Mesa</span>
                                   <select
                                     value={(firstSelected as any).capacity || 4}
@@ -987,6 +1239,25 @@ export default function DesignerPage() {
                                     <option value={8}>8 Personas (Mesa Grande)</option>
                                     <option value={10}>10 Personas (Mesa VIP)</option>
                                     <option value={12}>12 Personas (Mesa Imperial)</option>
+                                  </select>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey block">Acomodo / Distribución de Asientos</span>
+                                  <select
+                                    value={(firstSelected as any).seatArrangement || (firstSelected as any).seat_arrangement || '4_sides'}
+                                    onChange={(e) => {
+                                      const newArr = e.target.value;
+                                      updateSelectedProperty('seatArrangement', newArr);
+                                      updateSelectedProperty('seat_arrangement', newArr);
+                                      recalculateTableSeats(firstSelected, (firstSelected as any).tableShape || 'square', (firstSelected as any).capacity || 4, undefined, undefined, undefined, newArr);
+                                    }}
+                                    className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-amber-honey" : "bg-white border-slate-200 text-amber-600")}
+                                  >
+                                    <option value="4_sides">1 por Lado (4 Caras / Cruz)</option>
+                                    <option value="2_vs_2">2 Frente a 2 (Extremos / Paralelo)</option>
+                                    <option value="opposite">Frente a Frente (Solo Lados Largos)</option>
+                                    <option value="balanced">Distribución Equilibrada Perimetral</option>
                                   </select>
                                 </div>
                               </div>
@@ -1132,6 +1403,164 @@ export default function DesignerPage() {
                   </motion.button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════ TABLE MATRIX GENERATOR MODAL ══════ */}
+      <AnimatePresence>
+        {tableMatrixModal.isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
+            onClick={(e) => { if (e.target === e.currentTarget) setTableMatrixModal({ ...tableMatrixModal, isOpen: false }); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 24 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 24 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              className={cn(
+                "w-full max-w-lg rounded-[2rem] border p-8 shadow-2xl backdrop-blur-3xl",
+                isDark ? "bg-[#0b0d17]/90 border-white/10 text-white" : "bg-white/95 border-slate-200 text-slate-900"
+              )}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-honey/15 rounded-2xl flex items-center justify-center border border-amber-honey/25 text-amber-honey">
+                    <Grid3X3 size={22} />
+                  </div>
+                  <div>
+                    <h2 className="text-[13px] font-black uppercase tracking-[0.25em]">
+                      Matriz / Grilla de Mesas
+                    </h2>
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-amber-honey/60 mt-0.5">
+                      Generador Automático de Mesas y Asientos
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setTableMatrixModal({ ...tableMatrixModal, isOpen: false })}
+                  className={cn("w-9 h-9 rounded-xl flex items-center justify-center transition-all", isDark ? "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white" : "bg-slate-100 text-slate-400 hover:bg-slate-200")}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">
+                      Filas de Mesas
+                    </label>
+                    <input
+                      type="number" min="1" max="20"
+                      value={tableMatrixModal.rows}
+                      onChange={(e) => setTableMatrixModal({ ...tableMatrixModal, rows: Math.max(1, parseInt(e.target.value) || 1) })}
+                      className={cn("w-full px-4 py-3 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">
+                      Columnas de Mesas
+                    </label>
+                    <input
+                      type="number" min="1" max="20"
+                      value={tableMatrixModal.cols}
+                      onChange={(e) => setTableMatrixModal({ ...tableMatrixModal, cols: Math.max(1, parseInt(e.target.value) || 1) })}
+                      className={cn("w-full px-4 py-3 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">
+                      Espaciado Horiz. (X px)
+                    </label>
+                    <input
+                      type="number" min="80" max="500" step="10"
+                      value={tableMatrixModal.spacingX}
+                      onChange={(e) => setTableMatrixModal({ ...tableMatrixModal, spacingX: parseInt(e.target.value) || 160 })}
+                      className={cn("w-full px-4 py-3 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">
+                      Espaciado Vert. (Y px)
+                    </label>
+                    <input
+                      type="number" min="80" max="500" step="10"
+                      value={tableMatrixModal.spacingY}
+                      onChange={(e) => setTableMatrixModal({ ...tableMatrixModal, spacingY: parseInt(e.target.value) || 160 })}
+                      className={cn("w-full px-4 py-3 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">
+                      Capacidad por Mesa
+                    </label>
+                    <select
+                      value={tableMatrixModal.seatsCount}
+                      onChange={(e) => setTableMatrixModal({ ...tableMatrixModal, seatsCount: parseInt(e.target.value) })}
+                      className={cn("w-full px-4 py-3 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")}
+                    >
+                      <option value={2}>2 Personas</option>
+                      <option value={4}>4 Personas</option>
+                      <option value={6}>6 Personas</option>
+                      <option value={8}>8 Personas</option>
+                      <option value={10}>10 Personas</option>
+                      <option value={12}>12 Personas</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">
+                      Forma de la Mesa
+                    </label>
+                    <select
+                      value={tableMatrixModal.shape}
+                      onChange={(e) => setTableMatrixModal({ ...tableMatrixModal, shape: e.target.value })}
+                      className={cn("w-full px-4 py-3 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")}
+                    >
+                      <option value="square">Mesa Cuadrada</option>
+                      <option value="rect">Mesa Rectangular</option>
+                      <option value="circle">Mesa Redonda</option>
+                      <option value="ellipse">Mesa Ovalada</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 block">
+                    Acomodo de Asientos
+                  </label>
+                  <select
+                    value={tableMatrixModal.arrangement}
+                    onChange={(e) => setTableMatrixModal({ ...tableMatrixModal, arrangement: e.target.value })}
+                    className={cn("w-full px-4 py-3 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-200 text-slate-900")}
+                  >
+                    <option value="4_sides">1 por Lado (4 Caras / Cruz)</option>
+                    <option value="2_vs_2">2 Frente a 2 (Paralelo / Extremos)</option>
+                    <option value="opposite">Frente a Frente (Solo Lados Largos)</option>
+                    <option value="balanced">Distribución Equilibrada Perimetral</option>
+                  </select>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={confirmTableMatrix}
+                  className="w-full py-4 rounded-xl text-xs font-black uppercase tracking-[0.25em] bg-amber-honey text-nature-night shadow-glow mt-4 flex items-center justify-center gap-2"
+                >
+                  <Plus size={16} />
+                  Generar {tableMatrixModal.rows * tableMatrixModal.cols} Mesas ({tableMatrixModal.rows * tableMatrixModal.cols * tableMatrixModal.seatsCount} Asientos Total)
+                </motion.button>
+              </div>
             </motion.div>
           </motion.div>
         )}

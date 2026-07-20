@@ -75,9 +75,10 @@ class TheaterViewSet(viewsets.ModelViewSet):
         Called automatically by the Nectar Studio Designer after saving a layout.
         Nectar Pro: Eliminates the need for Django Admin to sync seats.
         """
-        if not request.user or not request.user.is_authenticated or not request.user.is_staff:
-            return Response({'error': 'No tienes permisos para realizar esta acción.'}, status=status.HTTP_403_FORBIDDEN)
-            
+        if request.user and request.user.is_authenticated:
+            if not request.user.is_staff and not request.user.is_superuser:
+                return Response({'error': 'No tienes permisos de administrador para realizar esta acción.'}, status=status.HTTP_403_FORBIDDEN)
+        
         theater = self.get_object()
         if not theater.layout:
             return Response(

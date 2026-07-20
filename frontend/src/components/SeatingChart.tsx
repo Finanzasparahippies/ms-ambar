@@ -153,16 +153,60 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         const seatsCount = el.capacity || 4;
         ctx.fillStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,191,0,0.7)' : 'rgba(217,119,6,0.8)');
         if (tableShape === 'rect' || tableShape === 'square') {
-          const perim = 2 * (w + h);
-          for (let i = 0; i < seatsCount; i++) {
-            const frac = i / seatsCount;
-            const dist = frac * perim;
-            let sx = 0, sy = 0;
-            const pad = 14;
-            if (dist <= w) { sx = -w/2 + dist; sy = -h/2 - pad; }
-            else if (dist <= w + h) { sx = w/2 + pad; sy = -h/2 + (dist - w); }
-            else if (dist <= 2*w + h) { sx = w/2 - (dist - (w + h)); sy = h/2 + pad; }
-            else { sx = -w/2 - pad; sy = h/2 - (dist - (2*w + h)); }
+          const pad = 14;
+          const arrangement = el.seatArrangement || el.seat_arrangement || '4_sides';
+          let tc = 1, rc = 1, bc = 1, lc = 1;
+          if (arrangement === '2_vs_2' || arrangement === 'opposite') {
+            if (w >= h) {
+              tc = Math.ceil(seatsCount / 2);
+              bc = Math.floor(seatsCount / 2);
+              lc = 0; rc = 0;
+            } else {
+              lc = Math.ceil(seatsCount / 2);
+              rc = Math.floor(seatsCount / 2);
+              tc = 0; bc = 0;
+            }
+          } else if (arrangement === '4_sides' && seatsCount === 4) {
+            tc = 1; rc = 1; bc = 1; lc = 1;
+          } else {
+            if (seatsCount === 2) { tc = 0; bc = 0; lc = 1; rc = 1; }
+            else if (seatsCount === 4) { tc = 1; rc = 1; bc = 1; lc = 1; }
+            else if (seatsCount === 6) { tc = 2; bc = 2; lc = 1; rc = 1; }
+            else if (seatsCount === 8) { tc = 2; rc = 2; bc = 2; lc = 2; }
+            else if (seatsCount === 10) { tc = 3; bc = 3; lc = 2; rc = 2; }
+            else if (seatsCount === 12) { tc = 4; bc = 4; lc = 2; rc = 2; }
+            else {
+              const base = Math.floor(seatsCount / 4);
+              const rem = seatsCount % 4;
+              tc = base + (rem >= 1 ? 1 : 0);
+              bc = base + (rem >= 2 ? 1 : 0);
+              lc = base + (rem >= 3 ? 1 : 0);
+              rc = base;
+            }
+          }
+
+          // Top
+          for (let j = 0; j < tc; j++) {
+            const sx = -w / 2 + (w / (tc + 1)) * (j + 1);
+            const sy = -h / 2 - pad;
+            ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
+          }
+          // Right
+          for (let j = 0; j < rc; j++) {
+            const sx = w / 2 + pad;
+            const sy = -h / 2 + (h / (rc + 1)) * (j + 1);
+            ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
+          }
+          // Bottom
+          for (let j = 0; j < bc; j++) {
+            const sx = w / 2 - (w / (bc + 1)) * (j + 1);
+            const sy = h / 2 + pad;
+            ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
+          }
+          // Left
+          for (let j = 0; j < lc; j++) {
+            const sx = -w / 2 - pad;
+            const sy = h / 2 - (h / (lc + 1)) * (j + 1);
             ctx.beginPath(); ctx.arc(sx, sy, 7, 0, Math.PI * 2); ctx.fill();
           }
         } else {
