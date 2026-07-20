@@ -81,6 +81,26 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   useEffect(() => { setSeats(initialSeats); }, [initialSeats]);
   useEffect(() => { setElements(initialElements); }, [initialElements]);
   useEffect(() => { setSelectedIds(externalSelectedIds); }, [externalSelectedIds]);
+
+  // Non-passive native wheel listener to zoom canvas without scrolling outer web page
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setTransform(prev => ({
+        ...prev,
+        scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5))
+      }));
+    };
+
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
   
   const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
 
@@ -558,7 +578,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onWheel={(e) => setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5)) }))}
         className="w-full h-full block outline-none touch-none"
         style={{ touchAction: 'none' }}
         tabIndex={0}

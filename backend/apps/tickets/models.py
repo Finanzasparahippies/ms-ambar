@@ -27,34 +27,64 @@ class Theater(models.Model):
             seats_data = self.layout['seats']
 
         if seats_data is not None:
+            existing_seats_map = {
+                (s.section, str(s.row), s.number): s
+                for s in Seat.objects.filter(theater=self)
+            }
+            seats_to_create = []
+            seats_to_update = []
             active_keys = set()
-            created_count = 0
+            created_count = len(seats_data)
+
             for seat_data in seats_data:
                 sec = seat_data.get('section', 'General')
                 rw = str(seat_data.get('row', '1'))
                 num = int(seat_data.get('number', 1))
-                active_keys.add((sec, rw, num))
-                Seat.objects.update_or_create(
-                    theater=self,
-                    section=sec,
-                    row=rw,
-                    number=num,
-                    defaults={
-                        'category': seat_data.get('category', 'standard'),
-                        'status': seat_data.get('status', 'available'),
-                        'base_price': seat_data.get('base_price', 1000),
-                        'x': seat_data.get('x', 0),
-                        'y': seat_data.get('y', 0),
-                        'angle': seat_data.get('angle', 0)
-                    }
-                )
-                created_count += 1
+                key = (sec, rw, num)
+                active_keys.add(key)
 
-            # Delete seats no longer present in layout
-            existing_seats = Seat.objects.filter(theater=self)
-            for seat in existing_seats:
-                if (seat.section, str(seat.row), seat.number) not in active_keys:
-                    seat.delete()
+                cat = seat_data.get('category', 'standard')
+                st = seat_data.get('status', 'available')
+                price = seat_data.get('base_price', 1000)
+                sx = seat_data.get('x', 0)
+                sy = seat_data.get('y', 0)
+                ang = seat_data.get('angle', 0)
+
+                if key in existing_seats_map:
+                    seat = existing_seats_map[key]
+                    seat.category = cat
+                    seat.status = st
+                    seat.base_price = price
+                    seat.x = sx
+                    seat.y = sy
+                    seat.angle = ang
+                    seats_to_update.append(seat)
+                else:
+                    seats_to_create.append(Seat(
+                        theater=self,
+                        section=sec,
+                        row=rw,
+                        number=num,
+                        category=cat,
+                        status=st,
+                        base_price=price,
+                        x=sx,
+                        y=sy,
+                        angle=ang
+                    ))
+
+            if seats_to_create:
+                Seat.objects.bulk_create(seats_to_create, batch_size=500)
+            if seats_to_update:
+                Seat.objects.bulk_update(seats_to_update, ['category', 'status', 'base_price', 'x', 'y', 'angle'], batch_size=500)
+
+            # Bulk delete seats no longer present in layout
+            stale_ids = [
+                seat.id for key, seat in existing_seats_map.items()
+                if key not in active_keys
+            ]
+            if stale_ids:
+                Seat.objects.filter(id__in=stale_ids).delete()
 
             # Sync GA Zones
             elements_data = self.layout.get('map_elements', []) if isinstance(self.layout, dict) else []
