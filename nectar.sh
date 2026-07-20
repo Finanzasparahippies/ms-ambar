@@ -57,34 +57,46 @@ fi
 
 # Helper function to run Django commands in dev (using exec if running, run --rm if not)
 run_django_cmd_dev() {
+    local tty_flag=""
+    if [ -t 0 ]; then
+        tty_flag="-it"
+    fi
     if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_backend"; then
-        $DOCKER_BIN exec ambar_dev_backend python manage.py "$@"
+        $DOCKER_BIN exec $tty_flag ambar_dev_backend python manage.py "$@"
     elif $COMPOSE_BIN ps 2>/dev/null | grep -q "backend"; then
-        $COMPOSE_BIN exec backend python manage.py "$@"
+        $COMPOSE_BIN exec $tty_flag backend python manage.py "$@"
     else
-        $COMPOSE_BIN run --rm -w /app backend python manage.py "$@"
+        $COMPOSE_BIN run --rm $tty_flag -w /app backend python manage.py "$@"
     fi
 }
 
 # Helper function to run Django commands in staging (using exec if running, run --rm if not)
 run_django_cmd_staging() {
+    local tty_flag=""
+    if [ -t 0 ]; then
+        tty_flag="-it"
+    fi
     if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_staging_backend"; then
-        $DOCKER_BIN exec ambar_staging_backend python manage.py "$@"
+        $DOCKER_BIN exec $tty_flag ambar_staging_backend python manage.py "$@"
     elif $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps 2>/dev/null | grep -q "backend-staging"; then
-        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python manage.py "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml exec $tty_flag backend-staging python manage.py "$@"
     else
-        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm -w /app backend-staging python manage.py "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm $tty_flag -w /app backend-staging python manage.py "$@"
     fi
 }
 
 # Helper function to run Django commands in prod (using exec if running, run --rm if not)
 run_django_cmd_prod() {
+    local tty_flag=""
+    if [ -t 0 ]; then
+        tty_flag="-it"
+    fi
     if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_backend"; then
-        $DOCKER_BIN exec ambar_backend python manage.py "$@"
+        $DOCKER_BIN exec $tty_flag ambar_backend python manage.py "$@"
     elif $COMPOSE_BIN -f docker-compose.prod.yml ps 2>/dev/null | grep -q "backend"; then
-        $COMPOSE_BIN -f docker-compose.prod.yml exec backend python manage.py "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml exec $tty_flag backend python manage.py "$@"
     else
-        $COMPOSE_BIN -f docker-compose.prod.yml run --rm -w /app backend python manage.py "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml run --rm $tty_flag -w /app backend python manage.py "$@"
     fi
 }
 
