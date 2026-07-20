@@ -244,12 +244,85 @@ export default function DesignerPage() {
     addToHistory(updatedSeats, updatedEls);
   };
 
+  const deleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    const newSeats = seats.filter(s => !selectedIds.includes(String(s.id)));
+    const newEls = elements.filter(e => !selectedIds.includes(String(e.id)));
+    setSeats(newSeats);
+    setElements(newEls);
+    setSelectedIds([]);
+    addToHistory(newSeats, newEls);
+  };
+
+  const clearCanvas = async () => {
+    const isConfirmed = await showConfirm(
+      "¿Deseas dejar el lienzo 100% en blanco? Se borrarán todos los elementos y asientos del mapa actual.",
+      "Vaciar Lienzo"
+    );
+    if (!isConfirmed) return;
+    setSeats([]);
+    setElements([]);
+    setSelectedIds([]);
+    addToHistory([], []);
+  };
+
+  const addTable = (seatsCount: number = 4, x: number = 500, y: number = 500) => {
+    const tableId = `table-${crypto.randomUUID()}`;
+    const tableNum = elements.filter(e => e.type === 'table').length + 1;
+    const label = `Mesa ${tableNum}`;
+
+    const newTableEl = {
+      id: tableId,
+      type: 'table',
+      x, y,
+      w: 100, h: 100,
+      label,
+      color: 'rgba(255, 191, 0, 0.15)',
+      angle: 0,
+      sides: 0,
+      isGA: false,
+      capacity: seatsCount,
+      seatsCount
+    };
+
+    const tableSeats: any[] = [];
+    const radius = 60;
+    for (let i = 0; i < seatsCount; i++) {
+      const ang = (i * (360 / seatsCount) - 90) * Math.PI / 180;
+      const sx = Math.round(x + Math.cos(ang) * radius);
+      const sy = Math.round(y + Math.sin(ang) * radius);
+      tableSeats.push({
+        id: `seat-${crypto.randomUUID()}`,
+        x: sx,
+        y: sy,
+        row: label,
+        number: i + 1,
+        status: 'available',
+        category: 'vip',
+        angle: Math.round(ang * 180 / Math.PI + 90),
+        tableId
+      });
+    }
+
+    const updatedEls = [...elements, newTableEl];
+    const updatedSeats = [...seats, ...tableSeats];
+    setElements(updatedEls);
+    setSeats(updatedSeats);
+    setSelectedIds([newTableEl.id]);
+    addToHistory(updatedSeats, updatedEls);
+    setActiveTool('select');
+  };
+
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement?.tagName || '').toLowerCase();
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'c') { handleCopy(); }
       else if ((e.ctrlKey || e.metaKey) && e.key === 'v') { handlePaste(); }
+      else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); deleteSelected(); }
     };
     window.addEventListener('keydown', handleKeys);
     return () => window.removeEventListener('keydown', handleKeys);
@@ -432,6 +505,8 @@ export default function DesignerPage() {
   const handleChartClick = (x: number, y: number) => {
     if (activeTool === 'zone') addElement('rect', 'ZONA', 'rgba(34,166,179,0.1)', x, y);
     else if (activeTool === 'stage') addElement('rect', 'ESCENARIO', 'rgba(255,191,0,0.15)', x, y);
+    else if (activeTool === 'circle_zone') addElement('circle', 'ZONA CIRCULAR', 'rgba(168,85,247,0.15)', x, y, { sides: 0, w: 140, h: 140 });
+    else if (activeTool === 'table') addTable(4, x, y);
     else if (['grid', 'arc', 'stadium'].includes(activeTool)) confirmBatchSeats(x, y);
   };
 
@@ -604,16 +679,31 @@ export default function DesignerPage() {
             { id: 'grid', icon: Grid3X3, label: 'Add Row', action: () => { setBatchPanel({ type: 'grid', isOpen: true }); setActiveTool('grid'); } },
             { id: 'arc', icon: Compass, label: 'Add Arc', action: () => { setBatchPanel({ type: 'arc', isOpen: true }); setActiveTool('arc'); } },
             { id: 'stadium', icon: Zap, label: 'Stadium', action: () => { setBatchPanel({ type: 'stadium', isOpen: true }); setActiveTool('stadium'); } },
-            { id: 'zone', icon: Square, label: 'Zone', action: () => setActiveTool('zone') },
+            { id: 'zone', icon: Square, label: 'Zona Rect', action: () => setActiveTool('zone') },
+            { id: 'circle_zone', icon: CircleIcon, label: 'Zona Circular', action: () => setActiveTool('circle_zone') },
+            { id: 'table', icon: Coffee, label: 'Mesa', action: () => setActiveTool('table') },
             { id: 'stage', icon: Maximize, label: 'Stage', action: () => setActiveTool('stage') },
           ].map(tool => (
-            <button key={tool.id} onClick={tool.action || (() => setActiveTool(tool.id))} className={cn("w-12 h-12 rounded-xl flex items-center justify-center transition-all relative group", activeTool === tool.id ? "bg-amber-honey text-nature-night shadow-glow" : isDark ? "text-white/40 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-slate-900 hover:bg-slate-100")}>
-              <tool.icon size={20} /><div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-black/90 text-[8px] font-black uppercase rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap tracking-widest z-50">{tool.label}</div>
+            <button key={tool.id} onClick={tool.action || (() => setActiveTool(tool.id))} className={cn("w-11 h-11 rounded-xl flex items-center justify-center transition-all relative group", activeTool === tool.id ? "bg-amber-honey text-nature-night shadow-glow" : isDark ? "text-white/40 hover:text-white hover:bg-white/10" : "text-slate-400 hover:text-slate-900 hover:bg-slate-100")}>
+              <tool.icon size={18} /><div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-black/90 text-[8px] font-black uppercase rounded border border-white/10 opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap tracking-widest z-50">{tool.label}</div>
             </button>
           ))}
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Vaciar Canvas / Lienzo Blanco */}
+          {selectedTheaterId && (
+            <motion.button
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
+              onClick={clearCanvas}
+              title="Dejar el lienzo 100% en blanco"
+              className={cn("h-10 px-3 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-2 border bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white")}
+            >
+              <Trash2 size={13} />
+              Lienzo Blanco
+            </motion.button>
+          )}
+
           {/* Generate Seats from layout */}
           {selectedTheaterId && (
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }} onClick={handleGenerateSeats} disabled={generateSeatsStatus === 'loading'} title="Sincronizar asientos desde el layout actual" className={cn("h-10 px-4 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-2 border", generateSeatsStatus === 'success' ? "bg-green-500/10 border-green-500/30 text-green-400" : generateSeatsStatus === 'error' ? "bg-red-500/10 border-red-500/30 text-red-400" : isDark ? "bg-white/5 border-white/10 text-white/60 hover:bg-white/10" : "bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200")}>
@@ -708,6 +798,103 @@ export default function DesignerPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Geometry & Shape */}
+                      {!(firstSelected as any).row && (
+                        <div className="space-y-4">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Forma / Geometría</label>
+                          <div className={cn("p-5 rounded-2xl border space-y-5", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}>
+                            <div className="space-y-1">
+                              <span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Tipo de Figura</span>
+                              <select
+                                value={(firstSelected as any).type || 'rect'}
+                                onChange={(e) => {
+                                  const shape = e.target.value;
+                                  let sides = 4;
+                                  if (shape === 'circle' || shape === 'table') sides = 0;
+                                  else if (shape === 'rounded' || shape === 'rect') sides = 4;
+                                  updateSelectedProperty('type', shape);
+                                  updateSelectedProperty('sides', sides);
+                                  commitPropertyChange();
+                                }}
+                                className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900")}
+                              >
+                                <option value="rect">Rectángulo (Escenario / Zona)</option>
+                                <option value="rounded">Rectángulo Redondeado</option>
+                                <option value="circle">Círculo / Ovalado</option>
+                                <option value="table">Mesa / Cabaret</option>
+                              </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Ancho (px)</span>
+                                <input
+                                  type="number" min="20" max="1000"
+                                  value={(firstSelected as any).w || 100}
+                                  onChange={(e) => updateSelectedProperty('w', parseInt(e.target.value) || 100)}
+                                  onBlur={commitPropertyChange}
+                                  className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900")}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Alto (px)</span>
+                                <input
+                                  type="number" min="20" max="1000"
+                                  value={(firstSelected as any).h || 100}
+                                  onChange={(e) => updateSelectedProperty('h', parseInt(e.target.value) || 100)}
+                                  onBlur={commitPropertyChange}
+                                  className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-white" : "bg-white border-slate-200 text-slate-900")}
+                                />
+                              </div>
+                            </div>
+
+                            {((firstSelected as any).type === 'table' || (firstSelected as any).seatsCount) && (
+                              <div className="space-y-1">
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey">Personas por Mesa</span>
+                                <select
+                                  value={(firstSelected as any).capacity || 4}
+                                  onChange={(e) => {
+                                    const count = parseInt(e.target.value);
+                                    updateSelectedProperty('capacity', count);
+                                    updateSelectedProperty('seatsCount', count);
+                                    const tableEl = firstSelected as any;
+                                    const radius = 60;
+                                    const remainingSeats = seats.filter(s => s.tableId !== tableEl.id);
+                                    const tableSeats: any[] = [];
+                                    for (let i = 0; i < count; i++) {
+                                      const ang = (i * (360 / count) - 90) * Math.PI / 180;
+                                      const sx = Math.round(tableEl.x + Math.cos(ang) * radius);
+                                      const sy = Math.round(tableEl.y + Math.sin(ang) * radius);
+                                      tableSeats.push({
+                                        id: `seat-${crypto.randomUUID()}`,
+                                        x: sx, y: sy,
+                                        row: tableEl.label || 'Mesa',
+                                        number: i + 1,
+                                        status: 'available',
+                                        category: 'vip',
+                                        angle: Math.round(ang * 180 / Math.PI + 90),
+                                        tableId: tableEl.id
+                                      });
+                                    }
+                                    setSeats([...remainingSeats, ...tableSeats]);
+                                    commitPropertyChange();
+                                  }}
+                                  className={cn("w-full p-2.5 rounded-xl border text-xs font-bold outline-none", isDark ? "bg-black/60 border-white/10 text-amber-honey" : "bg-white border-slate-200 text-amber-600")}
+                                >
+                                  <option value={2}>2 Personas (Mesa Pareja)</option>
+                                  <option value={4}>4 Personas (Mesa Estándar)</option>
+                                  <option value={6}>6 Personas (Mesa Mediana)</option>
+                                  <option value={8}>8 Personas (Mesa Grande)</option>
+                                  <option value={10}>10 Personas (Mesa VIP)</option>
+                                  <option value={12}>12 Personas (Mesa Imperial)</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="space-y-4">
                         <div className="flex justify-between px-1"><label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Orientation</label><span className="text-[9px] font-black text-amber-honey">{firstSelected.angle || 0}°</span></div>
                         <div className={cn("p-6 rounded-2xl border", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}><input type="range" min="0" max="360" value={firstSelected.angle || 0} onChange={(e) => updateSelectedProperty('angle', parseInt(e.target.value))} onMouseUp={commitPropertyChange} className="w-full accent-amber-honey cursor-pointer" /></div>

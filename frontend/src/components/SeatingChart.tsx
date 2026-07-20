@@ -129,13 +129,47 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
       ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
       ctx.lineWidth = isSelected ? 3 : 1.5;
-      const sides = el.sides ?? 4, w = el.w || 100, h = el.h || 100;
-      if (sides === 0) { ctx.beginPath(); ctx.arc(0, 0, w / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-      else {
+      const sides = el.sides ?? (el.type === 'circle' ? 0 : 4), w = el.w || 100, h = el.h || 100;
+      const shapeType = el.type || 'rect';
+
+      if (shapeType === 'table') {
+        const radius = Math.min(w, h) / 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+
+        // Render seats ring around table
+        const seatsCount = el.capacity || 4;
+        const seatDist = radius + 14;
+        ctx.fillStyle = isSelected ? '#FFBF00' : (theme === 'dark' ? 'rgba(255,191,0,0.7)' : 'rgba(217,119,6,0.8)');
+        for (let i = 0; i < seatsCount; i++) {
+          const ang = (i * (360 / seatsCount) - 90) * Math.PI / 180;
+          const sx = Math.cos(ang) * seatDist;
+          const sy = Math.sin(ang) * seatDist;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (sides === 0 || shapeType === 'circle') {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      } else if (shapeType === 'rounded') {
+        ctx.beginPath();
+        ctx.roundRect(-w / 2, -h / 2, w, h, 16);
+        ctx.fill(); ctx.stroke();
+      } else if (sides === 4 && shapeType === 'rect') {
+        ctx.beginPath();
+        ctx.rect(-w / 2, -h / 2, w, h);
+        ctx.fill(); ctx.stroke();
+      } else {
         ctx.beginPath();
         for (let i = 0; i < sides; i++) {
-          const ang = (i * (360 / sides)) * Math.PI / 180;
-          ctx.lineTo(Math.cos(ang) * w / 2, Math.sin(ang) * h / 2);
+          const ang = (i * (360 / sides) - 90) * Math.PI / 180;
+          const px = Math.cos(ang) * (w / 2);
+          const py = Math.sin(ang) * (h / 2);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
         }
         ctx.closePath(); ctx.fill(); ctx.stroke();
       }

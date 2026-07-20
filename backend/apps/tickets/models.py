@@ -26,14 +26,19 @@ class Theater(models.Model):
         elif isinstance(self.layout, dict) and 'seats' in self.layout:
             seats_data = self.layout['seats']
 
-        if seats_data:
+        if seats_data is not None:
+            active_keys = set()
             created_count = 0
             for seat_data in seats_data:
+                sec = seat_data.get('section', 'General')
+                rw = str(seat_data.get('row', '1'))
+                num = int(seat_data.get('number', 1))
+                active_keys.add((sec, rw, num))
                 Seat.objects.update_or_create(
                     theater=self,
-                    section=seat_data.get('section', 'General'),
-                    row=seat_data.get('row', '1'),
-                    number=seat_data.get('number', 1),
+                    section=sec,
+                    row=rw,
+                    number=num,
                     defaults={
                         'category': seat_data.get('category', 'standard'),
                         'status': seat_data.get('status', 'available'),
@@ -44,14 +49,23 @@ class Theater(models.Model):
                     }
                 )
                 created_count += 1
-            
+
+            # Delete seats no longer present in layout
+            existing_seats = Seat.objects.filter(theater=self)
+            for seat in existing_seats:
+                if (seat.section, str(seat.row), seat.number) not in active_keys:
+                    seat.delete()
+
             # Sync GA Zones
-            elements_data = self.layout.get('map_elements', [])
+            elements_data = self.layout.get('map_elements', []) if isinstance(self.layout, dict) else []
+            active_ga_ids = set()
             for el_data in elements_data:
                 if el_data.get('isGA'):
+                    ext_id = el_data.get('id')
+                    active_ga_ids.add(ext_id)
                     GADeclaration.objects.update_or_create(
                         theater=self,
-                        external_id=el_data.get('id'),
+                        external_id=ext_id,
                         defaults={
                             'name': el_data.get('label', 'General Admission'),
                             'capacity': el_data.get('capacity', 0),
@@ -59,6 +73,7 @@ class Theater(models.Model):
                             'base_price': el_data.get('base_price', 500)
                         }
                     )
+            GADeclaration.objects.filter(theater=self).exclude(external_id__in=active_ga_ids).delete()
             return created_count
 
         # Case 2: Schema-based (current logic)
