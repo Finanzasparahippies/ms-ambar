@@ -88,6 +88,9 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                 filteredEvents.map((event, index) => {
                   const date = new Date(event.date);
                   const isActive = currentEvent?.id === event.id;
+                  const now = new Date();
+                  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const isPast = date < startOfToday;
 
                   return (
                     <motion.div
@@ -134,11 +137,23 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                       >
                         <div className="relative z-10">
                           <div className="flex justify-between items-start mb-4">
-                             <div className={cn(
-                               "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
-                               isActive ? "bg-nature-night text-amber-honey" : "bg-nature-night/5 dark:bg-white/5 text-nature-night/40 dark:text-white/40"
-                             )}>
-                               {event.theater_location}
+                             <div className="flex items-center gap-2">
+                               <div className={cn(
+                                 "px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest",
+                                 isActive ? "bg-nature-night text-amber-honey" : "bg-nature-night/5 dark:bg-white/5 text-nature-night/40 dark:text-white/40"
+                               )}>
+                                 {event.theater_location}
+                               </div>
+                               {isPast && (
+                                 <span className={cn(
+                                   "px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest border",
+                                   isActive 
+                                     ? "bg-nature-night/80 text-white/80 border-nature-night" 
+                                     : "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-400/10 dark:text-amber-400"
+                                 )}>
+                                   Concluido
+                                 </span>
+                               )}
                              </div>
                              {isActive && <motion.div layoutId="active-indicator" className="w-2.5 h-2.5 bg-nature-night rounded-full shadow-lg" />}
                           </div>

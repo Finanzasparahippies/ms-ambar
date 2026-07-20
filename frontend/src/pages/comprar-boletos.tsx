@@ -7,7 +7,7 @@ import SeatingChart from '../components/SeatingChart';
 import TourTimeline from '../components/TourTimeline';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Ticket, Users, MapPin, Calendar, Star, Sparkles, Minus, Plus, X, CheckCircle, Info, ShieldCheck
+  Ticket, Users, MapPin, Calendar, CalendarX, Star, Sparkles, Minus, Plus, X, CheckCircle, Info, ShieldCheck
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import axios from 'axios';
@@ -188,18 +188,19 @@ const TourPage = () => {
       if (eventsData && Array.isArray(eventsData) && eventsData.length > 0) {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const activeUpcomingEvents = eventsData.filter((e: any) => {
-          if (e.is_active === false) return false;
+        const activeEvents = eventsData.filter((e: any) => e.is_active !== false);
+        setEvents(activeEvents);
+
+        const upcomingEvents = activeEvents.filter((e: any) => {
           if (!e.date) return true;
-          const eventDate = new Date(e.date);
-          return eventDate >= startOfToday;
+          return new Date(e.date) >= startOfToday;
         });
 
-        if (activeUpcomingEvents.length > 0) {
-          setEvents(activeUpcomingEvents);
-          setCurrentEvent(activeUpcomingEvents[0]);
+        if (upcomingEvents.length > 0) {
+          setCurrentEvent(upcomingEvents[0]);
+        } else if (activeEvents.length > 0) {
+          setCurrentEvent(activeEvents[0]);
         } else {
-          setEvents([]);
           setCurrentEvent(null);
         }
       }
@@ -250,6 +251,13 @@ const TourPage = () => {
   };
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';
+  const isCurrentEventPast = React.useMemo(() => {
+    if (!currentEvent?.date) return false;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return new Date(currentEvent.date) < startOfToday;
+  }, [currentEvent]);
+
   const seatsBaseTotal = isMeetGreet ? 0 : selectedSeats.reduce((acc, seat) => acc + getSeatBasePrice(seat), 0);
   const mgBaseTotal = isMeetGreet
     ? mgQuantity * Number(currentEvent?.mg_price || 0)
@@ -385,6 +393,12 @@ const TourPage = () => {
                   <Calendar size={14} className="text-amber-honey" />
                   <span>{currentEvent ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
                 </div>
+                {isCurrentEventPast && (
+                  <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-5 py-2.5 rounded-full w-fit">
+                    <CalendarX size={14} className="text-amber-600 dark:text-amber-400" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">Evento Concluido (Modo Informativo)</span>
+                  </div>
+                )}
               </div>
             </header>
 
@@ -450,119 +464,140 @@ const TourPage = () => {
                 <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
               </div>
 
-              {isMeetGreet && (
-                <div className="mb-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
-                  <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
-                  <div className="flex items-center justify-center gap-6">
-                    <button
-                      onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
-                      className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
-                    >
-                      <Minus size={14} />
-                    </button>
-                    <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
-                    <button
-                      onClick={() => setMgQuantity(mgQuantity + 1)}
-                      className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
-                    >
-                      <Plus size={14} />
-                    </button>
+              {isCurrentEventPast ? (
+                <div className="my-6 p-8 rounded-[2.5rem] bg-nature-night/[0.03] border border-amber-honey/30 text-center space-y-4">
+                  <div className="w-14 h-14 rounded-full bg-amber-honey/15 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg">
+                    <CalendarX size={24} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
-                    <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
+                    <h4 className="text-xl font-black uppercase tracking-wider text-nature-night">Venta Cerrada</h4>
+                    <p className="text-xs text-nature-night/70 leading-relaxed max-w-md mx-auto font-medium">
+                      Este evento ya ha finalizado. La venta de accesos se encuentra cerrada y la información se presenta únicamente de carácter informativo.
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <span className="inline-block px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest bg-amber-honey/20 text-nature-night border border-amber-honey/40">
+                      Fecha del Evento: {new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
                   </div>
                 </div>
-              )}
-
-              {!isMeetGreet && (
-                <div
-                  onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
-                  className={cn(
-                    "mb-6 p-5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
-                    wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
-                  )}
-                >
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div className={cn(
-                      "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500",
-                      wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
-                    )}>
-                      <Star size={20} fill="currentColor" />
-                    </div>
-                    <div>
-                      <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet</h4>
-                      <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
-                        {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
-                      </p>
-                    </div>
-                  </div>
-                  {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
-                    {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
-                  </span>}
-                </div>
-              )}
-
-              <div className="space-y-3 mb-6 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                {isMeetGreet ? (
-                  <div className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10">
-                    <div>
-                      <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Meet & Greet</p>
-                      <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
-                    </div>
-                    <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
-                  </div>
-                ) : (
-                  <>
-                    <AnimatePresence mode="popLayout">
-                      {selectedSeats.map(seat => (
-                        <motion.div
-                          key={seat.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10"
-                        >
-                          <div>
-                            <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
-                            <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
-                          </div>
-                          <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-
-                    {selectedSeats.length === 0 && (
-                      <div className="py-12 text-center border border-dashed border-nature-night/20 rounded-2xl opacity-40">
-                        <Ticket className="mx-auto mb-2 text-nature-night/40" size={32} />
-                        <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-nature-night/40">Elige un asiento en el mapa</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {baseTotal > 0 ? (
-                <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
               ) : (
-                <div className="pt-6 border-t border-nature-night/10 mb-6">
-                  <div className="flex justify-between items-end">
-                    <div>
-                      <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-2">Total</p>
-                      <p className="text-4xl font-black leading-none text-amber-honey">$0 MXN</p>
+                <>
+                  {isMeetGreet && (
+                    <div className="mb-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
+                      <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
+                      <div className="flex items-center justify-center gap-6">
+                        <button
+                          onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
+                          className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
+                        <button
+                          onClick={() => setMgQuantity(mgQuantity + 1)}
+                          className="w-12 h-12 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
+                        <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
+                      </div>
                     </div>
-                    <Users size={18} className="text-nature-night/30 mb-1" />
+                  )}
+
+                  {!isMeetGreet && (
+                    <div
+                      onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
+                      className={cn(
+                        "mb-6 p-5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
+                        wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
+                      )}
+                    >
+                      <div className="flex items-center gap-4 relative z-10">
+                        <div className={cn(
+                          "w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-500",
+                          wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
+                        )}>
+                          <Star size={20} fill="currentColor" />
+                        </div>
+                        <div>
+                          <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet</h4>
+                          <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-1", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
+                            {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
+                          </p>
+                        </div>
+                      </div>
+                      {!wantsMG && <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
+                        {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
+                      </span>}
+                    </div>
+                  )}
+
+                  <div className="space-y-3 mb-6 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                    {isMeetGreet ? (
+                      <div className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10">
+                        <div>
+                          <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Meet & Greet</p>
+                          <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
+                        </div>
+                        <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
+                      </div>
+                    ) : (
+                      <>
+                        <AnimatePresence mode="popLayout">
+                          {selectedSeats.map(seat => (
+                            <motion.div
+                              key={seat.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, scale: 0.8 }}
+                              className="flex justify-between items-center bg-nature-night/[0.02] p-4 rounded-xl border border-nature-night/10"
+                            >
+                              <div>
+                                <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
+                                <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
+                              </div>
+                              <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
+                            </motion.div>
+                          ))}
+                        </AnimatePresence>
+
+                        {selectedSeats.length === 0 && (
+                          <div className="py-12 text-center border border-dashed border-nature-night/20 rounded-2xl opacity-40">
+                            <Ticket className="mx-auto mb-2 text-nature-night/40" size={32} />
+                            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-nature-night/40">Elige un asiento en el mapa</p>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                </div>
+
+                  {baseTotal > 0 ? (
+                    <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
+                  ) : (
+                    <div className="pt-6 border-t border-nature-night/10 mb-6">
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-2">Total</p>
+                          <p className="text-4xl font-black leading-none text-amber-honey">$0 MXN</p>
+                        </div>
+                        <Users size={18} className="text-nature-night/30 mb-1" />
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
 
               <div className="mt-6 w-full sm:w-auto">
                 <PremiumCTAButton
-                  disabled={isMeetGreet ? false : selectedSeats.length === 0}
-                  onClick={() => setIsCheckoutOpen(true)}
+                  disabled={isCurrentEventPast || (isMeetGreet ? false : selectedSeats.length === 0)}
+                  onClick={() => !isCurrentEventPast && setIsCheckoutOpen(true)}
                 >
                   <span className="text-xl font-black uppercase tracking-[0.15em] block transition-transform duration-300 group-hover:scale-[1.02]">
-                    Proceder al Pago
+                    {isCurrentEventPast ? 'Venta Finalizada' : 'Proceder al Pago'}
                   </span>
                 </PremiumCTAButton>
               </div>
@@ -576,7 +611,18 @@ const TourPage = () => {
                     <div className="text-amber-honey animate-pulse font-extrabold uppercase tracking-[0.5em]">Tejiendo la Planta...</div>
                   </div>
                 ) : (
-                  <div className="h-[450px] md:h-[600px] rounded-[3.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10">
+                  <div className={cn(
+                    "h-[450px] md:h-[600px] rounded-[3.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 relative",
+                    isCurrentEventPast && "pointer-events-none opacity-85"
+                  )}>
+                    {isCurrentEventPast && (
+                      <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
+                        <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
+                          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
+                          <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
+                        </div>
+                      </div>
+                    )}
                     <SeatingChart
                       seats={seats}
                       onSelect={handleSelectionChange}

@@ -100,8 +100,8 @@ class TicketsAppTests(APITestCase):
         self.assertIn("Concierto Cancelado", titles)
         self.assertIn("Sinfonía Ámbar 2026", titles)
 
-    def test_event_list_filters_past_events_for_public_users(self):
-        """Verify public users do not see events whose day has passed, while staff see all."""
+    def test_event_list_includes_past_events_for_timeline(self):
+        """Verify public users receive active past events so they can be rendered in the tour timeline."""
         past_event = Event.objects.create(
             title="Concierto Pasado",
             artist="MS AMBAR Ensemble",
@@ -111,19 +111,32 @@ class TicketsAppTests(APITestCase):
         )
         url = reverse('event-list')
 
-        # Non-staff user / Anonymous -> should NOT see past event
         response_anon = self.client.get(url)
         self.assertEqual(response_anon.status_code, status.HTTP_200_OK)
         anon_titles = [e['title'] for e in response_anon.data]
-        self.assertNotIn("Concierto Pasado", anon_titles)
+        self.assertIn("Concierto Pasado", anon_titles)
         self.assertIn("Sinfonía Ámbar 2026", anon_titles)
 
-        # Staff user -> should see past event in queryset for administration
-        self.client.force_authenticate(user=self.admin_user)
-        response_admin = self.client.get(url)
-        self.assertEqual(response_admin.status_code, status.HTTP_200_OK)
-        admin_titles = [e['title'] for e in response_admin.data]
-        self.assertIn("Concierto Pasado", admin_titles)
+    def test_checkout_past_event_fails(self):
+        """Verify attempting to purchase tickets for a past event returns a 400 Bad Request."""
+        past_event = Event.objects.create(
+            title="Concierto Pasado Venta",
+            artist="MS AMBAR",
+            date=timezone.now() - timezone.timedelta(days=2),
+            theater=self.theater,
+            event_type='concert',
+            is_active=True
+        )
+        url = reverse('ticket-list') + 'checkout/'
+        data = {
+            'email': 'buyer@example.com',
+            'event_id': past_event.id,
+            'seat_ids': [self.seat_std.id]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('error', response.data)
+        self.assertIn('finalizado', response.data['error'].lower())
 
     def test_event_creation_restricted(self):
         """Verify normal users cannot create events."""

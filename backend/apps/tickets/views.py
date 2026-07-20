@@ -23,8 +23,7 @@ class EventViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user and user.is_authenticated and user.is_staff:
             return Event.objects.all()
-        start_of_today = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
-        return Event.objects.filter(is_active=True, date__gte=start_of_today)
+        return Event.objects.filter(is_active=True)
 
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'seats']:
@@ -202,6 +201,10 @@ class TicketViewSet(viewsets.ModelViewSet):
             event = Event.objects.get(id=event_id)
         except Event.DoesNotExist:
             return Response({'error': 'Evento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        start_of_today = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
+        if event.date < start_of_today:
+            return Response({'error': 'Este evento ya ha finalizado. La venta de boletos se encuentra cerrada.'}, status=status.HTTP_400_BAD_REQUEST)
 
         from apps.shop.utils import create_ticket_checkout_session
         from django.conf import settings
