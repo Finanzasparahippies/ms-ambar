@@ -14,7 +14,7 @@ interface Seat {
 
 interface MapElement {
   id: string;
-  type: 'rect' | 'icon' | 'text';
+  type?: 'rect' | 'icon' | 'text' | 'circle' | 'table' | 'rounded' | string;
   x: number;
   y: number;
   w?: number;
@@ -27,6 +27,10 @@ interface MapElement {
   sides?: number;
   isGA?: boolean;
   capacity?: number;
+  tableShape?: string;
+  table_shape?: string;
+  seatArrangement?: string;
+  seat_arrangement?: string;
 }
 
 interface SeatingChartProps {
