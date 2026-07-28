@@ -1,12 +1,16 @@
-import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ArrowRight,
+  CheckCircle,
+  ChevronRight,
+  Sparkles,
+  Ticket
+} from 'lucide-react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Ticket, ArrowRight, Sparkles, ChevronRight, Play, CheckCircle
-} from 'lucide-react';
-import axios from 'axios';
+import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -956,6 +960,12 @@ const Home = () => {
             >
               <Ticket size={14} /> Adquirir Accesos "Hadas en el Desierto"
             </Link>
+            {/*<Link
+              href="/contacto"
+              className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border border-white/20 text-[#F4F6F0] hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all flex items-center gap-3"
+            >
+              Contacto <ArrowRight size={14} />
+            </Link>*/}
           </motion.div>
         </div>
       </section>
@@ -984,11 +994,6 @@ const Home = () => {
                       🦋 Concierto Oficial
                     </span>
                   </div>
-
-                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-purple-400/30 bg-purple-500/15 text-purple-200 text-[10px] font-black uppercase tracking-[0.25em] backdrop-blur-md">
-                    ✨ Estética Glowy Fashion
-                  </div>
-
                   <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/15 text-cyan-200 text-[10px] font-black uppercase tracking-[0.25em] backdrop-blur-md">
                     🌸 Soulteño
                   </div>
@@ -1000,7 +1005,7 @@ const Home = () => {
                     {nextEvent.title}
                   </h2>
                   <p className="text-pink-300/80 font-serif italic text-lg tracking-wide md:text-xl pt-1">
-                    Fusión Soulteño & Experiencia Fashion Ethereal
+                    Fusión Soulteño & Experiencia Ethereal
                   </p>
                 </div>
 
