@@ -38,6 +38,7 @@ class EventSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     flyer_url = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
+    numbered_seat_base_price = serializers.SerializerMethodField()
     price_with_fee = serializers.SerializerMethodField()
 
     class Meta:
@@ -52,7 +53,7 @@ class EventSerializer(serializers.ModelSerializer):
             'enable_dynamic_pricing', 'monthly_price_increment', 'effective_seatless_ticket_price',
             'price_multiplier', 'event_type',
             'stripe_product_id', 'stripe_price_id',
-            'base_price', 'price_with_fee',
+            'base_price', 'numbered_seat_base_price', 'price_with_fee',
         ]
         extra_kwargs = {
             'venue_name': {'required': False, 'allow_blank': True},
@@ -79,6 +80,9 @@ class EventSerializer(serializers.ModelSerializer):
 
     def get_base_price(self, obj):
         return obj.base_price
+
+    def get_numbered_seat_base_price(self, obj):
+        return obj.numbered_seat_base_price
 
     def get_price_with_fee(self, obj):
         """Returns fee breakdown for the lowest-priced ticket in this event."""

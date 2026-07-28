@@ -105,3 +105,11 @@ El sistema de boletines y newsletter está completamente automatizado a nivel ba
 - Al registrarse un correo en [index.tsx](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/frontend/src/pages/index.tsx), la API almacena el correo en el modelo `NewsletterSubscriber` y dispara automáticamente un correo de bienvenida estilizado en HTML.
 - **Configuración SMTP con Failover**: Enrutamiento automático que intenta enviar primero mediante Brevo (hasta agotar el límite diario de 300 correos), luego mediante Amazon SES (con el remitente verificado `hola@msambar.com`), y finalmente recurre a Zoho Mail como último recurso de failover.
 - **Desuscripción Segura**: Cada correo enviado incluye un enlace de desuscripción directo en el pie de página. Al hacer clic, redirige al usuario a la página del Blog, lee el parámetro `?unsubscribe=correo@email.com` y ejecuta una petición `POST` al endpoint de desuscripción de la API para desactivar la suscripción de forma transparente.
+
+---
+
+## 📑 Guías de Documentación Adicionales
+
+- 💻 **[README_DEV.md](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/README_DEV.md)**: Documentación de arquitectura de ingeniería, motor dinámico de precios, límites de precio piso, fórmulas de Stripe y APIs.
+- 🎟️ **[README_CLIENTE.md](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/README_CLIENTE.md)**: Guía práctica y no técnica para la administración de taquilla, tipos de boletos y configuración de precios para Ms. Ambar y el equipo de producción.
+

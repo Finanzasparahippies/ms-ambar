@@ -371,12 +371,17 @@ class Event(models.Model):
 
     def get_dynamic_price(self, base_amount, purchase_date=None):
         """
+        [Nectar Dynamic Pricing Engine]
         Calcula el precio dinámico mensual basado en el tiempo restante hasta el mes del evento.
-        Aplica a cualquier mes de evento y permite monto de incremento configurable.
+        Aplica una regla de seguridad de 'Precio Piso' (Floor Price Cap del 70% de valor base)
+        para garantizar que ventas anticipadas con varios meses de antelación jamás resulten
+        en precios de $0.00 MXN o descuentos desmedidos.
         """
         if base_amount is None:
             return 0.0
         amount = float(base_amount)
+        if amount <= 0:
+            return 0.0
         if not self.enable_dynamic_pricing or not self.date:
             return round(amount, 2)
         
@@ -386,14 +391,23 @@ class Event(models.Model):
         curr_month_idx = p_date.year * 12 + p_date.month
         months_diff = max(0, event_month_idx - curr_month_idx)
 
-        discount = months_diff * float(self.monthly_price_increment or 50.00)
-        final_price = max(0.0, amount - discount)
+        # Incremento preventivo por venta anticipada (descuento acumulativo)
+        increment = float(self.monthly_price_increment or 25.00)
+        raw_discount = months_diff * increment
+        
+        # Regla de Oro Nectar Labs: El descuento máximo acumulado no puede superar el 30% del precio base
+        max_allowed_discount = amount * 0.30
+        discount = min(raw_discount, max_allowed_discount)
+        
+        # Precio piso de seguridad (Mínimo 70% del valor base del boleto)
+        final_price = max(amount * 0.70, amount - discount)
         return round(final_price, 2)
 
     @property
     def effective_seatless_ticket_price(self):
-        """Precio actual del boleto general con ajuste dinámico mensual."""
-        return self.get_dynamic_price(self.seatless_ticket_price)
+        """Precio actual del boleto general con ajuste dinámico mensual y precio piso de seguridad."""
+        base = float(self.seatless_ticket_price if self.seatless_ticket_price is not None else 300.00)
+        return self.get_dynamic_price(base)
 
     @property
     def mg_available(self):
@@ -401,17 +415,41 @@ class Event(models.Model):
         return max(0, self.mg_limit - sold)
 
     @property
-    def base_price(self):
-        """Returns the lowest seat base_price in the event's theater with dynamic pricing applied."""
-        if self.event_type == 'meet_greet':
-            return float(self.mg_price)
+    def numbered_seat_base_price(self):
+        """Retorna el precio dinámico base del asiento numerado en mesa más económico del recinto."""
         if self.theater:
             from apps.tickets.models import Seat
-            min_seat = self.theater.seats.order_by('base_price').first()
+            min_seat = self.theater.seats.filter(base_price__gt=0).order_by('base_price').first()
             if min_seat:
                 raw_base = float(min_seat.base_price * self.price_multiplier)
                 return self.get_dynamic_price(raw_base)
-        return 0
+        return float(self.base_price or 0.0)
+
+    @property
+    def base_price(self):
+        """
+        [Nectar Base Price Property]
+        Retorna el precio de entrada base mínimo del evento (asiento numerado o boleto general).
+        Garantiza que nunca se devuelva 0.00 MXN salvo en eventos explícitamente gratuitos.
+        """
+        if self.event_type == 'meet_greet':
+            return float(self.mg_price or 0.0)
+        
+        prices = []
+        if self.allow_seatless_tickets and self.seatless_ticket_price is not None:
+            prices.append(float(self.effective_seatless_ticket_price))
+
+        if self.theater:
+            from apps.tickets.models import Seat
+            min_seat = self.theater.seats.filter(base_price__gt=0).order_by('base_price').first()
+            if min_seat:
+                raw_base = float(min_seat.base_price * self.price_multiplier)
+                prices.append(self.get_dynamic_price(raw_base))
+
+        if prices:
+            return min(prices)
+        
+        return float(self.seatless_ticket_price or 0.0)
 
     @property
     def end_date(self):

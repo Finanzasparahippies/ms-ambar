@@ -854,16 +854,29 @@ const Home = () => {
     }
   };
 
+  /**
+   * [Nectar Dynamic Pricing - Frontend Mirror Engine]
+   * Calcula el precio dinámico mensual basado en el tiempo restante hasta el mes del evento.
+   * Aplica la Regla de Oro Nectar Labs: el descuento preventivo no puede superar el 30% del precio base,
+   * garantizando un precio piso mínimo del 70% para evitar que las entradas caigan a $0.00 MXN.
+   */
   const getDynamicPrice = (event: any, baseAmount: number) => {
-    if (!event || !event.date) return baseAmount;
-    if (event.enable_dynamic_pricing === false) return baseAmount;
+    if (!event || !baseAmount || baseAmount <= 0) return baseAmount || 0;
+    if (event.enable_dynamic_pricing === false || !event.date) return baseAmount;
     const eventDate = new Date(event.date);
     const now = new Date();
     const eventMonthIdx = eventDate.getFullYear() * 12 + eventDate.getMonth();
     const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
     const monthsDiff = Math.max(0, eventMonthIdx - currMonthIdx);
-    const increment = Number(event.monthly_price_increment ?? 50);
-    return Math.max(0, baseAmount - (monthsDiff * increment));
+    const increment = Number(event.monthly_price_increment ?? 25);
+    
+    // Regla de Oro Nectar Labs: Tope de descuento preventivo al 30%
+    const rawDiscount = monthsDiff * increment;
+    const maxDiscount = baseAmount * 0.30;
+    const discount = Math.min(rawDiscount, maxDiscount);
+    
+    // Garantiza el Precio Piso de Seguridad (mínimo 70% del costo base)
+    return Math.max(baseAmount * 0.70, baseAmount - discount);
   };
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -1069,9 +1082,9 @@ const Home = () => {
                               <span className="text-[10px] text-pink-200/60">Acceso preferencial a zona general</span>
                             </div>
                             <span className="text-pink-300 font-black text-sm md:text-base">
-                              ${Math.round(nextEvent.effective_seatless_ticket_price
+                              ${Math.round(nextEvent.effective_seatless_ticket_price !== undefined
                                 ? Number(nextEvent.effective_seatless_ticket_price)
-                                : getDynamicPrice(nextEvent, Number(nextEvent.seatless_ticket_price || 300))
+                                : getDynamicPrice(nextEvent, Number(nextEvent.seatless_ticket_price ?? 0))
                               ).toLocaleString('es-MX')} MXN
                             </span>
                           </div>
@@ -1083,7 +1096,10 @@ const Home = () => {
                               <span className="text-[10px] text-pink-200/60">Lugar reservado en 42 mesas x 4 butacas</span>
                             </div>
                             <span className="text-pink-300 font-black text-sm md:text-base">
-                              ${Math.round(getDynamicPrice(nextEvent, Number(nextEvent.base_price || 400))).toLocaleString('es-MX')} MXN
+                              ${Math.round(nextEvent.numbered_seat_base_price !== undefined
+                                ? Number(nextEvent.numbered_seat_base_price)
+                                : getDynamicPrice(nextEvent, Number(nextEvent.base_price ?? 0))
+                              ).toLocaleString('es-MX')} MXN
                             </span>
                           </div>
 
@@ -1091,22 +1107,9 @@ const Home = () => {
                           {nextEvent.mg_limit > 0 && (
                             <div className="flex items-center justify-between text-xs bg-purple-500/15 p-3 rounded-xl border border-purple-500/30 text-purple-200">
                               <span className="font-semibold">🤝 Pase Opcional Meet & Greet</span>
-                              <span className="font-black text-white">+${Math.round(Number(nextEvent.mg_price || 0)).toLocaleString('es-MX')} MXN</span>
+                              <span className="font-black text-white">+${Math.round(Number(nextEvent.mg_price ?? 0)).toLocaleString('es-MX')} MXN</span>
                             </div>
                           )}
-                        </div>
-                      )}
-
-                      {/* MÓDULO DE CUPO DEL EVENTO */}
-                      {nextEvent.event_type !== 'meet_greet' && nextEvent.mg_limit > 0 && (
-                        <div className="pt-2 border-t border-pink-500/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${nextEvent.mg_available > 0 ? 'bg-pink-400 animate-pulse' : 'bg-red-500'}`} />
-                            <span className="text-pink-200/60">Cupo M&G disponible:</span>
-                          </div>
-                          <span className={`font-black uppercase tracking-wider ${nextEvent.mg_available <= 5 && nextEvent.mg_available > 0 ? 'text-pink-300 animate-bounce' : 'text-white'}`}>
-                            {nextEvent.mg_available > 0 ? `${nextEvent.mg_available} pases disponibles` : 'Agotado'}
-                          </span>
                         </div>
                       )}
                     </div>

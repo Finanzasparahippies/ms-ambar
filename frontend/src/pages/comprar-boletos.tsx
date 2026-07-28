@@ -266,16 +266,29 @@ const TourPage = () => {
     });
   }, []);
 
+  /**
+   * [Nectar Dynamic Pricing - Ticket Checkout Mirror Engine]
+   * Calcula el precio dinámico mensual basado en el tiempo restante hasta el mes del evento.
+   * Aplica la Regla de Oro Nectar Labs: el descuento preventivo no puede superar el 30% del precio base,
+   * garantizando un precio piso mínimo del 70% para evitar precios en $0.00 MXN.
+   */
   const getDynamicPrice = (baseAmount: number) => {
-    if (!currentEvent || !currentEvent.date) return baseAmount;
-    if (currentEvent.enable_dynamic_pricing === false) return baseAmount;
+    if (!currentEvent || !baseAmount || baseAmount <= 0) return baseAmount || 0;
+    if (currentEvent.enable_dynamic_pricing === false || !currentEvent.date) return baseAmount;
     const eventDate = new Date(currentEvent.date);
     const now = new Date();
     const eventMonthIdx = eventDate.getFullYear() * 12 + eventDate.getMonth();
     const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
     const monthsDiff = Math.max(0, eventMonthIdx - currMonthIdx);
-    const increment = Number(currentEvent.monthly_price_increment ?? 50);
-    return Math.max(0, baseAmount - (monthsDiff * increment));
+    const increment = Number(currentEvent.monthly_price_increment ?? 25);
+    
+    // Regla de Oro Nectar Labs: Descuento máximo anticipado del 30%
+    const rawDiscount = monthsDiff * increment;
+    const maxDiscount = baseAmount * 0.30;
+    const discount = Math.min(rawDiscount, maxDiscount);
+    
+    // Garantiza el Precio Piso de Seguridad (mínimo 70% del valor base)
+    return Math.max(baseAmount * 0.70, baseAmount - discount);
   };
 
   const fetchSeats = () => {
@@ -312,16 +325,17 @@ const TourPage = () => {
 
   const getSeatBasePrice = (seat: any) => {
     if (!seat) return 0;
-    const base = Number(seat.base_price || 0);
-    const mult = Number(currentEvent?.price_multiplier || 1);
-    return Math.round(base * mult);
+    const base = Number(seat.base_price ?? currentEvent?.numbered_seat_base_price ?? 0);
+    const mult = Number(currentEvent?.price_multiplier || 1.0);
+    const rawPrice = base * mult;
+    return Math.round(getDynamicPrice(rawPrice));
   };
 
   const getEffectiveSeatlessPrice = () => {
-    if (currentEvent?.effective_seatless_ticket_price) {
+    if (currentEvent?.effective_seatless_ticket_price !== undefined && Number(currentEvent.effective_seatless_ticket_price) > 0) {
       return Number(currentEvent.effective_seatless_ticket_price);
     }
-    return getDynamicPrice(Number(currentEvent?.seatless_ticket_price || 500));
+    return Math.round(getDynamicPrice(Number(currentEvent?.seatless_ticket_price ?? 0)));
   };
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';
@@ -664,7 +678,7 @@ const TourPage = () => {
                     </div>
                     <div className="pt-4 border-t border-nature-night/10 dark:border-white/10 flex justify-between items-center px-4 max-w-md mx-auto">
                       <span className="text-xs font-bold uppercase tracking-wider text-nature-night/60 dark:text-white/60">Precio Unitario General</span>
-                      <span className="text-xl font-black text-amber-honey">${Number(currentEvent?.seatless_ticket_price || 500).toLocaleString('es-MX')} MXN</span>
+                      <span className="text-xl font-black text-amber-honey">${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN</span>
                     </div>
                   </div>
                 )}
