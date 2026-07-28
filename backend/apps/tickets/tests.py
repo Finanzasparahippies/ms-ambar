@@ -1,4 +1,5 @@
 from django.urls import reverse
+from django.test import override_settings
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.utils import timezone
@@ -234,6 +235,7 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['status'], 'error')
 
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_valid_key', STRIPE_WEBHOOK_SECRET='whsec_valid_key')
     @patch('stripe.checkout.Session.create')
     def test_checkout_concert_success(self, mock_stripe_create):
         """Test checking out seats for a concert event successfully creates a Stripe checkout session."""
@@ -282,6 +284,7 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
 
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_valid_key', STRIPE_WEBHOOK_SECRET='whsec_valid_key')
     @patch('stripe.checkout.Session.create')
     def test_checkout_meet_greet_success(self, mock_stripe_create):
         """Test checking out Meet & Greet tickets with quantity."""
