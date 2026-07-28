@@ -402,7 +402,9 @@ const TourPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
+
+  if (!isMounted) return null;
 
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen pb-24 lg:pb-12">
