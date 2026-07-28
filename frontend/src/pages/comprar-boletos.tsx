@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -301,7 +300,7 @@ const TourPage = () => {
   };
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';
-  const isCurrentEventPast = React.useMemo(() => {
+  const isCurrentEventPast = useMemo(() => {
     if (!currentEvent?.date) return false;
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -321,7 +320,7 @@ const TourPage = () => {
   const rawBaseTotal = seatsBaseTotal + mgBaseTotal;
 
   // Aplicar Descuento de Cupón VIP
-  const baseTotal = React.useMemo(() => {
+  const baseTotal = useMemo(() => {
     if (!appliedCoupon) return rawBaseTotal;
     if (appliedCoupon.discount_type === 'free_vip' || Number(appliedCoupon.discount_value) >= 100) {
       return 0;
@@ -404,18 +403,19 @@ const TourPage = () => {
       setIsSubmitting(false);
     }
   };
-  const availableSeatsCount = React.useMemo(() => {
+  const availableSeatsCount = useMemo(() => {
     if (!seats || seats.length === 0) return 0;
     return seats.filter(s => s.status === 'available').length;
   }, [seats]);
 
-  const totalSeatsCount = React.useMemo(() => {
+  const totalSeatsCount = useMemo(() => {
     return seats ? seats.length : 0;
   }, [seats]);
 
-  const occupancyPercentage = React.useMemo(() => {
-    if (totalSeatsCount === 0) return 0;
-    return Math.round(((totalSeatsCount - availableSeatsCount) / totalSeatsCount) * 100);
+  const occupancyPercentage = useMemo(() => {
+    if (!totalSeatsCount || totalSeatsCount === 0) return 0;
+    const soldCount = totalSeatsCount - availableSeatsCount;
+    return Math.round((soldCount / totalSeatsCount) * 100);
   }, [availableSeatsCount, totalSeatsCount]);
 
   return (
