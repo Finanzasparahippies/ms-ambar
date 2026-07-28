@@ -347,8 +347,11 @@ class TicketViewSet(viewsets.ModelViewSet):
                 except Exception as e:
                     delivery_logger.warning(f"Error registering VIP buyer to marketing list: {e}")
 
-                def deliver_vip_tickets(tickets_list):
-                    for t in tickets_list:
+                vip_ticket_ids = [t.id for t in created_vip_tickets]
+
+                def deliver_vip_tickets(ticket_ids_list):
+                    tickets_to_send = Ticket.objects.filter(id__in=ticket_ids_list).select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon')
+                    for t in tickets_to_send:
                         try:
                             send_ticket_email(t)
                             delivery_logger.info(f"[Delivery/VIP] ✅ Boleto gratuito VIP {t.token} entregado a {t.user_email}")
@@ -357,7 +360,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
                 threading.Thread(
                     target=deliver_vip_tickets,
-                    args=(created_vip_tickets,),
+                    args=(vip_ticket_ids,),
                     daemon=False,
                     name=f"vip-ticket-delivery-{vip_session_id[:8]}"
                 ).start()
@@ -463,11 +466,14 @@ class TicketViewSet(viewsets.ModelViewSet):
                 f"Iniciando entrega SMTP..."
             )
 
+            mock_ticket_ids = [t.id for t in created_mock_tickets]
+
             # --- ENTREGA SINCRÓNICA EN HILO SEPARADO ---
             # Usamos un hilo NO-daemon para que Docker capture los logs completos.
             # El join() con timeout evita bloquear la respuesta al cliente.
-            def deliver_tickets(tickets_list):
-                for t in tickets_list:
+            def deliver_tickets(ticket_ids_list):
+                tickets_to_send = Ticket.objects.filter(id__in=ticket_ids_list).select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon')
+                for t in tickets_to_send:
                     delivery_logger.info(
                         f"[Delivery] Enviando boleto {t.token} → {t.user_email}"
                     )
@@ -484,7 +490,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             delivery_thread = threading.Thread(
                 target=deliver_tickets,
-                args=(created_mock_tickets,),
+                args=(mock_ticket_ids,),
                 daemon=False,  # Non-daemon: Docker captura los logs correctamente
                 name=f"ticket-delivery-{mock_session_id[:8]}"
             )

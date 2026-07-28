@@ -46,13 +46,17 @@ def send_ticket_email(ticket):
     elif ticket.ga_zone:
         seat_str = "Zona General Admission"
         section_str = ticket.ga_zone.name
-    else:
+    elif ticket.event and ticket.event.event_type == 'meet_greet':
         seat_str = "Acceso Único Especial"
         section_str = "Meet & Greet (Convivencia)"
+    else:
+        seat_str = "Entrada General (De pie)"
+        section_str = "Zona General / Sin Asiento"
 
     local_event_date = localtime(ticket.event.date)
-    theater_name = ticket.event.theater.name if ticket.event.theater else "Plataforma Digital / Streaming"
-    theater_loc = ticket.event.theater.location if ticket.event.theater else "Acceso en Línea"
+    theater_obj = getattr(ticket.event, 'theater', None)
+    theater_name = theater_obj.name if theater_obj else "Plataforma Digital / Streaming"
+    theater_loc = theater_obj.location if theater_obj else "Acceso en Línea"
 
     if ticket.event.doors_open:
         local_doors_open = localtime(ticket.event.doors_open)
