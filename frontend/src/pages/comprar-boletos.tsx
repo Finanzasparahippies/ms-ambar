@@ -402,22 +402,6 @@ const TourPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-  const availableSeatsCount = useMemo(() => {
-    if (!seats || seats.length === 0) return 0;
-    return seats.filter(s => s.status === 'available').length;
-  }, [seats]);
-
-  const totalSeatsCount = useMemo(() => {
-    return seats ? seats.length : 0;
-  }, [seats]);
-
-  const occupancyPercentage = useMemo(() => {
-    if (!totalSeatsCount || totalSeatsCount === 0) return 0;
-    const soldCount = totalSeatsCount - availableSeatsCount;
-    return Math.round((soldCount / totalSeatsCount) * 100);
-  }, [availableSeatsCount, totalSeatsCount]);
-
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen pb-24 lg:pb-12">
       <Head>
