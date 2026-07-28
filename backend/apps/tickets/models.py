@@ -415,10 +415,11 @@ class Coupon(models.Model):
     times_used = models.PositiveIntegerField(default=0, help_text="Veces que ha sido redimido")
     is_active = models.BooleanField(default=True)
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True, related_name='coupons', help_text="Evento específico (opcional)")
+    assigned_email = models.EmailField(null=True, blank=True, help_text="Correo electrónico exclusivo al que está asignado este cupón (opcional)")
     expiration_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def is_valid_for_event(self, event):
+    def is_valid_for_event(self, event, user_email=None):
         from django.utils import timezone
         if not self.is_active:
             return False, "Este cupón no está activo."
@@ -426,8 +427,13 @@ class Coupon(models.Model):
             return False, "Este cupón ha expirado."
         if self.times_used >= self.max_uses:
             return False, "Este cupón ha alcanzado su límite máximo de usos."
-        if self.event and self.event_id != event.id:
+        if event and self.event and self.event_id != event.id:
             return False, "Este cupón no es válido para este evento."
+        if self.assigned_email:
+            if not user_email:
+                return False, f"Este cupón es exclusivo y personal. Ingresa el correo del invitado ({self.assigned_email}) para validar."
+            if self.assigned_email.strip().lower() != user_email.strip().lower():
+                return False, f"Este cupón exclusivo fue asignado a {self.assigned_email} y no es válido para {user_email}."
         return True, "Cupón válido."
 
     def __str__(self):

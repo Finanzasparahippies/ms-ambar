@@ -21,6 +21,7 @@ class CouponViewSet(viewsets.ModelViewSet):
     def validate_code(self, request):
         code = request.data.get('code', '').strip()
         event_id = request.data.get('event_id')
+        user_email = request.data.get('email') or request.data.get('user_email')
 
         if not code:
             return Response({'error': 'Debes proporcionar un código de cupón.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -33,7 +34,7 @@ class CouponViewSet(viewsets.ModelViewSet):
         if event_id:
             try:
                 event = Event.objects.get(id=event_id)
-                valid, msg = coupon.is_valid_for_event(event)
+                valid, msg = coupon.is_valid_for_event(event, user_email=user_email)
                 if not valid:
                     return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
             except Event.DoesNotExist:
@@ -45,14 +46,35 @@ class CouponViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Este cupón ha expirado.'}, status=status.HTTP_400_BAD_REQUEST)
             if coupon.times_used >= coupon.max_uses:
                 return Response({'error': 'Este cupón ha alcanzado su límite de usos.'}, status=status.HTTP_400_BAD_REQUEST)
+            if coupon.assigned_email:
+                if not user_email:
+                    return Response({'error': f'Este cupón es exclusivo. Debes ingresar el correo del invitado ({coupon.assigned_email}) para usarlo.'}, status=status.HTTP_400_BAD_REQUEST)
+                if coupon.assigned_email.strip().lower() != user_email.strip().lower():
+                    return Response({'error': f'Este cupón exclusivo fue asignado a {coupon.assigned_email}.'}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
             'valid': True,
             'code': coupon.code,
             'discount_type': coupon.discount_type,
             'discount_value': float(coupon.discount_value),
+            'assigned_email': coupon.assigned_email,
             'message': 'Cupón VIP de entrada gratuita validado exitosamente.' if coupon.discount_type == 'free_vip' else 'Cupón validado correctamente.'
         })
+
+    @action(detail=True, methods=['post'], url_path='send_email', permission_classes=[permissions.IsAdminUser])
+    def send_email(self, request, pk=None):
+        coupon = self.get_object()
+        recipient_email = request.data.get('email', '').strip()
+        custom_note = request.data.get('note', '').strip()
+
+        if not recipient_email:
+            return Response({'error': 'Debes ingresar una dirección de correo de destino.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from apps.tickets.utils import send_coupon_email
+        success, msg = send_coupon_email(coupon, recipient_email, custom_note)
+        if success:
+            return Response({'message': f'Cupón enviado exitosamente a {recipient_email}.'})
+        return Response({'error': f'Error al enviar el correo: {msg}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
@@ -261,7 +283,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         if coupon_code:
             try:
                 coupon_obj = Coupon.objects.get(code__iexact=coupon_code.strip())
-                valid, msg = coupon_obj.is_valid_for_event(event)
+                valid, msg = coupon_obj.is_valid_for_event(event, user_email=email)
                 if not valid:
                     return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
                 if coupon_obj.discount_type == 'free_vip' or float(coupon_obj.discount_value) >= 100:

@@ -4,6 +4,7 @@ import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
+import CouponManager, { Coupon } from '../../components/CouponManager';
 import {
   DollarSign,
   Ticket,
@@ -211,7 +212,8 @@ export default function AdminDashboard() {
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
 
   // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons'>('summary');
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
 
@@ -666,7 +668,7 @@ export default function AdminDashboard() {
           setActiveTab('orders');
         }
         // Staff/Admin Data Fetching
-        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes, siteSettingsRes, marketingListsRes] = await Promise.all([
+        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes, siteSettingsRes, marketingListsRes, couponsRes] = await Promise.all([
           axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
           axios.get(`${API_URL}/dashboard/system/`, { headers }).catch(err => {
             console.error("System metrics fetch failed, using fallback", err);
@@ -685,6 +687,7 @@ export default function AdminDashboard() {
           axios.get(`${API_URL}/tickets/events/`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_URL}/tickets/settings/`).catch(() => ({ data: null })),
           axios.get(`${API_URL}/blog/marketing-lists/`, { headers }).catch(() => ({ data: [] })),
+          axios.get(`${API_URL}/tickets/coupons/`, { headers }).catch(() => ({ data: [] })),
         ]);
 
         setStats(analyticsRes.data);
@@ -699,6 +702,7 @@ export default function AdminDashboard() {
         setTemplateImages(Array.isArray(templateImagesRes.data) ? templateImagesRes.data : []);
         setEvents(Array.isArray(eventsRes.data) ? eventsRes.data : []);
         setMarketingLists(Array.isArray(marketingListsRes.data) ? marketingListsRes.data : []);
+        setCoupons(Array.isArray(couponsRes.data) ? couponsRes.data : []);
         if (siteSettingsRes?.data) {
           if (siteSettingsRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(siteSettingsRes.data.tickets_page_subtitle);
           if (siteSettingsRes.data.homepage_cta_text) setSiteSettingsCta(siteSettingsRes.data.homepage_cta_text);
@@ -2597,11 +2601,38 @@ export default function AdminDashboard() {
             >
               📅 Eventos
             </button>
+            <button
+              onClick={() => setActiveTab('coupons')}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'coupons'
+                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                }`}
+            >
+              🎟️ Cupones VIP
+            </button>
           </div>
 
           {/* Main Administrative Views Context */}
           <div className="relative z-10">
             <AnimatePresence>
+
+              {/* TAB: CUPONES Y DESCUENTOS */}
+              {activeTab === 'coupons' && (
+                <motion.div
+                  key="coupons-tab"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <CouponManager
+                    coupons={coupons}
+                    events={events}
+                    apiUrl={API_URL}
+                    onRefresh={fetchDashboardData}
+                  />
+                </motion.div>
+              )}
 
               {/* TAB 1: SUMMARY DASHBOARD */}
               {activeTab === 'summary' && (

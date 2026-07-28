@@ -25,9 +25,11 @@ class TheaterSerializer(serializers.ModelSerializer):
 
 
 class CouponSerializer(serializers.ModelSerializer):
+    event_title = serializers.ReadOnlyField(source='event.title', default=None)
+
     class Meta:
         model = Coupon
-        fields = ['id', 'code', 'discount_type', 'discount_value', 'max_uses', 'times_used', 'is_active', 'event', 'expiration_date']
+        fields = ['id', 'code', 'discount_type', 'discount_value', 'max_uses', 'times_used', 'is_active', 'event', 'event_title', 'assigned_email', 'expiration_date', 'created_at']
 
 
 class EventSerializer(serializers.ModelSerializer):

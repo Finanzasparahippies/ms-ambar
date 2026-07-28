@@ -124,3 +124,84 @@ def send_ticket_whatsapp(ticket):
 
 def send_ticket_telegram(ticket):
     logger.info(f"[Ticket] Telegram delivery stub: {ticket.token}")
+
+
+def send_coupon_email(coupon, recipient_email, custom_note=''):
+    """
+    Despacha un correo electrónico elegante con la información del cupón y link de auto-aplicación.
+    Si el cupón no tenía correo asignado, lo asigna automáticamente al correo del destinatario para blindar el beneficio.
+    """
+    recipient_email = recipient_email.strip()
+    if not coupon.assigned_email:
+        coupon.assigned_email = recipient_email
+        coupon.save(update_fields=['assigned_email'])
+
+    discount_desc = "100% de descuento (Entrada VIP Gratuita)" if coupon.discount_type == 'free_vip' else (
+        f"{coupon.discount_value}% de descuento" if coupon.discount_type == 'percentage' else f"${coupon.discount_value} MXN de descuento"
+    )
+    subject = f"🎟️ ¡Tienes un cupón exclusivo de Ms Ambar! ({coupon.code})"
+
+    checkout_url = f"{settings.FRONTEND_URL}/comprar-boletos?coupon={coupon.code}&email={recipient_email}"
+    if coupon.event:
+        checkout_url += f"&event={coupon.event.id}"
+
+    text_content = (
+        f"¡Hola!\n\n"
+        f"Has recibido un cupón exclusivo para los eventos de Ms Ambar:\n\n"
+        f"Código: {coupon.code}\n"
+        f"Beneficio: {discount_desc}\n"
+        + (f"Evento: {coupon.event.title}\n" if coupon.event else "")
+        + (f"Expiración: {coupon.expiration_date.strftime('%d/%m/%Y')}\n" if coupon.expiration_date else "")
+        + (f"\nNota: {custom_note}\n\n" if custom_note else "\n")
+        + f"Este cupón es personal e intransferible para {recipient_email}.\n"
+        f"Reclama tu beneficio directamente en:\n"
+        f"{checkout_url}\n\n"
+        f"¡Te esperamos!\n"
+        f"Con cariño, Ms Ambar"
+    )
+
+    html_content = f"""
+    <div style="font-family: 'Playfair Display', Georgia, serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #f3f4f6; border: 1px solid #d97706; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+      <h2 style="color: #f59e0b; text-align: center; margin-top: 0; font-size: 26px; letter-spacing: 3px;">MS AMBAR</h2>
+      <hr style="border: 0; border-top: 1px solid rgba(217, 119, 6, 0.4); margin: 20px 0;" />
+      <h3 style="color: #ffffff; text-align: center; font-size: 20px;">¡Tienes una Invitación Exclusiva!</h3>
+      <p style="font-size: 15px; line-height: 1.7; color: #d1d5db; text-align: center;">
+        Se ha emitido un cupón exclusivo asignado especialmente a tu correo (<strong>{recipient_email}</strong>) para disfrutar de los eventos de <strong>Ms Ambar</strong>.
+      </p>
+      {f'<blockquote style="background: rgba(217,119,6,0.1); border-left: 4px solid #d97706; padding: 14px; margin: 20px 0; color: #fbbf24; font-style: italic; border-radius: 4px;">"{custom_note}"</blockquote>' if custom_note else ''}
+      <div style="background: #18181b; border: 2px dashed #f59e0b; border-radius: 12px; padding: 24px; text-align: center; margin: 25px 0;">
+        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; display: block; margin-bottom: 8px;">Código de Cupón Personal</span>
+        <span style="font-size: 30px; font-weight: 900; color: #f59e0b; letter-spacing: 4px; font-family: monospace;">{coupon.code}</span>
+        <div style="margin-top: 12px; font-size: 14px; color: #e5e7eb;">
+          <strong>Beneficio:</strong> {discount_desc}
+        </div>
+        <div style="margin-top: 6px; font-size: 11px; color: #f59e0b;">
+          🛡️ Intransferible — Válido únicamente para {recipient_email}
+        </div>
+      </div>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="{checkout_url}" style="background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; text-decoration: none; padding: 16px 36px; font-size: 14px; font-weight: bold; border-radius: 30px; display: inline-block; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(217, 119, 6, 0.5);">
+          RECLAMAR MI BENEFICIO
+        </a>
+      </div>
+      <p style="font-size: 12px; color: #6b7280; text-align: center; margin-bottom: 0;">
+        Si tienes problemas con el botón, copia y abre este enlace:<br />
+        <a href="{checkout_url}" style="color: #f59e0b; word-break: break-all;">{checkout_url}</a>
+      </p>
+    </div>
+    """
+
+    try:
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[recipient_email]
+        )
+        msg.attach_alternative(html_content, "text/html")
+        msg.send(fail_silently=False)
+        logger.info(f"[Coupons/Delivery] ✅ Cupón {coupon.code} enviado a {recipient_email}")
+        return True, "Email enviado correctamente."
+    except Exception as e:
+        logger.error(f"[Coupons/Delivery] Error enviando correo de cupón: {e}")
+        return False, str(e)

@@ -127,15 +127,18 @@ const TourPage = () => {
         : 'http://localhost:8000/api');
   };
 
-  const handleValidateCoupon = async () => {
-    if (!couponCode.trim()) return;
+  const handleValidateCoupon = async (overrideCode?: string, overrideEmail?: string) => {
+    const codeToUse = (typeof overrideCode === 'string' ? overrideCode : couponCode).trim();
+    const emailToUse = (typeof overrideEmail === 'string' ? overrideEmail : email).trim();
+    if (!codeToUse) return;
     setIsValidatingCoupon(true);
     setCouponError('');
     try {
       const apiUrl = getApiUrl();
       const res = await axios.post(`${apiUrl}/tickets/coupons/validate/`, {
-        code: couponCode.trim(),
-        event_id: currentEvent?.id
+        code: codeToUse,
+        event_id: currentEvent?.id,
+        email: emailToUse || undefined
       });
       if (res.data.valid) {
         setAppliedCoupon(res.data);
@@ -150,6 +153,22 @@ const TourPage = () => {
       setIsValidatingCoupon(false);
     }
   };
+
+  // ── Auto-validación de Cupones desde URL Params (?coupon=CODIGO&email=CORREO) ──
+  useEffect(() => {
+    if (!router.isReady) return;
+    const { coupon, email: urlEmail } = router.query;
+    if (coupon && typeof coupon === 'string') {
+      const cleanCoupon = coupon.trim();
+      setCouponCode(cleanCoupon);
+      let cleanEmail = '';
+      if (urlEmail && typeof urlEmail === 'string') {
+        cleanEmail = urlEmail.trim();
+        setEmail(cleanEmail);
+      }
+      handleValidateCoupon(cleanCoupon, cleanEmail || undefined);
+    }
+  }, [router.isReady, router.query.coupon, router.query.email]);
 
   // ── Handle returning from Stripe Checkout (Asynchronous Resilient Webhook Sync) ──
   useEffect(() => {
