@@ -350,20 +350,28 @@ class TicketViewSet(viewsets.ModelViewSet):
                 vip_ticket_ids = [t.id for t in created_vip_tickets]
 
                 def deliver_vip_tickets(ticket_ids_list):
-                    tickets_to_send = Ticket.objects.filter(id__in=ticket_ids_list).select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon')
-                    for t in tickets_to_send:
-                        try:
-                            send_ticket_email(t)
-                            delivery_logger.info(f"[Delivery/VIP] ✅ Boleto gratuito VIP {t.token} entregado a {t.user_email}")
-                        except Exception as exc:
-                            delivery_logger.error(f"[Delivery/VIP] ❌ Falla enviando boleto {t.token}: {exc}")
+                    from django.db import close_old_connections
+                    close_old_connections()
+                    try:
+                        tickets_to_send = Ticket.objects.filter(id__in=ticket_ids_list).select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon')
+                        for t in tickets_to_send:
+                            try:
+                                send_ticket_email(t)
+                                delivery_logger.info(f"[Delivery/VIP] ✅ Boleto gratuito VIP {t.token} entregado a {t.user_email}")
+                            except Exception as exc:
+                                delivery_logger.error(f"[Delivery/VIP] ❌ Falla enviando boleto {t.token}: {exc}")
+                    finally:
+                        close_old_connections()
 
-                threading.Thread(
-                    target=deliver_vip_tickets,
-                    args=(vip_ticket_ids,),
-                    daemon=False,
-                    name=f"vip-ticket-delivery-{vip_session_id[:8]}"
-                ).start()
+                if getattr(settings, 'TESTING', False):
+                    deliver_vip_tickets(vip_ticket_ids)
+                else:
+                    threading.Thread(
+                        target=deliver_vip_tickets,
+                        args=(vip_ticket_ids,),
+                        daemon=False,
+                        name=f"vip-ticket-delivery-{vip_session_id[:8]}"
+                    ).start()
 
                 serializer = self.get_serializer(created_vip_tickets, many=True)
                 return Response({
@@ -406,7 +414,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     cancel_url=cancel_url,
                     quantity=quantity,
                     has_mg=has_mg,
-                    phone=phone
+                    phone=phone,
+                    is_seatless=is_seatless
                 )
                 session_id = session.id
                 session_url = session.url
@@ -468,41 +477,59 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             mock_ticket_ids = [t.id for t in created_mock_tickets]
 
-            # --- ENTREGA SINCRÓNICA EN HILO SEPARADO ---
-            # Usamos un hilo NO-daemon para que Docker capture los logs completos.
-            # El join() con timeout evita bloquear la respuesta al cliente.
+            # --- ENTREGA SINCRÓNICA EN MODO TESTING O HILO SEPARADO EN PRODUCCIÓN ---
             def deliver_tickets(ticket_ids_list):
-                tickets_to_send = Ticket.objects.filter(id__in=ticket_ids_list).select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon')
-                for t in tickets_to_send:
-                    delivery_logger.info(
-                        f"[Delivery] Enviando boleto {t.token} → {t.user_email}"
-                    )
-                    try:
-                        send_ticket_email(t)
+                from django.db import close_old_connections
+                close_old_connections()
+                try:
+                    tickets_to_send = Ticket.objects.filter(id__in=ticket_ids_list).select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon')
+                    for t in tickets_to_send:
                         delivery_logger.info(
-                            f"[Delivery] ✅ Boleto {t.token} entregado exitosamente a {t.user_email}"
+                            f"[Delivery] Enviando boleto {t.token} → {t.user_email}"
                         )
-                    except Exception as exc:
-                        delivery_logger.error(
-                            f"[Delivery] ❌ FALLA al enviar boleto {t.token} a {t.user_email}: {exc}",
-                            exc_info=True
-                        )
+                        try:
+                            send_ticket_email(t)
+                            delivery_logger.info(
+                                f"[Delivery] ✅ Boleto {t.token} entregado exitosamente a {t.user_email}"
+                            )
+                        except Exception as exc:
+                            delivery_logger.error(
+                                f"[Delivery] ❌ FALLA al enviar boleto {t.token} a {t.user_email}: {exc}",
+                                exc_info=True
+                            )
+                finally:
+                    close_old_connections()
 
-            delivery_thread = threading.Thread(
-                target=deliver_tickets,
-                args=(mock_ticket_ids,),
-                daemon=False,  # Non-daemon: Docker captura los logs correctamente
-                name=f"ticket-delivery-{mock_session_id[:8]}"
-            )
-            delivery_thread.start()
+            if getattr(settings, 'TESTING', False):
+                deliver_tickets(mock_ticket_ids)
+            else:
+                delivery_thread = threading.Thread(
+                    target=deliver_tickets,
+                    args=(mock_ticket_ids,),
+                    daemon=False,  # Non-daemon: Docker captura los logs correctamente
+                    name=f"ticket-delivery-{mock_session_id[:8]}"
+                )
+                delivery_thread.start()
             # No bloqueamos la respuesta — el cliente recibe 200 inmediatamente
         else:
             # Standard Stripe pre-creation of reserved tickets for concert
-            if event.event_type != 'meet_greet':
+            if event.event_type != 'meet_greet' and not is_seatless:
                 for seat in seats:
                     Ticket.objects.create(
                         event=event,
                         seat=seat,
+                        ga_zone=None,
+                        user_email=email,
+                        user_phone=phone,
+                        status='reserved',
+                        has_mg=has_mg,
+                        stripe_session_id=session_id
+                    )
+            elif is_seatless and event.event_type != 'meet_greet':
+                for _ in range(int(quantity)):
+                    Ticket.objects.create(
+                        event=event,
+                        seat=None,
                         ga_zone=None,
                         user_email=email,
                         user_phone=phone,

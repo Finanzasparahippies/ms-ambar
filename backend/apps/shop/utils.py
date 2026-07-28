@@ -4,7 +4,7 @@ from apps.tickets.models import Ticket
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-def create_ticket_checkout_session(event, seats, user_email, success_url, cancel_url, quantity=1, has_mg=False, phone=''):
+def create_ticket_checkout_session(event, seats, user_email, success_url, cancel_url, quantity=1, has_mg=False, phone='', is_seatless=False):
     """
     Creates a Stripe Checkout Session for buying tickets.
     """
@@ -28,6 +28,41 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
             'price_data': price_data,
             'quantity': int(quantity),
         })
+    elif is_seatless or not seats:
+        # Seatless / General admission tickets
+        seatless_price = getattr(event, 'seatless_ticket_price', 500)
+        multiplier = getattr(event, 'price_multiplier', 1.0)
+        unit_amount = int(float(seatless_price) * float(multiplier) * 100)
+        price_data = {
+            'currency': 'mxn',
+            'unit_amount': unit_amount,
+        }
+        if event.stripe_product_id:
+            price_data['product'] = event.stripe_product_id
+        else:
+            price_data['product_data'] = {
+                'name': f"Boleto General - {event.title}",
+                'description': f"Boleto general sin asiento para {event.title}",
+            }
+        line_items.append({
+            'price_data': price_data,
+            'quantity': int(quantity),
+        })
+
+        if has_mg and float(event.mg_price) > 0:
+            mg_unit_amount = int(event.mg_price * 100)
+            price_data = {
+                'currency': 'mxn',
+                'unit_amount': mg_unit_amount,
+                'product_data': {
+                    'name': f"Upgrade Meet & Greet - {event.title}",
+                    'description': f"Pase exclusivo de convivencia con Ms Ambar",
+                }
+            }
+            line_items.append({
+                'price_data': price_data,
+                'quantity': int(quantity),
+            })
     else:
         # Concert tickets
         for seat in seats:
