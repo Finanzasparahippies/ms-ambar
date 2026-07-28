@@ -310,8 +310,8 @@ const TourPage = () => {
   const seatsBaseTotal = isMeetGreet
     ? 0
     : (ticketMode === 'seat'
-        ? selectedSeats.reduce((acc, seat) => acc + getSeatBasePrice(seat), 0)
-        : seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500));
+      ? selectedSeats.reduce((acc, seat) => acc + getSeatBasePrice(seat), 0)
+      : seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500));
 
   const mgBaseTotal = isMeetGreet
     ? mgQuantity * Number(currentEvent?.mg_price || 0)
@@ -402,6 +402,8 @@ const TourPage = () => {
     } finally {
       setIsSubmitting(false);
     }
+  }
+
   return (
     <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-nature-night dark:text-[#F4F6F0] min-h-screen pb-24 lg:pb-12">
       <Head>
@@ -522,591 +524,593 @@ const TourPage = () => {
               )}
             </div>
 
-            </div>
+          </div>
 
-            {/* Ticket Mode Selector & Canvas / Seatless Card Container */}
-            {!isMeetGreet && (
-              <div className="space-y-4">
-                {/* Selector de Modalidad de Boleto */}
-                <div className="flex items-center justify-between gap-3 bg-nature-night/5 dark:bg-white/5 p-1.5 rounded-2xl border border-nature-night/10 dark:border-white/10">
-                  <button
-                    onClick={() => setTicketMode('seat')}
-                    className={cn(
-                      "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
-                      ticketMode === 'seat'
-                        ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
-                        : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
-                    )}
-                  >
-                    <Ticket size={14} />
-                    Asientos Numerados
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTicketMode('seatless');
-                      setSelectedSeats([]);
-                    }}
-                    className={cn(
-                      "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
-                      ticketMode === 'seatless'
-                        ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
-                        : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
-                    )}
-                  >
-                    <Users size={14} />
-                    Boleto General (Sin Asiento)
-                  </button>
-                </div>
+          {/* Ticket Mode Selector & Canvas / Seatless Card Container */}
+          {!isMeetGreet && (
+            <div className="space-y-4">
+              {/* Selector de Modalidad de Boleto */}
+              <div className="flex items-center justify-between gap-3 bg-nature-night/5 dark:bg-white/5 p-1.5 rounded-2xl border border-nature-night/10 dark:border-white/10">
+                <button
+                  onClick={() => setTicketMode('seat')}
+                  className={cn(
+                    "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+                    ticketMode === 'seat'
+                      ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
+                      : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
+                  )}
+                >
+                  <Ticket size={14} />
+                  Asientos Numerados
+                </button>
+                <button
+                  onClick={() => {
+                    setTicketMode('seatless');
+                    setSelectedSeats([]);
+                  }}
+                  className={cn(
+                    "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+                    ticketMode === 'seatless'
+                      ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
+                      : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
+                  )}
+                >
+                  <Users size={14} />
+                  Boleto General (Sin Asiento)
+                </button>
+              </div>
 
-                {ticketMode === 'seat' ? (
-                  <div className="relative group rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                    {/* Header Toolbar Legend for Canvas */}
-                    <div className="px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] font-black uppercase tracking-wider text-white/70">
-                      <div className="flex items-center gap-4">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30" /> Disponible
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-white/20 border border-white/10" /> Reservado
-                        </span>
-                      </div>
-                      <span className="text-[9px] text-white/40 tracking-widest hidden sm:block">
-                        Arrastra o usa rueda del ratón para explorar
+              {ticketMode === 'seat' ? (
+                <div className="relative group rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
+                  {/* Header Toolbar Legend for Canvas */}
+                  <div className="px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] font-black uppercase tracking-wider text-white/70">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30" /> Disponible
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-white/20 border border-white/10" /> Reservado
                       </span>
                     </div>
+                    <span className="text-[9px] text-white/40 tracking-widest hidden sm:block">
+                      Arrastra o usa rueda del ratón para explorar
+                    </span>
+                  </div>
 
-                    {isLoading ? (
-                      <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
-                        <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-                        <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        "h-[480px] lg:h-[580px] relative w-full",
-                        isCurrentEventPast && "pointer-events-none opacity-85"
-                      )}>
-                        {isCurrentEventPast && (
-                          <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
-                            <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
-                              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
-                              <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
-                            </div>
+                  {isLoading ? (
+                    <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
+                      <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+                      <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
+                    </div>
+                  ) : (
+                    <div className={cn(
+                      "h-[480px] lg:h-[580px] relative w-full",
+                      isCurrentEventPast && "pointer-events-none opacity-85"
+                    )}>
+                      {isCurrentEventPast && (
+                        <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
+                          <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
+                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
+                            <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
                           </div>
-                        )}
-                        <SeatingChart
-                          seats={seats}
-                          onSelect={handleSelectionChange}
-                          selectedIds={selectedSeats.map(s => String(s.id))}
-                          theme={theme}
-                          elements={elements}
-                        />
-                      </div>
-                    )}
+                        </div>
+                      )}
+                      <SeatingChart
+                        seats={seats}
+                        onSelect={handleSelectionChange}
+                        selectedIds={selectedSeats.map(s => String(s.id))}
+                        theme={theme}
+                        elements={elements}
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg shadow-amber-honey/10">
+                    <Users size={32} />
                   </div>
-                ) : (
-                  <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg shadow-amber-honey/10">
-                      <Users size={32} />
-                    </div>
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Entrada Libre Sin Límite</span>
-                      <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-nature-night dark:text-white">
-                        Boleto General (Sin Asiento Reservado)
-                      </h3>
-                      <p className="text-xs text-nature-night/70 dark:text-white/70 max-w-md mx-auto leading-relaxed">
-                        Acceso directo de pie a la zona general del recinto con excelente visibilidad y flexibilidad total.
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-center gap-6 py-4">
-                      <button
-                        onClick={() => setSeatlessQuantity(Math.max(1, seatlessQuantity - 1))}
-                        className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <span className="text-4xl font-black text-nature-night dark:text-white min-w-[3rem] text-center">{seatlessQuantity}</span>
-                      <button
-                        onClick={() => setSeatlessQuantity(seatlessQuantity + 1)}
-                        className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                    <div className="pt-4 border-t border-nature-night/10 dark:border-white/10 flex justify-between items-center px-4 max-w-md mx-auto">
-                      <span className="text-xs font-bold uppercase tracking-wider text-nature-night/60 dark:text-white/60">Precio Unitario General</span>
-                      <span className="text-xl font-black text-amber-honey">${Number(currentEvent?.seatless_ticket_price || 500).toLocaleString('es-MX')} MXN</span>
-                    </div>
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Entrada Libre Sin Límite</span>
+                    <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-nature-night dark:text-white">
+                      Boleto General (Sin Asiento Reservado)
+                    </h3>
+                    <p className="text-xs text-nature-night/70 dark:text-white/70 max-w-md mx-auto leading-relaxed">
+                      Acceso directo de pie a la zona general del recinto con excelente visibilidad y flexibilidad total.
+                    </p>
                   </div>
-                )}
+                  <div className="flex items-center justify-center gap-6 py-4">
+                    <button
+                      onClick={() => setSeatlessQuantity(Math.max(1, seatlessQuantity - 1))}
+                      className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className="text-4xl font-black text-nature-night dark:text-white min-w-[3rem] text-center">{seatlessQuantity}</span>
+                    <button
+                      onClick={() => setSeatlessQuantity(seatlessQuantity + 1)}
+                      className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  <div className="pt-4 border-t border-nature-night/10 dark:border-white/10 flex justify-between items-center px-4 max-w-md mx-auto">
+                    <span className="text-xs font-bold uppercase tracking-wider text-nature-night/60 dark:text-white/60">Precio Unitario General</span>
+                    <span className="text-xl font-black text-amber-honey">${Number(currentEvent?.seatless_ticket_price || 500).toLocaleString('es-MX')} MXN</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Flyer / Meet & Greet Details Card */}
+          <div className="grid md:grid-cols-2 gap-6 items-stretch">
+            {currentEvent?.flyer_url && (
+              <div className="relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-xl shadow-amber-honey/5 aspect-[4/3] md:aspect-auto">
+                <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-nature-night/20 to-transparent z-10 pointer-events-none" />
+                <img
+                  src={currentEvent.flyer_url}
+                  alt={`Flyer oficial: ${currentEvent.title}`}
+                  className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                />
+                <div className="absolute bottom-6 left-8 z-20">
+                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
+                  <h3 className="text-xl font-black text-white uppercase italic">{currentEvent.title}</h3>
+                </div>
               </div>
             )}
 
-            {/* Flyer / Meet & Greet Details Card */}
-            <div className="grid md:grid-cols-2 gap-6 items-stretch">
-              {currentEvent?.flyer_url && (
-                <div className="relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-xl shadow-amber-honey/5 aspect-[4/3] md:aspect-auto">
-                  <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-nature-night/20 to-transparent z-10 pointer-events-none" />
-                  <img
-                    src={currentEvent.flyer_url}
-                    alt={`Flyer oficial: ${currentEvent.title}`}
-                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute bottom-6 left-8 z-20">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
-                    <h3 className="text-xl font-black text-white uppercase italic">{currentEvent.title}</h3>
-                  </div>
+            {isMeetGreet && (
+              <div className="p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-5">
+                <div className="flex items-center gap-3 text-amber-honey">
+                  <Star className="fill-current animate-pulse" size={20} />
+                  <h3 className="text-lg font-black uppercase tracking-wider">Experiencia Convivencia</h3>
                 </div>
-              )}
-
-              {isMeetGreet && (
-                <div className="p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-5">
-                  <div className="flex items-center gap-3 text-amber-honey">
-                    <Star className="fill-current animate-pulse" size={20} />
-                    <h3 className="text-lg font-black uppercase tracking-wider">Experiencia Convivencia</h3>
-                  </div>
-                  <p className="text-xs leading-relaxed opacity-80">
-                    Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales.
-                  </p>
-                  <ul className="space-y-2.5 text-[10px] font-bold uppercase tracking-wider opacity-75">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle size={14} className="text-amber-honey" />
-                      Acceso exclusivo al venue de convivencia
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle size={14} className="text-amber-honey" />
-                      Firma de autógrafos y posters de colección
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle size={14} className="text-amber-honey" />
-                      Fotografía digital oficial individual
-                    </li>
-                  </ul>
-                </div>
-              )}
-            </div>
-
-          </div>
-
-          {/* ══════ RIGHT COLUMN: Sticky Cart Summary Side Panel (col-span-5/4) ══════ */}
-          <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 space-y-6">
-            <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-2xl shadow-nature-night/10 p-6 md:p-8 rounded-[3rem]">
-              <div className="text-center mb-6 border-b border-nature-night/10 pb-5">
-                <div className="flex items-center justify-center gap-2 mb-1">
-                  <Ticket size={16} className="text-amber-honey" />
-                  <h3 className="text-2xl font-black uppercase tracking-wider">Reserva Digital</h3>
-                </div>
-                <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
+                <p className="text-xs leading-relaxed opacity-80">
+                  Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales.
+                </p>
+                <ul className="space-y-2.5 text-[10px] font-bold uppercase tracking-wider opacity-75">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Acceso exclusivo al venue de convivencia
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Firma de autógrafos y posters de colección
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Fotografía digital oficial individual
+                  </li>
+                </ul>
               </div>
-
-              {isCurrentEventPast ? (
-                <div className="my-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-amber-honey/30 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-amber-honey/15 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg">
-                    <CalendarX size={20} />
-                  </div>
-                  <h4 className="text-lg font-black uppercase tracking-wider text-nature-night">Venta Cerrada</h4>
-                  <p className="text-xs text-nature-night/70 leading-relaxed font-medium">
-                    Este evento ha finalizado. La venta de accesos se encuentra cerrada.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {isMeetGreet && (
-                    <div className="mb-6 p-5 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
-                      <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
-                      <div className="flex items-center justify-center gap-6">
-                        <button
-                          onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
-                          className="w-11 h-11 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
-                        >
-                          <Minus size={14} />
-                        </button>
-                        <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
-                        <button
-                          onClick={() => setMgQuantity(mgQuantity + 1)}
-                          className="w-11 h-11 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      </div>
-                      <div className="space-y-0.5">
-                        <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
-                        <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isMeetGreet && (
-                    <div
-                      onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
-                      className={cn(
-                        "mb-5 p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
-                        wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
-                      )}
-                    >
-                      <div className="flex items-center gap-3.5 relative z-10">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500",
-                          wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
-                        )}>
-                          <Star size={18} fill="currentColor" />
-                        </div>
-                        <div>
-                          <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet Pase</h4>
-                          <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
-                            {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
-                          </p>
-                        </div>
-                      </div>
-                      {!wantsMG && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
-                        {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
-                      </span>}
-                    </div>
-                  )}
-
-                  {/* Selected Seats / General Ticket List */}
-                  <div className="space-y-2.5 mb-5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
-                    {isMeetGreet ? (
-                      <div className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10">
-                        <div>
-                          <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Meet & Greet</p>
-                          <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
-                        </div>
-                        <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
-                      </div>
-                    ) : ticketMode === 'seatless' ? (
-                      <div className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10">
-                        <div>
-                          <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Zona General</p>
-                          <p className="text-xs font-bold text-nature-night/80">{seatlessQuantity} Boleto(s) Sin Asiento</p>
-                        </div>
-                        <span className="font-extrabold text-xs text-nature-night">${(seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500)).toLocaleString()} MXN</span>
-                      </div>
-                    ) : (
-                      <>
-                        <AnimatePresence mode="popLayout">
-                          {selectedSeats.map(seat => (
-                            <motion.div
-                              key={seat.id}
-                              initial={{ opacity: 0, x: -15 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, scale: 0.8 }}
-                              className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10"
-                            >
-                              <div>
-                                <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
-                                <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
-                              </div>
-                              <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-
-                        {selectedSeats.length === 0 && (
-                          <div className="py-10 text-center border border-dashed border-nature-night/20 rounded-2xl opacity-50">
-                            <Ticket className="mx-auto mb-2 text-nature-night/40" size={28} />
-                            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-nature-night/60">Toca un asiento en el mapa interactivo</p>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Price Breakdown */}
-                  {baseTotal > 0 ? (
-                    <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
-                  ) : (
-                    <div className="pt-4 border-t border-nature-night/10 mb-4">
-                      <div className="flex justify-between items-end">
-                        <div>
-                          <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-1">Total (Pase VIP Gratuito)</p>
-                          <p className="text-3xl font-black leading-none text-emerald-600">$0 MXN</p>
-                        </div>
-                        <Sparkles size={20} className="text-amber-honey mb-1 animate-pulse" />
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              <div className="mt-6 w-full">
-                <PremiumCTAButton
-                  disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
-                  onClick={() => !isCurrentEventPast && setIsCheckoutOpen(true)}
-                >
-                  <span className="text-base md:text-lg font-black uppercase tracking-[0.15em] block">
-                    {isCurrentEventPast ? 'Venta Finalizada' : (baseTotal === 0 && appliedCoupon ? 'Reclamar Entrada VIP' : 'Proceder al Pago')}
-                  </span>
-                </PremiumCTAButton>
-              </div>
-            </motion.div>
+            )}
           </div>
 
         </div>
 
-        {/* ─── MOBILE STICKY BOTTOM BAR (Celulares / Dispositivos Móviles) ─── */}
-        {!isCurrentEventPast && (selectedSeats.length > 0 || isMeetGreet) && (
-          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-nature-night/95 dark:bg-[#0B0F0D]/95 backdrop-blur-xl border-t border-white/10 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-            <div className="max-w-md mx-auto flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">
-                  {isMeetGreet ? `${mgQuantity} Pase(s)` : `${selectedSeats.length} Seleccionado(s)`}
-                </p>
-                <p className="text-2xl font-black text-white leading-none mt-0.5">
-                  ${Math.ceil(checkoutTotal).toLocaleString('es-MX')} <span className="text-[10px] font-bold text-white/50">MXN</span>
+        {/* ══════ RIGHT COLUMN: Sticky Cart Summary Side Panel (col-span-5/4) ══════ */}
+        <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 space-y-6">
+          <motion.div layout className="border border-nature-night/15 bg-white text-nature-night shadow-2xl shadow-nature-night/10 p-6 md:p-8 rounded-[3rem]">
+            <div className="text-center mb-6 border-b border-nature-night/10 pb-5">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Ticket size={16} className="text-amber-honey" />
+                <h3 className="text-2xl font-black uppercase tracking-wider">Reserva Digital</h3>
+              </div>
+              <p className="text-[9px] uppercase tracking-[0.3em] text-nature-night/50 font-bold">Reserva directa mediante Néctar Gateway</p>
+            </div>
+
+            {isCurrentEventPast ? (
+              <div className="my-6 p-6 rounded-[2rem] bg-nature-night/[0.03] border border-amber-honey/30 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full bg-amber-honey/15 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg">
+                  <CalendarX size={20} />
+                </div>
+                <h4 className="text-lg font-black uppercase tracking-wider text-nature-night">Venta Cerrada</h4>
+                <p className="text-xs text-nature-night/70 leading-relaxed font-medium">
+                  Este evento ha finalizado. La venta de accesos se encuentra cerrada.
                 </p>
               </div>
-              <button
-                onClick={() => setIsCheckoutOpen(true)}
-                className="bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-amber-honey/20 active:scale-95 transition-all flex items-center gap-2"
-              >
-                <ShieldCheck size={16} />
-                Reservar Ahora
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */}
-        <AnimatePresence>
-          {
-            isCheckoutOpen && (
-              <div className="fixed inset-0 z-[110] bg-nature-night/60 backdrop-blur-md flex items-center justify-center p-4">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                  className="bg-white border border-nature-night/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-hidden"
-                >
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/10 rounded-bl-[8rem] pointer-events-none" />
-
-                  {!checkoutSuccess && (
-                    <button
-                      onClick={() => {
-                        setIsCheckoutOpen(false);
-                        setFullName('');
-                        setEmail('');
-                        setPhone('');
-                      }}
-                      className="absolute top-6 right-6 text-nature-night/50 hover:text-nature-night transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
-                  )}
-
-                  {checkoutSuccess ? (
-                    <div className="text-center space-y-6 py-4">
-                      <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
-                        <CheckCircle size={32} />
-                      </div>
-                      <div className="space-y-2">
-                        <h3 className="text-2xl font-black uppercase tracking-wider">¡Compra Confirmada!</h3>
-                        <p className="text-xs text-nature-night/60">Tus accesos han sido generados y enviados a su correo:</p>
-                        <p className="text-xs font-bold text-amber-honey">{email}</p>
-                      </div>
-
-                      {/* DESGLOSE FINANCIERO CORREGIDO — MATCHING DESKTOP ASYMMETRIC FLYER SPEC */}
-                      {(() => {
-                        const totalCargado = getCreatedTicketsTotalAmount();
-                        const { base_price: costoNetoBoleto, service_fee: comisionPlataforma } = calculateTotalWithFee(totalCargado);
-                        if (totalCargado <= 0) return null;
-                        return (
-                          <div className="bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-xl text-left space-y-1.5 text-[11px]">
-                            <div className="flex justify-between text-nature-night/60">
-                              <span>Costo del Boleto ({createdTickets.length} accesos):</span>
-                              <span className="font-semibold text-nature-night">${costoNetoBoleto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
-                            </div>
-                            <div className="flex justify-between text-amber-600">
-                              <span className="flex items-center gap-1"><Info size={10} /> Cargo de servicio (Stripe MX):</span>
-                              <span className="font-semibold">+${comisionPlataforma.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
-                            </div>
-                            <div className="flex justify-between text-nature-night font-bold border-t border-nature-night/10 pt-1.5 mt-1 text-xs">
-                              <span>Total Pagado:</span>
-                              <span className="text-amber-honey">${Math.ceil(totalCargado).toLocaleString('es-MX')} MXN</span>
-                            </div>
-                          </div>
-                        );
-                      })()}
-
-                      <div className="bg-nature-night/[0.02] p-5 rounded-2xl border border-nature-night/10 text-left space-y-3">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales</h4>
-                        <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-                          {createdTickets.map((t, idx) => (
-                            <div key={t.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-nature-night/10">
-                              <span className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</span>
-                              <Link
-                                href={`/tickets/${t.token}`}
-                                className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors"
-                                target="_blank"
-                              >
-                                Ver Boleto
-                              </Link>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
+            ) : (
+              <>
+                {isMeetGreet && (
+                  <div className="mb-6 p-5 rounded-[2rem] bg-nature-night/[0.03] border border-nature-night/10 text-center space-y-4">
+                    <p className="text-[10px] font-black uppercase text-amber-honey tracking-[0.2em]">Cantidad de Boletos</p>
+                    <div className="flex items-center justify-center gap-6">
                       <button
-                        onClick={() => {
-                          setIsCheckoutOpen(false);
-                          setCheckoutSuccess(false);
-                          setCreatedTickets([]);
-                          setFullName('');
-                          setEmail('');
-                          setPhone('');
-                        }}
-                        className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform"
+                        onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
+                        className="w-11 h-11 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
                       >
-                        Finalizar y Volver
+                        <Minus size={14} />
+                      </button>
+                      <span className="text-3xl font-black min-w-[2rem] text-center text-nature-night">{mgQuantity}</span>
+                      <button
+                        onClick={() => setMgQuantity(mgQuantity + 1)}
+                        className="w-11 h-11 rounded-full bg-nature-night/5 hover:bg-amber-honey/20 border border-nature-night/10 flex items-center justify-center font-bold text-nature-night transition-colors"
+                      >
+                        <Plus size={14} />
                       </button>
                     </div>
-                  ) : (
-                    <form onSubmit={handleCheckoutSubmit} className="space-y-6">
-                      <div className="border-b border-nature-night/10 pb-4">
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">Pasarela Segura</span>
-                        <h3 className="text-2xl font-black uppercase tracking-tight mt-1">Confirmar Reserva</h3>
-                      </div>
+                    <div className="space-y-0.5">
+                      <p className="text-[9px] font-bold uppercase text-nature-night/40 tracking-widest">Precio Unitario</p>
+                      <p className="text-xl font-black text-nature-night">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
+                    </div>
+                  </div>
+                )}
 
-                      <div className="bg-nature-night/[0.02] border border-nature-night/10 p-5 rounded-2xl space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-nature-night/50">Resumen del Evento</p>
-                        <h4 className="text-sm font-black text-nature-night">{currentEvent?.title}</h4>
-                        <p className="text-xs text-nature-night/60">
-                          {isMeetGreet
-                            ? `${mgQuantity} Pase(s) de Convivencia Meet & Greet`
-                            : ticketMode === 'seatless'
-                              ? `${seatlessQuantity} Boleto(s) General(es) Sin Asiento`
-                              : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
-                          }
-                          {wantsMG && !isMeetGreet && " (Incluye Meet & Greet)"}
+                {!isMeetGreet && (
+                  <div
+                    onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
+                    className={cn(
+                      "mb-5 p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
+                      wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
+                    )}
+                  >
+                    <div className="flex items-center gap-3.5 relative z-10">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500",
+                        wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
+                      )}>
+                        <Star size={18} fill="currentColor" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet Pase</h4>
+                        <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
+                          {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
                         </p>
-
-                        {baseTotal > 0 ? (
-                          <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
-                            <div className="flex justify-between items-center text-[10px]">
-                              <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
-                              <span className="font-extrabold text-nature-night">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[10px]">
-                              <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
-                                <Info size={9} /> Cargo de servicio
-                              </span>
-                              <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
-                            </div>
-                            <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
-                              <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
-                              <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="pt-3 border-t border-nature-night/10 mt-2 flex justify-between items-center text-xs">
-                            <span className="font-bold text-emerald-600 uppercase tracking-wider">Total Pase VIP Gratuito:</span>
-                            <span className="font-black text-emerald-600 text-base">$0.00 MXN</span>
-                          </div>
-                        )}
                       </div>
+                    </div>
+                    {!wantsMG && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
+                      {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
+                    </span>}
+                  </div>
+                )}
 
-                      {/* VIP Coupon Code Input */}
-                      <div className="space-y-1.5 bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-2xl">
-                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60 flex items-center gap-1.5">
-                          <Sparkles size={12} className="text-amber-honey animate-pulse" /> Código de Cupón / Entrada VIP
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={couponCode}
-                            onChange={e => {
-                              setCouponCode(e.target.value);
-                              setCouponError('');
-                            }}
-                            placeholder="Ej. VIP-AMBAR-2026..."
-                            className="flex-1 bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none transition-colors text-nature-night uppercase tracking-wider"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleValidateCoupon()}
-                            disabled={isValidatingCoupon || !couponCode.trim()}
-                            className="px-4 py-2.5 bg-nature-night text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-nature-night/80 disabled:opacity-40 transition-all"
+                {/* Selected Seats / General Ticket List */}
+                <div className="space-y-2.5 mb-5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
+                  {isMeetGreet ? (
+                    <div className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10">
+                      <div>
+                        <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Meet & Greet</p>
+                        <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
+                      </div>
+                      <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
+                    </div>
+                  ) : ticketMode === 'seatless' ? (
+                    <div className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10">
+                      <div>
+                        <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Zona General</p>
+                        <p className="text-xs font-bold text-nature-night/80">{seatlessQuantity} Boleto(s) Sin Asiento</p>
+                      </div>
+                      <span className="font-extrabold text-xs text-nature-night">${(seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500)).toLocaleString()} MXN</span>
+                    </div>
+                  ) : (
+                    <>
+                      <AnimatePresence mode="popLayout">
+                        {selectedSeats.map(seat => (
+                          <motion.div
+                            key={seat.id}
+                            initial={{ opacity: 0, x: -15 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10"
                           >
-                            {isValidatingCoupon ? 'Validando...' : 'Aplicar'}
-                          </button>
-                        </div>
-                        {appliedCoupon && (
-                          <div className="mt-2 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-700 font-bold">
-                            <span className="flex items-center gap-1.5">
-                              <CheckCircle size={14} className="text-emerald-600" />
-                              {appliedCoupon.discount_type === 'free_vip' ? '¡Entrada VIP Gratuita (100% Descuento)!' : '¡Cupón VIP Aplicado!'}
-                            </span>
-                            <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-[10px] text-emerald-800 underline">Quitar</button>
-                          </div>
-                        )}
-                        {couponError && (
-                          <p className="text-[10px] font-bold text-rose-600 mt-1">{couponError}</p>
-                        )}
-                      </div>
+                            <div>
+                              <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
+                              <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
+                            </div>
+                            <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
 
-                      <div className="space-y-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Nombre Completo</label>
-                          <input
-                            type="text"
-                            required
-                            value={fullName}
-                            onChange={e => setFullName(e.target.value)}
-                            placeholder="Juan Pérez..."
-                            className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
-                          />
+                      {selectedSeats.length === 0 && (
+                        <div className="py-10 text-center border border-dashed border-nature-night/20 rounded-2xl opacity-50">
+                          <Ticket className="mx-auto mb-2 text-nature-night/40" size={28} />
+                          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-nature-night/60">Toca un asiento en el mapa interactivo</p>
                         </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Correo Electrónico</label>
-                          <input
-                            type="email"
-                            required
-                            value={email}
-                            onChange={e => setEmail(e.target.value)}
-                            placeholder="juan@example.com..."
-                            className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Teléfono (WhatsApp)</label>
-                          <input
-                            type="tel"
-                            value={phone}
-                            onChange={e => setPhone(e.target.value)}
-                            placeholder="+52 55 1234 5678..."
-                            className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
-                          />
-                        </div>
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="w-full py-5 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black disabled:opacity-30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-amber-honey/20"
-                      >
-                        <ShieldCheck size={14} />
-                        {isSubmitting
-                          ? 'Procesando...'
-                          : (baseTotal === 0 && appliedCoupon
-                              ? 'Reclamar Entrada VIP Gratuita'
-                              : 'Confirmar y Pagar Boletos'
-                            )
-                        }
-                        {!isSubmitting && <Sparkles size={12} className="animate-pulse" />}
-                      </button>
-                    </form>
+                      )}
+                    </>
                   )}
-                </motion.div>
-              </div>
-            )
-          }
-        </AnimatePresence>
+                </div>
+
+                {/* Price Breakdown */}
+                {baseTotal > 0 ? (
+                  <PriceBreakdown baseTotal={baseTotal} label="Subtotal boletos" />
+                ) : (
+                  <div className="pt-4 border-t border-nature-night/10 mb-4">
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-1">Total (Pase VIP Gratuito)</p>
+                        <p className="text-3xl font-black leading-none text-emerald-600">$0 MXN</p>
+                      </div>
+                      <Sparkles size={20} className="text-amber-honey mb-1 animate-pulse" />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="mt-6 w-full">
+              <PremiumCTAButton
+                disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
+                onClick={() => !isCurrentEventPast && setIsCheckoutOpen(true)}
+              >
+                <span className="text-base md:text-lg font-black uppercase tracking-[0.15em] block">
+                  {isCurrentEventPast ? 'Venta Finalizada' : (baseTotal === 0 && appliedCoupon ? 'Reclamar Entrada VIP' : 'Proceder al Pago')}
+                </span>
+              </PremiumCTAButton>
+            </div>
+          </motion.div>
+        </div>
+
     </div>
+
+        {/* ─── MOBILE STICKY BOTTOM BAR (Celulares / Dispositivos Móviles) ─── */ }
+  {
+    !isCurrentEventPast && (selectedSeats.length > 0 || isMeetGreet) && (
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-nature-night/95 dark:bg-[#0B0F0D]/95 backdrop-blur-xl border-t border-white/10 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        <div className="max-w-md mx-auto flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">
+              {isMeetGreet ? `${mgQuantity} Pase(s)` : `${selectedSeats.length} Seleccionado(s)`}
+            </p>
+            <p className="text-2xl font-black text-white leading-none mt-0.5">
+              ${Math.ceil(checkoutTotal).toLocaleString('es-MX')} <span className="text-[10px] font-bold text-white/50">MXN</span>
+            </p>
+          </div>
+          <button
+            onClick={() => setIsCheckoutOpen(true)}
+            className="bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-amber-honey/20 active:scale-95 transition-all flex items-center gap-2"
+          >
+            <ShieldCheck size={16} />
+            Reservar Ahora
+          </button>
+        </div>
+      </div>
+    )
+  }
+      </section >
+
+  {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */ }
+  <AnimatePresence>
+{
+  isCheckoutOpen && (
+    <div className="fixed inset-0 z-[110] bg-nature-night/60 backdrop-blur-md flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white border border-nature-night/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/10 rounded-bl-[8rem] pointer-events-none" />
+
+        {!checkoutSuccess && (
+          <button
+            onClick={() => {
+              setIsCheckoutOpen(false);
+              setFullName('');
+              setEmail('');
+              setPhone('');
+            }}
+            className="absolute top-6 right-6 text-nature-night/50 hover:text-nature-night transition-colors"
+          >
+            <X size={18} />
+          </button>
+        )}
+
+        {checkoutSuccess ? (
+          <div className="text-center space-y-6 py-4">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-500">
+              <CheckCircle size={32} />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black uppercase tracking-wider">¡Compra Confirmada!</h3>
+              <p className="text-xs text-nature-night/60">Tus accesos han sido generados y enviados a su correo:</p>
+              <p className="text-xs font-bold text-amber-honey">{email}</p>
+            </div>
+
+            {/* DESGLOSE FINANCIERO CORREGIDO — MATCHING DESKTOP ASYMMETRIC FLYER SPEC */}
+            {(() => {
+              const totalCargado = getCreatedTicketsTotalAmount();
+              const { base_price: costoNetoBoleto, service_fee: comisionPlataforma } = calculateTotalWithFee(totalCargado);
+              if (totalCargado <= 0) return null;
+              return (
+                <div className="bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-xl text-left space-y-1.5 text-[11px]">
+                  <div className="flex justify-between text-nature-night/60">
+                    <span>Costo del Boleto ({createdTickets.length} accesos):</span>
+                    <span className="font-semibold text-nature-night">${costoNetoBoleto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                  </div>
+                  <div className="flex justify-between text-amber-600">
+                    <span className="flex items-center gap-1"><Info size={10} /> Cargo de servicio (Stripe MX):</span>
+                    <span className="font-semibold">+${comisionPlataforma.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                  </div>
+                  <div className="flex justify-between text-nature-night font-bold border-t border-nature-night/10 pt-1.5 mt-1 text-xs">
+                    <span>Total Pagado:</span>
+                    <span className="text-amber-honey">${Math.ceil(totalCargado).toLocaleString('es-MX')} MXN</span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div className="bg-nature-night/[0.02] p-5 rounded-2xl border border-nature-night/10 text-left space-y-3">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales</h4>
+              <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                {createdTickets.map((t, idx) => (
+                  <div key={t.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-nature-night/10">
+                    <span className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</span>
+                    <Link
+                      href={`/tickets/${t.token}`}
+                      className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors"
+                      target="_blank"
+                    >
+                      Ver Boleto
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setIsCheckoutOpen(false);
+                setCheckoutSuccess(false);
+                setCreatedTickets([]);
+                setFullName('');
+                setEmail('');
+                setPhone('');
+              }}
+              className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform"
+            >
+              Finalizar y Volver
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleCheckoutSubmit} className="space-y-6">
+            <div className="border-b border-nature-night/10 pb-4">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">Pasarela Segura</span>
+              <h3 className="text-2xl font-black uppercase tracking-tight mt-1">Confirmar Reserva</h3>
+            </div>
+
+            <div className="bg-nature-night/[0.02] border border-nature-night/10 p-5 rounded-2xl space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-nature-night/50">Resumen del Evento</p>
+              <h4 className="text-sm font-black text-nature-night">{currentEvent?.title}</h4>
+              <p className="text-xs text-nature-night/60">
+                {isMeetGreet
+                  ? `${mgQuantity} Pase(s) de Convivencia Meet & Greet`
+                  : ticketMode === 'seatless'
+                    ? `${seatlessQuantity} Boleto(s) General(es) Sin Asiento`
+                    : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
+                }
+                {wantsMG && !isMeetGreet && " (Incluye Meet & Greet)"}
+              </p>
+
+              {baseTotal > 0 ? (
+                <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
+                    <span className="font-extrabold text-nature-night">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px]">
+                    <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                      <Info size={9} /> Cargo de servicio
+                    </span>
+                    <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                  </div>
+                  <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
+                    <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
+                    <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-3 border-t border-nature-night/10 mt-2 flex justify-between items-center text-xs">
+                  <span className="font-bold text-emerald-600 uppercase tracking-wider">Total Pase VIP Gratuito:</span>
+                  <span className="font-black text-emerald-600 text-base">$0.00 MXN</span>
+                </div>
+              )}
+            </div>
+
+            {/* VIP Coupon Code Input */}
+            <div className="space-y-1.5 bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-2xl">
+              <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60 flex items-center gap-1.5">
+                <Sparkles size={12} className="text-amber-honey animate-pulse" /> Código de Cupón / Entrada VIP
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={couponCode}
+                  onChange={e => {
+                    setCouponCode(e.target.value);
+                    setCouponError('');
+                  }}
+                  placeholder="Ej. VIP-AMBAR-2026..."
+                  className="flex-1 bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none transition-colors text-nature-night uppercase tracking-wider"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleValidateCoupon()}
+                  disabled={isValidatingCoupon || !couponCode.trim()}
+                  className="px-4 py-2.5 bg-nature-night text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-nature-night/80 disabled:opacity-40 transition-all"
+                >
+                  {isValidatingCoupon ? 'Validando...' : 'Aplicar'}
+                </button>
+              </div>
+              {appliedCoupon && (
+                <div className="mt-2 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-700 font-bold">
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle size={14} className="text-emerald-600" />
+                    {appliedCoupon.discount_type === 'free_vip' ? '¡Entrada VIP Gratuita (100% Descuento)!' : '¡Cupón VIP Aplicado!'}
+                  </span>
+                  <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-[10px] text-emerald-800 underline">Quitar</button>
+                </div>
+              )}
+              {couponError && (
+                <p className="text-[10px] font-bold text-rose-600 mt-1">{couponError}</p>
+              )}
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Nombre Completo</label>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="Juan Pérez..."
+                  className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Correo Electrónico</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="juan@example.com..."
+                  className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60">Teléfono (WhatsApp)</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  placeholder="+52 55 1234 5678..."
+                  className="w-full bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-3 text-xs font-medium focus:outline-none transition-colors text-nature-night"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-5 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black disabled:opacity-30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-amber-honey/20"
+            >
+              <ShieldCheck size={14} />
+              {isSubmitting
+                ? 'Procesando...'
+                : (baseTotal === 0 && appliedCoupon
+                  ? 'Reclamar Entrada VIP Gratuita'
+                  : 'Confirmar y Pagar Boletos'
+                )
+              }
+              {!isSubmitting && <Sparkles size={12} className="animate-pulse" />}
+            </button>
+          </form>
+        )}
+      </motion.div>
+    </div>
+  )
+}
+        </AnimatePresence >
+    </div >
   );
 };
 
