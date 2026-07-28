@@ -210,6 +210,10 @@ class Event(models.Model):
     # Price multiplier for this specific event
     price_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=1.0)
 
+    # Configurable Monthly Dynamic Pricing Strategy
+    enable_dynamic_pricing = models.BooleanField(default=True, help_text="Activa el ajuste dinámico mensual de precios previo al evento")
+    monthly_price_increment = models.DecimalField(max_digits=10, decimal_places=2, default=50.00, help_text="Monto de incremento mensual (ej. $50.00 MXN)")
+
     stripe_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del producto en Stripe para este evento")
     stripe_price_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del precio en Stripe (solo para Meet & Greet o general)")
 
@@ -327,6 +331,32 @@ class Event(models.Model):
     def __str__(self):
         return f"{self.title} - {self.date.strftime('%Y-%m-%d')}"
 
+    def get_dynamic_price(self, base_amount, purchase_date=None):
+        """
+        Calcula el precio dinámico mensual basado en el tiempo restante hasta el mes del evento.
+        Aplica a cualquier mes de evento y permite monto de incremento configurable.
+        """
+        if base_amount is None:
+            return 0.0
+        amount = float(base_amount)
+        if not self.enable_dynamic_pricing or not self.date:
+            return round(amount, 2)
+        
+        from django.utils import timezone
+        p_date = purchase_date or timezone.now()
+        event_month_idx = self.date.year * 12 + self.date.month
+        curr_month_idx = p_date.year * 12 + p_date.month
+        months_diff = max(0, event_month_idx - curr_month_idx)
+
+        discount = months_diff * float(self.monthly_price_increment or 50.00)
+        final_price = max(0.0, amount - discount)
+        return round(final_price, 2)
+
+    @property
+    def effective_seatless_ticket_price(self):
+        """Precio actual del boleto general con ajuste dinámico mensual."""
+        return self.get_dynamic_price(self.seatless_ticket_price)
+
     @property
     def mg_available(self):
         sold = self.tickets.filter(status='paid', has_mg=True).count()
@@ -334,15 +364,17 @@ class Event(models.Model):
 
     @property
     def base_price(self):
-        """Returns the lowest seat base_price in the event's theater, or 0 if no theater/seats."""
+        """Returns the lowest seat base_price in the event's theater with dynamic pricing applied."""
         if self.event_type == 'meet_greet':
             return float(self.mg_price)
         if self.theater:
             from apps.tickets.models import Seat
             min_seat = self.theater.seats.order_by('base_price').first()
             if min_seat:
-                return float(min_seat.base_price * self.price_multiplier)
+                raw_base = float(min_seat.base_price * self.price_multiplier)
+                return self.get_dynamic_price(raw_base)
         return 0
+
     @property
     def end_date(self):
         """Calcula de forma dinámica la hora de finalización del show."""

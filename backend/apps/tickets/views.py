@@ -119,11 +119,15 @@ class EventViewSet(viewsets.ModelViewSet):
         data = serializer.data
         
         # Add status to each seat
+        multiplier = float(event.price_multiplier or 1.0)
         for seat_data in data:
             if seat_data['id'] in occupied_seat_ids:
                 seat_data['status'] = 'occupied'
             else:
                 seat_data['status'] = 'available'
+            
+            raw_price = float(seat_data.get('base_price') or 0) * multiplier
+            seat_data['base_price'] = event.get_dynamic_price(raw_price)
         
         return Response({
             "seats": data,

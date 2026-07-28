@@ -265,14 +265,21 @@ const TourPage = () => {
     });
   }, []);
 
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+  const getDynamicPrice = useCallback((baseAmount: number) => {
+    if (!currentEvent || !currentEvent.date) return baseAmount;
+    if (currentEvent.enable_dynamic_pricing === false) return baseAmount;
+    const eventDate = new Date(currentEvent.date);
+    const now = new Date();
+    const eventMonthIdx = eventDate.getFullYear() * 12 + eventDate.getMonth();
+    const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
+    const monthsDiff = Math.max(0, eventMonthIdx - currMonthIdx);
+    const increment = Number(currentEvent.monthly_price_increment ?? 50);
+    return Math.max(0, baseAmount - (monthsDiff * increment));
+  }, [currentEvent]);
 
-  useEffect(() => {
+  const fetchSeats = useCallback(() => {
     if (!currentEvent) return;
     const apiUrl = getApiUrl();
-
     fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
       .then(res => res.json())
       .then(data => {
@@ -287,6 +294,14 @@ const TourPage = () => {
       .catch(err => console.error("Error fetching seats:", err));
   }, [currentEvent]);
 
+  useEffect(() => {
+    fetchSeats();
+  }, [fetchSeats]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   const handleSelectionChange = (ids: string[]) => {
     const selectedObjects = ids.map(id => {
       return seats.find(s => String(s.id) === id);
@@ -299,6 +314,13 @@ const TourPage = () => {
     const base = Number(seat.base_price || 0);
     const mult = Number(currentEvent?.price_multiplier || 1);
     return Math.round(base * mult);
+  };
+
+  const getEffectiveSeatlessPrice = () => {
+    if (currentEvent?.effective_seatless_ticket_price) {
+      return Number(currentEvent.effective_seatless_ticket_price);
+    }
+    return getDynamicPrice(Number(currentEvent?.seatless_ticket_price || 500));
   };
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';
@@ -321,7 +343,7 @@ const TourPage = () => {
     ? 0
     : (ticketMode === 'seat'
       ? selectedSeats.reduce((acc, seat) => acc + getSeatBasePrice(seat), 0)
-      : seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500));
+      : seatlessQuantity * getEffectiveSeatlessPrice());
 
   const mgBaseTotal = isMeetGreet
     ? mgQuantity * Number(currentEvent?.mg_price || 0)
@@ -880,9 +902,36 @@ const TourPage = () => {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white border border-nature-night/10 p-8 md:p-10 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-hidden"
+              className="bg-white border border-nature-night/10 p-6 md:p-8 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-nature-night shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-honey/10 rounded-bl-[8rem] pointer-events-none" />
+
+              {/* ─── GUIADO DE PASOS (STEPPER) ─── */}
+              <div className="flex items-center justify-between border-b border-nature-night/10 pb-4 pt-1">
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black",
+                    !checkoutSuccess ? "bg-amber-honey text-black" : "bg-emerald-100 text-emerald-700"
+                  )}>1</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider">Datos</span>
+                </div>
+                <div className="h-[2px] w-8 bg-nature-night/10" />
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black",
+                    isSubmitting ? "bg-amber-honey text-black animate-pulse" : (checkoutSuccess ? "bg-emerald-100 text-emerald-700" : "bg-nature-night/10 text-nature-night/50")
+                  )}>2</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider">Pago</span>
+                </div>
+                <div className="h-[2px] w-8 bg-nature-night/10" />
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black",
+                    checkoutSuccess ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30" : "bg-nature-night/10 text-nature-night/50"
+                  )}>3</span>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Activado</span>
+                </div>
+              </div>
 
               {!checkoutSuccess && (
                 <button
@@ -904,8 +953,11 @@ const TourPage = () => {
                     <CheckCircle size={32} />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-2xl font-black uppercase tracking-wider">¡Compra Confirmada!</h3>
-                    <p className="text-xs text-nature-night/60">Tus accesos han sido generados y enviados a su correo:</p>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black uppercase text-emerald-600 tracking-widest">
+                      <ShieldCheck size={12} /> Accesos Activados y Asientos Bloqueados
+                    </div>
+                    <h3 className="text-2xl font-black uppercase tracking-wider">¡Adquisición Confirmada!</h3>
+                    <p className="text-xs text-nature-night/60">Tus accesos oficiales han sido activados y enviados a tu correo:</p>
                     <p className="text-xs font-bold text-amber-honey">{email}</p>
                   </div>
 
@@ -932,14 +984,17 @@ const TourPage = () => {
                   })()}
 
                   <div className="bg-nature-night/[0.02] p-5 rounded-2xl border border-nature-night/10 text-left space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales</h4>
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-honey">Tus Boletos Digitales Activados</h4>
                     <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                       {createdTickets.map((t, idx) => (
                         <div key={t.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-nature-night/10">
-                          <span className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</span>
+                          <div>
+                            <p className="text-xs font-bold text-nature-night/80">Boleto #{idx + 1} ({t.seat_display})</p>
+                            <span className="text-[8px] font-extrabold uppercase text-emerald-600 tracking-wider">Estado: Activo • Listo para QR</span>
+                          </div>
                           <Link
                             href={`/tickets/${t.token}`}
-                            className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors"
+                            className="text-[9px] font-black uppercase tracking-wider text-amber-honey hover:text-nature-night transition-colors border border-amber-honey/30 px-3 py-1.5 rounded-lg bg-amber-honey/10"
                             target="_blank"
                           >
                             Ver Boleto
@@ -957,8 +1012,9 @@ const TourPage = () => {
                       setFullName('');
                       setEmail('');
                       setPhone('');
+                      fetchSeats();
                     }}
-                    className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform"
+                    className="w-full py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-amber-honey text-black hover:scale-[1.02] transition-transform font-black"
                   >
                     Finalizar y Volver
                   </button>

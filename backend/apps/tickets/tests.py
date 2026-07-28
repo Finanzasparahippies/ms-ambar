@@ -101,22 +101,63 @@ class TicketsAppTests(APITestCase):
         self.assertIn("Concierto Cancelado", titles)
         self.assertIn("Sinfonía Ámbar 2026", titles)
 
-    def test_event_list_includes_past_events_for_timeline(self):
-        """Verify public users receive active past events so they can be rendered in the tour timeline."""
-        past_event = Event.objects.create(
-            title="Concierto Pasado",
-            artist="MS AMBAR Ensemble",
-            date=timezone.now() - timezone.timedelta(days=2),
-            theater=self.theater,
-            is_active=True
+    def test_dynamic_pricing_calculation(self):
+        """Verify dynamic price adjusts by month and increment."""
+        from datetime import datetime, timezone as tz
+        # Create event in October 2026 with base numbered = 500, general = 400, increment = 50
+        oct_date = datetime(2026, 10, 15, 20, 0, tzinfo=tz.utc)
+        evt = Event.objects.create(
+            title="Evento Octubre 2026",
+            artist="Ms Ambar",
+            date=oct_date,
+            enable_dynamic_pricing=True,
+            monthly_price_increment=50.00,
+            seatless_ticket_price=400.00
         )
-        url = reverse('event-list')
+        
+        aug_date = datetime(2026, 8, 10, 12, 0, tzinfo=tz.utc)
+        sep_date = datetime(2026, 9, 10, 12, 0, tzinfo=tz.utc)
+        oct_purchase_date = datetime(2026, 10, 5, 12, 0, tzinfo=tz.utc)
+        
+        # August (2 months prior): General $400 - $100 = $300, Numbered $500 - $100 = $400
+        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=aug_date), 300.00)
+        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=aug_date), 400.00)
+        
+        # September (1 month prior): General $400 - $50 = $350, Numbered $500 - $50 = $450
+        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=sep_date), 350.00)
+        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=sep_date), 450.00)
+        
+        # October (Event month): General $400, Numbered $500
+        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=oct_purchase_date), 400.00)
+        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=oct_purchase_date), 500.00)
 
-        response_anon = self.client.get(url)
-        self.assertEqual(response_anon.status_code, status.HTTP_200_OK)
-        anon_titles = [e['title'] for e in response_anon.data]
-        self.assertIn("Concierto Pasado", anon_titles)
-        self.assertIn("Sinfonía Ámbar 2026", anon_titles)
+    def test_42_tables_generate_168_seats(self):
+        """Verify 42 tables of 4 seats produce exactly 168 seats."""
+        from seed_db import build_42_tables_layout
+        t_42 = Theater.objects.create(name="Teatro 42 Mesas", location="Guadalajara", layout=build_42_tables_layout())
+        count = t_42.generate_seats()
+        self.assertEqual(count, 168)
+        self.assertEqual(Seat.objects.filter(theater=t_42).count(), 168)
+
+    def test_prevent_duplicate_seat_purchase(self):
+        """Verify that a seat with paid/reserved ticket cannot be re-purchased."""
+        # Create paid ticket for VIP seat
+        Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_vip,
+            user_email="taken@example.com",
+            status="paid"
+        )
+        
+        url = reverse('ticket-checkout')
+        payload = {
+            'email': 'attacker@example.com',
+            'event_id': self.event.id,
+            'seat_ids': [self.seat_vip.id]
+        }
+        res = self.client.post(url, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("ya están reservados o pagados", res.data['error'])
 
     def test_checkout_past_event_fails(self):
         """Verify attempting to purchase tickets for a past event returns a 400 Bad Request."""

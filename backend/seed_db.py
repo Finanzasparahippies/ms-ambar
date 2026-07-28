@@ -7,33 +7,65 @@ django.setup()
 
 from apps.tickets.models import Theater, Event, Seat
 
+def build_42_tables_layout():
+    seats = []
+    map_elements = []
+    table_id = 1
+    # Layout 7 rows by 6 columns of tables = 42 tables
+    for row in range(7):
+        for col in range(6):
+            table_x = 200 + col * 120
+            table_y = 200 + row * 120
+            label = f"Mesa {table_id}"
+            
+            map_elements.append({
+                "id": f"table-{table_id}",
+                "type": "table",
+                "tableShape": "circle",
+                "x": table_x,
+                "y": table_y,
+                "w": 80,
+                "h": 80,
+                "label": label,
+                "color": "rgba(255, 191, 0, 0.25)",
+                "capacity": 4
+            })
+            
+            # 4 seats around each table (top, right, bottom, left)
+            positions = [
+                (-25, -25), (25, -25),
+                (-25, 25), (25, 25)
+            ]
+            for seat_idx, (dx, dy) in enumerate(positions, start=1):
+                seats.append({
+                    "section": f"Planta Baja - Mesas",
+                    "row": f"Mesa {table_id}",
+                    "number": seat_idx,
+                    "category": "vip" if row < 2 else "standard",
+                    "base_price": 500.00,
+                    "x": table_x + dx,
+                    "y": table_y + dy,
+                    "angle": 0,
+                    "status": "available"
+                })
+            table_id += 1
+    return {"map_elements": map_elements, "seats": seats}
+
+layout_data = build_42_tables_layout()
+
 # 1. Create a Theater
 theater, created = Theater.objects.get_or_create(
     name="Teatro Degollado",
     defaults={
         "location": "Guadalajara, Jalisco",
-        "layout": {
-            "sections": [
-                {
-                    "name": "Platea VIP",
-                    "layout_type": "grid",
-                    "x": 100,
-                    "y": 100,
-                    "rows": [
-                        {"label": "A", "count": 6, "category": "vip", "base_price": 1500},
-                        {"label": "B", "count": 6, "category": "standard", "base_price": 1000}
-                    ]
-                }
-            ]
-        }
+        "layout": layout_data
     }
 )
 
-if created or Seat.objects.filter(theater=theater).count() == 0:
-    theater.generate_seats()
-    print("Theater and seats created.")
-else:
-    print("Theater already exists.")
+theater.layout = layout_data
+theater.save()
+seat_count = theater.generate_seats()
+print(f"Teatro sincronizado con {seat_count} asientos (42 mesas x 4 butacas).")
 
 # 2. Create a Concert Event
 concert, created = Event.objects.get_or_create(
