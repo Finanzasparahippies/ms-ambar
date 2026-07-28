@@ -467,7 +467,7 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
 
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, p1.size, 0, Math.PI * 2);
-        ctx.fillStyle = targetShape ? 'rgba(255, 191, 0, 0.75)' : 'rgba(255, 191, 0, 0.45)'; // Amber
+        ctx.fillStyle = targetShape ? 'rgba(255, 117, 160, 0.85)' : (i % 2 === 0 ? 'rgba(255, 140, 180, 0.6)' : 'rgba(245, 190, 110, 0.5)'); // Glowy Fairy Dust
         ctx.fill();
 
         for (let j = i + 1; j < particles.length; j++) {
@@ -481,9 +481,9 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
             // Highlight connections if morphing is active
-            const baseAlpha = targetShape ? 0.35 : 0.15;
+            const baseAlpha = targetShape ? 0.35 : 0.18;
             const alpha = (1 - dist / 120) * baseAlpha;
-            ctx.strokeStyle = `rgba(255, 191, 0, ${alpha})`;
+            ctx.strokeStyle = i % 2 === 0 ? `rgba(255, 130, 175, ${alpha})` : `rgba(255, 190, 110, ${alpha})`;
             ctx.lineWidth = targetShape ? 1.1 : 0.7;
             ctx.stroke();
           }
@@ -526,6 +526,19 @@ interface TarotCard {
 }
 
 const TAROT_CARDS: TarotCard[] = [
+  {
+    id: 'hadas',
+    name: 'Hadas en el Desierto',
+    vibe: 'Estética Glowy Fashion, Soulteño y Etereidad',
+    song: 'Hadas en el Desierto (Soulteño)',
+    description: 'La magia de las mariposas irisadas y el tul floreciente en el desierto sonorense. Una noche inolvidable de glamour, música en vivo y conexión sentimental.',
+    morphTarget: 'love',
+    color: '#ff75a0', // Rose pink fashion glow
+    icon: '🦋',
+    chordFreqs: [261.63, 329.63, 392.00, 523.25], // Sparkle Major Chord
+    waveType: 'sine',
+    useArpeggio: true
+  },
   {
     id: 'sol',
     name: 'El Sol de Sonora',
@@ -887,30 +900,32 @@ const Home = () => {
         <meta name="description" content="Ms Ambar - Desde Sonora para el mundo, adquiere tus boletos y acompáñame en este camino por la música y los escenarios." />
       </Head>
 
-      {/* ─── HERO SECTION (NECTAR LABS STYLE) ─── */}
+      {/* ─── HERO SECTION (NECTAR LABS & GLOWY FASHION STYLE) ─── */}
       <section className="relative min-h-[50vh] flex flex-col justify-center items-center px-6 pt-32 pb-8 md:pt-40 md:pb-12 overflow-hidden">
-        {/* Interactive canvas background */}
+        {/* Interactive canvas background (Rose-Gold Fairy Dust Particles) */}
         <CanvasParticles morphTarget="none" />
 
-        {/* Glow Spheres */}
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-amber-honey/10 rounded-full blur-[140px] pointer-events-none animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-amber-600/5 rounded-full blur-[120px] pointer-events-none" />
+        {/* Iridescent Glowy Fashion Spheres */}
+        <div className="absolute top-1/4 left-1/4 w-[550px] h-[550px] bg-pink-500/15 rounded-full blur-[160px] pointer-events-none animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-[450px] h-[450px] bg-purple-600/15 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute top-1/3 right-1/3 w-[350px] h-[350px] bg-cyan-400/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Ambient Grid overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
 
         <div className="max-w-4xl text-center space-y-8 z-10">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="flex items-center justify-center gap-2 bg-amber-honey/10 border border-amber-honey/20 px-4 py-2 rounded-full w-fit mx-auto mb-4"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-pink-500/15 via-rose-500/20 to-purple-500/15 border border-pink-400/40 px-5 py-2.5 rounded-full w-fit mx-auto mb-4 shadow-[0_0_25px_rgba(255,117,160,0.25)] backdrop-blur-md"
           >
-            <Sparkles size={12} className="text-amber-honey animate-pulse" />
-            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">
+            <span className="text-xs">🦋</span>
+            <Sparkles size={12} className="text-pink-300 animate-pulse" />
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-200">
               {nextEvent
-                ? `Mi próximo evento es solo para reales, nos vemos en ${nextEvent.venue_name} el ${getFormattedEventDate(nextEvent.date)} desde $${nextEvent.price_with_fee ? Math.ceil(nextEvent.price_with_fee.total) : nextEvent.base_price} MXN.`
-                : "¡Próximamente nuevo evento solo para reales!"
+                ? `Hadas en el Desierto — SOULTEÑO | ${getFormattedEventDate(nextEvent.date)} en ${nextEvent.venue_name || 'London Pub'}`
+                : "Hadas en el Desierto — Concierto Exclusivo"
               }
             </span>
           </motion.div>
@@ -925,7 +940,7 @@ const Home = () => {
               src="/logos/ms_ambar_logo_b.png"
               alt="Ms Ambar"
               className="h-20 md:h-32 w-auto object-contain hover:scale-[1.02] transition-transform duration-500"
-              style={{ filter: 'drop-shadow(0 0 35px rgba(229,169,59,0.25))' }}
+              style={{ filter: 'drop-shadow(0 0 45px rgba(255,117,160,0.35)) drop-shadow(0 0 20px rgba(229,169,59,0.25))' }}
             />
           </motion.div>
 
@@ -937,21 +952,15 @@ const Home = () => {
           >
             <Link
               href="/comprar-boletos"
-              className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-amber-honey text-[#06070b] shadow-lg shadow-amber-honey/20 hover:scale-105 hover:shadow-amber-honey/40 transition-all flex items-center gap-3"
+              className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 text-[#06070b] shadow-xl shadow-pink-500/25 hover:scale-105 hover:shadow-pink-500/45 transition-all flex items-center gap-3 font-extrabold"
             >
-              <Ticket size={14} /> Adquirir Boletos
+              <Ticket size={14} /> Adquirir Accesos "Hadas en el Desierto"
             </Link>
-            {/*<Link
-              href="/contacto"
-              className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] border border-white/20 text-[#F4F6F0] hover:border-amber-honey/40 hover:bg-amber-honey/5 transition-all flex items-center gap-3"
-            >
-              Contacto <ArrowRight size={14} />
-            </Link>*/}
           </motion.div>
         </div>
       </section>
 
-      {/* ─── PRÓXIMO EVENTO FLYER SECTION ─── */}
+      {/* ─── HADAS EN EL DESIERTO (GLOWY FASHION SHOWCASE) ─── */}
       {nextEvent?.flyer_url && (
         <section className="pb-16 md:pb-24 bg-[#06070b]">
           <div className="max-w-[1400px] mx-auto px-6 md:px-10">
@@ -960,50 +969,57 @@ const Home = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              className="relative bg-gradient-to-br from-[#0d0e12] to-[#07080c] rounded-[2.5rem] overflow-hidden border border-amber-honey/10 group shadow-[0_0_50px_rgba(6,7,11,0.8)] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 p-8 md:p-14 items-center"
+              className="relative bg-gradient-to-br from-[#1c0a1e] via-[#100615] to-[#07050a] rounded-[2.5rem] overflow-hidden border border-pink-500/30 group shadow-[0_0_90px_rgba(232,67,147,0.22)] grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 p-8 md:p-14 items-center"
             >
+              {/* Decorative Glow Elements */}
+              <div className="absolute top-0 right-0 w-96 h-96 bg-pink-500/20 rounded-full blur-[140px] pointer-events-none z-10 group-hover:bg-pink-500/30 transition-colors duration-1000" />
+              <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-600/15 rounded-full blur-[120px] pointer-events-none z-10" />
+
               {/* Left Column: Content */}
               <div className="space-y-6 order-2 lg:order-1 lg:col-span-7 z-20 flex flex-col items-center lg:items-start text-center lg:text-left justify-center h-full w-full">
                 <div className="flex flex-wrap items-center gap-3 justify-center lg:justify-start">
-                  <div className="inline-flex items-center gap-2 bg-amber-honey/5 border border-amber-honey/20 px-3 py-1.5 rounded-full w-fit backdrop-blur-sm">
-                    <Sparkles size={12} className="text-amber-honey animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey/90">
-                      Próximo Evento
+                  <div className="inline-flex items-center gap-2 bg-pink-500/15 border border-pink-400/30 px-3.5 py-1.5 rounded-full w-fit backdrop-blur-md shadow-lg shadow-pink-500/10">
+                    <Sparkles size={12} className="text-pink-300 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-200">
+                      🦋 Concierto Oficial
                     </span>
                   </div>
 
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-[0.25em] backdrop-blur-sm ${nextEvent.event_type === 'meet_greet'
-                    ? 'bg-purple-500/10 border-purple-500/30 text-purple-400'
-                    : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
-                    }`}>
-                    {nextEvent.event_type === 'meet_greet' ? '🤝 Convivencia M&G' : '🎸 En Vivo / Concert'}
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-purple-400/30 bg-purple-500/15 text-purple-200 text-[10px] font-black uppercase tracking-[0.25em] backdrop-blur-md">
+                    ✨ Estética Glowy Fashion
+                  </div>
+
+                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/15 text-cyan-200 text-[10px] font-black uppercase tracking-[0.25em] backdrop-blur-md">
+                    🌸 Soulteño
                   </div>
                 </div>
 
-                <div className="space-y-1 flex flex-col items-center lg:items-start">
-                  <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase italic tracking-tighter text-white leading-[0.95] max-w-md lg:max-w-xl group-hover:text-amber-honey/90 transition-colors duration-500">
+                <div className="space-y-2 flex flex-col items-center lg:items-start">
+                  <span className="text-[10px] font-black uppercase tracking-[0.35em] text-pink-300/80">Ms. Ambar Presenta</span>
+                  <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-rose-300 leading-[0.95] max-w-md lg:max-w-xl group-hover:from-pink-100 group-hover:to-pink-300 transition-colors duration-500">
                     {nextEvent.title}
                   </h2>
-                  <p className="text-amber-honey/60 font-serif italic text-lg tracking-wide md:text-xl pt-1">
-                    por {nextEvent.artist}
+                  <p className="text-pink-300/80 font-serif italic text-lg tracking-wide md:text-xl pt-1">
+                    Fusión Soulteño & Experiencia Fashion Ethereal
                   </p>
                 </div>
 
-                <div className="w-12 h-[2px] bg-gradient-to-r from-transparent via-amber-honey/40 to-transparent lg:from-amber-honey/40 lg:to-transparent" />
+                <div className="w-16 h-[2px] bg-gradient-to-r from-pink-500/60 via-purple-500/40 to-transparent lg:from-pink-500/60 lg:to-transparent" />
 
                 <div className="space-y-4 w-full max-w-md lg:max-w-lg flex flex-col items-center lg:items-start">
                   <div className="text-sm md:text-base text-white/90 font-bold tracking-tight space-y-2 w-full text-center lg:text-left">
-                    <p>{getFormattedEventDate(nextEvent.date)}</p>
+                    <p className="text-pink-200 font-extrabold text-lg flex items-center justify-center lg:justify-start gap-2">
+                      <span>🗓️</span> {getFormattedEventDate(nextEvent.date)}
+                    </p>
 
-                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-medium text-[#F4F6F0]/60 pt-0.5">
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-medium text-pink-100/70 pt-0.5">
                       {nextEvent.doors_open && (
-                        <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
+                        <span className="bg-pink-500/10 border border-pink-500/20 px-3 py-1 rounded-full text-pink-200">
                           🚪 Puertas: <strong className="text-white">{formatoHoraOficial(nextEvent.doors_open)} hrs</strong>
                         </span>
                       )}
-                      {/* LOGICA DE CIERRE DINÁMICO CORREGIDA CON TIMEZONE */}
                       {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
-                        <span className="bg-white/5 border border-white/5 px-2.5 py-1 rounded-md">
+                        <span className="bg-pink-500/10 border border-pink-500/20 px-3 py-1 rounded-full text-pink-200">
                           ✨ Cierre: <strong className="text-white">
                             {(() => {
                               if (nextEvent.end_date) {
@@ -1018,17 +1034,17 @@ const Home = () => {
                       )}
                     </div>
 
-                    <p className="text-xs text-[#F4F6F0]/50 font-normal tracking-normal pt-1">
-                      📍 {nextEvent.venue_name || nextEvent.theater_name} — <span className="italic">{nextEvent.venue_address || nextEvent.theater_location}</span>
+                    <p className="text-xs text-pink-200/70 font-normal tracking-normal pt-1 flex items-center justify-center lg:justify-start gap-1.5">
+                      📍 <strong className="text-white">{nextEvent.venue_name || 'London Pub'}</strong> — <span className="italic">{nextEvent.venue_address || 'Av. Tamaulipas 11, Centro, Hermosillo, Sonora'}</span>
                     </p>
                   </div>
 
                   {nextEvent && (
-                    <div className="text-xs md:text-sm text-[#F4F6F0]/80 font-medium leading-relaxed bg-[#0d0e12]/60 p-5 rounded-2xl border border-amber-honey/20 backdrop-blur-sm w-full text-center lg:text-left space-y-3 shadow-lg">
-                      <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                        <span className="text-amber-honey font-black text-xs uppercase tracking-wider">Tarifas del Evento</span>
+                    <div className="text-xs md:text-sm text-pink-100/90 font-medium leading-relaxed bg-pink-950/40 p-5 rounded-2xl border border-pink-500/25 backdrop-blur-md w-full text-center lg:text-left space-y-3 shadow-xl">
+                      <div className="flex items-center justify-between border-b border-pink-500/20 pb-2.5">
+                        <span className="text-pink-300 font-black text-xs uppercase tracking-wider">Tarifas del Evento</span>
                         {nextEvent.enable_dynamic_pricing !== false && (
-                          <span className="text-[10px] bg-amber-honey/10 text-amber-honey px-2.5 py-0.5 rounded-full border border-amber-honey/30 font-semibold">
+                          <span className="text-[10px] bg-pink-500/20 text-pink-200 px-2.5 py-0.5 rounded-full border border-pink-400/30 font-semibold">
                             Precio Dinámico por Mes
                           </span>
                         )}
@@ -1042,12 +1058,12 @@ const Home = () => {
                       ) : (
                         <div className="space-y-2.5">
                           {/* Boleto General (Sin Asiento) */}
-                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.03] p-2.5 rounded-xl border border-white/5">
+                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
                             <div className="flex flex-col text-left">
                               <span className="text-white font-bold">🎟️ Entrada General (Sin Asiento)</span>
-                              <span className="text-[10px] text-white/50">Acceso preferencial de pie</span>
+                              <span className="text-[10px] text-pink-200/60">Acceso preferencial a zona general</span>
                             </div>
-                            <span className="text-amber-honey font-black text-sm md:text-base">
+                            <span className="text-pink-300 font-black text-sm md:text-base">
                               ${Math.round(nextEvent.effective_seatless_ticket_price
                                 ? Number(nextEvent.effective_seatless_ticket_price)
                                 : getDynamicPrice(nextEvent, Number(nextEvent.seatless_ticket_price || 300))
@@ -1056,19 +1072,19 @@ const Home = () => {
                           </div>
 
                           {/* Boleto Numerado (Asiento de Mesa) */}
-                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.03] p-2.5 rounded-xl border border-white/5">
+                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
                             <div className="flex flex-col text-left">
                               <span className="text-white font-bold">🪑 Asiento Numerado (Mesas)</span>
-                              <span className="text-[10px] text-white/50">Lugar reservado en 42 mesas x 4 butacas</span>
+                              <span className="text-[10px] text-pink-200/60">Lugar reservado en 42 mesas x 4 butacas</span>
                             </div>
-                            <span className="text-amber-honey font-black text-sm md:text-base">
+                            <span className="text-pink-300 font-black text-sm md:text-base">
                               ${Math.round(getDynamicPrice(nextEvent, Number(nextEvent.base_price || 400))).toLocaleString('es-MX')} MXN
                             </span>
                           </div>
 
                           {/* Meet & Greet Adicional (Opcional) */}
                           {nextEvent.mg_limit > 0 && (
-                            <div className="flex items-center justify-between text-xs bg-purple-500/10 p-2.5 rounded-xl border border-purple-500/20 text-purple-300">
+                            <div className="flex items-center justify-between text-xs bg-purple-500/15 p-3 rounded-xl border border-purple-500/30 text-purple-200">
                               <span className="font-semibold">🤝 Pase Opcional Meet & Greet</span>
                               <span className="font-black text-white">+${Math.round(Number(nextEvent.mg_price || 0)).toLocaleString('es-MX')} MXN</span>
                             </div>
@@ -1078,12 +1094,12 @@ const Home = () => {
 
                       {/* MÓDULO DE CUPO DEL EVENTO */}
                       {nextEvent.event_type !== 'meet_greet' && nextEvent.mg_limit > 0 && (
-                        <div className="pt-2 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+                        <div className="pt-2 border-t border-pink-500/20 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
                           <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${nextEvent.mg_available > 0 ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-                            <span className="text-[#F4F6F0]/40">Cupo M&G disponible:</span>
+                            <div className={`w-2 h-2 rounded-full ${nextEvent.mg_available > 0 ? 'bg-pink-400 animate-pulse' : 'bg-red-500'}`} />
+                            <span className="text-pink-200/60">Cupo M&G disponible:</span>
                           </div>
-                          <span className={`font-black uppercase tracking-wider ${nextEvent.mg_available <= 5 && nextEvent.mg_available > 0 ? 'text-red-400 animate-bounce' : 'text-white'}`}>
+                          <span className={`font-black uppercase tracking-wider ${nextEvent.mg_available <= 5 && nextEvent.mg_available > 0 ? 'text-pink-300 animate-bounce' : 'text-white'}`}>
                             {nextEvent.mg_available > 0 ? `${nextEvent.mg_available} pases disponibles` : 'Agotado'}
                           </span>
                         </div>
@@ -1095,31 +1111,32 @@ const Home = () => {
                 <div className="pt-2 w-full lg:w-auto">
                   <Link
                     href="/comprar-boletos"
-                    className={`inline-flex items-center justify-center gap-3 w-[90%] mx-auto sm:mx-0 sm:w-fit px-24 py-2 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 ${nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0
+                    className={`inline-flex items-center justify-center gap-3 w-[90%] mx-auto sm:mx-0 sm:w-fit px-12 py-4 rounded-xl text-[11px] font-black uppercase tracking-[0.25em] transition-all duration-300 ${nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0
                       ? 'bg-white/5 text-white/30 border border-white/10 cursor-not-allowed pointer-events-none'
-                      : 'bg-amber-honey text-[#06070b] shadow-xl shadow-amber-honey/20 hover:bg-white hover:text-black hover:scale-[1.03] hover:shadow-white/10'
+                      : 'bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 text-[#06070b] shadow-xl shadow-pink-500/25 hover:from-pink-400 hover:to-amber-300 hover:scale-[1.03] hover:shadow-pink-500/40'
                       }`}
                   >
                     <Ticket size={14} />
-                    {nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0 ? 'Cupos Agotados' : 'Adquirir Accesos'}
+                    {nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0 ? 'Cupos Agotados' : 'Adquirir Accesos Hadas en el Desierto'}
                   </Link>
                 </div>
               </div>
 
-              {/* Right Column: Flyer Container */}
-              <div className="w-full h-80 sm:h-[400px] lg:h-[460px] overflow-hidden rounded-2xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
-                <div className="relative w-full h-full max-w-[340px] lg:max-w-none rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/5">
+              {/* Right Column: Flyer Poster Container */}
+              <div className="w-full h-80 sm:h-[440px] lg:h-[500px] overflow-hidden rounded-3xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
+                <div className="relative w-full h-full max-w-[360px] lg:max-w-none rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-pink-400/30 group/flyer">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 pointer-events-none" />
                   <img
                     src={nextEvent.flyer_url}
                     alt={`Flyer: ${nextEvent.title}`}
-                    className="w-full h-full object-contain object-center lg:object-right group-hover:scale-[1.04] transition-transform duration-1000 ease-out"
+                    className="w-full h-full object-contain object-center lg:object-right group-hover/flyer:scale-[1.03] transition-transform duration-1000 ease-out"
                   />
+                  <div className="absolute bottom-4 left-4 z-20">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300">Hadas en el Desierto</span>
+                    <p className="text-xs font-bold text-white uppercase italic">Sábado 3 Oct • London Pub</p>
+                  </div>
                 </div>
               </div>
-
-              {/* El Aura Amber Glow Ultra-premium */}
-              <div className="absolute top-1/2 -right-20 -translate-y-1/2 w-80 h-80 bg-amber-honey/10 rounded-full blur-[120px] pointer-events-none z-10 group-hover:bg-amber-honey/15 transition-colors duration-1000" />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#06070b]/20 via-transparent to-transparent pointer-events-none z-10" />
             </motion.div>
           </div>
         </section>
