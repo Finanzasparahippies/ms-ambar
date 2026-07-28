@@ -22,6 +22,10 @@ class EventAdmin(admin.ModelAdmin):
         ('Información del Evento', {
             'fields': ('title', 'artist', 'date', 'doors_open', 'duration_minutes', 'venue_name', 'venue_address', 'theater', 'is_active', 'event_type', 'price_multiplier')
         }),
+        ('Estrategia de Precios Dinámicos Mensuales', {
+            'fields': ('enable_dynamic_pricing', 'monthly_price_increment'),
+            'description': 'Ajusta automáticamente los precios de boletos por mes previo al evento (ej. -$50.00 MXN por mes de anticipación).'
+        }),
         ('Boletos Sin Asiento (General)', {
             'fields': ('allow_seatless_tickets', 'seatless_ticket_price'),
             'description': 'Permite vender entradas generales sin asiento reservado de forma ilimitada.'

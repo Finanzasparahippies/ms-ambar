@@ -10,6 +10,41 @@ class Theater(models.Model):
     def __str__(self):
         return self.name
 
+    def sanitize_42_tables_layout(self):
+        """
+        Garantiza que si el layout contiene mesas (ej. Mesa 1 a Mesa N), se limite a exactamente 42 mesas (168 asientos).
+        Descarta cualquier mesa excedente (ej. Mesa 43 a 46) para asegurar la capacidad oficial.
+        """
+        if not isinstance(self.layout, dict):
+            return
+        
+        seats_data = self.layout.get('seats')
+        map_elements = self.layout.get('map_elements')
+        
+        if not isinstance(seats_data, list):
+            return
+
+        table_rows = set()
+        for s in seats_data:
+            rw = str(s.get('row', '')).strip()
+            if rw.lower().startswith('mesa '):
+                table_rows.add(rw)
+
+        if len(table_rows) > 42:
+            allowed_tables = {f"Mesa {i}" for i in range(1, 43)}
+            filtered_seats = [s for s in seats_data if str(s.get('row', '')).strip() in allowed_tables]
+            
+            filtered_elements = map_elements
+            if isinstance(map_elements, list):
+                filtered_elements = [
+                    el for el in map_elements 
+                    if not (el.get('type') == 'table' and str(el.get('label', '')).strip() not in allowed_tables)
+                ]
+            
+            self.layout['seats'] = filtered_seats
+            self.layout['map_elements'] = filtered_elements
+            self.save(update_fields=['layout'])
+
     def generate_seats(self):
         """
         Generates Seat objects with 2D coordinates.
@@ -19,6 +54,9 @@ class Theater(models.Model):
         """
         import math
         
+        # Auto-sanitize table layout to 42 tables (168 seats max) if excess tables present
+        self.sanitize_42_tables_layout()
+
         # Case 1: Direct list or Object with seats key
         seats_data = None
         if isinstance(self.layout, list):
