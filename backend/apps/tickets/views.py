@@ -1,13 +1,57 @@
 from django.utils import timezone
+from django.db import transaction
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Event, Theater, Ticket, Seat, SiteSettings
-from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer, SiteSettingsSerializer
+from .models import Event, Theater, Ticket, Seat, SiteSettings, Coupon
+from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer, SiteSettingsSerializer, CouponSerializer
 import logging
 
 delivery_logger = logging.getLogger("apps.tickets.delivery")
+
+
+class CouponViewSet(viewsets.ModelViewSet):
+    queryset = Coupon.objects.all()
+    serializer_class = CouponSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=False, methods=['post'], url_path='validate', permission_classes=[permissions.AllowAny])
+    def validate_code(self, request):
+        code = request.data.get('code', '').strip()
+        event_id = request.data.get('event_id')
+
+        if not code:
+            return Response({'error': 'Debes proporcionar un código de cupón.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            coupon = Coupon.objects.get(code__iexact=code)
+        except Coupon.DoesNotExist:
+            return Response({'error': 'El código de cupón ingresado no existe o no es válido.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if event_id:
+            try:
+                event = Event.objects.get(id=event_id)
+                valid, msg = coupon.is_valid_for_event(event)
+                if not valid:
+                    return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
+            except Event.DoesNotExist:
+                return Response({'error': 'Evento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            if not coupon.is_active:
+                return Response({'error': 'Este cupón no está activo.'}, status=status.HTTP_400_BAD_REQUEST)
+            if coupon.expiration_date and timezone.now() > coupon.expiration_date:
+                return Response({'error': 'Este cupón ha expirado.'}, status=status.HTTP_400_BAD_REQUEST)
+            if coupon.times_used >= coupon.max_uses:
+                return Response({'error': 'Este cupón ha alcanzado su límite de usos.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'valid': True,
+            'code': coupon.code,
+            'discount_type': coupon.discount_type,
+            'discount_value': float(coupon.discount_value),
+            'message': 'Cupón VIP de entrada gratuita validado exitosamente.' if coupon.discount_type == 'free_vip' else 'Cupón validado correctamente.'
+        })
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
@@ -194,6 +238,8 @@ class TicketViewSet(viewsets.ModelViewSet):
         quantity = request.data.get('quantity', 1)
         phone = request.data.get('phone', '')
         has_mg = request.data.get('has_mg', False)
+        coupon_code = request.data.get('coupon_code') or request.data.get('coupon')
+        is_seatless = request.data.get('is_seatless', False)
 
         if not email or not event_id:
             return Response({'error': 'Email y ID de evento son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -207,20 +253,31 @@ class TicketViewSet(viewsets.ModelViewSet):
         if event.date < start_of_today:
             return Response({'error': 'Este evento ya ha finalizado. La venta de boletos se encuentra cerrada.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from apps.shop.utils import create_ticket_checkout_session
-        from django.conf import settings
+        # --- Validar Cupón si se proporcionó ---
+        coupon_obj = None
+        is_free_vip = False
 
-        success_url = f"{settings.FRONTEND_URL}/comprar-boletos"
-        cancel_url = f"{settings.FRONTEND_URL}/comprar-boletos"
+        if coupon_code:
+            try:
+                coupon_obj = Coupon.objects.get(code__iexact=coupon_code.strip())
+                valid, msg = coupon_obj.is_valid_for_event(event)
+                if not valid:
+                    return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
+                if coupon_obj.discount_type == 'free_vip' or float(coupon_obj.discount_value) >= 100:
+                    is_free_vip = True
+            except Coupon.DoesNotExist:
+                return Response({'error': 'El código de cupón ingresado no existe.'}, status=status.HTTP_404_NOT_FOUND)
 
         seats = []
-        if event.event_type == 'meet_greet':
+        if event.event_type == 'meet_greet' or is_seatless:
             qty = int(quantity)
             if qty < 1:
                 return Response({'error': 'La cantidad debe ser al menos 1.'}, status=status.HTTP_400_BAD_REQUEST)
+            if is_seatless and event.event_type != 'meet_greet' and not event.allow_seatless_tickets:
+                return Response({'error': 'Este evento no permite la venta de boletos generales sin asiento.'}, status=status.HTTP_400_BAD_REQUEST)
         else:
             if not seat_ids:
-                return Response({'error': 'Debes seleccionar al menos un asiento.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Debes seleccionar al menos un asiento o elegir la opción de boleto general sin asiento.'}, status=status.HTTP_400_BAD_REQUEST)
             
             occupied_seat_ids = Ticket.objects.filter(
                 event=event,
@@ -238,33 +295,106 @@ class TicketViewSet(viewsets.ModelViewSet):
                 except Seat.DoesNotExist:
                     return Response({'error': f'Asiento con ID {s_id} no existe.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # --- Determinar si usar Stripe real o mock ---
-        # En staging/local sin webhook configurado, siempre usar mock para garantizar entrega.
-        # Solo usar Stripe real si hay webhook secret configurado (producción).
+        # --- CASO A: REDENCIÓN DE CUPÓN DE ENTRADA GRATUITA VIP ($0) ---
+        if is_free_vip and coupon_obj:
+            import uuid
+            import threading
+            from apps.tickets.utils import send_ticket_email
+
+            with transaction.atomic():
+                # Re-check and lock coupon to prevent concurrent over-redemption
+                coupon_locked = Coupon.objects.select_for_update().get(id=coupon_obj.id)
+                if coupon_locked.times_used >= coupon_locked.max_uses:
+                    return Response({'error': 'Este cupón acaba de alcanzar su límite máximo de redenciones.'}, status=status.HTTP_400_BAD_REQUEST)
+                coupon_locked.times_used += 1
+                coupon_locked.save()
+
+                vip_session_id = f"free_vip_{uuid.uuid4().hex}"
+                created_vip_tickets = []
+
+                if event.event_type == 'meet_greet' or is_seatless:
+                    for _ in range(int(quantity)):
+                        ticket = Ticket.objects.create(
+                            event=event,
+                            seat=None,
+                            ga_zone=None,
+                            used_coupon=coupon_locked,
+                            user_email=email,
+                            user_phone=phone,
+                            status='paid',
+                            has_mg=True if event.event_type == 'meet_greet' else has_mg,
+                            stripe_session_id=vip_session_id
+                        )
+                        created_vip_tickets.append(ticket)
+                else:
+                    for seat in seats:
+                        ticket = Ticket.objects.create(
+                            event=event,
+                            seat=seat,
+                            ga_zone=None,
+                            used_coupon=coupon_locked,
+                            user_email=email,
+                            user_phone=phone,
+                            status='paid',
+                            has_mg=has_mg,
+                            stripe_session_id=vip_session_id
+                        )
+                        created_vip_tickets.append(ticket)
+
+                try:
+                    from apps.blog.utils import add_buyer_to_event_marketing_list
+                    add_buyer_to_event_marketing_list(email, event)
+                except Exception as e:
+                    delivery_logger.warning(f"Error registering VIP buyer to marketing list: {e}")
+
+                def deliver_vip_tickets(tickets_list):
+                    for t in tickets_list:
+                        try:
+                            send_ticket_email(t)
+                            delivery_logger.info(f"[Delivery/VIP] ✅ Boleto gratuito VIP {t.token} entregado a {t.user_email}")
+                        except Exception as exc:
+                            delivery_logger.error(f"[Delivery/VIP] ❌ Falla enviando boleto {t.token}: {exc}")
+
+                threading.Thread(
+                    target=deliver_vip_tickets,
+                    args=(created_vip_tickets,),
+                    daemon=False,
+                    name=f"vip-ticket-delivery-{vip_session_id[:8]}"
+                ).start()
+
+                serializer = self.get_serializer(created_vip_tickets, many=True)
+                return Response({
+                    'status': 'success',
+                    'session_id': vip_session_id,
+                    'session_url': None,
+                    'tickets': serializer.data,
+                    'message': '¡Felicidades! Tu entrada VIP gratuita ha sido reservada con éxito.'
+                }, status=status.HTTP_200_OK)
+
+        # --- CASO B: PROCESO ESTÁNDAR / MOCK STRIPE CHECKOUT ---
+        from apps.shop.utils import create_ticket_checkout_session
+        from django.conf import settings
+
+        success_url = f"{settings.FRONTEND_URL}/comprar-boletos"
+        cancel_url = f"{settings.FRONTEND_URL}/comprar-boletos"
+
+        # Determinar si usar Stripe real o mock
         use_mock = False
         if not getattr(settings, 'TESTING', False):
             stripe_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
             webhook_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '')
-            # Usar mock si: no hay key, la key es placeholder, o no hay webhook secret configurado
-            # Sin webhook, Stripe no puede confirmar el pago al backend → boletos nunca se crean
             placeholder_patterns = ['change_me', 'replace_me', 'test_mock', 'placeholder', 'your_']
             no_key = not stripe_key
             bad_key = any(p in stripe_key for p in placeholder_patterns)
             no_webhook = not webhook_secret or any(p in webhook_secret for p in placeholder_patterns)
             if no_key or bad_key or no_webhook:
                 use_mock = True
-                if no_webhook:
-                    delivery_logger.warning(
-                        "[Checkout] STRIPE_WEBHOOK_SECRET no configurado — usando modo mock. "
-                        "Sin webhook, Stripe no puede confirmar pagos al backend."
-                    )
 
         session_id = None
         session_url = None
 
         if not use_mock:
             try:
-                # Create Stripe Checkout Session
                 session = create_ticket_checkout_session(
                     event=event,
                     seats=seats,
@@ -292,16 +422,17 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             created_mock_tickets = []
 
-            if event.event_type == 'meet_greet':
+            if event.event_type == 'meet_greet' or is_seatless:
                 for _ in range(int(quantity)):
                     ticket = Ticket.objects.create(
                         event=event,
                         seat=None,
                         ga_zone=None,
+                        used_coupon=coupon_obj,
                         user_email=email,
                         user_phone=phone,
                         status='paid',
-                        has_mg=True,
+                        has_mg=True if event.event_type == 'meet_greet' else has_mg,
                         stripe_session_id=mock_session_id
                     )
                     created_mock_tickets.append(ticket)
@@ -311,6 +442,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                         event=event,
                         seat=seat,
                         ga_zone=None,
+                        used_coupon=coupon_obj,
                         user_email=email,
                         user_phone=phone,
                         status='paid',

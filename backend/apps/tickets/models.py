@@ -203,6 +203,10 @@ class Event(models.Model):
     mg_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     mg_limit = models.PositiveIntegerField(default=0)
 
+    # Seatless Ticket options
+    allow_seatless_tickets = models.BooleanField(default=True, help_text="Permite la compra de boletos generales sin asiento reservado")
+    seatless_ticket_price = models.DecimalField(max_digits=10, decimal_places=2, default=500.00, help_text="Precio base de boleto general sin asiento")
+
     # Price multiplier for this specific event
     price_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=1.0)
 
@@ -398,6 +402,37 @@ class GADeclaration(models.Model):
     def __str__(self):
         return f"{self.theater.name} - GA Zone: {self.name}"
 
+class Coupon(models.Model):
+    COUPON_TYPES = [
+        ('free_vip', 'Entrada Gratuita VIP (100% Descuento)'),
+        ('percentage', 'Porcentaje de Descuento'),
+        ('fixed', 'Monto Fijo de Descuento'),
+    ]
+    code = models.CharField(max_length=50, unique=True, help_text="Código único del cupón (ej. VIP-AMBAR-2026)")
+    discount_type = models.CharField(max_length=20, choices=COUPON_TYPES, default='free_vip')
+    discount_value = models.DecimalField(max_digits=7, decimal_places=2, default=100.00, help_text="Porcentaje (0-100) o monto fijo en MXN")
+    max_uses = models.PositiveIntegerField(default=1, help_text="Límite de redenciones del cupón")
+    times_used = models.PositiveIntegerField(default=0, help_text="Veces que ha sido redimido")
+    is_active = models.BooleanField(default=True)
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True, related_name='coupons', help_text="Evento específico (opcional)")
+    expiration_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_valid_for_event(self, event):
+        from django.utils import timezone
+        if not self.is_active:
+            return False, "Este cupón no está activo."
+        if self.expiration_date and timezone.now() > self.expiration_date:
+            return False, "Este cupón ha expirado."
+        if self.times_used >= self.max_uses:
+            return False, "Este cupón ha alcanzado su límite máximo de usos."
+        if self.event and self.event_id != event.id:
+            return False, "Este cupón no es válido para este evento."
+        return True, "Cupón válido."
+
+    def __str__(self):
+        return f"{self.code} ({self.get_discount_type_display()}) - {self.times_used}/{self.max_uses} usos"
+
 class Ticket(models.Model):
     STATUS_CHOICES = [
         ('reserved', 'Reserved'),
@@ -408,6 +443,7 @@ class Ticket(models.Model):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='tickets')
     seat = models.ForeignKey(Seat, on_delete=models.CASCADE, null=True, blank=True)
     ga_zone = models.ForeignKey(GADeclaration, on_delete=models.CASCADE, null=True, blank=True)
+    used_coupon = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True, related_name='tickets')
     user_email = models.EmailField()
     user_phone = models.CharField(max_length=20, null=True, blank=True)
     token = models.UUIDField(default=uuid.uuid4, unique=True)

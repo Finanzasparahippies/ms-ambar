@@ -1,5 +1,5 @@
 from django.contrib import admin, messages
-from .models import Theater, Event, Seat, Ticket, SiteSettings
+from .models import Theater, Event, Seat, Ticket, SiteSettings, Coupon
 
 
 @admin.register(Theater)
@@ -16,11 +16,15 @@ class TheaterAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'artist', 'date', 'event_type', 'is_active')
-    list_filter = ('is_active', 'event_type', 'date')
+    list_display = ('title', 'artist', 'date', 'event_type', 'allow_seatless_tickets', 'is_active')
+    list_filter = ('is_active', 'event_type', 'date', 'allow_seatless_tickets')
     fieldsets = (
         ('Información del Evento', {
             'fields': ('title', 'artist', 'date', 'doors_open', 'duration_minutes', 'venue_name', 'venue_address', 'theater', 'is_active', 'event_type', 'price_multiplier')
+        }),
+        ('Boletos Sin Asiento (General)', {
+            'fields': ('allow_seatless_tickets', 'seatless_ticket_price'),
+            'description': 'Permite vender entradas generales sin asiento reservado de forma ilimitada.'
         }),
         ('Imágenes', {
             'fields': ('image', 'flyer'),
@@ -38,6 +42,13 @@ class EventAdmin(admin.ModelAdmin):
     readonly_fields = ('stripe_product_id', 'stripe_price_id')
 
 
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ('code', 'discount_type', 'discount_value', 'times_used', 'max_uses', 'is_active', 'event', 'expiration_date')
+    list_filter = ('discount_type', 'is_active', 'event')
+    search_fields = ('code',)
+
+
 @admin.register(Seat)
 class SeatAdmin(admin.ModelAdmin):
     list_display = ('theater', 'section', 'row', 'number', 'category', 'position', 'base_price')
@@ -46,8 +57,8 @@ class SeatAdmin(admin.ModelAdmin):
 
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
-    list_display = ('event', 'seat', 'user_email', 'status', 'has_mg', 'created_at')
-    list_filter = ('status', 'event', 'has_mg')
+    list_display = ('event', 'seat', 'user_email', 'status', 'used_coupon', 'has_mg', 'created_at')
+    list_filter = ('status', 'event', 'has_mg', 'used_coupon')
     readonly_fields = ('token',)
 
 

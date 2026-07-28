@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Event, Theater, Seat, Ticket, GADeclaration, SiteSettings
+from .models import Event, Theater, Seat, Ticket, GADeclaration, SiteSettings, Coupon
 from .fees import calculate_total_with_fee, get_fee_config
 
 
@@ -24,6 +24,12 @@ class TheaterSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = ['id', 'code', 'discount_type', 'discount_value', 'max_uses', 'times_used', 'is_active', 'event', 'expiration_date']
+
+
 class EventSerializer(serializers.ModelSerializer):
     theater_name = serializers.SerializerMethodField()
     theater_location = serializers.SerializerMethodField()
@@ -40,6 +46,7 @@ class EventSerializer(serializers.ModelSerializer):
             'theater', 'theater_name', 'theater_location',
             'image', 'image_url', 'flyer', 'flyer_url',
             'is_active', 'mg_price', 'mg_limit', 'mg_available',
+            'allow_seatless_tickets', 'seatless_ticket_price',
             'price_multiplier', 'event_type',
             'stripe_product_id', 'stripe_price_id',
             'base_price', 'price_with_fee',
@@ -98,7 +105,9 @@ class TicketSerializer(serializers.ModelSerializer):
             return f"{obj.seat.row}{obj.seat.number}"
         if obj.ga_zone:
             return f"GA: {obj.ga_zone.name}"
-        return "Meet & Greet"
+        if obj.event and obj.event.event_type == 'meet_greet':
+            return "Meet & Greet"
+        return "General / Sin Asiento"
 
 
 class SiteSettingsSerializer(serializers.ModelSerializer):

@@ -103,8 +103,15 @@ const TourPage = () => {
   const [elements, setElements] = useState<any[]>([]);
   const [pageSubtitle, setPageSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
 
-  // Meet & Greet and Checkout states
+  // Meet & Greet, Ticket Mode and Coupon Checkout states
   const [mgQuantity, setMgQuantity] = useState(1);
+  const [ticketMode, setTicketMode] = useState<'seat' | 'seatless'>('seat');
+  const [seatlessQuantity, setSeatlessQuantity] = useState(1);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -118,6 +125,30 @@ const TourPage = () => {
       (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
         ? window.location.origin.replace(window.location.port, '8000') + '/api'
         : 'http://localhost:8000/api');
+  };
+
+  const handleValidateCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setIsValidatingCoupon(true);
+    setCouponError('');
+    try {
+      const apiUrl = getApiUrl();
+      const res = await axios.post(`${apiUrl}/tickets/coupons/validate/`, {
+        code: couponCode.trim(),
+        event_id: currentEvent?.id
+      });
+      if (res.data.valid) {
+        setAppliedCoupon(res.data);
+        showAlert(res.data.message || "Cupón VIP validado correctamente", "¡Cupón Aplicado!", "success");
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || "El código de cupón no es válido o ha expirado.";
+      setCouponError(msg);
+      setAppliedCoupon(null);
+      showAlert(msg, "Error de Cupón", "error");
+    } finally {
+      setIsValidatingCoupon(false);
+    }
   };
 
   // ── Handle returning from Stripe Checkout (Asynchronous Resilient Webhook Sync) ──
@@ -258,11 +289,32 @@ const TourPage = () => {
     return new Date(currentEvent.date) < startOfToday;
   }, [currentEvent]);
 
-  const seatsBaseTotal = isMeetGreet ? 0 : selectedSeats.reduce((acc, seat) => acc + getSeatBasePrice(seat), 0);
+  const seatsBaseTotal = isMeetGreet
+    ? 0
+    : (ticketMode === 'seat'
+        ? selectedSeats.reduce((acc, seat) => acc + getSeatBasePrice(seat), 0)
+        : seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500));
+
   const mgBaseTotal = isMeetGreet
     ? mgQuantity * Number(currentEvent?.mg_price || 0)
     : (wantsMG ? Number(currentEvent?.mg_price || 0) : 0);
-  const baseTotal = seatsBaseTotal + mgBaseTotal;
+
+  const rawBaseTotal = seatsBaseTotal + mgBaseTotal;
+
+  // Aplicar Descuento de Cupón VIP
+  const baseTotal = React.useMemo(() => {
+    if (!appliedCoupon) return rawBaseTotal;
+    if (appliedCoupon.discount_type === 'free_vip' || Number(appliedCoupon.discount_value) >= 100) {
+      return 0;
+    }
+    if (appliedCoupon.discount_type === 'percentage') {
+      return Math.max(0, rawBaseTotal * (1 - Number(appliedCoupon.discount_value) / 100));
+    }
+    if (appliedCoupon.discount_type === 'fixed') {
+      return Math.max(0, rawBaseTotal - Number(appliedCoupon.discount_value));
+    }
+    return rawBaseTotal;
+  }, [rawBaseTotal, appliedCoupon]);
 
   const { base_price: checkoutBasePrice, service_fee: checkoutServiceFee, total: checkoutTotal } = calculateTotalWithFee(baseTotal);
 
@@ -293,14 +345,29 @@ const TourPage = () => {
 
     try {
       const apiUrl = getApiUrl();
-      const res = await axios.post(`${apiUrl}/tickets/tickets/checkout/`, {
+      const payload: any = {
         email,
         event_id: currentEvent.id,
-        seat_ids: isMeetGreet ? [] : selectedSeats.map(s => s.id),
-        quantity: isMeetGreet ? mgQuantity : 1,
         phone,
-        has_mg: isMeetGreet ? true : wantsMG
-      });
+        has_mg: isMeetGreet ? true : wantsMG,
+        coupon_code: appliedCoupon ? appliedCoupon.code : (couponCode.trim() || undefined),
+      };
+
+      if (isMeetGreet) {
+        payload.seat_ids = [];
+        payload.quantity = mgQuantity;
+        payload.is_seatless = true;
+      } else if (ticketMode === 'seatless') {
+        payload.seat_ids = [];
+        payload.quantity = seatlessQuantity;
+        payload.is_seatless = true;
+      } else {
+        payload.seat_ids = selectedSeats.map(s => s.id);
+        payload.quantity = 1;
+        payload.is_seatless = false;
+      }
+
+      const res = await axios.post(`${apiUrl}/tickets/tickets/checkout/`, payload);
 
       if (res.data.session_url) {
         window.location.href = res.data.session_url;
@@ -310,9 +377,10 @@ const TourPage = () => {
         setSelectedSeats([]);
         setWantsMG(false);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error during checkout:", err);
-      showAlert("Hubo un error al procesar la reserva. Por favor intenta de nuevo.", "Error de Reserva", "error");
+      const errorMsg = err.response?.data?.error || "Hubo un error al procesar la reserva. Por favor intenta de nuevo.";
+      showAlert(errorMsg, "Error de Reserva", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -451,52 +519,123 @@ const TourPage = () => {
               )}
             </div>
 
-            {/* Seating Chart Interactive Canvas Container */}
+            </div>
+
+            {/* Ticket Mode Selector & Canvas / Seatless Card Container */}
             {!isMeetGreet && (
-              <div className="relative group rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                {/* Header Toolbar Legend for Canvas */}
-                <div className="px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] font-black uppercase tracking-wider text-white/70">
-                  <div className="flex items-center gap-4">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30" /> Disponible
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-3 h-3 rounded-full bg-white/20 border border-white/10" /> Reservado
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-white/40 tracking-widest hidden sm:block">
-                    Arrastra o usa rueda del ratón para explorar
-                  </span>
+              <div className="space-y-4">
+                {/* Selector de Modalidad de Boleto */}
+                <div className="flex items-center justify-between gap-3 bg-nature-night/5 dark:bg-white/5 p-1.5 rounded-2xl border border-nature-night/10 dark:border-white/10">
+                  <button
+                    onClick={() => setTicketMode('seat')}
+                    className={cn(
+                      "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+                      ticketMode === 'seat'
+                        ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
+                        : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
+                    )}
+                  >
+                    <Ticket size={14} />
+                    Asientos Numerados
+                  </button>
+                  <button
+                    onClick={() => {
+                      setTicketMode('seatless');
+                      setSelectedSeats([]);
+                    }}
+                    className={cn(
+                      "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+                      ticketMode === 'seatless'
+                        ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
+                        : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
+                    )}
+                  >
+                    <Users size={14} />
+                    Boleto General (Sin Asiento)
+                  </button>
                 </div>
 
-                {isLoading ? (
-                  <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
-                    <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-                    <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
-                  </div>
-                ) : (
-                  <div className={cn(
-                    "h-[480px] lg:h-[580px] relative w-full",
-                    isCurrentEventPast && "pointer-events-none opacity-85"
-                  )}>
-                    {isCurrentEventPast && (
-                      <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
-                        <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
-                          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
-                          <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
-                        </div>
+                {ticketMode === 'seat' ? (
+                  <div className="relative group rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
+                    {/* Header Toolbar Legend for Canvas */}
+                    <div className="px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] font-black uppercase tracking-wider text-white/70">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30" /> Disponible
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full bg-white/20 border border-white/10" /> Reservado
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-white/40 tracking-widest hidden sm:block">
+                        Arrastra o usa rueda del ratón para explorar
+                      </span>
+                    </div>
+
+                    {isLoading ? (
+                      <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
+                        <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+                        <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
+                      </div>
+                    ) : (
+                      <div className={cn(
+                        "h-[480px] lg:h-[580px] relative w-full",
+                        isCurrentEventPast && "pointer-events-none opacity-85"
+                      )}>
+                        {isCurrentEventPast && (
+                          <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
+                            <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
+                              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
+                              <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
+                            </div>
+                          </div>
+                        )}
+                        <SeatingChart
+                          seats={seats}
+                          onSelect={handleSelectionChange}
+                          selectedIds={selectedSeats.map(s => String(s.id))}
+                          theme={theme}
+                          elements={elements}
+                        />
                       </div>
                     )}
-                    <SeatingChart
-                      seats={seats}
-                      onSelect={handleSelectionChange}
-                      selectedIds={selectedSeats.map(s => String(s.id))}
-                      theme={theme}
-                      elements={elements}
-                    />
+                  </div>
+                ) : (
+                  <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg shadow-amber-honey/10">
+                      <Users size={32} />
+                    </div>
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Entrada Libre Sin Límite</span>
+                      <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-nature-night dark:text-white">
+                        Boleto General (Sin Asiento Reservado)
+                      </h3>
+                      <p className="text-xs text-nature-night/70 dark:text-white/70 max-w-md mx-auto leading-relaxed">
+                        Acceso directo de pie a la zona general del recinto con excelente visibilidad y flexibilidad total.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center gap-6 py-4">
+                      <button
+                        onClick={() => setSeatlessQuantity(Math.max(1, seatlessQuantity - 1))}
+                        className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span className="text-4xl font-black text-nature-night dark:text-white min-w-[3rem] text-center">{seatlessQuantity}</span>
+                      <button
+                        onClick={() => setSeatlessQuantity(seatlessQuantity + 1)}
+                        className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                    <div className="pt-4 border-t border-nature-night/10 dark:border-white/10 flex justify-between items-center px-4 max-w-md mx-auto">
+                      <span className="text-xs font-bold uppercase tracking-wider text-nature-night/60 dark:text-white/60">Precio Unitario General</span>
+                      <span className="text-xl font-black text-amber-honey">${Number(currentEvent?.seatless_ticket_price || 500).toLocaleString('es-MX')} MXN</span>
+                    </div>
                   </div>
                 )}
               </div>
@@ -624,7 +763,7 @@ const TourPage = () => {
                     </div>
                   )}
 
-                  {/* Selected Seats List */}
+                  {/* Selected Seats / General Ticket List */}
                   <div className="space-y-2.5 mb-5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1">
                     {isMeetGreet ? (
                       <div className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10">
@@ -633,6 +772,14 @@ const TourPage = () => {
                           <p className="text-xs font-bold text-nature-night/80">{mgQuantity} Pase(s) de Convivencia</p>
                         </div>
                         <span className="font-extrabold text-xs text-nature-night">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
+                      </div>
+                    ) : ticketMode === 'seatless' ? (
+                      <div className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10">
+                        <div>
+                          <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Zona General</p>
+                          <p className="text-xs font-bold text-nature-night/80">{seatlessQuantity} Boleto(s) Sin Asiento</p>
+                        </div>
+                        <span className="font-extrabold text-xs text-nature-night">${(seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500)).toLocaleString()} MXN</span>
                       </div>
                     ) : (
                       <>
@@ -671,10 +818,10 @@ const TourPage = () => {
                     <div className="pt-4 border-t border-nature-night/10 mb-4">
                       <div className="flex justify-between items-end">
                         <div>
-                          <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-1">Total</p>
-                          <p className="text-3xl font-black leading-none text-amber-honey">$0 MXN</p>
+                          <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-1">Total (Pase VIP Gratuito)</p>
+                          <p className="text-3xl font-black leading-none text-emerald-600">$0 MXN</p>
                         </div>
-                        <Users size={18} className="text-nature-night/30 mb-1" />
+                        <Sparkles size={20} className="text-amber-honey mb-1 animate-pulse" />
                       </div>
                     </div>
                   )}
@@ -683,11 +830,11 @@ const TourPage = () => {
 
               <div className="mt-6 w-full">
                 <PremiumCTAButton
-                  disabled={isCurrentEventPast || (isMeetGreet ? false : selectedSeats.length === 0)}
+                  disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
                   onClick={() => !isCurrentEventPast && setIsCheckoutOpen(true)}
                 >
                   <span className="text-base md:text-lg font-black uppercase tracking-[0.15em] block">
-                    {isCurrentEventPast ? 'Venta Finalizada' : 'Proceder al Pago'}
+                    {isCurrentEventPast ? 'Venta Finalizada' : (baseTotal === 0 && appliedCoupon ? 'Reclamar Entrada VIP' : 'Proceder al Pago')}
                   </span>
                 </PremiumCTAButton>
               </div>
@@ -826,12 +973,14 @@ const TourPage = () => {
                         <p className="text-xs text-nature-night/60">
                           {isMeetGreet
                             ? `${mgQuantity} Pase(s) de Convivencia Meet & Greet`
-                            : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
+                            : ticketMode === 'seatless'
+                              ? `${seatlessQuantity} Boleto(s) General(es) Sin Asiento`
+                              : `${selectedSeats.length} Asiento(s): ${selectedSeats.map(s => `${s.row}${s.number}`).join(', ')}`
                           }
                           {wantsMG && !isMeetGreet && " (Incluye Meet & Greet)"}
                         </p>
 
-                        {baseTotal > 0 && (
+                        {baseTotal > 0 ? (
                           <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
                             <div className="flex justify-between items-center text-[10px]">
                               <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
@@ -848,6 +997,50 @@ const TourPage = () => {
                               <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
                             </div>
                           </div>
+                        ) : (
+                          <div className="pt-3 border-t border-nature-night/10 mt-2 flex justify-between items-center text-xs">
+                            <span className="font-bold text-emerald-600 uppercase tracking-wider">Total Pase VIP Gratuito:</span>
+                            <span className="font-black text-emerald-600 text-base">$0.00 MXN</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* VIP Coupon Code Input */}
+                      <div className="space-y-1.5 bg-nature-night/[0.02] border border-nature-night/10 p-4 rounded-2xl">
+                        <label className="text-[9px] uppercase font-bold tracking-widest text-nature-night/60 flex items-center gap-1.5">
+                          <Sparkles size={12} className="text-amber-honey animate-pulse" /> Código de Cupón / Entrada VIP
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={couponCode}
+                            onChange={e => {
+                              setCouponCode(e.target.value);
+                              setCouponError('');
+                            }}
+                            placeholder="Ej. VIP-AMBAR-2026..."
+                            className="flex-1 bg-white border border-nature-night/15 focus:border-amber-honey rounded-xl px-4 py-2.5 text-xs font-medium focus:outline-none transition-colors text-nature-night uppercase tracking-wider"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleValidateCoupon}
+                            disabled={isValidatingCoupon || !couponCode.trim()}
+                            className="px-4 py-2.5 bg-nature-night text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-nature-night/80 disabled:opacity-40 transition-all"
+                          >
+                            {isValidatingCoupon ? 'Validando...' : 'Aplicar'}
+                          </button>
+                        </div>
+                        {appliedCoupon && (
+                          <div className="mt-2 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-700 font-bold">
+                            <span className="flex items-center gap-1.5">
+                              <CheckCircle size={14} className="text-emerald-600" />
+                              {appliedCoupon.discount_type === 'free_vip' ? '¡Entrada VIP Gratuita (100% Descuento)!' : '¡Cupón VIP Aplicado!'}
+                            </span>
+                            <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-[10px] text-emerald-800 underline">Quitar</button>
+                          </div>
+                        )}
+                        {couponError && (
+                          <p className="text-[10px] font-bold text-rose-600 mt-1">{couponError}</p>
                         )}
                       </div>
 
@@ -894,7 +1087,13 @@ const TourPage = () => {
                         className="w-full py-5 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black disabled:opacity-30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-amber-honey/20"
                       >
                         <ShieldCheck size={14} />
-                        {isSubmitting ? 'Procesando Pago...' : 'Confirmar y Pagar Boletos'}
+                        {isSubmitting
+                          ? 'Procesando...'
+                          : (baseTotal === 0 && appliedCoupon
+                              ? 'Reclamar Entrada VIP Gratuita'
+                              : 'Confirmar y Pagar Boletos'
+                            )
+                        }
                         {!isSubmitting && <Sparkles size={12} className="animate-pulse" />}
                       </button>
                     </form>

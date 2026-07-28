@@ -423,3 +423,74 @@ class TicketsAppTests(APITestCase):
         url = reverse('theater-generate-seats', kwargs={'pk': self.theater.pk})
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_coupon_validation(self):
+        """Verify validation endpoint for VIP free entry coupons."""
+        from apps.tickets.models import Coupon
+        coupon = Coupon.objects.create(
+            code="VIP-TEST-2026",
+            discount_type="free_vip",
+            discount_value=100,
+            max_uses=5,
+            is_active=True
+        )
+        url = reverse('coupon-validate-code')
+        
+        # Valid request
+        res = self.client.post(url, {'code': 'VIP-TEST-2026', 'event_id': self.event.id}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data.get('valid'))
+        self.assertEqual(res.data.get('discount_type'), 'free_vip')
+
+        # Invalid code
+        res_invalid = self.client.post(url, {'code': 'INVALID-CODE', 'event_id': self.event.id}, format='json')
+        self.assertEqual(res_invalid.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_free_vip_coupon_checkout_with_seat(self):
+        """Verify redeeming a 100% free VIP coupon creates paid tickets directly with chosen seat."""
+        from apps.tickets.models import Coupon
+        coupon = Coupon.objects.create(
+            code="FREE-VIP-PASS",
+            discount_type="free_vip",
+            max_uses=2,
+            is_active=True
+        )
+        url = reverse('ticket-list') + 'checkout/'
+        data = {
+            'email': 'vipguest@example.com',
+            'event_id': self.event.id,
+            'seat_ids': [self.seat_vip.id],
+            'coupon_code': 'FREE-VIP-PASS'
+        }
+        res = self.client.post(url, data, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data.get('status'), 'success')
+
+        # Verify ticket was created as paid directly with seat and used_coupon
+        ticket = Ticket.objects.get(user_email='vipguest@example.com', event=self.event)
+        self.assertEqual(ticket.status, 'paid')
+        self.assertEqual(ticket.seat, self.seat_vip)
+        self.assertEqual(ticket.used_coupon, coupon)
+
+        # Check times_used updated
+        coupon.refresh_from_db()
+        self.assertEqual(coupon.times_used, 1)
+
+    def test_seatless_ticket_checkout(self):
+        """Verify purchasing seatless general tickets creates tickets without seat assignment."""
+        url = reverse('ticket-list') + 'checkout/'
+        data = {
+            'email': 'general@example.com',
+            'event_id': self.event.id,
+            'quantity': 3,
+            'is_seatless': True
+        }
+        res = self.client.post(url, data, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        
+        tickets = Ticket.objects.filter(user_email='general@example.com', event=self.event)
+        self.assertEqual(tickets.count(), 3)
+        for t in tickets:
+            self.assertIsNone(t.seat)
+            self.assertEqual(t.status, 'paid')
+
