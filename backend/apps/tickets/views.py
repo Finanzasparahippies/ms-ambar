@@ -1,5 +1,6 @@
 from django.utils import timezone
 from django.db import transaction
+from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -384,14 +385,15 @@ class TicketViewSet(viewsets.ModelViewSet):
 
         # --- CASO B: PROCESO ESTÁNDAR / MOCK STRIPE CHECKOUT ---
         from apps.shop.utils import create_ticket_checkout_session
-        from django.conf import settings
 
         success_url = f"{settings.FRONTEND_URL}/comprar-boletos"
         cancel_url = f"{settings.FRONTEND_URL}/comprar-boletos"
 
         # Determinar si usar Stripe real o mock
         use_mock = False
-        if not getattr(settings, 'TESTING', False):
+        if getattr(settings, 'TESTING', False):
+            use_mock = True
+        else:
             stripe_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
             webhook_secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '')
             placeholder_patterns = ['change_me', 'replace_me', 'test_mock', 'placeholder', 'your_']
