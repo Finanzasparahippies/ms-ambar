@@ -265,7 +265,7 @@ const TourPage = () => {
     });
   }, []);
 
-  const getDynamicPrice = useCallback((baseAmount: number) => {
+  const getDynamicPrice = (baseAmount: number) => {
     if (!currentEvent || !currentEvent.date) return baseAmount;
     if (currentEvent.enable_dynamic_pricing === false) return baseAmount;
     const eventDate = new Date(currentEvent.date);
@@ -275,9 +275,9 @@ const TourPage = () => {
     const monthsDiff = Math.max(0, eventMonthIdx - currMonthIdx);
     const increment = Number(currentEvent.monthly_price_increment ?? 50);
     return Math.max(0, baseAmount - (monthsDiff * increment));
-  }, [currentEvent]);
+  };
 
-  const fetchSeats = useCallback(() => {
+  const fetchSeats = () => {
     if (!currentEvent) return;
     const apiUrl = getApiUrl();
     fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
@@ -292,11 +292,11 @@ const TourPage = () => {
         }
       })
       .catch(err => console.error("Error fetching seats:", err));
-  }, [currentEvent]);
+  };
 
   useEffect(() => {
     fetchSeats();
-  }, [fetchSeats]);
+  }, [currentEvent]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
