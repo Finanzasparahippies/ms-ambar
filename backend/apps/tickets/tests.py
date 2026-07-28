@@ -449,6 +449,27 @@ class TicketsAppTests(APITestCase):
         res_invalid = self.client.post(url, {'code': 'INVALID-CODE', 'event_id': self.event.id}, format='json')
         self.assertEqual(res_invalid.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_assigned_email_coupon_security(self):
+        """Verify that a coupon assigned to an email denies access to other emails."""
+        from apps.tickets.models import Coupon
+        coupon = Coupon.objects.create(
+            code="EXCLUSIVO-VIP",
+            discount_type="free_vip",
+            assigned_email="invitado@example.com",
+            max_uses=1,
+            is_active=True
+        )
+        url = reverse('coupon-validate-code')
+        
+        # 1. Validation with unauthorized email fails
+        res_fail = self.client.post(url, {'code': 'EXCLUSIVO-VIP', 'email': 'hacker@example.com'}, format='json')
+        self.assertEqual(res_fail.status_code, status.HTTP_400_BAD_REQUEST)
+        
+        # 2. Validation with correct email succeeds
+        res_ok = self.client.post(url, {'code': 'EXCLUSIVO-VIP', 'email': 'invitado@example.com'}, format='json')
+        self.assertEqual(res_ok.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_ok.data.get('valid'))
+
     def test_free_vip_coupon_checkout_with_seat(self):
         """Verify redeeming a 100% free VIP coupon creates paid tickets directly with chosen seat."""
         from apps.tickets.models import Coupon
