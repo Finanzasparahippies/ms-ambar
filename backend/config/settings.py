@@ -102,6 +102,7 @@ DATABASES = {
         "PORT": env("DB_PORT", default="5432"),
     }
 }
+DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 
 # Force using SQLite when running tests to avoid Supabase connection pooler conflicts
 import sys
