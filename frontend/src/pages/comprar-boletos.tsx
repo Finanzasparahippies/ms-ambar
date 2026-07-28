@@ -670,49 +670,47 @@ const TourPage = () => {
               </div>
             )}
 
-            {/* Flyer / Meet & Greet Details Card */}
-            <div className="grid md:grid-cols-2 gap-6 items-stretch">
-              {currentEvent?.flyer_url && (
-                <div className="relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-xl shadow-amber-honey/5 aspect-[4/3] md:aspect-auto">
-                  <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-nature-night/20 to-transparent z-10 pointer-events-none" />
-                  <img
-                    src={currentEvent.flyer_url}
-                    alt={`Flyer oficial: ${currentEvent.title}`}
-                    className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute bottom-6 left-8 z-20">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
-                    <h3 className="text-xl font-black text-white uppercase italic">{currentEvent.title}</h3>
-                  </div>
+            {/* Flyer Container (Abarca todo el ancho del contenedor) */}
+            {currentEvent?.flyer_url && (
+              <div className="w-full relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-2xl shadow-amber-honey/5 bg-[#08090f]">
+                <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-transparent to-transparent z-10 pointer-events-none" />
+                <img
+                  src={currentEvent.flyer_url}
+                  alt={`Flyer oficial: ${currentEvent.title}`}
+                  className="w-full h-auto max-h-[700px] object-cover object-center group-hover:scale-[1.02] transition-transform duration-700"
+                />
+                <div className="absolute bottom-6 left-8 z-20">
+                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
+                  <h3 className="text-xl md:text-2xl font-black text-white uppercase italic">{currentEvent.title}</h3>
                 </div>
-              )}
+              </div>
+            )}
 
-              {isMeetGreet && (
-                <div className="p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-5">
-                  <div className="flex items-center gap-3 text-amber-honey">
-                    <Star className="fill-current animate-pulse" size={20} />
-                    <h3 className="text-lg font-black uppercase tracking-wider">Experiencia Convivencia</h3>
-                  </div>
-                  <p className="text-xs leading-relaxed opacity-80">
-                    Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales.
-                  </p>
-                  <ul className="space-y-2.5 text-[10px] font-bold uppercase tracking-wider opacity-75">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle size={14} className="text-amber-honey" />
-                      Acceso exclusivo al venue de convivencia
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle size={14} className="text-amber-honey" />
-                      Firma de autógrafos y posters de colección
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle size={14} className="text-amber-honey" />
-                      Fotografía digital oficial individual
-                    </li>
-                  </ul>
+            {isMeetGreet && (
+              <div className="w-full p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-5 mt-6">
+                <div className="flex items-center gap-3 text-amber-honey">
+                  <Star className="fill-current animate-pulse" size={20} />
+                  <h3 className="text-lg font-black uppercase tracking-wider">Experiencia Convivencia</h3>
                 </div>
-              )}
-            </div>
+                <p className="text-xs leading-relaxed opacity-80">
+                  Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales.
+                </p>
+                <ul className="space-y-2.5 text-[10px] font-bold uppercase tracking-wider opacity-75">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Acceso exclusivo al venue de convivencia
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Firma de autógrafos y posters de colección
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-honey" />
+                    Fotografía digital oficial individual
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* ══════ RIGHT COLUMN: Cart Summary ══════ */}
