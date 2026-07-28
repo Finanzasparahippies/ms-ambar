@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Calendar, CalendarX,
   CheckCircle, Info,
-  MapPin,
+  MapPin, Maximize2,
   Minus, Plus,
   ShieldCheck,
   Sparkles,
@@ -119,6 +119,7 @@ const TourPage = () => {
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isFlyerModalOpen, setIsFlyerModalOpen] = useState(false);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -670,21 +671,7 @@ const TourPage = () => {
               </div>
             )}
 
-            {/* Flyer Container (Abarca todo el ancho del contenedor) */}
-            {currentEvent?.flyer_url && (
-              <div className="w-full relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-2xl shadow-amber-honey/5 bg-[#08090f]">
-                <div className="absolute inset-0 bg-gradient-to-t from-nature-night/80 via-transparent to-transparent z-10 pointer-events-none" />
-                <img
-                  src={currentEvent.flyer_url}
-                  alt={`Flyer oficial: ${currentEvent.title}`}
-                  className="w-full h-auto max-h-[700px] object-cover object-center group-hover:scale-[1.02] transition-transform duration-700"
-                />
-                <div className="absolute bottom-6 left-8 z-20">
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Flyer Oficial</span>
-                  <h3 className="text-xl md:text-2xl font-black text-white uppercase italic">{currentEvent.title}</h3>
-                </div>
-              </div>
-            )}
+
 
             {isMeetGreet && (
               <div className="w-full p-8 rounded-[2.5rem] border border-nature-night/10 dark:border-white/10 bg-nature-night/[0.02] dark:bg-white/[0.02] space-y-5 mt-6">
@@ -866,6 +853,67 @@ const TourPage = () => {
               </div>
             </motion.div>
           </div>
+
+          {/* ══════ FULL-WIDTH FLYER SECTION (Abarca el ancho completo del contenedor incluyendo area de pago) ══════ */}
+          {currentEvent?.flyer_url && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="lg:col-span-12 space-y-4 mt-6"
+            >
+              <div className="w-full relative rounded-[2.5rem] overflow-hidden border border-amber-honey/20 group shadow-2xl shadow-amber-honey/10 bg-[#08090f] p-4 sm:p-6 md:p-8 flex flex-col items-center justify-center">
+                {/* Backdrop ambient blur using flyer image */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center filter blur-3xl opacity-30 scale-110 pointer-events-none transition-all duration-1000"
+                  style={{ backgroundImage: `url(${currentEvent.flyer_url})` }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#08090f] via-[#08090f]/75 to-[#08090f]/40 z-10 pointer-events-none" />
+
+                {/* Top Banner Header */}
+                <div className="w-full flex flex-wrap items-center justify-between gap-3 z-20 mb-4 px-2">
+                  <div className="flex items-center gap-2 bg-amber-honey/10 border border-amber-honey/30 px-4 py-2 rounded-full backdrop-blur-md">
+                    <Sparkles size={14} className="text-amber-honey animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Flyer Oficial del Evento</span>
+                  </div>
+                  <button
+                    onClick={() => setIsFlyerModalOpen(true)}
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-full transition-all backdrop-blur-md shadow-lg hover:border-amber-honey/50"
+                  >
+                    <Maximize2 size={13} className="text-amber-honey" />
+                    <span>Pantalla Completa</span>
+                  </button>
+                </div>
+
+                {/* Main Flyer Display - Complete Aspect Ratio (Horizontal & Vertical, 0 cropping) */}
+                <div
+                  onClick={() => setIsFlyerModalOpen(true)}
+                  className="relative z-20 w-full flex items-center justify-center rounded-2xl cursor-pointer overflow-hidden group/img transition-transform duration-500 hover:scale-[1.005]"
+                >
+                  <img
+                    src={currentEvent.flyer_url}
+                    alt={`Flyer oficial: ${currentEvent.title}`}
+                    className="w-full h-auto max-h-[85vh] object-contain rounded-2xl shadow-2xl transition-all duration-500"
+                  />
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                    <span className="bg-nature-night/90 text-white border border-amber-honey/40 px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2 backdrop-blur-md shadow-2xl">
+                      <Maximize2 size={14} className="text-amber-honey" /> Ampliar Flyer
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer caption */}
+                <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-2 z-20 mt-6 pt-4 border-t border-white/10 px-2">
+                  <div>
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Arte Oficial</span>
+                    <h3 className="text-xl md:text-2xl font-black text-white uppercase italic">{currentEvent.title}</h3>
+                  </div>
+                  <p className="text-xs text-white/60 font-medium">
+                    Haz clic en el cartel para explorar todos los detalles en alta resolución.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </div>
       </section>
 
@@ -1155,6 +1203,39 @@ const TourPage = () => {
                   </button>
                 </form>
               )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── FULLSCREEN FLYER LIGHTBOX MODAL ─── */}
+      <AnimatePresence>
+        {isFlyerModalOpen && currentEvent?.flyer_url && (
+          <div className="fixed inset-0 z-[150] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 sm:p-6 md:p-10">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative max-w-5xl max-h-[95vh] w-full flex flex-col items-center justify-center"
+            >
+              <button
+                onClick={() => setIsFlyerModalOpen(false)}
+                className="absolute -top-12 right-0 sm:top-2 sm:right-2 z-50 bg-white/10 hover:bg-amber-honey hover:text-black border border-white/20 text-white p-3 rounded-full transition-all backdrop-blur-md shadow-2xl"
+                aria-label="Cerrar vista completa"
+              >
+                <X size={20} />
+              </button>
+              <div className="w-full h-full flex items-center justify-center overflow-auto p-2">
+                <img
+                  src={currentEvent.flyer_url}
+                  alt={`Flyer oficial ampliando: ${currentEvent.title}`}
+                  className="max-w-full max-h-[85vh] w-auto h-auto object-contain rounded-2xl shadow-2xl border border-white/10"
+                />
+              </div>
+              <div className="text-center mt-3 text-white/80">
+                <p className="text-xs font-black uppercase tracking-widest text-amber-honey">{currentEvent.title}</p>
+                <p className="text-[10px] uppercase tracking-wider opacity-60">Flyer Oficial en Alta Resolución</p>
+              </div>
             </motion.div>
           </div>
         )}
