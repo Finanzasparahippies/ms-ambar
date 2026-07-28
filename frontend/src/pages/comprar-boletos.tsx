@@ -127,9 +127,9 @@ const TourPage = () => {
         : 'http://localhost:8000/api');
   };
 
-  const handleValidateCoupon = async (overrideCode?: string, overrideEmail?: string) => {
-    const codeToUse = (typeof overrideCode === 'string' ? overrideCode : couponCode).trim();
-    const emailToUse = (typeof overrideEmail === 'string' ? overrideEmail : email).trim();
+  const handleValidateCoupon = async (overrideCode?: any, overrideEmail?: any) => {
+    const codeToUse = typeof overrideCode === 'string' ? overrideCode.trim() : (couponCode || '').trim();
+    const emailToUse = typeof overrideEmail === 'string' ? overrideEmail.trim() : (email || '').trim();
     if (!codeToUse) return;
     setIsValidatingCoupon(true);
     setCouponError('');
@@ -1042,7 +1042,7 @@ const TourPage = () => {
                           />
                           <button
                             type="button"
-                            onClick={handleValidateCoupon}
+                            onClick={() => handleValidateCoupon()}
                             disabled={isValidatingCoupon || !couponCode.trim()}
                             className="px-4 py-2.5 bg-nature-night text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-nature-night/80 disabled:opacity-40 transition-all"
                           >
