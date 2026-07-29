@@ -1,14 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Calendar, User, ArrowUpRight, Plus, Edit2, Trash2, Save, X,
-  Bold, Italic, Underline, Heading2, Heading3, Quote, List,
-  ListOrdered, Link2, Image as ImageIcon, Eye, Settings, Upload,
-  FolderPlus, Globe, FileText, Check, ChevronRight, AlertCircle, Sparkles, Lock
-} from 'lucide-react';
 import axios from 'axios';
-import { showConfirm, showToast as premiumToast } from '../lib/notifications';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  AlertCircle,
+  ArrowUpRight,
+  Bold,
+  Calendar,
+  Check,
+  Edit2,
+  Eye,
+  FileText,
+  FolderPlus, Globe,
+  Image as ImageIcon,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+  Plus,
+  Quote,
+  Save,
+  Settings,
+  Sparkles,
+  Trash2,
+  Underline,
+  Upload,
+  User,
+  X
+} from 'lucide-react';
+import Head from 'next/head';
+import React, { useEffect, useRef, useState } from 'react';
+import { showToast as premiumToast, showConfirm } from '../lib/notifications';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -492,7 +512,7 @@ export default function AmbarTeEscribePage() {
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey block mb-2">Solo para los reales</span>
               <h2 className="text-3xl font-serif text-[#F4F6F0] mb-4 tracking-tight italic font-normal">Ambar te escribe</h2>
               <p className="text-[#F4F6F0]/70 mb-10 text-xs leading-relaxed max-w-sm mx-auto">
-                Las crónicas y bitácoras de Ms Ambar están reservadas para los suscriptores. Ingresa tu correo y nombre para desbloquear el contenido del feed y recibir poemas exclusivos en tu bandeja.
+                Deja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
               </p>
 
               <form className="flex flex-col gap-3 text-left" onSubmit={handleSubscribe}>

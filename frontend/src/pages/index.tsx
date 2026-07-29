@@ -869,12 +869,12 @@ const Home = () => {
     const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
     const monthsDiff = Math.max(0, eventMonthIdx - currMonthIdx);
     const increment = Number(event.monthly_price_increment ?? 25);
-    
+
     // Regla de Oro Nectar Labs: Tope de descuento preventivo al 30%
     const rawDiscount = monthsDiff * increment;
     const maxDiscount = baseAmount * 0.30;
     const discount = Math.min(rawDiscount, maxDiscount);
-    
+
     // Garantiza el Precio Piso de Seguridad (mínimo 70% del costo base)
     return Math.max(baseAmount * 0.70, baseAmount - discount);
   };
@@ -941,8 +941,8 @@ const Home = () => {
             <Sparkles size={12} className="text-pink-300 animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-200">
               {nextEvent
-                ? `Hadas en el Desierto — SOULTEÑO | ${getFormattedEventDate(nextEvent.date)} en ${nextEvent.venue_name || 'London Pub'}`
-                : "Hadas en el Desierto — Concierto Exclusivo"
+                ? `Concierto Oficial | ${getFormattedEventDate(nextEvent.date)} en ${nextEvent.venue_name || 'Por Definir'}`
+                : "Próximamente"
               }
             </span>
           </motion.div>
@@ -1007,9 +1007,6 @@ const Home = () => {
                       🦋 Concierto Oficial
                     </span>
                   </div>
-                  <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-cyan-400/30 bg-cyan-500/15 text-cyan-200 text-[10px] font-black uppercase tracking-[0.25em] backdrop-blur-md">
-                    🌸 Soulteño
-                  </div>
                 </div>
 
                 <div className="space-y-2 flex flex-col items-center lg:items-start">
@@ -1017,9 +1014,6 @@ const Home = () => {
                   <h2 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase italic tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-white via-pink-100 to-rose-300 leading-[0.95] max-w-md lg:max-w-xl group-hover:from-pink-100 group-hover:to-pink-300 transition-colors duration-500">
                     {nextEvent.title}
                   </h2>
-                  <p className="text-pink-300/80 font-serif italic text-lg tracking-wide md:text-xl pt-1">
-                    Fusión Soulteño & Experiencia Ethereal
-                  </p>
                 </div>
 
                 <div className="w-16 h-[2px] bg-gradient-to-r from-pink-500/60 via-purple-500/40 to-transparent lg:from-pink-500/60 lg:to-transparent" />
@@ -1031,11 +1025,11 @@ const Home = () => {
                     </p>
 
                     <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-medium text-pink-100/70 pt-0.5">
-                      {nextEvent.doors_open && (
+                      {/* {nextEvent.doors_open && (
                         <span className="bg-pink-500/10 border border-pink-500/20 px-3 py-1 rounded-full text-pink-200">
                           🚪 Puertas: <strong className="text-white">{formatoHoraOficial(nextEvent.doors_open)} hrs</strong>
                         </span>
-                      )}
+                      )} */}
                       {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
                         <span className="bg-pink-500/10 border border-pink-500/20 px-3 py-1 rounded-full text-pink-200">
                           ✨ Cierre: <strong className="text-white">
@@ -1137,7 +1131,7 @@ const Home = () => {
                   <img
                     src={nextEvent.flyer_url}
                     alt={`Flyer: ${nextEvent.title}`}
-                    className="w-full h-full object-contain object-center lg:object-right group-hover/flyer:scale-[1.03] transition-transform duration-1000 ease-out"
+                    className="w-full h-full object-cover object-center lg:object-right group-hover/flyer:scale-[1.03] transition-transform duration-1000 ease-out"
                   />
                   <div className="absolute bottom-4 left-4 z-20">
                     <span className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300">Hadas en el Desierto</span>
@@ -1201,10 +1195,10 @@ const Home = () => {
 
               <div className="space-y-6 text-[#F4F6F0]/85 text-sm md:text-base font-medium leading-relaxed font-sans">
                 <p>
-                  Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como <span className="text-[#F4F6F0] font-bold">R&B, soul, regional mexicano y bachata</span>. Su carrera profesional comenzó en 2017 con la banda <span className="text-white/90">"Moonset"</span>, pero consolidó su relevancia al unirse a la gira del rapero mexicano <span className="text-amber-honey font-bold">Charles Ans</span> en 2019, actuando como telonera en grandes escenarios como el <span className="text-white/90">Auditorio Nacional</span>.
+                  Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como <span className="text-[#F4F6F0] font-bold">R&B, soul, regional mexicano y bachata</span>. Su carrera profesional comenzó en 2017 con la banda <span className="text-white/90">"Moonset"</span>, pero consolidó su relevancia al unirse a la gira del rapero mexicano <span className="text-amber-honey font-bold">Charles Ans</span> en 2022, actuando como telonera en grandes escenarios como el <span className="text-white/90">Auditorio Nacional</span>.
                 </p>
                 <p>
-                  Su primer álbum formal, <span className="text-amber-honey font-semibold font-serif italic text-base">"14•28"</span>, fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas, como el 14 de junio, día en que falleció su padre cuando ella tenía cinco años. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.
+                  Su primer álbum formal, <span className="text-amber-honey font-semibold font-serif italic text-base">"14•28"</span>, fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas.  A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.
                 </p>
                 <p>
                   Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del <span className="text-[#F4F6F0] font-bold">Festival de Viña del Mar 2025</span>, con la canción <span className="text-amber-honey font-bold">"No te voy a llorar"</span>, consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.
