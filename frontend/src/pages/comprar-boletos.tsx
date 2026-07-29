@@ -28,13 +28,13 @@ const STRIPE_FLAT_FEE = 3.00;   // $3.00 MXN
 
 const calculateTotalWithFee = (baseAmount: number): { base_price: number; service_fee: number; total: number } => {
   if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
-  const total = baseAmount;
-  const service_fee = baseAmount * STRIPE_PCT_FEE + STRIPE_FLAT_FEE;
-  const base_price = total - service_fee;
+  const base_price = Math.round(baseAmount * 100) / 100;
+  const total = Math.round(((base_price + STRIPE_FLAT_FEE) / (1 - STRIPE_PCT_FEE)) * 100) / 100;
+  const service_fee = Math.round((total - base_price) * 100) / 100;
   return {
-    base_price: Math.round(base_price * 100) / 100,
-    service_fee: Math.round(service_fee * 100) / 100,
-    total: Math.round(total * 100) / 100,
+    base_price,
+    service_fee,
+    total,
   };
 };
 
@@ -333,9 +333,8 @@ const TourPage = () => {
     setSelectedSeats(selectedObjects);
   };
 
-  const getSeatBasePrice = (seat: any) => {
-    if (!seat) return 0;
-    const seatPrice = Number(seat.base_price || 0);
+  const getSeatBasePrice = (seat?: any) => {
+    const seatPrice = Number(seat?.base_price || 0);
     if (seatPrice > 0) {
       return Math.round(seatPrice);
     }
@@ -595,7 +594,7 @@ const TourPage = () => {
                     )}
                   >
                     <Ticket size={14} />
-                    Asientos Numerados
+                    Asientos Numerados (Desde ${getSeatBasePrice().toLocaleString('es-MX')} MXN)
                   </button>
                   <button
                     onClick={() => {
@@ -610,7 +609,7 @@ const TourPage = () => {
                     )}
                   >
                     <Users size={14} />
-                    Boleto General (Sin Asiento)
+                    Boleto General (${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN)
                   </button>
                 </div>
 
@@ -631,8 +630,8 @@ const TourPage = () => {
                           <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
                         </span>
                       </div>
-                      <span className="text-[9px] text-white/40 tracking-widest hidden sm:block">
-                        Arrastra o usa rueda del ratón para explorar
+                      <span className="text-[9px] text-amber-honey tracking-widest font-black">
+                        Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
                       </span>
                     </div>
 

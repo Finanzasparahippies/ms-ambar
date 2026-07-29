@@ -23,29 +23,24 @@ STRIPE_FLAT_FEE: float = 3.00    # $3.00 MXN fijo por transacción
 
 def calculate_total_with_fee(base_amount: float) -> dict:
     """
-    Calcula el precio desglosado considerando que `base_amount` ya incluye la comisión.
-    El cliente paga exactamente `base_amount`, y la comisión se resta para obtener el precio base del artista.
+    Calcula el total a cobrar en Stripe utilizando la fórmula de Recargo/Gross-Up:
+        total = (base_price + FLAT_FEE) / (1 - PCT_FEE)
+        service_fee = total - base_price
 
-    Args:
-        base_amount: El precio total del producto/boleto en MXN (con comisión integrada).
-
-    Returns:
-        dict con:
-            base_price   — El precio neto del boleto (después de restar comisiones).
-            service_fee  — La comisión de Stripe.
-            total        — El total que se cobrará al cliente (igual a base_amount).
+    Esto garantiza que tras la deducción de la comisión por parte de Stripe (3.6% + $3.00 MXN sobre el total),
+    el negocio/artista reciba exactamente el precio base íntegro (base_amount).
     """
     if base_amount <= 0:
         return {"base_price": 0.0, "service_fee": 0.0, "total": 0.0}
 
-    total = base_amount
-    service_fee = base_amount * STRIPE_PCT_FEE + STRIPE_FLAT_FEE
-    base_price = base_amount - service_fee
+    base_price = round(float(base_amount), 2)
+    total = round((base_price + STRIPE_FLAT_FEE) / (1 - STRIPE_PCT_FEE), 2)
+    service_fee = round(total - base_price, 2)
 
     return {
-        "base_price": round(base_price, 2),
-        "service_fee": round(service_fee, 2),
-        "total": round(total, 2),
+        "base_price": base_price,
+        "service_fee": service_fee,
+        "total": total,
     }
 
 

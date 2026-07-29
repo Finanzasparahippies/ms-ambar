@@ -105,6 +105,30 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
                 'quantity': len(seats), # One upgrade per seat purchased
             })
 
+    # Calculate subtotal of base ticket items and add Stripe platform service fee line item
+    total_base_amount = 0.0
+    for item in line_items:
+        unit_price = item['price_data']['unit_amount'] / 100.0
+        qty = item['quantity']
+        total_base_amount += unit_price * qty
+
+    if total_base_amount > 0:
+        from apps.tickets.fees import calculate_total_with_fee
+        fee_info = calculate_total_with_fee(total_base_amount)
+        service_fee_amount = fee_info['service_fee']
+        if service_fee_amount > 0:
+            line_items.append({
+                'price_data': {
+                    'currency': 'mxn',
+                    'unit_amount': int(round(service_fee_amount * 100)),
+                    'product_data': {
+                        'name': 'Cargo de servicio de plataforma (Stripe MX)',
+                        'description': 'Comisión de procesamiento seguro Stripe (3.6% + $3.00 MXN)',
+                    }
+                },
+                'quantity': 1,
+            })
+
     session_data = {
         'payment_method_types': ['card'],
         'line_items': line_items,
