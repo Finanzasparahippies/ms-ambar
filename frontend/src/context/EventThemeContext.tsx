@@ -20,6 +20,8 @@ export interface SectionThemeSpec {
   animation_preset?: string;
   image_filter?: string;
   custom_css?: string;
+  timeline_glow?: string;
+  timeline_hover_balloon?: boolean;
 }
 
 export interface ThemeConfig {
