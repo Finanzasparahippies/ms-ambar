@@ -497,8 +497,6 @@ export const ThemeManager: React.FC = () => {
                   />
                 </div>
               </div>
-            </div>
-          </div>
 
               <div>
                 <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Títulos / Encabezados (h1, h2, h3)</label>
