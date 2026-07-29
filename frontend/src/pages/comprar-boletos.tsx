@@ -801,14 +801,14 @@ const TourPage = () => {
 
                   {!isMeetGreet && (
                     <motion.div
-                      whileHover={currentEvent?.mg_available > 0 ? { scale: 1.015, y: -1 } : {}}
+                      whileHover={currentEvent?.mg_available > 0 ? { scale: 1.01, y: -1 } : {}}
                       whileTap={currentEvent?.mg_available > 0 ? { scale: 0.985 } : {}}
                       onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
                       className={cn(
-                        "mb-5 p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden shadow-lg",
+                        "mb-5 p-4 sm:p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden shadow-lg",
                         wantsMG
                           ? "bg-gradient-to-r from-amber-honey via-amber-400 to-amber-500 border-amber-honey text-nature-night shadow-amber-honey/20"
-                          : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/40"
+                          : "bg-nature-night/[0.02] dark:bg-white/[0.03] border-nature-night/10 dark:border-white/10 hover:border-amber-honey/40"
                       )}
                     >
                       {/* Pulse glow background effect when active */}
@@ -820,38 +820,40 @@ const TourPage = () => {
                           className="absolute inset-0 bg-white/20 pointer-events-none"
                         />
                       )}
-                      <div className="flex items-center justify-between relative z-10">
-                        <div className="flex items-center gap-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative z-10">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <motion.div
-                            animate={wantsMG ? { rotate: [0, 15, -15, 0], scale: [1, 1.15, 1] } : { rotate: 0, scale: 1 }}
+                            animate={wantsMG ? { rotate: [0, 15, -15, 0], scale: [1, 1.1, 1] } : { rotate: 0, scale: 1 }}
                             transition={{ duration: 0.4 }}
                             className={cn(
-                              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md",
+                              "w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex-shrink-0 flex items-center justify-center transition-all duration-300 shadow-md",
                               wantsMG ? "bg-nature-night text-amber-honey" : "bg-amber-honey/20 text-amber-honey border border-amber-honey/30"
                             )}
                           >
-                            <Star size={20} fill={wantsMG ? "currentColor" : "none"} />
+                            <Star size={18} fill={wantsMG ? "currentColor" : "none"} />
                           </motion.div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Experiencia Meet & Greet</h4>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <h4 className={cn("font-black text-xs uppercase tracking-wider truncate max-w-full", wantsMG ? "text-nature-night" : "text-nature-night dark:text-white")}>
+                                Experiencia Meet & Greet
+                              </h4>
                               {wantsMG && (
-                                <span className="bg-nature-night text-amber-honey text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                <span className="bg-nature-night text-amber-honey text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 shrink-0">
                                   <CheckCircle size={9} /> Añadido
                                 </span>
                               )}
                             </div>
-                            <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5", wantsMG ? "text-nature-night/80" : "text-nature-night/50")}>
+                            <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5 truncate", wantsMG ? "text-nature-night/80" : "text-nature-night/50 dark:text-white/50")}>
                               {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Cupo Limitado Agotado'}
                             </p>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <span className={cn("text-xs font-black tracking-wider block", wantsMG ? "text-nature-night" : "text-amber-honey")}>
+                        <div className="flex sm:flex-col justify-between sm:justify-center items-end text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-nature-night/10 dark:border-white/10">
+                          <span className={cn("text-xs font-black tracking-wider whitespace-nowrap", wantsMG ? "text-nature-night" : "text-amber-honey")}>
                             +${Number(currentEvent?.mg_price || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
                           </span>
-                          <span className={cn("text-[8px] font-bold uppercase tracking-widest block opacity-75", wantsMG ? "text-nature-night/70" : "text-nature-night/40")}>
+                          <span className={cn("text-[8px] font-bold uppercase tracking-widest block opacity-75 whitespace-nowrap", wantsMG ? "text-nature-night/70" : "text-nature-night/40 dark:text-white/40")}>
                             Tarifa Base
                           </span>
                         </div>
@@ -1205,7 +1207,7 @@ const TourPage = () => {
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
                           <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
-                            <Info size={9} /> Cargo de servicio ( MX 3.6% + $3.00)
+                            <Info size={9} /> Cargo de servicio (3.6% + $3.00)
                           </span>
                           <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
