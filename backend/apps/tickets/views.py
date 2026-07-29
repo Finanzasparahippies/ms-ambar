@@ -118,21 +118,38 @@ class EventViewSet(viewsets.ModelViewSet):
         serializer = SeatSerializer(seats, many=True)
         data = serializer.data
         
-        # Add status to each seat
+        # Add status and dynamic pricing to each seat with logger traces
+        import logging
+        logger = logging.getLogger('apps.tickets')
         multiplier = float(event.price_multiplier or 1.0)
+        event_numbered_price = float(getattr(event, 'numbered_ticket_price', 0) or 0)
+        logger.info(f"[SeatsView Debug] Event ID={event.id} ({event.title}): event_numbered_price={event_numbered_price}, multiplier={multiplier}, enable_dynamic={event.enable_dynamic_pricing}")
+
         for seat_data in data:
             if seat_data['id'] in occupied_seat_ids:
                 seat_data['status'] = 'occupied'
             else:
                 seat_data['status'] = 'available'
             
-            raw_seat_price = float(seat_data.get('base_price') or 0)
-            if raw_seat_price <= 0 and getattr(event, 'numbered_ticket_price', None):
-                raw_seat_price = float(event.numbered_ticket_price)
-            elif raw_seat_price <= 0:
+            seat_base = float(seat_data.get('base_price') or 0)
+
+            if event_numbered_price > 0:
+                if seat_base > 0 and seat_base not in [500.0, 1000.0]:
+                    ratio = seat_base / 1000.0
+                    raw_seat_price = event_numbered_price * ratio
+                else:
+                    raw_seat_price = event_numbered_price
+            elif seat_base > 0:
+                raw_seat_price = seat_base
+            else:
                 raw_seat_price = 1000.0
+
             raw_price = raw_seat_price * multiplier
-            seat_data['base_price'] = event.get_dynamic_price(raw_price)
+            final_dyn_price = event.get_dynamic_price(raw_price)
+            seat_data['base_price'] = final_dyn_price
+
+        if data:
+            logger.info(f"[SeatsView Debug] Sample Seat #1 resolved price: raw_base={raw_seat_price}, raw_price_with_mult={raw_price}, final_dyn_price={data[0]['base_price']}")
         
         return Response({
             "seats": data,

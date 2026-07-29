@@ -335,20 +335,41 @@ const TourPage = () => {
 
   const getSeatBasePrice = (seat?: any) => {
     const seatPrice = Number(seat?.base_price || 0);
+    let resolvedPrice = 0;
+    let source = '';
+
     if (seatPrice > 0) {
-      return Math.round(seatPrice);
+      resolvedPrice = Math.round(seatPrice);
+      source = 'seat.base_price (from backend /seats/ API)';
+    } else if (currentEvent?.numbered_seat_base_price !== undefined && Number(currentEvent.numbered_seat_base_price) > 0) {
+      resolvedPrice = Math.round(Number(currentEvent.numbered_seat_base_price));
+      source = 'currentEvent.numbered_seat_base_price (from EventSerializer)';
+    } else {
+      const multiplier = Number(currentEvent?.price_multiplier || 1.0);
+      const fallbackBase = Number(currentEvent?.numbered_ticket_price || 400) * multiplier;
+      resolvedPrice = Math.round(getDynamicPrice(fallbackBase));
+      source = 'fallback (getDynamicPrice + multiplier)';
     }
-    if (currentEvent?.numbered_seat_base_price !== undefined && Number(currentEvent.numbered_seat_base_price) > 0) {
-      return Math.round(Number(currentEvent.numbered_seat_base_price));
-    }
-    const multiplier = Number(currentEvent?.price_multiplier || 1.0);
-    const fallbackBase = Number(currentEvent?.numbered_ticket_price || 1000) * multiplier;
-    return Math.round(getDynamicPrice(fallbackBase));
+
+    console.log(`[TicketPricing Debug] getSeatBasePrice resolved: $${resolvedPrice} MXN | Source: ${source} | Seat ID: ${seat?.id || 'N/A'}`);
+    return resolvedPrice;
   };
 
   const getEffectiveSeatlessPrice = () => {
-    const rawBase = Number(currentEvent?.seatless_ticket_price ?? 500);
-    return Math.round(getDynamicPrice(rawBase));
+    let resolvedPrice = 0;
+    let source = '';
+
+    if (currentEvent?.effective_seatless_ticket_price !== undefined && Number(currentEvent.effective_seatless_ticket_price) > 0) {
+      resolvedPrice = Math.round(Number(currentEvent.effective_seatless_ticket_price));
+      source = 'currentEvent.effective_seatless_ticket_price (from EventSerializer)';
+    } else {
+      const rawBase = Number(currentEvent?.seatless_ticket_price ?? 500);
+      resolvedPrice = Math.round(getDynamicPrice(rawBase));
+      source = 'fallback (getDynamicPrice + seatless_ticket_price)';
+    }
+
+    console.log(`[TicketPricing Debug] getEffectiveSeatlessPrice resolved: $${resolvedPrice} MXN | Source: ${source}`);
+    return resolvedPrice;
   };
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';

@@ -68,7 +68,18 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
     else:
         # Concert tickets
         for seat in seats:
-            seat_base = float(seat.base_price) if seat.base_price and float(seat.base_price) > 0 else float(getattr(event, 'numbered_seat_base_price', 1000) or 1000)
+            event_num_price = float(getattr(event, 'numbered_ticket_price', 0) or 0)
+            seat_db_price = float(seat.base_price or 0) if seat else 0
+
+            if event_num_price > 0:
+                if seat_db_price > 0 and seat_db_price not in [500.0, 1000.0]:
+                    seat_base = event_num_price * (seat_db_price / 1000.0)
+                else:
+                    seat_base = event_num_price
+            elif seat_db_price > 0:
+                seat_base = seat_db_price
+            else:
+                seat_base = 1000.0
             raw_seat_price = seat_base * float(getattr(event, 'price_multiplier', 1.0) or 1.0)
             dynamic_price = event.get_dynamic_price(raw_seat_price) if hasattr(event, 'get_dynamic_price') else raw_seat_price
             unit_amount = int(round(dynamic_price * 100))
@@ -128,6 +139,10 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
                 },
                 'quantity': 1,
             })
+
+    import logging
+    logger = logging.getLogger('apps.shop')
+    logger.info(f"[StripeCheckout Debug] Event ID={event.id} ({event.title}): total_base_amount=${total_base_amount} MXN, service_fee=${service_fee_amount} MXN, grand_total=${fee_info['total'] if total_base_amount > 0 else 0} MXN, line_items_count={len(line_items)}")
 
     session_data = {
         'payment_method_types': ['card'],
