@@ -46,6 +46,22 @@ const FONT_PRESET_OPTIONS = [
   { id: 'syne', label: 'Syne (Vanguardista & Artístico)', sample: 'Ms Ambar Concert' },
 ];
 
+const ANIMATION_OPTIONS = [
+  { id: 'none', label: 'Estático (Sin animación)', icon: '🛑' },
+  { id: 'float', label: 'Flotación Suave (Levitación)', icon: '🎈' },
+  { id: 'pulse', label: 'Latido Organic', icon: '💓' },
+  { id: 'glow', label: 'Resplandor Místico Radiante', icon: '✨' },
+  { id: 'shimmer', label: 'Brillo Irisado', icon: '💎' },
+];
+
+const IMAGE_FILTER_OPTIONS = [
+  { id: 'none', label: 'Sin Filtro (Original)' },
+  { id: 'glow-amber', label: 'Resplandor Ámbar Místico' },
+  { id: 'grayscale', label: 'Blanco y Negro Editorial' },
+  { id: 'sepia', label: 'Sepia Cálido' },
+  { id: 'contrast', label: 'Alto Contraste' },
+];
+
 const PAGE_SECTIONS = [
   { id: 'hero', label: 'Landing Page: Hero Principal (Portada)', icon: '🌟' },
   { id: 'events_grid', label: 'Landing Page: Próximos Conciertos y Boletos', icon: '🎫' },
@@ -75,11 +91,18 @@ export const ThemeManager: React.FC = () => {
   const [accentColor, setAccentColor] = useState('#9F2B00');
   const [cardBackground, setCardBackground] = useState('#0c0f0d');
   const [textColor, setTextColor] = useState('#F4F6F0');
+  const [headingColor, setHeadingColor] = useState('#E5A93B');
+  const [subtitleColor, setSubtitleColor] = useState('#F4F6F0');
+  const [buttonBg, setButtonBg] = useState('#E5A93B');
+  const [buttonText, setButtonText] = useState('#080c0a');
+  const [borderColor, setBorderColor] = useState('#E5A93B');
   
   const [particleShape, setParticleShape] = useState('moon');
   const [cardStyle, setCardStyle] = useState('rounded-full');
   const [backgroundPattern, setBackgroundPattern] = useState('stars');
   const [fontPreset, setFontPreset] = useState('cormorant');
+  const [animationPreset, setAnimationPreset] = useState('none');
+  const [imageFilter, setImageFilter] = useState('none');
   const [customCss, setCustomCss] = useState('');
 
   // Section-level Themes State
@@ -122,10 +145,17 @@ export const ThemeManager: React.FC = () => {
           setAccentColor(cfg.accent_color || '#9F2B00');
           setCardBackground(cfg.card_background || '#0c0f0d');
           setTextColor(cfg.text_color || '#F4F6F0');
+          setHeadingColor(cfg.heading_color || cfg.primary_color || '#E5A93B');
+          setSubtitleColor(cfg.subtitle_color || cfg.text_color || '#F4F6F0');
+          setButtonBg(cfg.button_bg || cfg.primary_color || '#E5A93B');
+          setButtonText(cfg.button_text || cfg.background_start || '#080c0a');
+          setBorderColor(cfg.border_color || '#E5A93B');
           setParticleShape(cfg.particle_shape || 'moon');
           setCardStyle(cfg.card_style || 'rounded-full');
           setBackgroundPattern(cfg.background_pattern || 'stars');
           setFontPreset(cfg.font_preset || 'cormorant');
+          setAnimationPreset(cfg.animation_preset || 'none');
+          setImageFilter(cfg.image_filter || 'none');
           setCustomCss(cfg.custom_css || '');
           setSectionThemes(cfg.section_themes || res.data.section_themes || {});
         }
@@ -140,10 +170,17 @@ export const ThemeManager: React.FC = () => {
           setAccentColor(res.data.accent_color || cfg.accent_color || '#9F2B00');
           setCardBackground(res.data.card_background || cfg.card_background || '#0c0f0d');
           setTextColor(res.data.text_color || cfg.text_color || '#F4F6F0');
+          setHeadingColor(cfg.heading_color || cfg.primary_color || '#E5A93B');
+          setSubtitleColor(cfg.subtitle_color || cfg.text_color || '#F4F6F0');
+          setButtonBg(cfg.button_bg || cfg.primary_color || '#E5A93B');
+          setButtonText(cfg.button_text || cfg.background_start || '#080c0a');
+          setBorderColor(cfg.border_color || '#E5A93B');
           setParticleShape(res.data.particle_shape || cfg.particle_shape || 'moon');
           setCardStyle(res.data.card_style || cfg.card_style || 'rounded-full');
           setBackgroundPattern(res.data.background_pattern || cfg.background_pattern || 'stars');
           setFontPreset(res.data.font_preset || cfg.font_preset || 'cormorant');
+          setAnimationPreset(cfg.animation_preset || 'none');
+          setImageFilter(cfg.image_filter || 'none');
           setCustomCss(res.data.custom_css || '');
           setSectionThemes(res.data.section_themes || cfg.section_themes || {});
         }
@@ -169,10 +206,17 @@ export const ThemeManager: React.FC = () => {
       accentColor,
       cardBackground,
       textColor,
+      headingColor,
+      subtitleColor,
+      buttonBg,
+      buttonText,
+      borderColor,
       particleShape,
       cardStyle,
       backgroundPattern,
       fontPreset,
+      animationPreset,
+      imageFilter,
       customCss,
       sectionThemes,
     });
@@ -180,7 +224,7 @@ export const ThemeManager: React.FC = () => {
 
   useEffect(() => {
     handleLivePreview();
-  }, [primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes]);
+  }, [primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, animationPreset, imageFilter, customCss, sectionThemes]);
 
   const updateSectionProp = (key: string, field: keyof SectionThemeSpec, val: any) => {
     setSectionThemes(prev => {
@@ -203,10 +247,17 @@ export const ThemeManager: React.FC = () => {
       accent_color: accentColor,
       card_background: cardBackground,
       text_color: textColor,
+      heading_color: headingColor,
+      subtitle_color: subtitleColor,
+      button_bg: buttonBg,
+      button_text: buttonText,
+      border_color: borderColor,
       particle_shape: particleShape,
       card_style: cardStyle,
       background_pattern: backgroundPattern,
       font_preset: fontPreset,
+      animation_preset: animationPreset,
+      image_filter: imageFilter,
       custom_css: customCss,
       section_themes: sectionThemes,
     };
@@ -449,6 +500,120 @@ export const ThemeManager: React.FC = () => {
             </div>
           </div>
 
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Títulos / Encabezados (h1, h2, h3)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={headingColor}
+                    onChange={(e) => setHeadingColor(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={headingColor}
+                    onChange={(e) => setHeadingColor(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Texto Base y Subtítulos</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={textColor}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={textColor}
+                    onChange={(e) => setTextColor(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo de Botones CTA</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={buttonBg}
+                    onChange={(e) => setButtonBg(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={buttonBg}
+                    onChange={(e) => setButtonBg(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Texto de Botones CTA</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={buttonText}
+                    onChange={(e) => setButtonText(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={buttonText}
+                    onChange={(e) => setButtonText(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Bordes de Tarjetas</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={borderColor}
+                    onChange={(e) => setBorderColor(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={borderColor}
+                    onChange={(e) => setBorderColor(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Dynamic Animation Presets for Objects */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+              <Sparkles className="text-amber-honey" size={20} />
+              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Animaciones de Objetos y Elementos</h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {ANIMATION_OPTIONS.map((anim) => (
+                <button
+                  key={anim.id}
+                  type="button"
+                  onClick={() => setAnimationPreset(anim.id)}
+                  className={`p-3 rounded-2xl border text-left transition-all flex items-center gap-3 ${animationPreset === anim.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey shadow-lg font-bold' : 'bg-[#080c0a]/60 text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
+                >
+                  <span className="text-xl">{anim.icon}</span>
+                  <span className="text-xs">{anim.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Particle Canvas Shape Selection */}
           <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-white/10">
@@ -605,7 +770,7 @@ export const ThemeManager: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color del Texto de la Sección</label>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color del Texto Base de la Sección</label>
                 <div className="flex items-center gap-3">
                   <input
                     type="color"
@@ -621,6 +786,74 @@ export const ThemeManager: React.FC = () => {
                     className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Títulos de Sección</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={currentSectionSpec.heading_color || '#E5A93B'}
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'heading_color', e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={currentSectionSpec.heading_color || ''}
+                    placeholder="Ej. #E5A93B"
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'heading_color', e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Botones CTA de Sección</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={currentSectionSpec.button_bg || '#E5A93B'}
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'button_bg', e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={currentSectionSpec.button_bg || ''}
+                    placeholder="Ej. #E5A93B"
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'button_bg', e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Filtro Visual para Imágenes</label>
+                <select
+                  value={currentSectionSpec.image_filter || 'none'}
+                  onChange={(e) => updateSectionProp(selectedSectionKey, 'image_filter', e.target.value)}
+                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
+                >
+                  {IMAGE_FILTER_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Animación de Objetos en Sección</label>
+                <select
+                  value={currentSectionSpec.animation_preset || 'none'}
+                  onChange={(e) => updateSectionProp(selectedSectionKey, 'animation_preset', e.target.value)}
+                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
+                >
+                  {ANIMATION_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.icon} {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

@@ -8,11 +8,17 @@ export interface SectionThemeSpec {
   bg_gradient_start?: string;
   bg_gradient_end?: string;
   text_color?: string;
+  heading_color?: string;
+  subtitle_color?: string;
   accent_color?: string;
   card_bg?: string;
+  button_bg?: string;
+  button_text?: string;
+  border_color?: string;
   particle_shape?: string;
   card_style?: string;
-  border_color?: string;
+  animation_preset?: string;
+  image_filter?: string;
   custom_css?: string;
 }
 
@@ -24,10 +30,17 @@ export interface ThemeConfig {
   accentColor: string;
   cardBackground: string;
   textColor: string;
+  headingColor?: string;
+  subtitleColor?: string;
+  buttonBg?: string;
+  buttonText?: string;
+  borderColor?: string;
   particleShape: string;
   cardStyle: string;
   backgroundPattern: string;
   fontPreset: string;
+  animationPreset?: string;
+  imageFilter?: string;
   customCss: string;
   sectionThemes?: Record<string, SectionThemeSpec>;
   eventId?: number | null;
@@ -42,10 +55,17 @@ const DEFAULT_THEME: ThemeConfig = {
   accentColor: '#9F2B00',
   cardBackground: '#0c0f0d',
   textColor: '#F4F6F0',
+  headingColor: '#E5A93B',
+  subtitleColor: '#F4F6F0',
+  buttonBg: '#E5A93B',
+  buttonText: '#080c0a',
+  borderColor: 'rgba(229, 169, 59, 0.25)',
   particleShape: 'moon',
   cardStyle: 'rounded-full',
   backgroundPattern: 'stars',
   fontPreset: 'cormorant',
+  animationPreset: 'none',
+  imageFilter: 'none',
   customCss: '',
   sectionThemes: {},
   eventId: null,
@@ -106,7 +126,11 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.style.setProperty('--card-bg', cfg.cardBackground);
     root.style.setProperty('--foreground-rgb', hexToRgbTriplet(cfg.textColor));
     root.style.setProperty('--text-color', cfg.textColor);
-    root.style.setProperty('--border-color', `rgba(${hexToRgbTriplet(cfg.primaryColor)}, 0.25)`);
+    root.style.setProperty('--heading-color', cfg.headingColor || cfg.primaryColor);
+    root.style.setProperty('--subtitle-color', cfg.subtitleColor || cfg.textColor);
+    root.style.setProperty('--button-bg', cfg.buttonBg || cfg.primaryColor);
+    root.style.setProperty('--button-text', cfg.buttonText || cfg.backgroundStart);
+    root.style.setProperty('--border-color', cfg.borderColor || `rgba(${hexToRgbTriplet(cfg.primaryColor)}, 0.25)`);
 
     // Card radius mapping
     let radius = '2rem';
@@ -122,10 +146,12 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     else if (cfg.fontPreset === 'syne') fontSerif = "'Syne', sans-serif";
     root.style.setProperty('--theme-heading-font', fontSerif);
 
-    // Data attributes for layout selectors
+    // Data attributes for layout selectors & animations
     root.setAttribute('data-theme-pattern', cfg.backgroundPattern || 'stars');
     root.setAttribute('data-theme-shape', cfg.particleShape || 'moon');
     root.setAttribute('data-theme-card-style', cfg.cardStyle || 'rounded-full');
+    root.setAttribute('data-theme-animation', cfg.animationPreset || 'none');
+    root.setAttribute('data-theme-image-filter', cfg.imageFilter || 'none');
 
     // Custom CSS injection
     let customStyleTag = document.getElementById('ms-ambar-custom-theme-css');
@@ -155,10 +181,17 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
           accentColor: d.accent_color || DEFAULT_THEME.accentColor,
           cardBackground: d.card_background || DEFAULT_THEME.cardBackground,
           textColor: d.text_color || DEFAULT_THEME.textColor,
+          headingColor: d.heading_color || d.primary_color || DEFAULT_THEME.headingColor,
+          subtitleColor: d.subtitle_color || d.text_color || DEFAULT_THEME.subtitleColor,
+          buttonBg: d.button_bg || d.primary_color || DEFAULT_THEME.buttonBg,
+          buttonText: d.button_text || d.background_start || DEFAULT_THEME.buttonText,
+          borderColor: d.border_color || DEFAULT_THEME.borderColor,
           particleShape: d.particle_shape || DEFAULT_THEME.particleShape,
           cardStyle: d.card_style || DEFAULT_THEME.cardStyle,
           backgroundPattern: d.background_pattern || DEFAULT_THEME.backgroundPattern,
           fontPreset: d.font_preset || DEFAULT_THEME.fontPreset,
+          animationPreset: d.animation_preset || DEFAULT_THEME.animationPreset,
+          imageFilter: d.image_filter || DEFAULT_THEME.imageFilter,
           customCss: d.custom_css || '',
           sectionThemes: d.section_themes || {},
           eventId: d.event_id || null,

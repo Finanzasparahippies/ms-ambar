@@ -337,10 +337,10 @@ const TourPage = () => {
     if (!seat) return 0;
     const seatPrice = Number(seat.base_price || 0);
     if (seatPrice > 0) {
-      return Math.round(seatPrice);
+      return Math.round(getDynamicPrice(seatPrice));
     }
     const fallbackBase = Number(currentEvent?.numbered_seat_base_price || 1000);
-    return Math.round(fallbackBase);
+    return Math.round(getDynamicPrice(fallbackBase));
   };
 
   const getEffectiveSeatlessPrice = () => {

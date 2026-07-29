@@ -47,6 +47,52 @@ body {
 
 h1, h2, h3, h4, h5, h6, .font-serif {
   font-family: var(--theme-heading-font), 'Cormorant Garamond', Georgia, serif;
+  color: var(--heading-color, inherit);
+}
+
+.text-subtitle {
+  color: var(--subtitle-color, inherit);
+}
+
+.btn-dynamic {
+  background-color: var(--button-bg, var(--primary-color, #E5A93B));
+  color: var(--button-text, var(--background-start, #080c0a));
+}
+
+/* Dynamic Object Animation Presets */
+[data-theme-animation='float'],
+[data-section-animation='float'] {
+  animation: themeFloat 6s ease-in-out infinite;
+}
+[data-theme-animation='pulse'],
+[data-section-animation='pulse'] {
+  animation: themePulse 3s ease-in-out infinite;
+}
+[data-theme-animation='glow'],
+[data-section-animation='glow'] {
+  animation: themeGlow 4s ease-in-out infinite;
+}
+[data-theme-animation='shimmer'],
+[data-section-animation='shimmer'] {
+  animation: themeShimmer 5s linear infinite;
+}
+
+@keyframes themeFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+@keyframes themePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.94; transform: scale(1.015); }
+}
+@keyframes themeGlow {
+  0%, 100% { filter: drop-shadow(0 0 15px rgba(var(--amber-primary), 0.35)); }
+  50% { filter: drop-shadow(0 0 40px rgba(var(--amber-primary), 0.75)); }
+}
+@keyframes themeShimmer {
+  0% { filter: brightness(1); }
+  50% { filter: brightness(1.25) contrast(110%); }
+  100% { filter: brightness(1); }
 }
 
 /* Star Background Effect for Dark Mode */

@@ -68,7 +68,8 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
     else:
         # Concert tickets
         for seat in seats:
-            raw_seat_price = float(seat.base_price) * float(event.price_multiplier)
+            seat_base = float(seat.base_price) if seat.base_price and float(seat.base_price) > 0 else float(getattr(event, 'numbered_seat_base_price', 1000) or 1000)
+            raw_seat_price = seat_base * float(getattr(event, 'price_multiplier', 1.0) or 1.0)
             dynamic_price = event.get_dynamic_price(raw_seat_price) if hasattr(event, 'get_dynamic_price') else raw_seat_price
             unit_amount = int(round(dynamic_price * 100))
             price_data = {

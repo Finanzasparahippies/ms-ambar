@@ -47,6 +47,10 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
     const rgb = hexToRgb(sec.text_color);
     if (rgb) customVars['--foreground-rgb'] = rgb;
   }
+  if (sec.heading_color) customVars['--heading-color'] = sec.heading_color;
+  if (sec.subtitle_color) customVars['--subtitle-color'] = sec.subtitle_color;
+  if (sec.button_bg) customVars['--button-bg'] = sec.button_bg;
+  if (sec.button_text) customVars['--button-text'] = sec.button_text;
   if (sec.border_color) customVars['--border-color'] = sec.border_color;
   if (sec.bg_gradient_start) customVars['--background-start'] = sec.bg_gradient_start;
   if (sec.bg_gradient_end) customVars['--background-end'] = sec.bg_gradient_end;
@@ -71,9 +75,25 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
       id={id}
       data-section-key={sectionKey}
       data-section-shape={sec.particle_shape}
+      data-section-animation={sec.animation_preset || 'none'}
+      data-section-image-filter={sec.image_filter || 'none'}
       style={combinedStyle}
       className={`relative transition-all duration-500 ${radiusClass} ${className}`}
     >
+      {sec.image_filter && sec.image_filter !== 'none' && (
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              [data-section-key="${sectionKey}"] img {
+                ${sec.image_filter === 'grayscale' ? 'filter: grayscale(100%);' : ''}
+                ${sec.image_filter === 'sepia' ? 'filter: sepia(85%);' : ''}
+                ${sec.image_filter === 'glow-amber' ? 'filter: drop-shadow(0 0 30px rgba(229, 169, 59, 0.5));' : ''}
+                ${sec.image_filter === 'contrast' ? 'filter: contrast(125%) brightness(105%);' : ''}
+              }
+            `
+          }}
+        />
+      )}
       {sec.custom_css && (
         <style dangerouslySetInnerHTML={{ __html: `[data-section-key="${sectionKey}"] { ${sec.custom_css} }` }} />
       )}
