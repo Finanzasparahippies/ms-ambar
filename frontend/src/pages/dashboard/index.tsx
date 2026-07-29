@@ -611,6 +611,11 @@ export default function AdminDashboard() {
   const [eventMgPrice, setEventMgPrice] = useState('0');
   const [eventMgLimit, setEventMgLimit] = useState('0');
   const [eventPriceMultiplier, setEventPriceMultiplier] = useState('1.0');
+  const [eventSeatlessPrice, setEventSeatlessPrice] = useState('500.00');
+  const [eventNumberedPrice, setEventNumberedPrice] = useState('1000.00');
+  const [eventEnableDynamicPricing, setEventEnableDynamicPricing] = useState(true);
+  const [eventMonthlyIncrement, setEventMonthlyIncrement] = useState('50.00');
+  const [eventAllowSeatless, setEventAllowSeatless] = useState(true);
   const [eventIsActive, setEventIsActive] = useState(true);
   const [eventImageFile, setEventImageFile] = useState<File | null>(null);
   const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
@@ -1775,6 +1780,11 @@ export default function AdminDashboard() {
     setEventMgPrice(String(event.mg_price || '0'));
     setEventMgLimit(String(event.mg_limit || '0'));
     setEventPriceMultiplier(String(event.price_multiplier || '1.0'));
+    setEventSeatlessPrice(String(event.seatless_ticket_price ?? '500.00'));
+    setEventNumberedPrice(String(event.numbered_ticket_price ?? '1000.00'));
+    setEventEnableDynamicPricing(event.enable_dynamic_pricing !== false);
+    setEventMonthlyIncrement(String(event.monthly_price_increment ?? '50.00'));
+    setEventAllowSeatless(event.allow_seatless_tickets !== false);
     setEventIsActive(event.is_active);
     setEventImageFile(null);
     setEventImagePreview(event.image ? resolveMediaUrl(event.image) : null);
@@ -1813,6 +1823,11 @@ export default function AdminDashboard() {
     formData.append('date', eventDate);
     formData.append('event_type', eventType);
     formData.append('price_multiplier', eventPriceMultiplier);
+    formData.append('seatless_ticket_price', eventSeatlessPrice || '500.00');
+    formData.append('numbered_ticket_price', eventNumberedPrice || '1000.00');
+    formData.append('enable_dynamic_pricing', eventEnableDynamicPricing ? 'true' : 'false');
+    formData.append('monthly_price_increment', eventMonthlyIncrement || '50.00');
+    formData.append('allow_seatless_tickets', eventAllowSeatless ? 'true' : 'false');
     formData.append('is_active', eventIsActive ? 'true' : 'false');
     formData.append('mg_price', eventMgPrice || '0.00');
     formData.append('mg_limit', eventMgLimit || '0');
@@ -4032,34 +4047,25 @@ export default function AdminDashboard() {
                           {eventType === 'concert' ? (
                             <>
                               <div className="space-y-1 col-span-2 sm:col-span-1">
-                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Precio Base del Boleto ($ MXN) *</label>
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Precio General (Sin Asiento) *</label>
                                 <input
                                   type="number" step="10" min="0" required
-                                  value={
-                                    (() => {
-                                      const minSeat = (() => {
-                                        const t = theaters.find((x: any) => x.id?.toString() === eventTheater?.toString());
-                                        if (!t || !t.seats || t.seats.length === 0) return 1000;
-                                        const prices = t.seats.map((s: any) => Number(s.base_price || 1000));
-                                        return Math.min(...prices) || 1000;
-                                      })();
-                                      return Math.round(minSeat * parseFloat(eventPriceMultiplier || '1.0'));
-                                    })()
-                                  }
-                                  onChange={(e) => {
-                                    const desired = parseFloat(e.target.value) || 0;
-                                    const minSeat = (() => {
-                                      const t = theaters.find((x: any) => x.id?.toString() === eventTheater?.toString());
-                                      if (!t || !t.seats || t.seats.length === 0) return 1000;
-                                      const prices = t.seats.map((s: any) => Number(s.base_price || 1000));
-                                      return Math.min(...prices) || 1000;
-                                    })();
-                                    const newMult = (desired / minSeat).toFixed(2);
-                                    setEventPriceMultiplier(newMult);
-                                  }}
+                                  value={eventSeatlessPrice}
+                                  onChange={(e) => setEventSeatlessPrice(e.target.value)}
                                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
                                 />
-                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Precio base estimado por entrada.</span>
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Precio base boleto general sin asiento.</span>
+                              </div>
+
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Precio Asiento Numerado *</label>
+                                <input
+                                  type="number" step="10" min="0" required
+                                  value={eventNumberedPrice}
+                                  onChange={(e) => setEventNumberedPrice(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Precio base reservado de mesado.</span>
                               </div>
 
                               <div className="space-y-1 col-span-2 sm:col-span-1">
@@ -4068,7 +4074,42 @@ export default function AdminDashboard() {
                                   type="number" step="0.01" min="0.1" required value={eventPriceMultiplier} onChange={(e) => setEventPriceMultiplier(e.target.value)}
                                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
                                 />
-                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Factor de escala sobre mapa del teatro.</span>
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Factor de escala global (1.0 = normal).</span>
+                              </div>
+
+                              <div className="space-y-1 col-span-2 sm:col-span-1">
+                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Incremento Mensual ($ MXN)</label>
+                                <input
+                                  type="number" step="5" min="0" required value={eventMonthlyIncrement} onChange={(e) => setEventMonthlyIncrement(e.target.value)}
+                                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                                />
+                                <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Aumento mensual en últimos 3 meses.</span>
+                              </div>
+
+                              <div className="col-span-2 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10 mt-1">
+                                <div>
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-white block">Estrategia de Precio Dinámico</span>
+                                  <span className="text-[8px] text-[#F4F6F0]/50 block">Escala progresiva automática 3 meses antes del show</span>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={eventEnableDynamicPricing}
+                                  onChange={(e) => setEventEnableDynamicPricing(e.target.checked)}
+                                  className="w-4 h-4 accent-amber-honey rounded cursor-pointer"
+                                />
+                              </div>
+
+                              <div className="col-span-2 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
+                                <div>
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-white block">Permitir Venta de Boletos Generales</span>
+                                  <span className="text-[8px] text-[#F4F6F0]/50 block">Permite comprar accesos sin asiento reservado</span>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={eventAllowSeatless}
+                                  onChange={(e) => setEventAllowSeatless(e.target.checked)}
+                                  className="w-4 h-4 accent-amber-honey rounded cursor-pointer"
+                                />
                               </div>
 
                               <div className="space-y-1 col-span-2 sm:col-span-1">
