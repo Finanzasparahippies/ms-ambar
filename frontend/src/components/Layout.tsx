@@ -3,6 +3,7 @@ import Navbar from './Navbar';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import ThemedSection from './ThemedSection';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -51,7 +52,7 @@ const Layout = ({ children }: LayoutProps) => {
       </main>
 
       {/* Footer (Nature inspired) */}
-      <footer className="relative z-10 py-12 px-6 mt-12 border-t border-amber-honey/20 dark:border-amber-honey/25 bg-[#0c0f0d] rounded-t-[2.5rem] md:rounded-t-[4rem] md:py-20 md:px-10 md:mt-20 md:bg-white/10 md:dark:bg-[#0c0f0d]/95 md:backdrop-blur-xl shadow-xl dark:shadow-2xl dark:shadow-black">
+      <ThemedSection sectionKey="footer" className="relative z-10 py-12 px-6 mt-12 border-t border-amber-honey/20 dark:border-amber-honey/25 bg-[#0c0f0d] rounded-t-[2.5rem] md:rounded-t-[4rem] md:py-20 md:px-10 md:mt-20 md:bg-white/10 md:dark:bg-[#0c0f0d]/95 md:backdrop-blur-xl shadow-xl dark:shadow-2xl dark:shadow-black">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-4 gap-12">
           <div className="col-span-2">
             <Link href="/" className="inline-block mb-6">
@@ -98,7 +99,7 @@ const Layout = ({ children }: LayoutProps) => {
             </a>
           </span>
         </div>
-      </footer>
+      </ThemedSection>
     </div>
   );
 };

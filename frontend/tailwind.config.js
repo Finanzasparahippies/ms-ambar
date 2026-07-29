@@ -9,24 +9,28 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+        serif: ['var(--theme-heading-font)', '"Cormorant Garamond"', 'Georgia', 'serif'],
       },
       colors: {
+        primary: 'var(--primary-color, #E5A93B)',
+        secondary: 'var(--secondary-color, #22A6B7)',
+        accent: 'var(--accent-color, #9F2B00)',
+        card: 'var(--card-bg, #0c0f0d)',
         amber: {
-          honey: '#E5A93B', // Rich golden amber
-          cognac: '#9F2B00',
+          honey: 'rgb(var(--amber-primary) / <alpha-value>)',
+          cognac: 'var(--accent-color, #9F2B00)',
           cherry: '#700101',
-          butterscotch: '#F4D03F',
+          butterscotch: 'var(--secondary-color, #22A6B7)',
         },
         nature: {
-          sky: '#22A6B3',
+          sky: 'rgb(var(--sky-accent) / <alpha-value>)',
           earth: '#8B4513',
-          night: '#0B0F0D', // Deep forest green-black
-          stars: '#F5F6FA',
+          night: 'var(--background-start, #080c0a)',
+          stars: 'rgb(var(--foreground-rgb) / <alpha-value>)',
         },
         forest: {
-          green: '#1E2B22', // Template dark green
-          muted: '#2E3F33',
+          green: 'var(--card-bg, #0c0f0d)',
+          muted: 'var(--background-end, #040605)',
         }
       },
     },

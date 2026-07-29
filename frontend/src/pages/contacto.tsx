@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mail, Download, ArrowRight, CheckCircle, Calendar, Phone, Award } from 'lucide-react';
 import axios from 'axios';
 import { showAlert } from '../lib/notifications';
+import ThemedSection from '../components/ThemedSection';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -44,7 +45,7 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-[#F4F6F0]">
+    <ThemedSection sectionKey="contact_section" className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-[#F4F6F0]">
       <Head>
         <title>Ms Ambar | Promociones & Contrataciones</title>
       </Head>
@@ -255,7 +256,7 @@ const ContactPage = () => {
           </div>
         </div>
       </div>
-    </div>
+    </ThemedSection>
   );
 };
 

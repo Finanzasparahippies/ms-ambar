@@ -97,6 +97,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     // Set CSS variables
     root.style.setProperty('--amber-primary-hex', cfg.primaryColor);
     root.style.setProperty('--amber-primary', hexToRgbTriplet(cfg.primaryColor));
+    root.style.setProperty('--sky-accent', hexToRgbTriplet(cfg.secondaryColor));
     root.style.setProperty('--primary-color', cfg.primaryColor);
     root.style.setProperty('--secondary-color', cfg.secondaryColor);
     root.style.setProperty('--background-start', cfg.backgroundStart);
@@ -104,6 +105,8 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.style.setProperty('--accent-color', cfg.accentColor);
     root.style.setProperty('--card-bg', cfg.cardBackground);
     root.style.setProperty('--foreground-rgb', hexToRgbTriplet(cfg.textColor));
+    root.style.setProperty('--text-color', cfg.textColor);
+    root.style.setProperty('--border-color', `rgba(${hexToRgbTriplet(cfg.primaryColor)}, 0.25)`);
 
     // Card radius mapping
     let radius = '2rem';

@@ -473,9 +473,24 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
           }
         }
 
+        const hexToRgb = (hex: string, alpha: number) => {
+          if (!hex) return `rgba(229, 169, 59, ${alpha})`;
+          let cleanHex = hex.replace('#', '');
+          if (cleanHex.length === 3) cleanHex = cleanHex.split('').map(c => c + c).join('');
+          if (cleanHex.length !== 6) return `rgba(229, 169, 59, ${alpha})`;
+          const num = parseInt(cleanHex, 16);
+          const r = (num >> 16) & 255;
+          const g = (num >> 8) & 255;
+          const b = num & 255;
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        const fillPrimary = hexToRgb(theme.primaryColor || '#E5A93B', targetShape ? 0.85 : 0.6);
+        const fillSecondary = hexToRgb(theme.secondaryColor || '#22A6B7', targetShape ? 0.85 : 0.5);
+
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, p1.size, 0, Math.PI * 2);
-        ctx.fillStyle = targetShape ? 'rgba(255, 117, 160, 0.85)' : (i % 2 === 0 ? 'rgba(255, 140, 180, 0.6)' : 'rgba(245, 190, 110, 0.5)'); // Glowy Fairy Dust
+        ctx.fillStyle = i % 2 === 0 ? fillPrimary : fillSecondary;
         ctx.fill();
 
         for (let j = i + 1; j < particles.length; j++) {
@@ -488,10 +503,9 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
-            // Highlight connections if morphing is active
             const baseAlpha = targetShape ? 0.35 : 0.18;
             const alpha = (1 - dist / 120) * baseAlpha;
-            ctx.strokeStyle = i % 2 === 0 ? `rgba(255, 130, 175, ${alpha})` : `rgba(255, 190, 110, ${alpha})`;
+            ctx.strokeStyle = i % 2 === 0 ? hexToRgb(theme.primaryColor || '#E5A93B', alpha) : hexToRgb(theme.secondaryColor || '#22A6B7', alpha);
             ctx.lineWidth = targetShape ? 1.1 : 0.7;
             ctx.stroke();
           }
@@ -922,7 +936,7 @@ const Home = () => {
       </Head>
 
       {/* ─── HERO SECTION (NECTAR LABS & GLOWY FASHION STYLE) ─── */}
-      <section className="relative min-h-[50vh] flex flex-col justify-center items-center px-6 pt-32 pb-8 md:pt-40 md:pb-12 overflow-hidden">
+      <ThemedSection sectionKey="hero" className="relative min-h-[50vh] flex flex-col justify-center items-center px-6 pt-32 pb-8 md:pt-40 md:pb-12 overflow-hidden">
         {/* Interactive canvas background (Rose-Gold Fairy Dust Particles) */}
         <CanvasParticles morphTarget="none" />
 
@@ -985,11 +999,11 @@ const Home = () => {
             </Link>*/}
           </motion.div>
         </div>
-      </section>
+      </ThemedSection>
 
       {/* ─── HADAS EN EL DESIERTO (GLOWY FASHION SHOWCASE) ─── */}
       {nextEvent?.flyer_url && (
-        <section className="pb-16 md:pb-24 bg-[#06070b]">
+        <ThemedSection sectionKey="events_grid" className="pb-16 md:pb-24 bg-[#06070b]">
           <div className="max-w-[1400px] mx-auto px-6 md:px-10">
             <motion.div
               initial={{ opacity: 0, y: 40 }}
@@ -1149,11 +1163,11 @@ const Home = () => {
               </div>
             </motion.div>
           </div>
-        </section>
+        </ThemedSection>
       )}
 
       {/* ─── BIOGRAPHY SECTION ─── */}
-      <section className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden bg-[#06070b]">
+      <ThemedSection sectionKey="tarot_experience" className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden bg-[#06070b]">
         <div className="absolute top-1/2 left-[-10%] w-[35%] h-[35%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
 
         <div className="max-w-[1600px] mx-auto px-6 md:px-10">
@@ -1227,10 +1241,10 @@ const Home = () => {
             </motion.div>
           </div>
         </div>
-      </section>
+      </ThemedSection>
 
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
-      <section className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
+      <ThemedSection sectionKey="contact_section" className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/5 rounded-full blur-[140px] pointer-events-none" />
 
         <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-[#0c140f] border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
@@ -1339,7 +1353,7 @@ const Home = () => {
             </Link>
           </div>
         </div>
-      </section>
+      </ThemedSection>
     </div>
   );
 };

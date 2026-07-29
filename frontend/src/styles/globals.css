@@ -77,19 +77,24 @@ h1, h2, h3, h4, h5, h6, .font-serif {
 
 @layer components {
   .amber-glass {
-    @apply bg-white/10 dark:bg-[#0c0f0d]/95 backdrop-blur-xl border border-amber-honey/20 dark:border-amber-honey/25 shadow-xl dark:shadow-2xl dark:shadow-black transition-all duration-300;
+    @apply backdrop-blur-xl shadow-xl dark:shadow-2xl dark:shadow-black transition-all duration-300;
+    background-color: var(--card-bg, #0c0f0d) !important;
+    border: 1px solid rgba(var(--amber-primary), 0.25) !important;
+    border-radius: var(--theme-card-radius, 2rem);
   }
   
   [data-theme='dark'] .amber-glass,
   .dark .amber-glass,
   div[data-theme='dark'] .amber-glass {
-    background-color: #0c0f0d !important;
-    border-color: rgba(229, 169, 59, 0.25) !important;
+    background-color: var(--card-bg, #0c0f0d) !important;
+    border-color: rgba(var(--amber-primary), 0.25) !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
   }
 
   .btn-amber {
-    @apply bg-amber-honey text-nature-night px-6 py-3 rounded-full font-bold hover:bg-amber-butterscotch hover:scale-105 active:scale-95 transition-all shadow-md;
+    background-color: var(--primary-color, #E5A93B);
+    color: var(--background-start, #080c0a);
+    @apply px-6 py-3 rounded-full font-bold hover:scale-105 active:scale-95 transition-all shadow-md;
   }
 }
 

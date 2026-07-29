@@ -472,7 +472,7 @@ const TourPage = () => {
       </Head>
 
       {/* ─── Header Section ─── */}
-      <section className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative overflow-hidden">
+      <ThemedSection sectionKey="tickets_page" className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative overflow-hidden">
         <div className="absolute top-[-10%] left-[-15%] w-[45%] h-[45%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
         <div className="max-w-4xl mx-auto space-y-4">
           <motion.div
@@ -500,10 +500,10 @@ const TourPage = () => {
             {pageSubtitle}
           </motion.p>
         </div>
-      </section>
+      </ThemedSection>
 
       {/* ─── Main Reservation Section ─── */}
-      <section className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+      <ThemedSection sectionKey="seating_map" className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
         <TourTimeline
           events={events}
           onEventSelect={(event) => {
@@ -944,7 +944,7 @@ const TourPage = () => {
             </motion.div>
           )}
         </div>
-      </section>
+      </ThemedSection>
 
       {/* ─── MOBILE STICKY BOTTOM BAR ─── */}
       {!isCurrentEventPast && (selectedSeats.length > 0 || isMeetGreet) && (
