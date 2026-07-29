@@ -310,12 +310,21 @@ class Event(models.Model):
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, blank=True, null=True, help_text="Patrón visual de fondo")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, blank=True, null=True, help_text="Preset de fuentes tipográficas")
     custom_css = models.TextField(blank=True, null=True, help_text="CSS personalizado para este evento específico")
+    section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 
     stripe_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del producto en Stripe para este evento")
     stripe_price_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del precio en Stripe (solo para Meet & Greet o general)")
 
     def get_theme_config(self):
         site_theme = SiteSettings.get().get_theme_config()
+        merged_section_themes = dict(site_theme.get('section_themes', {}) or {})
+        if self.section_themes and isinstance(self.section_themes, dict):
+            for s_key, s_val in self.section_themes.items():
+                if isinstance(s_val, dict):
+                    merged_section_themes[s_key] = {**merged_section_themes.get(s_key, {}), **s_val}
+                else:
+                    merged_section_themes[s_key] = s_val
+
         return {
             'primary_color': self.primary_color or site_theme['primary_color'],
             'secondary_color': self.secondary_color or site_theme['secondary_color'],
@@ -329,6 +338,7 @@ class Event(models.Model):
             'background_pattern': self.background_pattern or site_theme['background_pattern'],
             'font_preset': self.font_preset or site_theme['font_preset'],
             'custom_css': (self.custom_css or '') + ('\n' + site_theme['custom_css'] if site_theme['custom_css'] else ''),
+            'section_themes': merged_section_themes,
         }
 
     def save(self, *args, **kwargs):
@@ -690,6 +700,7 @@ class SiteSettings(models.Model):
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, default='cormorant', help_text="Preset de fuentes tipográficas")
     custom_css = models.TextField(blank=True, null=True, default='', help_text="CSS personalizado global para todo el sitio")
+    section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección del sitio (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 
     def get_theme_config(self):
         return {
@@ -705,6 +716,7 @@ class SiteSettings(models.Model):
             'background_pattern': self.background_pattern or 'stars',
             'font_preset': self.font_preset or 'cormorant',
             'custom_css': self.custom_css or '',
+            'section_themes': self.section_themes or {},
         }
 
     class Meta:

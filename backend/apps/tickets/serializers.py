@@ -58,7 +58,7 @@ class EventSerializer(serializers.ModelSerializer):
             'theme_config',
             'primary_color', 'secondary_color', 'background_start', 'background_end',
             'accent_color', 'card_background', 'text_color', 'particle_shape',
-            'card_style', 'background_pattern', 'font_preset', 'custom_css'
+            'card_style', 'background_pattern', 'font_preset', 'custom_css', 'section_themes'
         ]
         extra_kwargs = {
             'venue_name': {'required': False, 'allow_blank': True},
@@ -132,7 +132,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'tickets_page_subtitle', 'homepage_cta_text', 'fee_config', 'theme_config',
             'primary_color', 'secondary_color', 'background_start', 'background_end',
             'accent_color', 'card_background', 'text_color', 'particle_shape',
-            'card_style', 'background_pattern', 'font_preset', 'custom_css'
+            'card_style', 'background_pattern', 'font_preset', 'custom_css', 'section_themes'
         ]
 
     def get_fee_config(self, obj):

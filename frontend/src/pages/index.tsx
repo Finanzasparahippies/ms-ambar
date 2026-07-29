@@ -12,6 +12,7 @@ import Link from 'next/link';
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useEventTheme } from '../context/EventThemeContext';
+import ThemedSection from '../components/ThemedSection';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 

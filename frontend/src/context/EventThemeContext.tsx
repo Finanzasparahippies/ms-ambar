@@ -3,6 +3,19 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+export interface SectionThemeSpec {
+  bg_color?: string;
+  bg_gradient_start?: string;
+  bg_gradient_end?: string;
+  text_color?: string;
+  accent_color?: string;
+  card_bg?: string;
+  particle_shape?: string;
+  card_style?: string;
+  border_color?: string;
+  custom_css?: string;
+}
+
 export interface ThemeConfig {
   primaryColor: string;
   secondaryColor: string;
@@ -16,6 +29,7 @@ export interface ThemeConfig {
   backgroundPattern: string;
   fontPreset: string;
   customCss: string;
+  sectionThemes?: Record<string, SectionThemeSpec>;
   eventId?: number | null;
   eventTitle?: string | null;
 }
@@ -33,6 +47,7 @@ const DEFAULT_THEME: ThemeConfig = {
   backgroundPattern: 'stars',
   fontPreset: 'cormorant',
   customCss: '',
+  sectionThemes: {},
   eventId: null,
   eventTitle: null,
 };
@@ -42,6 +57,7 @@ interface EventThemeContextType {
   loading: boolean;
   setThemeOverride: (override: Partial<ThemeConfig>) => void;
   fetchThemeForEvent: (eventId?: number | string) => Promise<void>;
+  getSectionTheme: (sectionKey: string) => SectionThemeSpec;
 }
 
 const EventThemeContext = createContext<EventThemeContextType>({
@@ -49,6 +65,7 @@ const EventThemeContext = createContext<EventThemeContextType>({
   loading: true,
   setThemeOverride: () => {},
   fetchThemeForEvent: async () => {},
+  getSectionTheme: () => ({}),
 });
 
 export const useEventTheme = () => useContext(EventThemeContext);
@@ -140,6 +157,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
           backgroundPattern: d.background_pattern || DEFAULT_THEME.backgroundPattern,
           fontPreset: d.font_preset || DEFAULT_THEME.fontPreset,
           customCss: d.custom_css || '',
+          sectionThemes: d.section_themes || {},
           eventId: d.event_id || null,
           eventTitle: d.event_title || null,
         };
@@ -162,12 +180,16 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     });
   };
 
+  const getSectionTheme = (sectionKey: string): SectionThemeSpec => {
+    return theme.sectionThemes?.[sectionKey] || {};
+  };
+
   useEffect(() => {
     fetchThemeForEvent();
   }, []);
 
   return (
-    <EventThemeContext.Provider value={{ theme, loading, setThemeOverride, fetchThemeForEvent }}>
+    <EventThemeContext.Provider value={{ theme, loading, setThemeOverride, fetchThemeForEvent, getSectionTheme }}>
       {children}
     </EventThemeContext.Provider>
   );

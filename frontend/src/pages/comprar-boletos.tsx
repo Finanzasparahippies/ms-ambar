@@ -20,6 +20,7 @@ import TourTimeline from '../components/TourTimeline';
 import { showAlert } from '../lib/notifications';
 import { cn } from '../lib/utils';
 import { useEventTheme } from '../context/EventThemeContext';
+import ThemedSection from '../components/ThemedSection';
 
 // ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
 const STRIPE_PCT_FEE = 0.036;   // 3.6%

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useEventTheme, ThemeConfig } from '../context/EventThemeContext';
-import { Palette, Sparkles, Check, RefreshCw, Eye, Sliders, Layers, Type, Paintbrush } from 'lucide-react';
+import { useEventTheme, ThemeConfig, SectionThemeSpec } from '../context/EventThemeContext';
+import { Palette, Sparkles, Check, RefreshCw, Eye, Sliders, Layers, Type, Paintbrush, Layout, Settings } from 'lucide-react';
 import { showToast } from '../lib/notifications';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -46,13 +46,28 @@ const FONT_PRESET_OPTIONS = [
   { id: 'syne', label: 'Syne (Vanguardista & Artístico)', sample: 'Ms Ambar Concert' },
 ];
 
+const PAGE_SECTIONS = [
+  { id: 'hero', label: 'Landing Page: Hero Principal (Portada)', icon: '🌟' },
+  { id: 'events_grid', label: 'Landing Page: Próximos Conciertos y Boletos', icon: '🎫' },
+  { id: 'tarot_experience', label: 'Landing Page: Experiencia Tarot & Mística', icon: '🔮' },
+  { id: 'tour_timeline', label: 'Landing Page: Línea de Tiempo de Gira', icon: '🗓️' },
+  { id: 'vip_experience', label: 'Landing Page: Experiencia VIP Meet & Greet', icon: '👑' },
+  { id: 'tickets_page', label: 'Página de Compra: Encabezado y Accesos', icon: '🎟️' },
+  { id: 'seating_map', label: 'Página de Compra: Mapa Interactivo de Asientos', icon: '🗺️' },
+  { id: 'checkout_modal', label: 'Modal de Checkout y Resumen de Compra', icon: '💳' },
+  { id: 'contact_section', label: 'Página de Contacto y Formulario', icon: '📬' },
+  { id: 'footer', label: 'Pie de Página y Redes Sociales', icon: '⚓' },
+];
+
 export const ThemeManager: React.FC = () => {
   const { theme, setThemeOverride, fetchThemeForEvent } = useEventTheme();
   
   const [scope, setScope] = useState<'global' | 'event'>('global');
+  const [activeTabMode, setActiveTabMode] = useState<'general' | 'sections'>('general');
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
+  // Global Theme States
   const [primaryColor, setPrimaryColor] = useState('#E5A93B');
   const [secondaryColor, setSecondaryColor] = useState('#22A6B7');
   const [backgroundStart, setBackgroundStart] = useState('#080c0a');
@@ -66,6 +81,10 @@ export const ThemeManager: React.FC = () => {
   const [backgroundPattern, setBackgroundPattern] = useState('stars');
   const [fontPreset, setFontPreset] = useState('cormorant');
   const [customCss, setCustomCss] = useState('');
+
+  // Section-level Themes State
+  const [sectionThemes, setSectionThemes] = useState<Record<string, SectionThemeSpec>>({});
+  const [selectedSectionKey, setSelectedSectionKey] = useState<string>('hero');
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -108,6 +127,7 @@ export const ThemeManager: React.FC = () => {
           setBackgroundPattern(cfg.background_pattern || 'stars');
           setFontPreset(cfg.font_preset || 'cormorant');
           setCustomCss(cfg.custom_css || '');
+          setSectionThemes(cfg.section_themes || res.data.section_themes || {});
         }
       } else if (selectedEventId) {
         const res = await axios.get(`${API_URL}/tickets/events/${selectedEventId}/`);
@@ -125,6 +145,7 @@ export const ThemeManager: React.FC = () => {
           setBackgroundPattern(res.data.background_pattern || cfg.background_pattern || 'stars');
           setFontPreset(res.data.font_preset || cfg.font_preset || 'cormorant');
           setCustomCss(res.data.custom_css || '');
+          setSectionThemes(res.data.section_themes || cfg.section_themes || {});
         }
       }
     } catch (e) {
@@ -153,12 +174,21 @@ export const ThemeManager: React.FC = () => {
       backgroundPattern,
       fontPreset,
       customCss,
+      sectionThemes,
     });
   };
 
   useEffect(() => {
     handleLivePreview();
-  }, [primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss]);
+  }, [primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes]);
+
+  const updateSectionProp = (key: string, field: keyof SectionThemeSpec, val: any) => {
+    setSectionThemes(prev => {
+      const currentSec = prev[key] || {};
+      const updatedSec = { ...currentSec, [field]: val };
+      return { ...prev, [key]: updatedSec };
+    });
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -178,24 +208,27 @@ export const ThemeManager: React.FC = () => {
       background_pattern: backgroundPattern,
       font_preset: fontPreset,
       custom_css: customCss,
+      section_themes: sectionThemes,
     };
 
     try {
       if (scope === 'global') {
         await axios.post(`${API_URL}/tickets/settings/`, payload, { headers });
-        showToast.success('¡Configuración de tema global guardada y aplicada a todo el sitio!');
+        showToast.success('¡Configuración de tema y secciones guardada en todo el sitio!');
       } else if (selectedEventId) {
         await axios.patch(`${API_URL}/tickets/events/${selectedEventId}/`, payload, { headers });
-        showToast.success('¡Tema personalizado del evento actualizado con éxito!');
+        showToast.success('¡Tema y secciones personalizadas del evento actualizados con éxito!');
       }
       fetchThemeForEvent(scope === 'event' ? selectedEventId || undefined : undefined);
     } catch (e: any) {
       console.error('Error saving theme settings:', e);
-      showToast.error(e.response?.data?.error || 'Error al guardar el tema visual.');
+      showToast.error(e.response?.data?.error || 'Error al guardar la personalización visual.');
     } finally {
       setSaving(false);
     }
   };
+
+  const currentSectionSpec = sectionThemes[selectedSectionKey] || {};
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
@@ -205,13 +238,13 @@ export const ThemeManager: React.FC = () => {
           <div>
             <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center gap-2 mb-2">
               <Paintbrush size={14} className="text-amber-honey" />
-              Motor de Personalización Visual (Dynamic Multi-Tenant Theme Engine)
+              Motor de Personalización Granular por Sección y Evento (Dynamic Page Builder)
             </span>
             <h2 className="text-3xl md:text-4xl font-black text-[#F4F6F0] uppercase italic tracking-tighter">
-              Control Visual del Sitio y Eventos
+              Control Visual del Sitio y Secciones
             </h2>
             <p className="text-[#F4F6F0]/60 text-xs font-medium max-w-2xl mt-1">
-              Modifica los colores, formas del Canvas de partículas, estilo de tarjetas, tipografía y CSS dinámico en tiempo real para todas las páginas del sitio o por evento individual.
+              Configura colores, formas de partículas, estilos de tarjetas, tipografía y personalización específica para cada sección individual (`Hero`, `Mapa`, `Boletos`, `Contacto`, etc.).
             </p>
           </div>
 
@@ -222,10 +255,26 @@ export const ThemeManager: React.FC = () => {
               className="bg-amber-honey hover:bg-amber-butterscotch text-[#1E2B22] font-black uppercase tracking-widest text-xs px-7 py-3.5 rounded-2xl transition-all shadow-xl shadow-amber-honey/20 flex items-center gap-2 disabled:opacity-50"
             >
               {saving ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />}
-              Guardar Tema Visual
+              Guardar Cambios
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Mode Sub-navigation: General Palette vs Granular Section Customizer */}
+      <div className="flex gap-3 bg-white/5 border border-white/10 p-1.5 rounded-2xl w-fit">
+        <button
+          onClick={() => setActiveTabMode('general')}
+          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTabMode === 'general' ? 'bg-amber-honey text-[#1E2B22] shadow-lg' : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0]'}`}
+        >
+          <Palette size={14} /> Tema General & Paleta Global
+        </button>
+        <button
+          onClick={() => setActiveTabMode('sections')}
+          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTabMode === 'sections' ? 'bg-amber-honey text-[#1E2B22] shadow-lg' : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0]'}`}
+        >
+          <Layout size={14} /> Personalización por Sección Individual
+        </button>
       </div>
 
       {/* Scope Selector: Global Site vs Event Override */}
@@ -278,212 +327,337 @@ export const ThemeManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Main Settings Form */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        {/* Colors Section */}
-        <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-            <Palette className="text-amber-honey" size={20} />
-            <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Paleta de Colores & Degradados</h3>
+      {/* MODE 1: General Theme Settings */}
+      {activeTabMode === 'general' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* Colors Section */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+              <Palette className="text-amber-honey" size={20} />
+              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Paleta de Colores & Degradados</h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Primario (Botones / Luces)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Secundario (Acentos)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={secondaryColor}
+                    onChange={(e) => setSecondaryColor(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Inicio (Gradient Start)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={backgroundStart}
+                    onChange={(e) => setBackgroundStart(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={backgroundStart}
+                    onChange={(e) => setBackgroundStart(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Fin (Gradient End)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={backgroundEnd}
+                    onChange={(e) => setBackgroundEnd(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={backgroundEnd}
+                    onChange={(e) => setBackgroundEnd(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Resplandor / Brillo</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Tarjetas de Cristal</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={cardBackground}
+                    onChange={(e) => setCardBackground(e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={cardBackground}
+                    onChange={(e) => setCardBackground(e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Primario (Botones / Luces)</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={primaryColor}
-                  onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                />
+          {/* Particle Canvas Shape Selection */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+              <Sparkles className="text-amber-honey" size={20} />
+              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Figura Geométrica del Canvas de Partículas</h3>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 max-h-[320px] overflow-y-auto custom-scroll pr-1">
+              {SHAPE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setParticleShape(opt.id)}
+                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 ${particleShape === opt.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey shadow-lg shadow-amber-honey/20 font-bold' : 'bg-[#080c0a]/60 text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
+                >
+                  <span className="text-2xl">{opt.icon}</span>
+                  <span className="text-[10px] font-black uppercase tracking-tight">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Card Styles & Typography */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+              <Type className="text-amber-honey" size={20} />
+              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Estilos de Tarjeta & Fuentes</h3>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Estilo de Bordes y Redondeo</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CARD_STYLE_OPTIONS.map((st) => (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => setCardStyle(st.id)}
+                      className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${cardStyle === st.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey' : 'bg-[#080c0a] text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Preset de Fuentes Tipográficas</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {FONT_PRESET_OPTIONS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFontPreset(f.id)}
+                      className={`p-3 rounded-xl border text-left transition-all ${fontPreset === f.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey' : 'bg-[#080c0a] text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
+                    >
+                      <div className="text-xs font-bold">{f.label}</div>
+                      <div className="text-[10px] opacity-70 italic mt-0.5">{f.sample}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Custom CSS Block */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
+            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
+              <Sliders className="text-amber-honey" size={20} />
+              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">CSS Personalizado Avanzado</h3>
             </div>
 
             <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Secundario (Acentos)</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={secondaryColor}
-                  onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={secondaryColor}
-                  onChange={(e) => setSecondaryColor(e.target.value)}
-                  className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Inicio (Gradient Start)</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={backgroundStart}
-                  onChange={(e) => setBackgroundStart(e.target.value)}
-                  className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={backgroundStart}
-                  onChange={(e) => setBackgroundStart(e.target.value)}
-                  className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Fin (Gradient End)</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={backgroundEnd}
-                  onChange={(e) => setBackgroundEnd(e.target.value)}
-                  className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={backgroundEnd}
-                  onChange={(e) => setBackgroundEnd(e.target.value)}
-                  className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Resplandor / Brillo</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={accentColor}
-                  onChange={(e) => setAccentColor(e.target.value)}
-                  className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Tarjetas de Cristal</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={cardBackground}
-                  onChange={(e) => setCardBackground(e.target.value)}
-                  className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={cardBackground}
-                  onChange={(e) => setCardBackground(e.target.value)}
-                  className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                />
-              </div>
+              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Escribe reglas CSS adicionales (opcional):</label>
+              <textarea
+                rows={7}
+                value={customCss}
+                onChange={(e) => setCustomCss(e.target.value)}
+                placeholder="/* Ejemplo: body { filter: contrast(105%); } */"
+                className="w-full bg-[#080c0a] border border-white/15 rounded-2xl p-4 text-xs font-mono text-amber-honey focus:border-amber-honey focus:outline-none"
+              />
             </div>
           </div>
         </div>
+      )}
 
-        {/* Particle Canvas Shape Selection */}
-        <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-            <Sparkles className="text-amber-honey" size={20} />
-            <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Figura Geométrica del Canvas de Partículas</h3>
-          </div>
-
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 max-h-[320px] overflow-y-auto custom-scroll pr-1">
-            {SHAPE_OPTIONS.map((opt) => (
+      {/* MODE 2: Granular Section Customizer */}
+      {activeTabMode === 'sections' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Section List Selector */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-3 lg:col-span-1">
+            <h3 className="text-sm font-bold text-amber-honey uppercase tracking-wider mb-2">Seleccionar Sección del Sitio:</h3>
+            {PAGE_SECTIONS.map((sec) => (
               <button
-                key={opt.id}
-                type="button"
-                onClick={() => setParticleShape(opt.id)}
-                className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 ${particleShape === opt.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey shadow-lg shadow-amber-honey/20 font-bold' : 'bg-[#080c0a]/60 text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
+                key={sec.id}
+                onClick={() => setSelectedSectionKey(sec.id)}
+                className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${selectedSectionKey === sec.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey shadow-lg font-bold' : 'bg-[#080c0a]/60 text-[#F4F6F0]/80 border-white/10 hover:border-white/20'}`}
               >
-                <span className="text-2xl">{opt.icon}</span>
-                <span className="text-[10px] font-black uppercase tracking-tight">{opt.label}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">{sec.icon}</span>
+                  <span className="text-xs font-bold">{sec.label}</span>
+                </div>
+                {sectionThemes[sec.id] && Object.keys(sectionThemes[sec.id] || {}).length > 0 && (
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" title="Sección personalizada" />
+                )}
               </button>
             ))}
           </div>
-        </div>
 
-        {/* Card Styles & Typography */}
-        <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-            <Type className="text-amber-honey" size={20} />
-            <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Estilos de Tarjeta & Fuentes</h3>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Estilo de Bordes y Redondeo</label>
-              <div className="grid grid-cols-2 gap-2">
-                {CARD_STYLE_OPTIONS.map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setCardStyle(st.id)}
-                    className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${cardStyle === st.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey' : 'bg-[#080c0a] text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
+          {/* Granular Section Properties Form */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6 lg:col-span-2">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div>
+                <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black block">Configuración de Sección</span>
+                <h3 className="text-xl font-bold text-[#F4F6F0]">
+                  {PAGE_SECTIONS.find(s => s.id === selectedSectionKey)?.label}
+                </h3>
               </div>
+
+              <button
+                onClick={() => {
+                  setSectionThemes(prev => {
+                    const copy = { ...prev };
+                    delete copy[selectedSectionKey];
+                    return copy;
+                  });
+                  showToast.success('Ajustes específicos de la sección restablecidos.');
+                }}
+                className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10"
+              >
+                Restablecer Sección
+              </button>
             </div>
 
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Preset de Fuentes Tipográficas</label>
-              <div className="grid grid-cols-2 gap-2">
-                {FONT_PRESET_OPTIONS.map((f) => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setFontPreset(f.id)}
-                    className={`p-3 rounded-xl border text-left transition-all ${fontPreset === f.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey' : 'bg-[#080c0a] text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
-                  >
-                    <div className="text-xs font-bold">{f.label}</div>
-                    <div className="text-[10px] opacity-70 italic mt-0.5">{f.sample}</div>
-                  </button>
-                ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo de Sección (Solid Color)</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={currentSectionSpec.bg_color || '#080c0a'}
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'bg_color', e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={currentSectionSpec.bg_color || ''}
+                    placeholder="Ej. #080c0a"
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'bg_color', e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color del Texto de la Sección</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={currentSectionSpec.text_color || '#F4F6F0'}
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'text_color', e.target.value)}
+                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={currentSectionSpec.text_color || ''}
+                    placeholder="Ej. #F4F6F0"
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'text_color', e.target.value)}
+                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Figura Canvas para esta Sección</label>
+                <select
+                  value={currentSectionSpec.particle_shape || 'moon'}
+                  onChange={(e) => updateSectionProp(selectedSectionKey, 'particle_shape', e.target.value)}
+                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
+                >
+                  {SHAPE_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.icon} {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Redondeo de Tarjetas en esta Sección</label>
+                <select
+                  value={currentSectionSpec.card_style || 'rounded-full'}
+                  onChange={(e) => updateSectionProp(selectedSectionKey, 'card_style', e.target.value)}
+                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
+                >
+                  {CARD_STYLE_OPTIONS.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Custom CSS Block */}
-        <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-            <Sliders className="text-amber-honey" size={20} />
-            <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">CSS Personalizado Avanzado</h3>
-          </div>
-
-          <div>
-            <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Escribe reglas CSS adicionales (opcional):</label>
-            <textarea
-              rows={7}
-              value={customCss}
-              onChange={(e) => setCustomCss(e.target.value)}
-              placeholder="/* Ejemplo: body { filter: contrast(105%); } */"
-              className="w-full bg-[#080c0a] border border-white/15 rounded-2xl p-4 text-xs font-mono text-amber-honey focus:border-amber-honey focus:outline-none"
-            />
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
+
 export default ThemeManager;
