@@ -49,7 +49,7 @@ class EventSerializer(serializers.ModelSerializer):
             'theater', 'theater_name', 'theater_location',
             'image', 'image_url', 'flyer', 'flyer_url',
             'is_active', 'mg_price', 'mg_limit', 'mg_available',
-            'allow_seatless_tickets', 'seatless_ticket_price',
+            'allow_seatless_tickets', 'seatless_ticket_price', 'numbered_ticket_price',
             'enable_dynamic_pricing', 'monthly_price_increment', 'effective_seatless_ticket_price',
             'price_multiplier', 'event_type',
             'stripe_product_id', 'stripe_price_id',

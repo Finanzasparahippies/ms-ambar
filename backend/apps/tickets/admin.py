@@ -26,9 +26,9 @@ class EventAdmin(admin.ModelAdmin):
             'fields': ('enable_dynamic_pricing', 'monthly_price_increment'),
             'description': 'Ajusta automáticamente los precios de boletos por mes previo al evento (ej. -$50.00 MXN por mes de anticipación).'
         }),
-        ('Boletos Sin Asiento (General)', {
-            'fields': ('allow_seatless_tickets', 'seatless_ticket_price'),
-            'description': 'Permite vender entradas generales sin asiento reservado de forma ilimitada.'
+        ('Tarifas Base de Boletos', {
+            'fields': ('allow_seatless_tickets', 'seatless_ticket_price', 'numbered_ticket_price'),
+            'description': 'Tarifas mínimas base para boletos generales sin asiento y boletos numerados en mesas.'
         }),
         ('Imágenes', {
             'fields': ('image', 'flyer'),

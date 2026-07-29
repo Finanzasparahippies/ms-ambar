@@ -127,7 +127,9 @@ class EventViewSet(viewsets.ModelViewSet):
                 seat_data['status'] = 'available'
             
             raw_seat_price = float(seat_data.get('base_price') or 0)
-            if raw_seat_price <= 0:
+            if raw_seat_price <= 0 and getattr(event, 'numbered_ticket_price', None):
+                raw_seat_price = float(event.numbered_ticket_price)
+            elif raw_seat_price <= 0:
                 raw_seat_price = 1000.0
             raw_price = raw_seat_price * multiplier
             seat_data['base_price'] = event.get_dynamic_price(raw_price)

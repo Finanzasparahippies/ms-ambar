@@ -244,9 +244,10 @@ class Event(models.Model):
     mg_price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     mg_limit = models.PositiveIntegerField(default=0)
 
-    # Seatless Ticket options
+    # Seatless & Numbered Ticket base price options
     allow_seatless_tickets = models.BooleanField(default=True, help_text="Permite la compra de boletos generales sin asiento reservado")
     seatless_ticket_price = models.DecimalField(max_digits=10, decimal_places=2, default=500.00, help_text="Precio base de boleto general sin asiento")
+    numbered_ticket_price = models.DecimalField(max_digits=10, decimal_places=2, default=1000.00, help_text="Precio base de boleto numerado reservado")
 
     # Price multiplier for this specific event
     price_multiplier = models.DecimalField(max_digits=4, decimal_places=2, default=1.0)
@@ -419,14 +420,17 @@ class Event(models.Model):
 
     @property
     def numbered_seat_base_price(self):
-        """Retorna el precio dinámico base del asiento numerado en mesa más económico del recinto."""
+        """Retorna el precio dinámico base del boleto numerado."""
+        if self.numbered_ticket_price is not None and float(self.numbered_ticket_price) > 0:
+            raw_base = float(self.numbered_ticket_price) * float(self.price_multiplier or 1.0)
+            return self.get_dynamic_price(raw_base)
         if self.theater:
             from apps.tickets.models import Seat
             min_seat = self.theater.seats.filter(base_price__gt=0).order_by('base_price').first()
             if min_seat:
                 raw_base = float(min_seat.base_price * self.price_multiplier)
                 return self.get_dynamic_price(raw_base)
-        return float(self.base_price or 0.0)
+        return self.get_dynamic_price(1000.00)
 
     @property
     def base_price(self):
@@ -442,17 +446,12 @@ class Event(models.Model):
         if self.allow_seatless_tickets and self.seatless_ticket_price is not None:
             prices.append(float(self.effective_seatless_ticket_price))
 
-        if self.theater:
-            from apps.tickets.models import Seat
-            min_seat = self.theater.seats.filter(base_price__gt=0).order_by('base_price').first()
-            if min_seat:
-                raw_base = float(min_seat.base_price * self.price_multiplier)
-                prices.append(self.get_dynamic_price(raw_base))
+        prices.append(float(self.numbered_seat_base_price))
 
         if prices:
             return min(prices)
         
-        return float(self.seatless_ticket_price or 0.0)
+        return float(self.effective_seatless_ticket_price or 0.0)
 
     @property
     def end_date(self):
