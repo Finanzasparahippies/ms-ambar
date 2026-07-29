@@ -1057,7 +1057,7 @@ const Home = () => {
                         <span className="text-pink-300 font-black text-xs uppercase tracking-wider">Tarifas del Evento</span>
                         {nextEvent.enable_dynamic_pricing !== false && (
                           <span className="text-[10px] bg-pink-500/20 text-pink-200 px-2.5 py-0.5 rounded-full border border-pink-400/30 font-semibold">
-                            Precio Dinámico por Mes
+                            Precio Dinámico
                           </span>
                         )}
                       </div>
