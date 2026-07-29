@@ -59,12 +59,12 @@ const PriceBreakdown = ({ baseTotal, label = 'Precio Base' }: { baseTotal: numbe
       <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
         <div>
           <p className="text-[9px] uppercase font-bold text-nature-night/50 tracking-[0.25em] mb-1">Total a Pagar</p>
-          <p className="text-3xl font-black leading-none text-amber-honey">${Math.ceil(total).toLocaleString('es-MX')} MXN</p>
+          <p className="text-3xl font-black leading-none text-amber-honey">${total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</p>
         </div>
         <Users size={18} className="text-nature-night/30 mb-1" />
       </div>
       <p className="text-[8px] text-nature-night/40 leading-relaxed">
-        El precio incluye un cargo de servicio de plataforma (Stripe MX). El monto final a pagar es ${Math.ceil(total).toLocaleString('es-MX')} MXN.
+        El precio incluye un cargo de servicio de plataforma. El monto final a pagar es ${total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN.
       </p>
     </div>
   );
@@ -800,28 +800,63 @@ const TourPage = () => {
                   )}
 
                   {!isMeetGreet && (
-                    <div
+                    <motion.div
+                      whileHover={currentEvent?.mg_available > 0 ? { scale: 1.015, y: -1 } : {}}
+                      whileTap={currentEvent?.mg_available > 0 ? { scale: 0.985 } : {}}
                       onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
                       className={cn(
-                        "mb-5 p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
-                        wantsMG ? "bg-amber-honey border-amber-honey text-nature-night" : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/30"
+                        "mb-5 p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden shadow-lg",
+                        wantsMG
+                          ? "bg-gradient-to-r from-amber-honey via-amber-400 to-amber-500 border-amber-honey text-nature-night shadow-amber-honey/20"
+                          : "bg-nature-night/[0.02] border-nature-night/10 hover:border-amber-honey/40"
                       )}
                     >
-                      <div className="flex items-center gap-3.5 relative z-10">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500",
-                          wantsMG ? "bg-nature-night text-amber-honey rotate-12" : "bg-amber-honey text-nature-night"
-                        )}>
-                          <Star size={18} fill="currentColor" />
+                      {/* Pulse glow background effect when active */}
+                      {wantsMG && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: [0.15, 0.35, 0.15] }}
+                          transition={{ repeat: Infinity, duration: 2.5 }}
+                          className="absolute inset-0 bg-white/20 pointer-events-none"
+                        />
+                      )}
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="flex items-center gap-3.5">
+                          <motion.div
+                            animate={wantsMG ? { rotate: [0, 15, -15, 0], scale: [1, 1.15, 1] } : { rotate: 0, scale: 1 }}
+                            transition={{ duration: 0.4 }}
+                            className={cn(
+                              "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md",
+                              wantsMG ? "bg-nature-night text-amber-honey" : "bg-amber-honey/20 text-amber-honey border border-amber-honey/30"
+                            )}
+                          >
+                            <Star size={20} fill={wantsMG ? "currentColor" : "none"} />
+                          </motion.div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Experiencia Meet & Greet</h4>
+                              {wantsMG && (
+                                <span className="bg-nature-night text-amber-honey text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                  <CheckCircle size={9} /> Añadido
+                                </span>
+                              )}
+                            </div>
+                            <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5", wantsMG ? "text-nature-night/80" : "text-nature-night/50")}>
+                              {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Cupo Limitado Agotado'}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet Pase</h4>
+
+                        <div className="text-right">
+                          <span className={cn("text-xs font-black tracking-wider block", wantsMG ? "text-nature-night" : "text-amber-honey")}>
+                            +${Number(currentEvent?.mg_price || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN
+                          </span>
+                          <span className={cn("text-[8px] font-bold uppercase tracking-widest block opacity-75", wantsMG ? "text-nature-night/70" : "text-nature-night/40")}>
+                            Tarifa Base
+                          </span>
                         </div>
                       </div>
-                      {!wantsMG && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">
-                        {currentEvent ? `+$${Number(currentEvent.mg_price).toLocaleString()}` : ''}
-                      </span>}
-                    </div>
+                    </motion.div>
                   )}
 
                   {/* Selected Seats / General Ticket List */}
@@ -1081,7 +1116,7 @@ const TourPage = () => {
                           <span className="font-semibold text-nature-night">${costoNetoBoleto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
                         <div className="flex justify-between text-amber-600">
-                          <span className="flex items-center gap-1"><Info size={10} /> Cargo de servicio (Stripe MX):</span>
+                          <span className="flex items-center gap-1"><Info size={10} /> Cargo de servicio:</span>
                           <span className="font-semibold">+${comisionPlataforma.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
                         <div className="flex justify-between text-nature-night font-bold border-t border-nature-night/10 pt-1.5 mt-1 text-xs">
@@ -1150,19 +1185,33 @@ const TourPage = () => {
 
                     {baseTotal > 0 ? (
                       <div className="pt-3 border-t border-nature-night/10 mt-2 space-y-1.5">
+                        {!isMeetGreet && (
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-nature-night/50 font-bold uppercase tracking-wider">Subtotal Boletos Concierto</span>
+                            <span className="font-extrabold text-nature-night">${seatsBaseTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                          </div>
+                        )}
+                        {(wantsMG || isMeetGreet) && (
+                          <div className="flex justify-between items-center text-[10px] text-amber-600 font-bold">
+                            <span className="uppercase tracking-wider flex items-center gap-1">
+                              <Star size={9} fill="currentColor" /> Pase(s) Meet & Greet
+                            </span>
+                            <span>+${mgBaseTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-nature-night/50 font-bold uppercase tracking-wider">Precio Base</span>
+                          <span className="text-nature-night/60 font-bold uppercase tracking-wider">Subtotal Base</span>
                           <span className="font-extrabold text-nature-night">${checkoutBasePrice.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
                           <span className="text-amber-600 font-bold uppercase tracking-wider flex items-center gap-1">
-                            <Info size={9} /> Cargo de servicio
+                            <Info size={9} /> Cargo de servicio ( MX 3.6% + $3.00)
                           </span>
                           <span className="font-bold text-amber-600">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
                         <div className="flex justify-between items-end pt-2 border-t border-nature-night/10">
                           <span className="text-[10px] uppercase font-bold text-nature-night/50">Total a Pagar</span>
-                          <span className="text-lg font-black text-amber-honey">${Math.ceil(checkoutTotal).toLocaleString('es-MX')} MXN</span>
+                          <span className="text-lg font-black text-amber-honey">${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
                       </div>
                     ) : (
