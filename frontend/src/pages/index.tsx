@@ -1024,12 +1024,12 @@ const Home = () => {
                       <span>🗓️</span> {getFormattedEventDate(nextEvent.date)}
                     </p>
 
-                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-medium text-pink-100/70 pt-0.5">
-                      {/* {nextEvent.doors_open && (
+                    {/* <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-xs font-medium text-pink-100/70 pt-0.5">
+                      {nextEvent.doors_open && (
                         <span className="bg-pink-500/10 border border-pink-500/20 px-3 py-1 rounded-full text-pink-200">
                           🚪 Puertas: <strong className="text-white">{formatoHoraOficial(nextEvent.doors_open)} hrs</strong>
                         </span>
-                      )} */}
+                      )}
                       {nextEvent.date && (nextEvent.duration_minutes || nextEvent.end_date) && (
                         <span className="bg-pink-500/10 border border-pink-500/20 px-3 py-1 rounded-full text-pink-200">
                           ✨ Cierre: <strong className="text-white">
@@ -1044,7 +1044,7 @@ const Home = () => {
                           </strong>
                         </span>
                       )}
-                    </div>
+                    </div> */}
 
                     <p className="text-xs text-pink-200/70 font-normal tracking-normal pt-1 flex items-center justify-center lg:justify-start gap-1.5">
                       📍 <strong className="text-white">{nextEvent.venue_name || 'London Pub'}</strong> — <span className="italic">{nextEvent.venue_address || 'Av. Tamaulipas 11, Centro, Hermosillo, Sonora'}</span>
