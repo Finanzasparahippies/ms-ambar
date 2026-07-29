@@ -336,18 +336,18 @@ const TourPage = () => {
   const getSeatBasePrice = (seat: any) => {
     if (!seat) return 0;
     const seatPrice = Number(seat.base_price || 0);
+    const multiplier = Number(currentEvent?.price_multiplier || 1.0);
     if (seatPrice > 0) {
-      return Math.round(getDynamicPrice(seatPrice));
+      const rawBase = seatPrice * multiplier;
+      return Math.round(getDynamicPrice(rawBase));
     }
-    const fallbackBase = Number(currentEvent?.numbered_seat_base_price || 1000);
+    const fallbackBase = Number(currentEvent?.numbered_ticket_price || currentEvent?.numbered_seat_base_price || 1000) * multiplier;
     return Math.round(getDynamicPrice(fallbackBase));
   };
 
   const getEffectiveSeatlessPrice = () => {
-    if (currentEvent?.effective_seatless_ticket_price !== undefined && Number(currentEvent.effective_seatless_ticket_price) > 0) {
-      return Number(currentEvent.effective_seatless_ticket_price);
-    }
-    return Math.round(getDynamicPrice(Number(currentEvent?.seatless_ticket_price ?? 0)));
+    const rawBase = Number(currentEvent?.seatless_ticket_price ?? 500);
+    return Math.round(getDynamicPrice(rawBase));
   };
 
   const isMeetGreet = currentEvent?.event_type === 'meet_greet';
@@ -489,7 +489,7 @@ const TourPage = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase italic leading-tight px-2 py-2"
           >
-            ACCESOS <span className="text-glow text-gradient bg-gradient-to-r from-amber-400 via-amber-honey to-amber-700 bg-clip-text text-transparent px-2">OFICIALES 2026</span>
+            ACCESOS <span className="text-glow text-gradient-theme px-2">OFICIALES 2026</span>
           </motion.h1>
 
           <motion.p
@@ -821,7 +821,7 @@ const TourPage = () => {
                           <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">Zona General</p>
                           <p className="text-xs font-bold text-nature-night/80">{seatlessQuantity} Boleto(s) Sin Asiento</p>
                         </div>
-                        <span className="font-extrabold text-xs text-nature-night">${(seatlessQuantity * Number(currentEvent?.seatless_ticket_price || 500)).toLocaleString()} MXN</span>
+                        <span className="font-extrabold text-xs text-nature-night">${(seatlessQuantity * getEffectiveSeatlessPrice()).toLocaleString()} MXN</span>
                       </div>
                     ) : (
                       <>

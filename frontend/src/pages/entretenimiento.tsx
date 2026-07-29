@@ -1056,7 +1056,7 @@ const Entretenimiento = () => {
               animate={{ opacity: 1, scale: 1 }}
               className="text-5xl md:text-7xl font-black tracking-tighter uppercase italic leading-tight"
             >
-              ENTRETENIMIENTO <span className="text-glow text-gradient bg-gradient-to-r from-amber-400 via-amber-honey to-amber-700 bg-clip-text text-transparent px-2">SENSORIAL</span>
+              ENTRETENIMIENTO <span className="text-glow text-gradient-theme px-2">SENSORIAL</span>
             </motion.h1>
 
             <motion.p
@@ -1076,7 +1076,7 @@ const Entretenimiento = () => {
               <Sparkles size={10} className="text-amber-honey animate-pulse" />
               <span className="text-[8px] font-black uppercase tracking-[0.25em] text-amber-honey">Sintonización Diaria & Oráculo Sensorial</span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-glow text-gradient bg-gradient-to-r from-amber-300 via-amber-honey to-amber-600 bg-clip-text text-transparent">
+            <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight text-glow text-gradient-theme">
               LECTOR DE ARCANOS DEL DESIERTO
             </h2>
             <p className="text-white/60 text-xs md:text-sm max-w-2xl mx-auto leading-relaxed">

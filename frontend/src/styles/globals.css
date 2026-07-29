@@ -146,7 +146,13 @@ h1, h2, h3, h4, h5, h6, .font-serif {
 
 @layer utilities {
   .text-glow {
-    text-shadow: 0 0 10px rgba(var(--amber-primary), 0.5);
+    text-shadow: 0 0 12px rgba(var(--amber-primary, 229, 169, 59), 0.5);
+  }
+  .text-gradient,
+  .text-gradient-theme {
+    background: linear-gradient(135deg, var(--heading-color, var(--primary-color, #E5A93B)), var(--accent-color, #22A6B7));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 }
 
