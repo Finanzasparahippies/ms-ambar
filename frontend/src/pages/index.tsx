@@ -1110,7 +1110,7 @@ const Home = () => {
                             <span className="text-pink-300 font-black text-sm md:text-base">
                               ${Math.round(nextEvent.numbered_seat_base_price !== undefined
                                 ? Number(nextEvent.numbered_seat_base_price)
-                                : getDynamicPrice(nextEvent, Number(nextEvent.base_price ?? 0))
+                                : getDynamicPrice(nextEvent, Number(nextEvent.numbered_ticket_price ?? 1000))
                               ).toLocaleString('es-MX')} MXN
                             </span>
                           </div>

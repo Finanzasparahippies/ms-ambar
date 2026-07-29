@@ -336,12 +336,14 @@ const TourPage = () => {
   const getSeatBasePrice = (seat: any) => {
     if (!seat) return 0;
     const seatPrice = Number(seat.base_price || 0);
-    const multiplier = Number(currentEvent?.price_multiplier || 1.0);
     if (seatPrice > 0) {
-      const rawBase = seatPrice * multiplier;
-      return Math.round(getDynamicPrice(rawBase));
+      return Math.round(seatPrice);
     }
-    const fallbackBase = Number(currentEvent?.numbered_ticket_price || currentEvent?.numbered_seat_base_price || 1000) * multiplier;
+    if (currentEvent?.numbered_seat_base_price !== undefined && Number(currentEvent.numbered_seat_base_price) > 0) {
+      return Math.round(Number(currentEvent.numbered_seat_base_price));
+    }
+    const multiplier = Number(currentEvent?.price_multiplier || 1.0);
+    const fallbackBase = Number(currentEvent?.numbered_ticket_price || 1000) * multiplier;
     return Math.round(getDynamicPrice(fallbackBase));
   };
 
@@ -832,13 +834,28 @@ const TourPage = () => {
                               initial={{ opacity: 0, x: -15 }}
                               animate={{ opacity: 1, x: 0 }}
                               exit={{ opacity: 0, scale: 0.8 }}
-                              className="flex justify-between items-center bg-nature-night/[0.02] p-3.5 rounded-xl border border-nature-night/10"
+                              className="flex justify-between items-center bg-nature-night/[0.03] p-3.5 rounded-2xl border border-nature-night/10 hover:border-amber-honey/30 transition-all group"
                             >
-                              <div>
-                                <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category}</p>
-                                <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-amber-honey/10 text-amber-honey flex items-center justify-center font-black text-xs">
+                                  {seat.row}{seat.number}
+                                </div>
+                                <div>
+                                  <p className="text-[9px] font-black text-amber-honey uppercase tracking-wider">{seat.category || 'Reservado'}</p>
+                                  <p className="text-xs font-bold text-nature-night/80">Fila {seat.row} • Asiento {seat.number}</p>
+                                </div>
                               </div>
-                              <span className="font-extrabold text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
+                              <div className="flex items-center gap-3">
+                                <span className="font-black text-xs text-nature-night">${getSeatBasePrice(seat).toLocaleString()} MXN</span>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedSeats(selectedSeats.filter(s => String(s.id) !== String(seat.id)))}
+                                  className="w-6 h-6 rounded-full bg-nature-night/5 hover:bg-rose-500/20 text-nature-night/40 hover:text-rose-600 flex items-center justify-center transition-colors"
+                                  title="Quitar asiento"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
                             </motion.div>
                           ))}
                         </AnimatePresence>

@@ -4931,15 +4931,29 @@ export default function AdminDashboard() {
                             </div>
 
                             {/* Pricing & Limits info */}
-                            <div className="bg-black/30 rounded-xl p-3 border border-white/5 text-[9px] font-bold uppercase tracking-widest text-[#F4F6F0]/60 space-y-1 mt-2">
+                            <div className="bg-black/30 rounded-xl p-3 border border-white/5 text-[9px] font-bold uppercase tracking-widest text-[#F4F6F0]/60 space-y-1.5 mt-2">
                               {event.event_type === 'concert' ? (
                                 <>
                                   <div className="flex justify-between">
-                                    <span>Multiplicador de Precio:</span>
-                                    <span className="text-[#F4F6F0] font-black">{event.price_multiplier}x</span>
+                                    <span>Boleto General:</span>
+                                    <span className="text-[#F4F6F0] font-black">${Number(event.effective_seatless_ticket_price ?? event.seatless_ticket_price ?? 500).toLocaleString()} MXN</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Asiento Numerado:</span>
+                                    <span className="text-[#F4F6F0] font-black">${Number(event.numbered_seat_base_price ?? event.numbered_ticket_price ?? 1000).toLocaleString()} MXN</span>
+                                  </div>
+                                  <div className="flex justify-between border-t border-white/5 pt-1">
+                                    <span>Precio Mínimo Entrada:</span>
+                                    <span className="text-emerald-400 font-black">${Number(event.base_price ?? 0).toLocaleString()} MXN</span>
+                                  </div>
+                                  <div className="flex justify-between text-[8px] text-[#F4F6F0]/40">
+                                    <span>Mult. / Precio Dinámico:</span>
+                                    <span className="text-amber-honey font-bold">
+                                      {event.price_multiplier}x {event.enable_dynamic_pricing !== false ? `(+${event.monthly_price_increment ?? 50} MXN/mes)` : '(Fijo)'}
+                                    </span>
                                   </div>
                                   {Number(event.mg_price) > 0 && (
-                                    <div className="flex justify-between border-t border-white/5 pt-1 mt-1 text-amber-honey">
+                                    <div className="flex justify-between border-t border-white/5 pt-1 text-amber-honey">
                                       <span>Upgrade M&G:</span>
                                       <span>${Number(event.mg_price).toLocaleString()} MXN ({event.mg_available} disp)</span>
                                     </div>
