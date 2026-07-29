@@ -32,7 +32,9 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
         # Seatless / General admission tickets
         seatless_price = getattr(event, 'seatless_ticket_price', 500)
         multiplier = getattr(event, 'price_multiplier', 1.0)
-        unit_amount = int(float(seatless_price) * float(multiplier) * 100)
+        raw_price = float(seatless_price) * float(multiplier)
+        dynamic_price = event.get_dynamic_price(raw_price) if hasattr(event, 'get_dynamic_price') else raw_price
+        unit_amount = int(round(dynamic_price * 100))
         price_data = {
             'currency': 'mxn',
             'unit_amount': unit_amount,
@@ -66,7 +68,9 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
     else:
         # Concert tickets
         for seat in seats:
-            unit_amount = int(seat.base_price * event.price_multiplier * 100)
+            raw_seat_price = float(seat.base_price) * float(event.price_multiplier)
+            dynamic_price = event.get_dynamic_price(raw_seat_price) if hasattr(event, 'get_dynamic_price') else raw_seat_price
+            unit_amount = int(round(dynamic_price * 100))
             price_data = {
                 'currency': 'mxn',
                 'unit_amount': unit_amount,

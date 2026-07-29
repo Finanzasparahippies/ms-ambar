@@ -375,10 +375,9 @@ class Event(models.Model):
     def get_dynamic_price(self, base_amount, purchase_date=None):
         """
         [Nectar Dynamic Pricing Engine]
-        Calcula el precio dinámico mensual basado en el tiempo restante hasta el mes del evento.
-        Aplica una regla de seguridad de 'Precio Piso' (Floor Price Cap del 70% de valor base)
-        para garantizar que ventas anticipadas con varios meses de antelación jamás resulten
-        en precios de $0.00 MXN o descuentos desmedidos.
+        Garantiza un precio mínimo establecido (base_amount) tanto para asientos numerados
+        como para asientos generales. La tarifa se mantiene en su mínimo y SOLO AUMENTA
+        durante los últimos 3 meses previos hasta el día del evento.
         """
         if base_amount is None:
             return 0.0
@@ -392,24 +391,25 @@ class Event(models.Model):
         p_date = purchase_date or timezone.now()
         event_month_idx = self.date.year * 12 + self.date.month
         curr_month_idx = p_date.year * 12 + p_date.month
-        months_diff = max(0, event_month_idx - curr_month_idx)
+        months_diff = event_month_idx - curr_month_idx
 
-        # Incremento preventivo por venta anticipada (descuento acumulativo)
-        increment = float(self.monthly_price_increment or 25.00)
-        raw_discount = months_diff * increment
-        
-        # Regla de Oro Nectar Labs: El descuento máximo acumulado no puede superar el 30% del precio base
-        max_allowed_discount = amount * 0.30
-        discount = min(raw_discount, max_allowed_discount)
-        
-        # Precio piso de seguridad (Mínimo 70% del valor base del boleto)
-        final_price = max(amount * 0.70, amount - discount)
+        # A más de 3 meses de anticipación: tarifa en su precio mínimo establecido (sin aumento)
+        if months_diff > 3:
+            return round(amount, 2)
+
+        # En los últimos 3 meses (o mes del evento): la tarifa aumenta de forma progresiva
+        months_in_last_3 = 3 - max(0, months_diff)
+        increment = float(self.monthly_price_increment or 50.00)
+        increase = months_in_last_3 * increment
+
+        # Garantizar que nunca sea menor a la tarifa mínima establecida (base_amount)
+        final_price = max(amount, amount + increase)
         return round(final_price, 2)
 
     @property
     def effective_seatless_ticket_price(self):
-        """Precio actual del boleto general con ajuste dinámico mensual y precio piso de seguridad."""
-        base = float(self.seatless_ticket_price if self.seatless_ticket_price is not None else 300.00)
+        """Precio actual del boleto general con tarifa mínima y ajuste dinámico en últimos 3 meses."""
+        base = float(self.seatless_ticket_price if self.seatless_ticket_price is not None else 500.00)
         return self.get_dynamic_price(base)
 
     @property

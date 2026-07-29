@@ -856,9 +856,8 @@ const Home = () => {
 
   /**
    * [Nectar Dynamic Pricing - Frontend Mirror Engine]
-   * Calcula el precio dinámico mensual basado en el tiempo restante hasta el mes del evento.
-   * Aplica la Regla de Oro Nectar Labs: el descuento preventivo no puede superar el 30% del precio base,
-   * garantizando un precio piso mínimo del 70% para evitar que las entradas caigan a $0.00 MXN.
+   * Garantiza la tarifa mínima establecida (baseAmount) y aplica aumentos progresivos
+   * únicamente en los últimos 3 meses antes del evento.
    */
   const getDynamicPrice = (event: any, baseAmount: number) => {
     if (!event || !baseAmount || baseAmount <= 0) return baseAmount || 0;
@@ -867,16 +866,17 @@ const Home = () => {
     const now = new Date();
     const eventMonthIdx = eventDate.getFullYear() * 12 + eventDate.getMonth();
     const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
-    const monthsDiff = Math.max(0, eventMonthIdx - currMonthIdx);
-    const increment = Number(event.monthly_price_increment ?? 25);
+    const monthsDiff = eventMonthIdx - currMonthIdx;
 
-    // Regla de Oro Nectar Labs: Tope de descuento preventivo al 30%
-    const rawDiscount = monthsDiff * increment;
-    const maxDiscount = baseAmount * 0.30;
-    const discount = Math.min(rawDiscount, maxDiscount);
+    if (monthsDiff > 3) {
+      return baseAmount;
+    }
 
-    // Garantiza el Precio Piso de Seguridad (mínimo 70% del costo base)
-    return Math.max(baseAmount * 0.70, baseAmount - discount);
+    const monthsInLast3 = 3 - Math.max(0, monthsDiff);
+    const increment = Number(event.monthly_price_increment ?? 50);
+    const increase = monthsInLast3 * increment;
+
+    return Math.max(baseAmount, baseAmount + increase);
   };
 
   const handleSubscribe = async (e: React.FormEvent) => {
