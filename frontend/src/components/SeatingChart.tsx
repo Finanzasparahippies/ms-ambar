@@ -313,19 +313,26 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         fillColor = theme === 'dark' ? 'rgba(30, 41, 59, 0.75)' : 'rgba(226, 232, 240, 0.85)';
         strokeColor = theme === 'dark' ? 'rgba(239, 68, 68, 0.45)' : 'rgba(239, 68, 68, 0.35)';
       } else {
-        const cat = String(seat.category || '').toLowerCase();
-        if (cat === 'vip') {
-          fillColor = 'rgba(245, 158, 11, 0.85)';
-          strokeColor = '#d97706';
-        } else if (cat === 'premium') {
-          fillColor = 'rgba(139, 92, 246, 0.85)';
-          strokeColor = '#7c3aed';
-        } else if (cat === 'disabled') {
-          fillColor = 'rgba(34, 197, 94, 0.85)';
-          strokeColor = '#16a34a';
+        // Priority 1: Custom color set in Nectar Studio Designer
+        if (seat.color && typeof seat.color === 'string' && seat.color.trim() !== '') {
+          fillColor = seat.color;
+          strokeColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)';
         } else {
-          fillColor = 'rgba(34, 166, 179, 0.85)';
-          strokeColor = '#008b9b';
+          // Priority 2: Category fallback
+          const cat = String(seat.category || '').toLowerCase();
+          if (cat === 'vip') {
+            fillColor = 'rgba(245, 158, 11, 0.85)';
+            strokeColor = '#d97706';
+          } else if (cat === 'premium') {
+            fillColor = 'rgba(139, 92, 246, 0.85)';
+            strokeColor = '#7c3aed';
+          } else if (cat === 'disabled') {
+            fillColor = 'rgba(34, 197, 94, 0.85)';
+            strokeColor = '#16a34a';
+          } else {
+            fillColor = 'rgba(34, 166, 179, 0.85)';
+            strokeColor = '#008b9b';
+          }
         }
       }
 
@@ -433,22 +440,57 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     };
   };
 
+  const getHitSeat = useCallback((x: number, y: number) => {
+    const maxRadius = Math.max(12, Math.min(24, 18 / transform.scale));
+    let closestSeat: Seat | null = null;
+    let minDist = Infinity;
+
+    for (let i = seats.length - 1; i >= 0; i--) {
+      const s = seats[i];
+      const dx = s.x - x;
+      const dy = s.y - y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= maxRadius && dist < minDist) {
+        minDist = dist;
+        closestSeat = s;
+      }
+    }
+    return closestSeat;
+  }, [seats, transform.scale]);
+
+  const getHitElement = useCallback((x: number, y: number) => {
+    const slop = Math.max(5, 12 / transform.scale);
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      const w = el.w || 100;
+      const h = el.h || 100;
+      let px = x - el.x;
+      let py = y - el.y;
+      if (el.angle) {
+        const rad = (-el.angle * Math.PI) / 180;
+        const rx = px * Math.cos(rad) - py * Math.sin(rad);
+        const ry = px * Math.sin(rad) + py * Math.cos(rad);
+        px = rx;
+        py = ry;
+      }
+      if (Math.abs(px) <= w / 2 + slop && Math.abs(py) <= h / 2 + slop) {
+        return el;
+      }
+    }
+    return null;
+  }, [elements, transform.scale]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
       const touch = e.touches[0];
       const { x, y } = getTouchCoords(e);
       setLastMousePos({ x: touch.clientX, y: touch.clientY });
 
-      const hitSlop = 20 / transform.scale;
-      const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < hitSlop && Math.abs(s.y - y) < hitSlop);
+      const hitSeat = getHitSeat(x, y);
+      const hitEl = getHitElement(x, y);
 
       if (isDesignMode) {
         if (activeTool !== 'select') { onChartClick?.(x, y); return; }
-        const hitEl = [...elements].reverse().find(el => {
-          const w = el.w || 100, h = el.h || 100;
-          return x >= el.x - w / 2 - hitSlop && x <= el.x + w / 2 + hitSlop &&
-            y >= el.y - h / 2 - hitSlop && y <= el.y + h / 2 + hitSlop;
-        });
         const hit = hitSeat || hitEl;
         if (hit) {
           const id = String(hit.id); let newSelection = selectedIds;
@@ -458,6 +500,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
             const s = seats.find(st => String(st.id) === sid), el = elements.find(elObj => String(elObj.id) === sid);
             if (s) snapshot.set(sid, { x: s.x, y: s.y }); else if (el) snapshot.set(sid, { x: el.x, y: el.y });
           });
+          const hitSlop = 20 / transform.scale;
           setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, handle: (hitEl && Math.abs(hitEl.x + hitEl.w! / 2 - x) < hitSlop && Math.abs(hitEl.y + hitEl.h! / 2 - y) < hitSlop) ? 'br' : undefined, groupSnapshot: snapshot });
           return;
         }
@@ -535,16 +578,11 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     if (e.button === 1 || e.button === 2) { setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY }); return; }
 
     if (e.button === 0) {
-      const hitSlop = 20 / transform.scale;
-      const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < hitSlop && Math.abs(s.y - y) < hitSlop);
+      const hitSeat = getHitSeat(x, y);
+      const hitEl = getHitElement(x, y);
 
       if (isDesignMode) {
         if (activeTool !== 'select') { onChartClick?.(x, y); return; }
-        const hitEl = [...elements].reverse().find(el => {
-          const w = el.w || 100, h = el.h || 100;
-          return x >= el.x - w / 2 - hitSlop && x <= el.x + w / 2 + hitSlop &&
-            y >= el.y - h / 2 - hitSlop && y <= el.y + h / 2 + hitSlop;
-        });
         const hit = hitSeat || hitEl;
         if (hit) {
           const id = String(hit.id); let newSelection = selectedIds;
@@ -554,6 +592,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
             const s = seats.find(st => String(st.id) === sid), el = elements.find(e => String(e.id) === sid);
             if (s) snapshot.set(sid, { x: s.x, y: s.y }); else if (el) snapshot.set(sid, { x: el.x, y: el.y });
           });
+          const hitSlop = 20 / transform.scale;
           setDraggedItem({ type: hitSeat ? 'seat' : 'element', id, offsetX: hit.x - x, offsetY: hit.y - y, handle: (hitEl && Math.abs(hitEl.x + hitEl.w! / 2 - x) < hitSlop && Math.abs(hitEl.y + hitEl.h! / 2 - y) < hitSlop) ? 'br' : undefined, groupSnapshot: snapshot });
           return;
         }
@@ -574,13 +613,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const handleMouseMove = (e: React.MouseEvent) => {
     const { x, y } = getMouseCoords(e); setMousePos({ x, y });
 
-    const hitSlop = 20 / transform.scale;
-    const hitSeat = [...seats].reverse().find(s => Math.abs(s.x - x) < hitSlop && Math.abs(s.y - y) < hitSlop);
-    const hitEl = [...elements].reverse().find(el => {
-      const w = el.w || 100, h = el.h || 100;
-      return x >= el.x - w / 2 - hitSlop && x <= el.x + w / 2 + hitSlop &&
-        y >= el.y - h / 2 - hitSlop && y <= el.y + h / 2 + hitSlop;
-    });
+    const hitSeat = getHitSeat(x, y);
+    const hitEl = getHitElement(x, y);
     setHoveredId(hitSeat || hitEl ? String((hitSeat || hitEl)!.id) : null);
 
     if (selectionRect) { setSelectionRect(prev => ({ ...prev!, w: x - prev!.x, h: y - prev!.y })); return; }

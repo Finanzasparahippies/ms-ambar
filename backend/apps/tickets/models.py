@@ -87,6 +87,7 @@ class Theater(models.Model):
                 sx = seat_data.get('x', 0)
                 sy = seat_data.get('y', 0)
                 ang = seat_data.get('angle', 0)
+                clr = seat_data.get('color', '')
 
                 if key in existing_seats_map:
                     seat = existing_seats_map[key]
@@ -96,6 +97,7 @@ class Theater(models.Model):
                     seat.x = sx
                     seat.y = sy
                     seat.angle = ang
+                    seat.color = clr
                     seats_to_update.append(seat)
                 else:
                     seats_to_create.append(Seat(
@@ -108,13 +110,14 @@ class Theater(models.Model):
                         base_price=price,
                         x=sx,
                         y=sy,
-                        angle=ang
+                        angle=ang,
+                        color=clr
                     ))
 
             if seats_to_create:
                 Seat.objects.bulk_create(seats_to_create, batch_size=500)
             if seats_to_update:
-                Seat.objects.bulk_update(seats_to_update, ['category', 'status', 'base_price', 'x', 'y', 'angle'], batch_size=500)
+                Seat.objects.bulk_update(seats_to_update, ['category', 'status', 'base_price', 'x', 'y', 'angle', 'color'], batch_size=500)
 
             # Bulk delete seats no longer present in layout
             stale_ids = [

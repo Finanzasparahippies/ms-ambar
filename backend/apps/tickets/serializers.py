@@ -6,7 +6,7 @@ from .fees import calculate_total_with_fee, get_fee_config
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seat
-        fields = ['id', 'section', 'row', 'number', 'category', 'status', 'base_price', 'x', 'y', 'angle']
+        fields = ['id', 'section', 'row', 'number', 'category', 'status', 'base_price', 'x', 'y', 'angle', 'color']
 
 
 class GADeclarationSerializer(serializers.ModelSerializer):
