@@ -10,6 +10,8 @@ interface Seat {
   status: 'available' | 'occupied' | 'selected' | 'reserved';
   category: string;
   angle: number;
+  color?: string;
+  base_price?: number | string;
 }
 
 interface MapElement {
