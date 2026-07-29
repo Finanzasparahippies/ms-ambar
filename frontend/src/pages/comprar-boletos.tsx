@@ -325,10 +325,12 @@ const TourPage = () => {
 
   const getSeatBasePrice = (seat: any) => {
     if (!seat) return 0;
-    const base = Number(seat.base_price ?? currentEvent?.numbered_seat_base_price ?? 0);
-    const mult = Number(currentEvent?.price_multiplier || 1.0);
-    const rawPrice = base * mult;
-    return Math.round(getDynamicPrice(rawPrice));
+    const seatPrice = Number(seat.base_price || 0);
+    if (seatPrice > 0) {
+      return Math.round(seatPrice);
+    }
+    const fallbackBase = Number(currentEvent?.numbered_seat_base_price || 1000);
+    return Math.round(fallbackBase);
   };
 
   const getEffectiveSeatlessPrice = () => {
@@ -603,15 +605,18 @@ const TourPage = () => {
                 {ticketMode === 'seat' ? (
                   <div className="relative group rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
                     <div className="px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] font-black uppercase tracking-wider text-white/70">
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-4">
                         <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30" /> Disponible
+                          <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30 shadow-[0_0_6px_#22a6b3]" /> Disponible
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-3 h-3 rounded-full bg-[#f59e0b] border border-white/30 shadow-[0_0_6px_#f59e0b]" /> VIP
                         </span>
                         <span className="flex items-center gap-1.5">
                           <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
                         </span>
                         <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-white/20 border border-white/10" /> Reservado
+                          <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
                         </span>
                       </div>
                       <span className="text-[9px] text-white/40 tracking-widest hidden sm:block">

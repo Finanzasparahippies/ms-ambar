@@ -107,6 +107,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   }, []);
   
   const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
+  const hoveredSeat = useMemo(() => {
+    if (!hoveredId) return null;
+    return seats.find(s => String(s.id) === hoveredId) || null;
+  }, [seats, hoveredId]);
 
   // --- Premium Rendering Engine ---
   const draw = useCallback(() => {
@@ -300,32 +304,81 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.save(); ctx.translate(seat.x, seat.y); ctx.rotate((seat.angle || 0) * Math.PI / 180);
       const isSelected = selectedSet.has(String(seat.id));
       const isHovered = hoveredId === String(seat.id);
+      const isOccupied = seat.status === 'occupied' || seat.status === 'reserved';
       
-      if (isSelected) { ctx.shadowBlur = 10; ctx.shadowColor = '#FFBF00'; }
-      
-      // Status & Category-based coloring
-      let fillColor = theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)';
-      let strokeColor = theme === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.3)';
-      
-      if (seat.status === 'occupied' || seat.status === 'reserved') {
-        fillColor = theme === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.05)';
-        strokeColor = theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)';
-      } else {
-        if (seat.category === 'vip') fillColor = 'rgba(255, 191, 0, 0.4)';
-        else if (seat.category === 'premium') fillColor = 'rgba(34, 166, 179, 0.4)';
-        else if (seat.category === 'disabled') fillColor = 'rgba(106, 176, 76, 0.4)';
-      }
-      
-      ctx.fillStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : fillColor;
-      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') : strokeColor;
-      ctx.lineWidth = isSelected ? 2 : 1;
-      ctx.beginPath(); ctx.roundRect(-9, -9, 18, 18, 5); ctx.fill(); ctx.stroke();
+      let fillColor: string;
+      let strokeColor: string;
 
-      // Lock icon for reserved seats
-      if ((seat.status === 'occupied' || seat.status === 'reserved') && !isSelected) {
-        ctx.fillStyle = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)';
-        ctx.beginPath(); ctx.arc(0, 0, 2, 0, Math.PI * 2); ctx.fill();
+      if (isOccupied) {
+        fillColor = theme === 'dark' ? 'rgba(30, 41, 59, 0.75)' : 'rgba(226, 232, 240, 0.85)';
+        strokeColor = theme === 'dark' ? 'rgba(239, 68, 68, 0.45)' : 'rgba(239, 68, 68, 0.35)';
+      } else {
+        const cat = String(seat.category || '').toLowerCase();
+        if (cat === 'vip') {
+          fillColor = 'rgba(245, 158, 11, 0.85)';
+          strokeColor = '#d97706';
+        } else if (cat === 'premium') {
+          fillColor = 'rgba(139, 92, 246, 0.85)';
+          strokeColor = '#7c3aed';
+        } else if (cat === 'disabled') {
+          fillColor = 'rgba(34, 197, 94, 0.85)';
+          strokeColor = '#16a34a';
+        } else {
+          fillColor = 'rgba(34, 166, 179, 0.85)';
+          strokeColor = '#008b9b';
+        }
       }
+
+      if (isSelected) {
+        fillColor = '#FFBF00';
+        strokeColor = '#ffffff';
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = '#FFBF00';
+      } else if (isHovered && !isOccupied) {
+        fillColor = '#38bdf8';
+        strokeColor = '#ffffff';
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#38bdf8';
+      }
+
+      ctx.fillStyle = fillColor;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = isSelected ? 2.5 : 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-10, -10, 20, 20, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      // Render Checkmark inside selected seats
+      if (isSelected) {
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-4, 0);
+        ctx.lineTo(-1, 3);
+        ctx.lineTo(5, -3);
+        ctx.stroke();
+      }
+
+      // Render Lock/X icon inside occupied/reserved seats
+      if (isOccupied && !isSelected) {
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(239, 68, 68, 0.65)' : 'rgba(220, 38, 38, 0.65)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-4, -4); ctx.lineTo(4, 4);
+        ctx.moveTo(4, -4); ctx.lineTo(-4, 4);
+        ctx.stroke();
+      }
+
+      // Render seat number label on zoom
+      if (transform.scale >= 0.45) {
+        ctx.font = '900 8px Outfit, sans-serif';
+        ctx.fillStyle = isSelected ? '#000000' : (isOccupied ? (theme === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)') : '#ffffff');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(seat.number), 0, 0);
+      }
+
       ctx.restore();
     });
 
@@ -586,6 +639,25 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         style={{ touchAction: 'none' }}
         tabIndex={0}
       />
+      {hoveredSeat && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-black/85 backdrop-blur-xl border border-white/20 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-3 text-white text-[11px] font-black uppercase tracking-wider z-20 pointer-events-none transition-all duration-200">
+          <span className={cn(
+            "w-2.5 h-2.5 rounded-full shrink-0 animate-pulse",
+            hoveredSeat.status === 'occupied' || hoveredSeat.status === 'reserved'
+              ? "bg-red-500 shadow-[0_0_8px_#ef4444]"
+              : String(hoveredSeat.category).toLowerCase() === 'vip'
+                ? "bg-amber-400 shadow-[0_0_8px_#f59e0b]"
+                : "bg-[#22a6b3] shadow-[0_0_8px_#22a6b3]"
+          )} />
+          <span>Fila {hoveredSeat.row} • Asiento {hoveredSeat.number}</span>
+          <span className="text-white/30">|</span>
+          <span className="text-amber-400 font-extrabold">
+            {hoveredSeat.status === 'occupied' || hoveredSeat.status === 'reserved'
+              ? 'OCUPADO / RESERVADO'
+              : (hoveredSeat.base_price ? `$${Math.round(Number(hoveredSeat.base_price)).toLocaleString('es-MX')} MXN` : 'DISPONIBLE')}
+          </span>
+        </div>
+      )}
       <div className="absolute bottom-6 left-6 flex gap-2">
         <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50 hidden sm:block">Del: Borrar | Shift+Drag: Multi | Arrows: Precision</div>
       </div>
