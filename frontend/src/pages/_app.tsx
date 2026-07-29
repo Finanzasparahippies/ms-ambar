@@ -5,6 +5,7 @@ import { Inter } from "next/font/google";
 import { reportWebVitalsToBackend } from "../lib/performance";
 import PerformanceHUD from "../components/PerformanceHUD";
 import { Toaster } from "react-hot-toast";
+import { EventThemeContextProvider } from "../context/EventThemeContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -14,12 +15,14 @@ export function reportWebVitals(metric: NextWebVitalsMetric) {
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <div className={inter.className}>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
-      <PerformanceHUD />
-      <Toaster position="top-right" />
-    </div>
+    <EventThemeContextProvider>
+      <div className={inter.className}>
+        <Layout>
+          <Component {...pageProps} />
+        </Layout>
+        <PerformanceHUD />
+        <Toaster position="top-right" />
+      </div>
+    </EventThemeContextProvider>
   );
 }

@@ -569,3 +569,45 @@ class TicketsAppTests(APITestCase):
             self.assertIsNone(t.seat)
             self.assertEqual(t.status, 'paid')
 
+    def test_active_theme_endpoint_default(self):
+        """Verify GET /api/tickets/theme/active/ returns default theme configuration from SiteSettings."""
+        from apps.tickets.models import SiteSettings
+        url = reverse('active-theme')
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data.get('primary_color'), '#E5A93B')
+        self.assertEqual(res.data.get('particle_shape'), 'moon')
+        self.assertEqual(res.data.get('card_style'), 'rounded-full')
+
+    def test_active_theme_endpoint_event_override(self):
+        """Verify GET /api/tickets/theme/active/ returns event-specific custom theme when set."""
+        # Set custom theme for event
+        self.event.primary_color = '#FF4500'
+        self.event.particle_shape = 'cactus'
+        self.event.card_style = 'rounded-2xl'
+        self.event.save()
+
+        url = reverse('active-theme') + f'?event_id={self.event.id}'
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data.get('primary_color'), '#FF4500')
+        self.assertEqual(res.data.get('particle_shape'), 'cactus')
+        self.assertEqual(res.data.get('card_style'), 'rounded-2xl')
+        self.assertEqual(res.data.get('event_id'), self.event.id)
+
+    def test_site_settings_theme_update_admin(self):
+        """Verify staff/admin can update global theme settings via POST /api/tickets/settings/."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('site-settings')
+        data = {
+            'primary_color': '#00FF00',
+            'particle_shape': 'star',
+            'custom_css': 'body { font-weight: bold; }'
+        }
+        res = self.client.post(url, data, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data.get('theme_config', {}).get('primary_color'), '#00FF00')
+        self.assertEqual(res.data.get('theme_config', {}).get('particle_shape'), 'star')
+        self.assertEqual(res.data.get('theme_config', {}).get('custom_css'), 'body { font-weight: bold; }')
+
+

@@ -11,17 +11,20 @@ import Head from 'next/head';
 import Link from 'next/link';
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useEventTheme } from '../context/EventThemeContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // ─── PARTICLE BACKGROUND COMPONENT (WITH MORPHING) ───
 const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const morphTargetRef = useRef(morphTarget);
+  const { theme } = useEventTheme();
+  const activeTarget = morphTarget !== 'none' ? morphTarget : (theme.particleShape || 'moon');
+  const morphTargetRef = useRef(activeTarget);
 
   useEffect(() => {
-    morphTargetRef.current = morphTarget;
-  }, [morphTarget]);
+    morphTargetRef.current = activeTarget;
+  }, [activeTarget]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

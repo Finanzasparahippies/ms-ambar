@@ -19,6 +19,7 @@ import SeatingChart from '../components/SeatingChart';
 import TourTimeline from '../components/TourTimeline';
 import { showAlert } from '../lib/notifications';
 import { cn } from '../lib/utils';
+import { useEventTheme } from '../context/EventThemeContext';
 
 // ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
 const STRIPE_PCT_FEE = 0.036;   // 3.6%
@@ -108,6 +109,14 @@ const TourPage = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [elements, setElements] = useState<any[]>([]);
   const [pageSubtitle, setPageSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
+
+  const { fetchThemeForEvent } = useEventTheme();
+
+  useEffect(() => {
+    if (currentEvent?.id) {
+      fetchThemeForEvent(currentEvent.id);
+    }
+  }, [currentEvent?.id]);
 
   // Meet & Greet, Ticket Mode and Coupon Checkout states
   const [mgQuantity, setMgQuantity] = useState(1);
