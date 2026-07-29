@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
 import CouponManager, { Coupon } from '../../components/CouponManager';
+import ThemeManager from '../../components/ThemeManager';
 import {
   DollarSign,
   Ticket,
@@ -212,7 +213,7 @@ export default function AdminDashboard() {
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
 
   // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme'>('summary');
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [contracts, setContracts] = useState<any[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
@@ -2610,11 +2611,35 @@ export default function AdminDashboard() {
             >
               🎟️ Cupones VIP
             </button>
+            <button
+              onClick={() => setActiveTab('theme')}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'theme'
+                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                }`}
+            >
+              🎨 Tema & Apariencia
+            </button>
           </div>
 
           {/* Main Administrative Views Context */}
           <div className="relative z-10">
             <AnimatePresence>
+
+              {/* TAB: TEMA Y APARIENCIA VISUAL */}
+              {activeTab === 'theme' && (
+                <motion.div
+                  key="theme-tab"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ThemeManager />
+                </motion.div>
+              )}
+
+              {/* TAB: CUPONES Y DESCUENTOS */}
 
               {/* TAB: CUPONES Y DESCUENTOS */}
               {activeTab === 'coupons' && (
