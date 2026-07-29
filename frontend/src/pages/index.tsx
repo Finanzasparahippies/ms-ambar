@@ -1125,17 +1125,21 @@ const Home = () => {
               </div>
 
               {/* Right Column: Flyer Poster Container */}
-              <div className="w-full h-80 sm:h-[440px] lg:h-[500px] overflow-hidden rounded-3xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
-                <div className="relative w-full h-full max-w-[360px] lg:max-w-none rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-pink-400/30 group/flyer">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-10 pointer-events-none" />
+              <div className="w-full h-[500px] sm:h-[600px] lg:h-[720px] overflow-hidden rounded-3xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
+                <div className="relative w-full h-full max-w-[420px] lg:max-w-none rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-pink-400/30 group/flyer bg-black/40">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent z-10 pointer-events-none" />
                   <img
                     src={nextEvent.flyer_url}
                     alt={`Flyer: ${nextEvent.title}`}
-                    className="w-full h-full object-cover object-center lg:object-right group-hover/flyer:scale-[1.03] transition-transform duration-1000 ease-out"
+                    className="w-full h-full object-contain object-center group-hover/flyer:scale-[1.03] transition-transform duration-1000 ease-out"
                   />
-                  <div className="absolute bottom-4 left-4 z-20">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300">Hadas en el Desierto</span>
-                    <p className="text-xs font-bold text-white uppercase italic">Sábado 3 Oct • London Pub</p>
+                  <div className="absolute bottom-5 left-5 z-20">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300">
+                      Hadas en el Desierto
+                    </span>
+                    <p className="text-xs font-bold text-white uppercase italic">
+                      Sábado 3 Oct • London Pub
+                    </p>
                   </div>
                 </div>
               </div>
