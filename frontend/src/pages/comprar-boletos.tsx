@@ -870,9 +870,6 @@ const TourPage = () => {
                                 </span>
                               )}
                             </div>
-                            <p className={cn("text-[9.5px] font-bold uppercase tracking-wider mt-0.5 truncate", wantsMG ? "text-amber-700 dark:text-amber-300/80" : "text-slate-400 dark:text-slate-400")}>
-                              {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Cupo Limitado Agotado'}
-                            </p>
                           </div>
                         </div>
 
