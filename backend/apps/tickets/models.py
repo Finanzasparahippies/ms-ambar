@@ -493,6 +493,7 @@ class Seat(models.Model):
     x = models.FloatField(default=0)
     y = models.FloatField(default=0)
     angle = models.FloatField(default=0) # In degrees
+    color = models.CharField(max_length=50, blank=True, default='')
 
     class Meta:
         unique_together = ('theater', 'section', 'row', 'number')
