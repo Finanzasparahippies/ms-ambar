@@ -16,11 +16,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import SeatingChart from '../components/SeatingChart';
+import ThemedSection from '../components/ThemedSection';
 import TourTimeline from '../components/TourTimeline';
+import { useEventTheme } from '../context/EventThemeContext';
 import { showAlert } from '../lib/notifications';
 import { cn } from '../lib/utils';
-import { useEventTheme } from '../context/EventThemeContext';
-import ThemedSection from '../components/ThemedSection';
 
 // ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
 const STRIPE_PCT_FEE = 0.036;   // 3.6%
@@ -816,9 +816,6 @@ const TourPage = () => {
                         </div>
                         <div>
                           <h4 className="font-black text-xs uppercase tracking-widest text-nature-night">Meet & Greet Pase</h4>
-                          <p className={cn("text-[9px] font-bold uppercase tracking-widest mt-0.5", wantsMG ? "text-nature-night/70" : "text-amber-honey")}>
-                            {currentEvent?.mg_available > 0 ? `${currentEvent.mg_available} Pases Disponibles` : 'Agotado'}
-                          </p>
                         </div>
                       </div>
                       {!wantsMG && <span className="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-black opacity-60 text-nature-night italic">

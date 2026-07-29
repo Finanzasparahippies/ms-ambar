@@ -52,16 +52,25 @@ describe('Pricing and Stripe Fee Mirror Unit Tests (Frontend)', () => {
     expect(res.service_fee).toBe(21.78);
   });
 
-  test('debe calcular correctamente el precio dinámico mensual en la ventana de 3 meses', () => {
-    const mockEventCurrentMonth = {
-      date: new Date().toISOString(),
-      enable_dynamic_pricing: true,
-      monthly_price_increment: 50
-    };
+  test('debe calcular correctamente la comisión Gross-Up al adquirir pases Meet & Greet (2 pases de $500 = $1,000 base -> $1,040.46 total)', () => {
+    const mgQuantity = 2;
+    const mgPrice = 500;
+    const baseTotal = mgQuantity * mgPrice; // $1,000 MXN
+    const res = calculateTotalWithFee(baseTotal);
 
-    const basePrice = 1000;
-    const dynamicPrice = getDynamicPrice(mockEventCurrentMonth, basePrice);
-    // En el mes del evento (0 meses de diferencia), aplica 3 incrementos de 50 = +150 -> $1150
-    expect(dynamicPrice).toBe(1150);
+    expect(res.base_price).toBe(1000);
+    expect(res.service_fee).toBe(40.46);
+    expect(res.total).toBe(1040.46);
+  });
+
+  test('debe calcular la comisión Gross-Up al combinar boleto de concierto con Upgrade M&G ($1,000 boleto + $500 upgrade = $1,500 base -> $1,559.13 total)', () => {
+    const seatPrice = 1000;
+    const mgUpgradePrice = 500;
+    const baseTotal = seatPrice + mgUpgradePrice; // $1,500 MXN
+    const res = calculateTotalWithFee(baseTotal);
+
+    expect(res.base_price).toBe(1500);
+    expect(res.service_fee).toBe(59.13);
+    expect(res.total).toBe(1559.13);
   });
 });

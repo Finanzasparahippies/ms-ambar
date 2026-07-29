@@ -678,3 +678,37 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(float(self.event.numbered_ticket_price), 1250.00)
         self.assertTrue(self.event.enable_dynamic_pricing)
         self.assertEqual(float(self.event.monthly_price_increment), 75.00)
+
+    @patch('stripe.checkout.Session.create')
+    def test_create_ticket_checkout_session_meet_greet_with_fee(self, mock_session_create):
+        """Verify Meet & Greet ticket purchases and M&G upgrades correctly sum the Gross-Up service fee."""
+        from apps.shop.utils import create_ticket_checkout_session
+        mock_session_create.return_value = type('MockSession', (), {'id': 'cs_test_mg_123', 'url': 'https://checkout.stripe.com/test_mg'})()
+
+        # Standalone M&G Event
+        mg_event = Event.objects.create(
+            title="Convivencia Exclusiva M&G",
+            artist="Ms Ambar",
+            date=self.event.date,
+            event_type="meet_greet",
+            mg_price=500.00,
+            mg_limit=20
+        )
+
+        session = create_ticket_checkout_session(
+            event=mg_event,
+            seats=[],
+            user_email="mg_buyer@example.com",
+            success_url="https://example.com/success",
+            cancel_url="https://example.com/cancel",
+            quantity=2
+        )
+
+        self.assertTrue(mock_session_create.called)
+        kwargs = mock_session_create.call_args[1]
+        line_items = kwargs.get('line_items', [])
+
+        # Total base = 2 * 500 = 1000 MXN. Gross-Up fee = 40.46 MXN
+        fee_item = next((item for item in line_items if 'Cargo de servicio' in item.get('price_data', {}).get('product_data', {}).get('name', '')), None)
+        self.assertIsNotNone(fee_item)
+        self.assertEqual(fee_item['price_data']['unit_amount'], 4046) # $40.46 MXN
