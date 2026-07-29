@@ -22,6 +22,15 @@ class EventAdmin(admin.ModelAdmin):
         ('Información del Evento', {
             'fields': ('title', 'artist', 'date', 'doors_open', 'duration_minutes', 'venue_name', 'venue_address', 'theater', 'is_active', 'event_type', 'price_multiplier')
         }),
+        ('Personalización Visual del Tema (Frontend)', {
+            'fields': (
+                'primary_color', 'secondary_color', 'background_start', 'background_end',
+                'accent_color', 'card_background', 'text_color',
+                'particle_shape', 'card_style', 'background_pattern', 'font_preset', 'custom_css'
+            ),
+            'description': 'Configura los colores, figura de partículas, estilo de tarjetas y fuentes para este evento. Si se dejan en blanco, se utilizarán los valores globales del sitio.',
+            'classes': ('collapse',),
+        }),
         ('Estrategia de Precios Dinámicos Mensuales', {
             'fields': ('enable_dynamic_pricing', 'monthly_price_increment'),
             'description': 'Ajusta automáticamente los precios de boletos por mes previo al evento (ej. -$50.00 MXN por mes de anticipación).'
@@ -76,6 +85,14 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         ('Landing Page', {
             'fields': ('homepage_cta_text',),
             'description': 'Texto del badge de CTA cuando no hay eventos próximos programados.'
+        }),
+        ('Personalización Global del Tema (Frontend Todo el Sitio)', {
+            'fields': (
+                'primary_color', 'secondary_color', 'background_start', 'background_end',
+                'accent_color', 'card_background', 'text_color',
+                'particle_shape', 'card_style', 'background_pattern', 'font_preset', 'custom_css'
+            ),
+            'description': 'Configura la paleta de colores, la figura del canvas de partículas, estilos de tarjetas y fuentes por defecto para todas las páginas del sitio.',
         }),
     )
 

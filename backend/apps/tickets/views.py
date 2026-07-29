@@ -660,12 +660,52 @@ class SiteSettingsView(APIView):
 
     def post(self, request):
         settings_obj = SiteSettings.get()
-        # Update only provided fields
-        if 'tickets_page_subtitle' in request.data:
-            settings_obj.tickets_page_subtitle = request.data['tickets_page_subtitle']
-        if 'homepage_cta_text' in request.data:
-            settings_obj.homepage_cta_text = request.data['homepage_cta_text']
+        for field in [
+            'tickets_page_subtitle', 'homepage_cta_text',
+            'primary_color', 'secondary_color', 'background_start', 'background_end',
+            'accent_color', 'card_background', 'text_color', 'particle_shape',
+            'card_style', 'background_pattern', 'font_preset', 'custom_css'
+        ]:
+            if field in request.data:
+                setattr(settings_obj, field, request.data[field])
         settings_obj.save()
         serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
         return Response(serializer.data)
+
+
+class ActiveThemeView(APIView):
+    """
+    Retorna la configuración de tema visual activa para el sitio.
+    Si hay un evento activo o si se especifica ?event_id= o ?slug=, retorna su tema.
+    De lo contrario, retorna el tema global por defecto de SiteSettings.
+    GET /api/tickets/theme/active/
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        event_id = request.query_params.get('event_id')
+        slug = request.query_params.get('slug')
+
+        event = None
+        if event_id:
+            event = Event.objects.filter(id=event_id, is_active=True).first()
+        elif slug:
+            event = Event.objects.filter(slug=slug, is_active=True).first()
+        else:
+            now = timezone.now()
+            event = Event.objects.filter(is_active=True, date__gte=now).order_by('date').first()
+            if not event:
+                event = Event.objects.filter(is_active=True).order_by('-date').first()
+
+        if event:
+            theme_data = event.get_theme_config()
+            theme_data['event_id'] = event.id
+            theme_data['event_title'] = event.title
+        else:
+            theme_data = SiteSettings.get().get_theme_config()
+            theme_data['event_id'] = None
+            theme_data['event_title'] = None
+
+        return Response(theme_data)
+
 

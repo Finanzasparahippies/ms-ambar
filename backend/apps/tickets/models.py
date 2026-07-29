@@ -211,6 +211,47 @@ class Theater(models.Model):
                     created_count += 1
         return created_count
 
+PARTICLE_SHAPE_CHOICES = [
+    ('circle', 'Círculo (Mundo)'),
+    ('moon', 'Media Luna'),
+    ('cactus', 'Cactus / Desierto'),
+    ('star', 'Estrella (Brillo)'),
+    ('infinity', 'Símbolo Infinito'),
+    ('hexagon', 'Hexágono Futuro'),
+    ('sun', 'Sol Radiante'),
+    ('wave', 'Ondas Fluídas'),
+    ('spiral', 'Espiral Mística'),
+    ('music', 'Nota Musical'),
+    ('eye', 'Ojo / Visión'),
+    ('love', 'Corazón / Amor'),
+    ('bee', 'Abeja / Colmena'),
+    ('eclipse', 'Eclipse Sombra'),
+    ('none', 'Partículas Libres (Sin forma)'),
+]
+
+CARD_STYLE_CHOICES = [
+    ('rounded-full', 'Ultra Suave / Redondeado Total (Píldoras y Cristal)'),
+    ('rounded-2xl', 'Moderno (Esquinas Medias Elegantes)'),
+    ('rounded-lg', 'Clásico (Esquinas Sutiles)'),
+    ('rounded-none', 'Recto / Neobrutalismo'),
+]
+
+BACKGROUND_PATTERN_CHOICES = [
+    ('stars', 'Estrellas Doradas Flotantes'),
+    ('grid', 'Malla Geométrica Futurista'),
+    ('dots', 'Puntos Sutiles Minimalistas'),
+    ('waves', 'Ondas Gradientes Suaves'),
+    ('none', 'Limpio (Solo degradado)'),
+]
+
+FONT_PRESET_CHOICES = [
+    ('cormorant', 'Cormorant Garamond (Elegante & Místico)'),
+    ('outfit', 'Outfit / Inter (Moderno & Tecnológico)'),
+    ('cinzel', 'Cinzel Decorative (Editorial & Lujo)'),
+    ('syne', 'Syne (Vanguardista & Artístico)'),
+]
+
+
 class Event(models.Model):
     EVENT_TYPES = [
         ('concert', 'Concierto / Venue'),
@@ -227,7 +268,7 @@ class Event(models.Model):
     )
     venue_name = models.CharField(max_length=255, blank=True, default='')
     venue_address = models.CharField(max_length=255, blank=True, default='')
-    theater = models.ForeignKey(Theater, on_delete=models.CASCADE, null=True, blank=True, related_name='events')
+    theater = models.ForeignKey('Theater', on_delete=models.CASCADE, null=True, blank=True, related_name='events')
     image = models.ImageField(upload_to='events/', null=True, blank=True)
     flyer = models.ImageField(
         upload_to='event_flyers/',
@@ -256,8 +297,39 @@ class Event(models.Model):
     enable_dynamic_pricing = models.BooleanField(default=True, help_text="Activa el ajuste dinámico mensual de precios previo al evento")
     monthly_price_increment = models.DecimalField(max_digits=10, decimal_places=2, default=50.00, help_text="Monto de incremento mensual (ej. $50.00 MXN)")
 
+    # Personalización del Tema Visual del Evento (Sobrescribe SiteSettings si se define)
+    primary_color = models.CharField(max_length=50, blank=True, null=True, help_text="Color primario de acentos, botones y luces (ej. #E5A93B). Dejar en blanco para usar configuración global.")
+    secondary_color = models.CharField(max_length=50, blank=True, null=True, help_text="Color secundario (ej. #22A6B7)")
+    background_start = models.CharField(max_length=50, blank=True, null=True, help_text="Color inicio degradado fondo (ej. #080c0a)")
+    background_end = models.CharField(max_length=50, blank=True, null=True, help_text="Color fin degradado fondo (ej. #040605)")
+    accent_color = models.CharField(max_length=50, blank=True, null=True, help_text="Color de resplandor / detalles (ej. #9F2B00)")
+    card_background = models.CharField(max_length=50, blank=True, null=True, help_text="Color de fondo de tarjetas de cristal (ej. #0c0f0d)")
+    text_color = models.CharField(max_length=50, blank=True, null=True, help_text="Color principal del texto (ej. #F4F6F0)")
+    particle_shape = models.CharField(max_length=50, choices=PARTICLE_SHAPE_CHOICES, blank=True, null=True, help_text="Figura geométrica del Canvas de partículas")
+    card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, blank=True, null=True, help_text="Estilo de bordes de tarjetas y botones")
+    background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, blank=True, null=True, help_text="Patrón visual de fondo")
+    font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, blank=True, null=True, help_text="Preset de fuentes tipográficas")
+    custom_css = models.TextField(blank=True, null=True, help_text="CSS personalizado para este evento específico")
+
     stripe_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del producto en Stripe para este evento")
     stripe_price_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del precio en Stripe (solo para Meet & Greet o general)")
+
+    def get_theme_config(self):
+        site_theme = SiteSettings.get().get_theme_config()
+        return {
+            'primary_color': self.primary_color or site_theme['primary_color'],
+            'secondary_color': self.secondary_color or site_theme['secondary_color'],
+            'background_start': self.background_start or site_theme['background_start'],
+            'background_end': self.background_end or site_theme['background_end'],
+            'accent_color': self.accent_color or site_theme['accent_color'],
+            'card_background': self.card_background or site_theme['card_background'],
+            'text_color': self.text_color or site_theme['text_color'],
+            'particle_shape': self.particle_shape or site_theme['particle_shape'],
+            'card_style': self.card_style or site_theme['card_style'],
+            'background_pattern': self.background_pattern or site_theme['background_pattern'],
+            'font_preset': self.font_preset or site_theme['font_preset'],
+            'custom_css': (self.custom_css or '') + ('\n' + site_theme['custom_css'] if site_theme['custom_css'] else ''),
+        }
 
     def save(self, *args, **kwargs):
         if self.theater:
@@ -604,6 +676,36 @@ class SiteSettings(models.Model):
         default="¡Próximamente nuevo evento!",
         help_text="Texto del badge de próximo evento en la landing page cuando no hay eventos programados."
     )
+
+    # Configuración Global de Tema Visual (Valores por defecto para todo el sitio)
+    primary_color = models.CharField(max_length=50, default='#E5A93B', help_text="Color primario de acentos, botones y luces (ej. #E5A93B)")
+    secondary_color = models.CharField(max_length=50, default='#22A6B7', help_text="Color secundario (ej. #22A6B7)")
+    background_start = models.CharField(max_length=50, default='#080c0a', help_text="Color inicio degradado fondo (ej. #080c0a)")
+    background_end = models.CharField(max_length=50, default='#040605', help_text="Color fin degradado fondo (ej. #040605)")
+    accent_color = models.CharField(max_length=50, default='#9F2B00', help_text="Color de resplandor / detalles (ej. #9F2B00)")
+    card_background = models.CharField(max_length=50, default='#0c0f0d', help_text="Color de fondo de tarjetas de cristal (ej. #0c0f0d)")
+    text_color = models.CharField(max_length=50, default='#F4F6F0', help_text="Color principal del texto (ej. #F4F6F0)")
+    particle_shape = models.CharField(max_length=50, choices=PARTICLE_SHAPE_CHOICES, default='moon', help_text="Figura geométrica del Canvas de partículas")
+    card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, default='rounded-full', help_text="Estilo de bordes de tarjetas y botones")
+    background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
+    font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, default='cormorant', help_text="Preset de fuentes tipográficas")
+    custom_css = models.TextField(blank=True, null=True, default='', help_text="CSS personalizado global para todo el sitio")
+
+    def get_theme_config(self):
+        return {
+            'primary_color': self.primary_color or '#E5A93B',
+            'secondary_color': self.secondary_color or '#22A6B7',
+            'background_start': self.background_start or '#080c0a',
+            'background_end': self.background_end or '#040605',
+            'accent_color': self.accent_color or '#9F2B00',
+            'card_background': self.card_background or '#0c0f0d',
+            'text_color': self.text_color or '#F4F6F0',
+            'particle_shape': self.particle_shape or 'moon',
+            'card_style': self.card_style or 'rounded-full',
+            'background_pattern': self.background_pattern or 'stars',
+            'font_preset': self.font_preset or 'cormorant',
+            'custom_css': self.custom_css or '',
+        }
 
     class Meta:
         verbose_name = "Configuración del Sitio"

@@ -40,6 +40,7 @@ class EventSerializer(serializers.ModelSerializer):
     base_price = serializers.SerializerMethodField()
     numbered_seat_base_price = serializers.SerializerMethodField()
     price_with_fee = serializers.SerializerMethodField()
+    theme_config = serializers.ReadOnlyField(source='get_theme_config')
 
     class Meta:
         model = Event
@@ -54,6 +55,10 @@ class EventSerializer(serializers.ModelSerializer):
             'price_multiplier', 'event_type',
             'stripe_product_id', 'stripe_price_id',
             'base_price', 'numbered_seat_base_price', 'price_with_fee',
+            'theme_config',
+            'primary_color', 'secondary_color', 'background_start', 'background_end',
+            'accent_color', 'card_background', 'text_color', 'particle_shape',
+            'card_style', 'background_pattern', 'font_preset', 'custom_css'
         ]
         extra_kwargs = {
             'venue_name': {'required': False, 'allow_blank': True},
@@ -119,10 +124,16 @@ class TicketSerializer(serializers.ModelSerializer):
 
 class SiteSettingsSerializer(serializers.ModelSerializer):
     fee_config = serializers.SerializerMethodField()
+    theme_config = serializers.ReadOnlyField(source='get_theme_config')
 
     class Meta:
         model = SiteSettings
-        fields = ['tickets_page_subtitle', 'homepage_cta_text', 'fee_config']
+        fields = [
+            'tickets_page_subtitle', 'homepage_cta_text', 'fee_config', 'theme_config',
+            'primary_color', 'secondary_color', 'background_start', 'background_end',
+            'accent_color', 'card_background', 'text_color', 'particle_shape',
+            'card_style', 'background_pattern', 'font_preset', 'custom_css'
+        ]
 
     def get_fee_config(self, obj):
         return get_fee_config()

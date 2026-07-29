@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import EventViewSet, TheaterViewSet, TicketViewSet, CouponViewSet, SiteSettingsView
+from .views import EventViewSet, TheaterViewSet, TicketViewSet, CouponViewSet, SiteSettingsView, ActiveThemeView
 
 router = DefaultRouter()
 router.register(r'events', EventViewSet)
@@ -11,4 +11,5 @@ router.register(r'coupons', CouponViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('settings/', SiteSettingsView.as_view(), name='site-settings'),
+    path('theme/active/', ActiveThemeView.as_view(), name='active-theme'),
 ]
