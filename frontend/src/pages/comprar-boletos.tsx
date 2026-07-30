@@ -143,6 +143,7 @@ const TourPage = () => {
   const [wantsMG, setWantsMG] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [elements, setElements] = useState<any[]>([]);
+  const [allowCanvasZoom, setAllowCanvasZoom] = useState<boolean>(true);
   const [pageSubtitle, setPageSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
 
   const { fetchThemeForEvent } = useEventTheme();
@@ -269,6 +270,9 @@ const TourPage = () => {
       api.get('/tickets/events/').then(r => r.data).catch(() => []),
       api.get('/tickets/settings/').then(r => r.data).catch(() => null),
     ]).then(([eventsData, settingsData]) => {
+      if (settingsData && typeof settingsData.allow_canvas_zoom === 'boolean') {
+        setAllowCanvasZoom(settingsData.allow_canvas_zoom);
+      }
       if (eventsData && Array.isArray(eventsData) && eventsData.length > 0) {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -727,6 +731,7 @@ const TourPage = () => {
                           selectedIds={selectedSeats.map(s => String(s.id))}
                           theme={theme}
                           elements={elements}
+                          allowZoom={allowCanvasZoom}
                         />
                       </div>
                     )}

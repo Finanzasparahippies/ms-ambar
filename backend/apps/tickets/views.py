@@ -219,23 +219,19 @@ class TicketViewSet(viewsets.ModelViewSet):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup_value = str(self.kwargs[lookup_url_kwarg]).strip()
         from django.http import Http404
+        from django.core.exceptions import ValidationError
+        import uuid
 
-        # 1. Primary Token Lookup (UUID token is unguessable, secure for public ticket view)
-        ticket = Ticket.objects.filter(token=lookup_value).first()
-        if ticket:
-            return ticket
-
-        # 2. Try parsing UUID object if token string had format differences
+        # 1. Primary Token Lookup: Only query token if lookup_value is a valid UUID
         try:
-            import uuid
             uuid_val = uuid.UUID(lookup_value)
             ticket = Ticket.objects.filter(token=uuid_val).first()
             if ticket:
                 return ticket
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, ValidationError):
             pass
 
-        # 3. Fallback to Primary Key (ID) or filter lookup
+        # 2. Fallback to Primary Key (ID) or filter lookup
         user = self.request.user
         if user and user.is_authenticated and (user.is_staff or user.is_superuser):
             queryset = Ticket.objects.all()
@@ -248,7 +244,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             if lookup_value.isdigit():
                 return queryset.get(pk=int(lookup_value))
             return queryset.get(**{self.lookup_field: lookup_value})
-        except (Ticket.DoesNotExist, ValueError):
+        except (Ticket.DoesNotExist, ValueError, ValidationError):
             raise Http404("No ticket matches the given query.")
 
     @action(detail=False, methods=['post'], url_path='validate')

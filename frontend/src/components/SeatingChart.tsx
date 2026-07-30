@@ -52,6 +52,7 @@ interface SeatingChartProps {
   onChartClick?: (x: number, y: number) => void;
   selectedIds?: string[];
   activeTool?: string;
+  allowZoom?: boolean;
 }
 
 const SeatingChart: React.FC<SeatingChartProps> = ({
@@ -64,12 +65,15 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   onSelect,
   onChartClick,
   selectedIds: externalSelectedIds = [],
-  activeTool = 'select'
+  activeTool = 'select',
+  allowZoom = true
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number>();
   const hasAutoFittedRef = useRef<boolean>(false);
+  const allowZoomRef = useRef<boolean>(allowZoom);
+  useEffect(() => { allowZoomRef.current = allowZoom; }, [allowZoom]);
 
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [elements, setElements] = useState<MapElement[]>(initialElements);
@@ -143,12 +147,12 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Re-fit when initial seats/elements load if not fitted yet
+  // Re-fit when initial seats/elements load or if zoom is disabled
   useEffect(() => {
-    if ((seats.length > 0 || elements.length > 0) && !hasAutoFittedRef.current) {
+    if ((seats.length > 0 || elements.length > 0) && (!hasAutoFittedRef.current || !allowZoom)) {
       handleFitToView();
     }
-  }, [seats.length, elements.length, handleFitToView]);
+  }, [seats.length, elements.length, allowZoom, handleFitToView]);
 
   // Non-passive native wheel listener with constrained zoom/pan bounds
   useEffect(() => {
@@ -166,13 +170,19 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const containerH = container?.clientHeight || rect.height || 600;
 
       setTransform(prev => {
+        const currentBounds = boundsRef.current;
+        const fitScale = calculateFitTransform(currentBounds, containerW, containerH).scale;
+
+        // If zoom is disabled by admin setting, lock scale at fitScale
+        if (!allowZoomRef.current) {
+          return clampTransform({ x: prev.x, y: prev.y, scale: fitScale }, currentBounds, containerW, containerH, fitScale);
+        }
+
         const zoomFactor = e.deltaY > 0 ? 0.88 : 1.14;
         const rawScale = prev.scale * zoomFactor;
         const newX = mouseX - (mouseX - prev.x) * (rawScale / prev.scale);
         const newY = mouseY - (mouseY - prev.y) * (rawScale / prev.scale);
 
-        const currentBounds = boundsRef.current;
-        const fitScale = calculateFitTransform(currentBounds, containerW, containerH).scale;
         return clampTransform({ x: newX, y: newY, scale: rawScale }, currentBounds, containerW, containerH, fitScale);
       });
     };
@@ -185,6 +195,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
   // Incremental button zoom handler
   const handleStepZoom = useCallback((factor: number) => {
+    if (!allowZoom) return;
     const container = containerRef.current;
     const cW = container?.clientWidth || 800;
     const cH = container?.clientHeight || 600;
@@ -198,7 +209,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const fitScale = calculateFitTransform(bounds, cW, cH).scale;
       return clampTransform({ x: newX, y: newY, scale: rawScale }, bounds, cW, cH, fitScale);
     });
-  }, [bounds]);
+  }, [bounds, allowZoom]);
 
   const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
   const hoveredSeat = useMemo(() => {
@@ -645,7 +656,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         });
         setLastMousePos({ x: touch.clientX, y: touch.clientY });
       }
-    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
+    } else if (e.touches.length === 2 && lastTouchDistRef.current !== null && allowZoom) {
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
@@ -800,38 +811,53 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       )}
       <div className="absolute bottom-6 left-6 flex gap-2 z-10 pointer-events-none">
         <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50 hidden sm:block">
-          Del: Borrar | Shift+Drag: Multi | Scroll: Zoom | Arrastrar: Paneo
+          Del: Borrar | Shift+Drag: Multi | {allowZoom ? 'Scroll: Zoom | ' : ''}Arrastrar: Paneo
         </div>
       </div>
       
       {/* Interactive Zoom Controls & Recenter Button */}
       <div className="absolute bottom-6 right-6 flex items-center gap-2 z-20">
-        <button
-          onClick={() => handleStepZoom(0.8)}
-          title="Alejar Zoom"
-          className="w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white/80 border border-white/15 backdrop-blur-xl flex items-center justify-center font-bold text-sm transition-all hover:scale-105 active:scale-95"
-        >
-          -
-        </button>
+        {allowZoom ? (
+          <>
+            <button
+              onClick={() => handleStepZoom(0.8)}
+              title="Alejar Zoom"
+              className="w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white/80 border border-white/15 backdrop-blur-xl flex items-center justify-center font-bold text-sm transition-all hover:scale-105 active:scale-95"
+            >
+              -
+            </button>
 
-        <button
-          onClick={handleFitToView}
-          title="Ajustar mapa a pantalla (Recentrar)"
-          className="px-3.5 py-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-xl border border-white/15 hover:border-amber-400/40 rounded-full text-[10px] font-black text-white/90 uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 shadow-lg"
-        >
-          <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-          </svg>
-          <span>{Math.round(transform.scale * 100)}%</span>
-        </button>
+            <button
+              onClick={handleFitToView}
+              title="Ajustar mapa a pantalla (Recentrar)"
+              className="px-3.5 py-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-xl border border-white/15 hover:border-amber-400/40 rounded-full text-[10px] font-black text-white/90 uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 shadow-lg"
+            >
+              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+              <span>{Math.round(transform.scale * 100)}%</span>
+            </button>
 
-        <button
-          onClick={() => handleStepZoom(1.25)}
-          title="Acercar Zoom"
-          className="w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white/80 border border-white/15 backdrop-blur-xl flex items-center justify-center font-bold text-sm transition-all hover:scale-105 active:scale-95"
-        >
-          +
-        </button>
+            <button
+              onClick={() => handleStepZoom(1.25)}
+              title="Acercar Zoom"
+              className="w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white/80 border border-white/15 backdrop-blur-xl flex items-center justify-center font-bold text-sm transition-all hover:scale-105 active:scale-95"
+            >
+              +
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={handleFitToView}
+            title="Vista Fija del Evento (Zoom Bloqueado)"
+            className="px-3.5 py-1.5 bg-amber-500/20 backdrop-blur-xl border border-amber-400/30 rounded-full text-[10px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1.5 shadow-lg pointer-events-auto"
+          >
+            <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span>Zoom Fijo</span>
+          </button>
+        )}
       </div>
     </div>
   );

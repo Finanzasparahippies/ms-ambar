@@ -595,6 +595,18 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(res.data.get('particle_shape'), 'moon')
         self.assertEqual(res.data.get('card_style'), 'rounded-full')
 
+    def test_site_settings_allow_canvas_zoom(self):
+        """Verify SiteSettings supports allow_canvas_zoom toggle."""
+        from apps.tickets.models import SiteSettings
+        s = SiteSettings.get()
+        self.assertTrue(s.allow_canvas_zoom)
+        
+        url = reverse('site-settings')
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('allow_canvas_zoom', res.data)
+        self.assertTrue(res.data['allow_canvas_zoom'])
+
     def test_active_theme_endpoint_event_override(self):
         """Verify GET /api/tickets/theme/active/ returns event-specific custom theme when set."""
         # Set custom theme for event
