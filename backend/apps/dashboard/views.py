@@ -65,28 +65,21 @@ class AnalyticsOverview(APIView):
             start_date = end_date - timedelta(days=29)
             
             def _get_ticket_price(t):
-                base = 0.0
                 if t.seat:
                     base = float(t.seat.base_price)
                     multiplier = float(t.event.price_multiplier) if (t.event and t.event.price_multiplier) else 1.0
-                    raw_price = base * multiplier
+                    price = base * multiplier
                 elif t.ga_zone:
-                    raw_price = float(t.ga_zone.base_price)
+                    price = float(t.ga_zone.base_price)
                 elif t.event:
                     if t.event.allow_seatless_tickets and t.event.seatless_ticket_price is not None:
-                        raw_price = float(t.event.seatless_ticket_price)
+                        price = float(t.event.effective_seatless_ticket_price)
                     elif t.event.numbered_ticket_price is not None and float(t.event.numbered_ticket_price) > 0:
-                        raw_price = float(t.event.numbered_ticket_price) * float(t.event.price_multiplier or 1.0)
+                        price = float(t.event.numbered_seat_base_price)
                     else:
-                        raw_price = float(t.event.base_price or 0.0)
+                        price = float(t.event.base_price or 0.0)
                 else:
-                    raw_price = 0.0
-
-                # Dynamic pricing calculation
-                if t.event and getattr(t.event, 'enable_dynamic_pricing', False):
-                    price = t.event.get_dynamic_price(raw_price, purchase_date=t.created_at)
-                else:
-                    price = round(raw_price, 2)
+                    price = 0.0
 
                 # Meet & Greet Upgrade
                 if t.has_mg and t.event:
