@@ -210,7 +210,7 @@ class PostViewSet(viewsets.ModelViewSet):
             post.save()
 
 class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
-    queryset = NewsletterSubscriber.objects.all().order_by('-subscribed_at')
+    queryset = NewsletterSubscriber.objects.all().order_by('-created_at')
     serializer_class = NewsletterSubscriberSerializer
     pagination_class = StandardResultsSetPagination
     
