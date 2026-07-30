@@ -1145,8 +1145,7 @@ export const ThemeManager: React.FC = () => {
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };
