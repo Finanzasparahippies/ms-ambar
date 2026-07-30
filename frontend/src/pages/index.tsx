@@ -847,6 +847,7 @@ const formatoHoraOficial = (fechaString: string) => {
 };
 
 const Home = () => {
+  const { getSectionTheme } = useEventTheme();
   const [isMounted, setIsMounted] = useState(false);
   const [newsletterName, setNewsletterName] = useState('');
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -1196,8 +1197,8 @@ const Home = () => {
         const bioCtaUrl = bioTheme.bio_cta_url || "/tour";
         
         const rawContent = bioTheme.bio_content;
-        const paragraphs = rawContent
-          ? rawContent.split('\n').filter(p => p.trim().length > 0)
+        const paragraphs: string[] = rawContent
+          ? rawContent.split('\n').filter((p: string) => p.trim().length > 0)
           : [
               'Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda "Moonset", pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.',
               'Su primer álbum formal, "14•28", fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.',
@@ -1257,7 +1258,7 @@ const Home = () => {
                   </div>
 
                   <div className="space-y-4 sm:space-y-6 text-[#F4F6F0]/85 text-xs sm:text-sm md:text-base font-medium leading-relaxed font-sans" style={{ color: bioTheme.text_color || undefined }}>
-                    {paragraphs.map((para, idx) => (
+                    {paragraphs.map((para: string, idx: number) => (
                       <p key={idx}>{para}</p>
                     ))}
                   </div>
