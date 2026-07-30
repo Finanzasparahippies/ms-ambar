@@ -687,6 +687,18 @@ class SiteSettings(models.Model):
         help_text="Texto del badge de próximo evento en la landing page cuando no hay eventos programados."
     )
 
+    # Configuración de Biografía de la Artista
+    bio_badge = models.CharField(max_length=255, default="La Cantautora", help_text="Insignia / Distintivo del encabezado de la biografía.")
+    bio_title = models.CharField(max_length=255, default="Ms. Ambar", help_text="Título / Nombre artístico principal.")
+    bio_content = models.TextField(
+        default="Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda 'Moonset', pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.\n\nSu primer álbum formal, '14•28', fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.\n\nUn hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción 'No te voy a llorar', consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.",
+        help_text="Párrafos de la historia autobiográfica de la artista."
+    )
+    bio_image = models.CharField(max_length=500, default="/Images/Inicio_Biografia.jpg", help_text="URL o ruta de la fotografía oficial de biografía.")
+    bio_location = models.CharField(max_length=255, default="Hermosillo • México", help_text="Ubicación u origen de la artista.")
+    bio_cta_text = models.CharField(max_length=255, default="Ver Próximos Eventos", help_text="Texto del botón de acción (CTA).")
+    bio_cta_url = models.CharField(max_length=255, default="/tour", help_text="Enlace del botón de acción (CTA).")
+
     # Configuración Global de Tema Visual (Valores por defecto para todo el sitio)
     primary_color = models.CharField(max_length=50, default='#E5A93B', help_text="Color primario de acentos, botones y luces (ej. #E5A93B)")
     secondary_color = models.CharField(max_length=50, default='#22A6B7', help_text="Color secundario (ej. #22A6B7)")
@@ -704,6 +716,20 @@ class SiteSettings(models.Model):
     section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección del sitio (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 
     def get_theme_config(self):
+        sec_themes = self.section_themes or {}
+        bio_sec = sec_themes.get('biography', {})
+        bio_merged = {
+            'bio_badge': bio_sec.get('bio_badge', self.bio_badge),
+            'bio_title': bio_sec.get('bio_title', self.bio_title),
+            'bio_content': bio_sec.get('bio_content', self.bio_content),
+            'bio_image': bio_sec.get('bio_image', self.bio_image),
+            'bio_location': bio_sec.get('bio_location', self.bio_location),
+            'bio_cta_text': bio_sec.get('bio_cta_text', self.bio_cta_text),
+            'bio_cta_url': bio_sec.get('bio_cta_url', self.bio_cta_url),
+            **bio_sec
+        }
+        sec_themes['biography'] = bio_merged
+
         return {
             'theme_mode': self.theme_mode or 'global',
             'primary_color': self.primary_color or '#E5A93B',
@@ -718,7 +744,14 @@ class SiteSettings(models.Model):
             'background_pattern': self.background_pattern or 'stars',
             'font_preset': self.font_preset or 'cormorant',
             'custom_css': self.custom_css or '',
-            'section_themes': self.section_themes or {},
+            'bio_badge': self.bio_badge,
+            'bio_title': self.bio_title,
+            'bio_content': self.bio_content,
+            'bio_image': self.bio_image,
+            'bio_location': self.bio_location,
+            'bio_cta_text': self.bio_cta_text,
+            'bio_cta_url': self.bio_cta_url,
+            'section_themes': sec_themes,
         }
 
     class Meta:

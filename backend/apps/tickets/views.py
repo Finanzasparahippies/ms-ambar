@@ -679,6 +679,7 @@ class SiteSettingsView(APIView):
         settings_obj = SiteSettings.get()
         for field in [
             'tickets_page_subtitle', 'homepage_cta_text',
+            'bio_badge', 'bio_title', 'bio_content', 'bio_image', 'bio_location', 'bio_cta_text', 'bio_cta_url',
             'primary_color', 'secondary_color', 'background_start', 'background_end',
             'accent_color', 'card_background', 'text_color', 'particle_shape',
             'card_style', 'background_pattern', 'font_preset', 'custom_css', 'section_themes'

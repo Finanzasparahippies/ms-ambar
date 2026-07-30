@@ -95,7 +95,7 @@ const COLOR_PRESETS = [
 
 export const ThemeManager: React.FC = () => {
   const { theme, setThemeOverride, fetchThemeForEvent, resetThemeToDefaults, clearSectionOverrides } = useEventTheme();
-  
+
   const [scope, setScope] = useState<'global' | 'event'>('global');
   const [activeTabMode, setActiveTabMode] = useState<'general' | 'sections'>('general');
   const [themeMode, setThemeMode] = useState<'global' | 'section'>(theme.themeMode || 'global');
@@ -115,7 +115,7 @@ export const ThemeManager: React.FC = () => {
   const [buttonBg, setButtonBg] = useState('#E5A93B');
   const [buttonText, setButtonText] = useState('#080c0a');
   const [borderColor, setBorderColor] = useState('#E5A93B');
-  
+
   const [particleShape, setParticleShape] = useState('moon');
   const [cardStyle, setCardStyle] = useState('rounded-full');
   const [backgroundPattern, setBackgroundPattern] = useState('stars');
@@ -441,7 +441,7 @@ export const ThemeManager: React.FC = () => {
 
       {/* Scope Selector: Global Site vs Event Override */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div 
+        <div
           onClick={() => setScope('global')}
           className={`amber-glass p-6 rounded-2xl border transition-all cursor-pointer ${scope === 'global' ? 'border-amber-honey bg-amber-honey/10 shadow-lg shadow-amber-honey/10' : 'border-white/10 hover:border-white/20'}`}
         >
@@ -456,7 +456,7 @@ export const ThemeManager: React.FC = () => {
           </div>
         </div>
 
-        <div 
+        <div
           onClick={() => setScope('event')}
           className={`amber-glass p-6 rounded-2xl border transition-all cursor-pointer ${scope === 'event' ? 'border-amber-honey bg-amber-honey/10 shadow-lg shadow-amber-honey/10' : 'border-white/10 hover:border-white/20'}`}
         >
@@ -492,7 +492,7 @@ export const ThemeManager: React.FC = () => {
       {/* MODE 1: General Theme Settings */}
       {activeTabMode === 'general' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
+
           {/* Colors Section */}
           <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
             <div className="flex items-center gap-3 pb-4 border-b border-white/10">
@@ -812,7 +812,7 @@ export const ThemeManager: React.FC = () => {
       {/* MODE 2: Granular Section Customizer */}
       {activeTabMode === 'sections' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Section List Selector */}
           <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-3 lg:col-span-1">
             <h3 className="text-sm font-bold text-amber-honey uppercase tracking-wider mb-2">Seleccionar Sección del Sitio:</h3>
@@ -1101,49 +1101,48 @@ export const ThemeManager: React.FC = () => {
               </div>
             )}
 
-              {/* Dedicated Tour Timeline Ultrapremium Controls */}
-              {selectedSectionKey === 'tour_timeline' && (
-                <div className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-4 mt-2">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="text-amber-400" size={16} />
-                    <h4 className="text-xs font-black text-amber-300 uppercase tracking-wider">
-                      Ajustes Ultrapremium de la Línea de Ruta de Eventos (Tour Timeline)
-                    </h4>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-[10px] text-[#F4F6F0]/70 font-bold uppercase tracking-widest block mb-2">
-                        Globo Emergente Flotante (Cover Image Tooltip)
-                      </label>
-                      <select
-                        value={currentSectionSpec.timeline_hover_balloon !== false ? 'true' : 'false'}
-                        onChange={(e) => updateSectionProp(selectedSectionKey, 'timeline_hover_balloon', e.target.value === 'true')}
-                        className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                      >
-                        <option value="true">✨ Habilitado (Muestra la portada oficial al pasar el puntero)</option>
-                        <option value="false">Deshabilitado</option>
-                      </select>
-                    </div>
+            {/* Dedicated Tour Timeline Ultrapremium Controls */}
+            {selectedSectionKey === 'tour_timeline' && (
+              <div className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-4 mt-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="text-amber-400" size={16} />
+                  <h4 className="text-xs font-black text-amber-300 uppercase tracking-wider">
+                    Ajustes Ultrapremium de la Línea de Ruta de Eventos (Tour Timeline)
+                  </h4>
+                </div>
 
-                    <div>
-                      <label className="text-[10px] text-[#F4F6F0]/70 font-bold uppercase tracking-widest block mb-2">
-                        Resplandor y Neón de Tarjeta Focalizada
-                      </label>
-                      <select
-                        value={currentSectionSpec.timeline_glow || 'amber-neon'}
-                        onChange={(e) => updateSectionProp(selectedSectionKey, 'timeline_glow', e.target.value)}
-                        className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                      >
-                        <option value="amber-neon">🟡 Cristal Oscuro con Neón Ámbar (Recomendado)</option>
-                        <option value="cyan-neon">🌐 Cristal Oscuro con Neón Cian</option>
-                        <option value="gold-glass">✨ Cristal Dorado de Lujo</option>
-                      </select>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/70 font-bold uppercase tracking-widest block mb-2">
+                      Globo Emergente Flotante (Cover Image Tooltip)
+                    </label>
+                    <select
+                      value={currentSectionSpec.timeline_hover_balloon !== false ? 'true' : 'false'}
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'timeline_hover_balloon', e.target.value === 'true')}
+                      className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
+                    >
+                      <option value="true">✨ Habilitado (Muestra la portada oficial al pasar el puntero)</option>
+                      <option value="false">Deshabilitado</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/70 font-bold uppercase tracking-widest block mb-2">
+                      Resplandor y Neón de Tarjeta Focalizada
+                    </label>
+                    <select
+                      value={currentSectionSpec.timeline_glow || 'amber-neon'}
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'timeline_glow', e.target.value)}
+                      className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
+                    >
+                      <option value="amber-neon">🟡 Cristal Oscuro con Neón Ámbar (Recomendado)</option>
+                      <option value="cyan-neon">🌐 Cristal Oscuro con Neón Cian</option>
+                      <option value="gold-glass">✨ Cristal Dorado de Lujo</option>
+                    </select>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
