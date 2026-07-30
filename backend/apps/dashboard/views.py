@@ -134,14 +134,14 @@ class AnalyticsOverview(APIView):
             # 3. Financial Metrics - Shop / Merch
             paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
             total_orders_count = paid_orders.count()
-            shop_sales = paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            shop_sales = paid_orders.aggregate(sum('total_amount'))['total_amount__sum'] or 0
             shop_sales = float(shop_sales)
             
             # Gross Sales combined
             gross_sales = ticket_sales + shop_sales
 
             # 3b. Expenses & Net Profit
-            total_expenses = Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+            total_expenses = Expense.objects.aggregate(sum('amount'))['amount__sum'] or 0
             total_expenses = float(total_expenses)
             net_profit = gross_sales - total_expenses
             
@@ -200,7 +200,7 @@ class AnalyticsOverview(APIView):
                     s_daily_sales = Order.objects.filter(
                         status__in=['paid', 'shipped', 'delivered'],
                         created_at__date=current_date.date()
-                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                    ).aggregate(sum('total_amount'))['total_amount__sum'] or 0
                     s_daily_sales = float(s_daily_sales)
                     
                     daily_stats.append({
@@ -243,7 +243,7 @@ class AnalyticsOverview(APIView):
                         status__in=['paid', 'shipped', 'delivered'],
                         created_at__gte=m_start,
                         created_at__lte=m_end
-                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                    ).aggregate(sum('total_amount'))['total_amount__sum'] or 0
                     s_m_sales = float(s_m_sales)
 
                     monthly_stats.append({
@@ -276,7 +276,7 @@ class AnalyticsOverview(APIView):
                         status__in=['paid', 'shipped', 'delivered'],
                         created_at__gte=w_start,
                         created_at__lte=w_end
-                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                    ).aggregate(sum('total_amount'))['total_amount__sum'] or 0
                     s_w_sales = float(s_w_sales)
 
                     weekly_stats.append({
