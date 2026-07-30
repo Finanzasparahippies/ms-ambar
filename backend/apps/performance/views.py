@@ -11,8 +11,16 @@ class PerformanceViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=['post'], url_path='vitals')
     def report_vitals(self, request):
-        """Endpoint for the frontend to report Web Vitals."""
-        serializer = PerformanceMetricSerializer(data=request.data)
+        """Endpoint for the frontend to report Web Vitals (supports single & batch array)."""
+        data = request.data
+        if isinstance(data, list):
+            serializer = PerformanceMetricSerializer(data=data, many=True)
+            if serializer.is_valid():
+                serializer.save(user_agent=request.META.get('HTTP_USER_AGENT', ''))
+                return Response(status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = PerformanceMetricSerializer(data=data)
         if serializer.is_valid():
             serializer.save(user_agent=request.META.get('HTTP_USER_AGENT', ''))
             return Response(status=status.HTTP_201_CREATED)

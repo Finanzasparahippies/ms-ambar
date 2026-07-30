@@ -786,8 +786,9 @@ export default function AdminDashboard() {
   useEffect(() => {
     let interval: any;
     if (isStaff) {
-      // Poll system metrics every 15 seconds only for admins
+      // Poll system metrics every 45 seconds only for active admin sessions
       interval = setInterval(async () => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         try {
           const token = localStorage.getItem('token');
           const res = await axios.get(`${API_URL}/dashboard/system/`, {
@@ -797,7 +798,7 @@ export default function AdminDashboard() {
         } catch (e) {
           // Silent error for polling
         }
-      }, 15000);
+      }, 45000);
     }
     return () => {
       if (interval) clearInterval(interval);

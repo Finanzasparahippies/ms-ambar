@@ -14,10 +14,22 @@ import {
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import dynamic from 'next/dynamic';
 import React, { useEffect, useMemo, useState } from 'react';
-import SeatingChart from '../components/SeatingChart';
 import ThemedSection from '../components/ThemedSection';
 import TourTimeline from '../components/TourTimeline';
+
+const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[480px] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10">
+      <div className="w-8 h-8 rounded-full border-2 border-t-amber-honey border-amber-honey/20 animate-spin" />
+      <span className="text-[10px] uppercase font-bold tracking-widest text-amber-honey">
+        Cargando Mapa de Asientos...
+      </span>
+    </div>
+  ),
+});
 import { useEventTheme } from '../context/EventThemeContext';
 import { showAlert } from '../lib/notifications';
 import { cn, getApiUrl } from '../lib/utils';
