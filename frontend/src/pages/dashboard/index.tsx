@@ -642,6 +642,7 @@ export default function AdminDashboard() {
   // ─── Site Settings State (Dynamic Texts) ───
   const [siteSettingsSubtitle, setSiteSettingsSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
   const [siteSettingsCta, setSiteSettingsCta] = useState('¡Próximamente nuevo evento!');
+  const [allowCanvasZoom, setAllowCanvasZoom] = useState<boolean>(true);
   const [siteBioBadge, setSiteBioBadge] = useState('La Cantautora');
   const [siteBioTitle, setSiteBioTitle] = useState('Ms. Ambar');
   const [siteBioLocation, setSiteBioLocation] = useState('Hermosillo • México');
@@ -781,6 +782,7 @@ export default function AdminDashboard() {
         ]);
         setEvents(Array.isArray(evRes.data) ? evRes.data : []);
         if (stRes?.data) {
+          if (typeof stRes.data.allow_canvas_zoom === 'boolean') setAllowCanvasZoom(stRes.data.allow_canvas_zoom);
           if (stRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(stRes.data.tickets_page_subtitle);
           if (stRes.data.homepage_cta_text) setSiteSettingsCta(stRes.data.homepage_cta_text);
           if (stRes.data.bio_badge) setSiteBioBadge(stRes.data.bio_badge);
