@@ -136,9 +136,11 @@ show_help() {
     echo "Staging Commands:"
     echo "  build-staging           - Build staging Docker images"
     echo "  up-staging              - Start staging environment"
+    echo "  deploy-staging          - Build and start staging environment"
     echo "  down-staging            - Stop staging environment"
     echo "  restart-staging         - Restart staging environment"
     echo "  logs-staging            - Show real-time staging logs"
+    echo "  logs-nginx-staging      - Show real-time staging Nginx logs"
     echo "  makemigrations-staging  - Generate staging database migrations"
     echo "  migrate-staging         - Run database migrations in staging"
     echo "  createsuperuser-staging - Create admin superuser in staging"
@@ -151,9 +153,12 @@ show_help() {
     echo "Production Commands:"
     echo "  build                   - Build production Docker images"
     echo "  up-prod                 - Start production environment"
+    echo "  deploy-prod             - Build and start production environment"
     echo "  down-prod               - Stop production environment"
     echo "  restart-prod            - Restart production environment"
     echo "  logs-prod               - Show real-time production logs"
+    echo "  logs-nginx              - Show real-time Nginx logs (Prod/Staging)"
+    echo "  logs-nginx-prod         - Show real-time production Nginx logs"
     echo "  makemigrations-prod     - Generate database migrations (Prod)"
     echo "  migrate-prod            - Run database migrations in prod"
     echo "  shell-prod              - Open backend python shell in prod"
@@ -231,6 +236,11 @@ case $COMMAND in
         echo "Stopping Staging Environment..."
         $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml down "$@"
         ;;
+    deploy-staging)
+        echo "Deploying MS AMBAR Staging Environment..."
+        remove_conflicting_containers ambar_staging_backend ambar_staging_frontend ambar_staging_nginx ambar_staging_autostop
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml up -d --build "$@"
+        ;;
     restart-staging)
         echo "Restarting Staging Environment..."
         $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml restart "$@"
@@ -240,6 +250,13 @@ case $COMMAND in
             $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml logs -f --tail=100
         else
             $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml logs "$@"
+        fi
+        ;;
+    logs-nginx-staging)
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "^ambar_staging_nginx$"; then
+            $DOCKER_BIN logs -f --tail=100 ambar_staging_nginx "$@"
+        else
+            $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml logs -f --tail=100 nginx-staging "$@"
         fi
         ;;
     migrate-staging)
@@ -278,6 +295,11 @@ case $COMMAND in
         remove_conflicting_containers ambar_backend ambar_frontend
         $COMPOSE_BIN -f docker-compose.prod.yml up -d "$@"
         ;;
+    deploy-prod)
+        echo "Deploying MS AMBAR Production Environment..."
+        remove_conflicting_containers ambar_backend ambar_frontend
+        $COMPOSE_BIN -f docker-compose.prod.yml up -d --build "$@"
+        ;;
     down-prod)
         echo "Stopping Production Environment..."
         $COMPOSE_BIN -f docker-compose.prod.yml down "$@"
@@ -291,6 +313,17 @@ case $COMMAND in
             $COMPOSE_BIN -f docker-compose.prod.yml logs -f --tail=100
         else
             $COMPOSE_BIN -f docker-compose.prod.yml logs "$@"
+        fi
+        ;;
+    logs-nginx|logs-nginx-prod)
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "^prod_nginx$"; then
+            $DOCKER_BIN logs -f --tail=100 prod_nginx "$@"
+        elif $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "^ambar_staging_nginx$"; then
+            $DOCKER_BIN logs -f --tail=100 ambar_staging_nginx "$@"
+        elif $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "^ambar_dev_nginx$"; then
+            $DOCKER_BIN logs -f --tail=100 ambar_dev_nginx "$@"
+        else
+            echo "No se encontró ningún contenedor Nginx activo (prod_nginx, ambar_staging_nginx, ambar_dev_nginx)."
         fi
         ;;
     makemigrations-prod)

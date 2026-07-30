@@ -21,6 +21,15 @@ export interface SectionThemeSpec {
   custom_css?: string;
   timeline_glow?: string;
   timeline_hover_balloon?: boolean;
+  // Biography section configuration
+  bio_badge?: string;
+  bio_title?: string;
+  bio_paragraphs?: string[];
+  bio_content?: string;
+  bio_image?: string;
+  bio_location?: string;
+  bio_cta_text?: string;
+  bio_cta_url?: string;
 }
 
 export interface ThemeConfig {

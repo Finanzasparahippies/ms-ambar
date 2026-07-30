@@ -521,30 +521,30 @@ const TourPage = () => {
       </Head>
 
       {/* ─── Header Section ─── */}
-      <ThemedSection sectionKey="tickets_page" className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative z-10">
+      <ThemedSection sectionKey="tickets_page" className="pt-6 pb-8 max-w-[1600px] mx-auto px-3 sm:px-6 md:px-10 text-center relative z-10">
         <div className="absolute top-[-10%] left-[-15%] w-[45%] h-[45%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
-        <div className="max-w-4xl mx-auto space-y-4">
+        <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center justify-center gap-2 bg-amber-honey/10 border border-amber-honey/20 px-4 py-2 rounded-full w-fit mx-auto"
+            className="flex items-center justify-center gap-1.5 bg-amber-honey/10 border border-amber-honey/20 px-3 py-1.5 xs:px-4 xs:py-2 rounded-full w-fit mx-auto"
           >
             <Sparkles size={12} className="text-amber-honey animate-spin" />
-            <span className="text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey">Reserva Oficial</span>
+            <span className="text-[8px] xs:text-[9px] font-black uppercase tracking-[0.2em] xs:tracking-[0.25em] text-amber-honey">Reserva Oficial</span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase italic leading-tight px-2 py-2 text-[var(--heading-color,#E5A93B)]"
+            className="text-2xl xs:text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase italic leading-tight px-1 py-1 text-[var(--heading-color,#E5A93B)]"
           >
-            ACCESOS <span className="text-glow text-gradient-theme px-2">OFICIALES 2026</span>
+            ACCESOS <span className="text-glow text-gradient-theme px-1 sm:px-2">OFICIALES 2026</span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-xs md:text-sm uppercase tracking-[0.35em] max-w-2xl mx-auto leading-relaxed text-[var(--subtitle-color,#F4F6F0)] opacity-90"
+            className="text-[10px] xs:text-xs md:text-sm uppercase tracking-[0.25em] xs:tracking-[0.35em] max-w-2xl mx-auto leading-relaxed text-[var(--subtitle-color,#F4F6F0)] opacity-90 px-2"
           >
             {pageSubtitle}
           </motion.p>
@@ -552,7 +552,7 @@ const TourPage = () => {
       </ThemedSection>
 
       {/* ─── Main Reservation Section ─── */}
-      <ThemedSection sectionKey="seating_map" className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 relative z-30">
+      <ThemedSection sectionKey="seating_map" className="max-w-[1600px] mx-auto px-2 xs:px-4 sm:px-6 lg:px-10 relative z-30">
         <TourTimeline
           events={events}
           onEventSelect={(event) => {
@@ -566,39 +566,39 @@ const TourPage = () => {
           currentEvent={currentEvent}
         />
 
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-12 mt-10 items-start">
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-10 xl:gap-12 mt-6 sm:mt-10 items-start">
           {/* ══════ LEFT COLUMN ══════ */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-6">
-            <div className="p-6 md:p-8 rounded-[2.5rem] bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 backdrop-blur-md space-y-6">
+            <div className="p-3.5 xs:p-5 md:p-8 rounded-2xl xs:rounded-[2.5rem] bg-nature-night/[0.02] dark:bg-white/[0.02] border border-nature-night/10 dark:border-white/10 backdrop-blur-md space-y-5 xs:space-y-6">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <motion.h2
                     key={currentEvent?.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase italic leading-tight text-[var(--heading-color,#E5A93B)]"
+                    className="text-2xl xs:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase italic leading-tight text-[var(--heading-color,#E5A93B)]"
                   >
                     {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
                   </motion.h2>
-                  <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-widest font-black mt-3">
-                    <div className="flex items-center gap-2 bg-nature-night/5 dark:bg-white/5 border border-nature-night/10 dark:border-white/10 px-4 py-2 rounded-full">
-                      <MapPin size={13} className="text-amber-honey" />
-                      <span>{currentEvent?.theater_name || (isMeetGreet ? 'Meet & Greet' : 'Cargando Recinto...')}</span>
+                  <div className="flex flex-wrap items-center gap-2 xs:gap-3 text-[10px] xs:text-xs uppercase tracking-widest font-black mt-2.5">
+                    <div className="flex items-center gap-1.5 bg-nature-night/5 dark:bg-white/5 border border-nature-night/10 dark:border-white/10 px-3 py-1.5 xs:px-4 xs:py-2 rounded-full">
+                      <MapPin size={12} className="text-amber-honey shrink-0" />
+                      <span className="truncate max-w-[140px] xs:max-w-none">{currentEvent?.theater_name || (isMeetGreet ? 'Meet & Greet' : 'Cargando Recinto...')}</span>
                     </div>
-                    <div className="flex items-center gap-2 bg-nature-night/5 dark:bg-white/5 border border-nature-night/10 dark:border-white/10 px-4 py-2 rounded-full">
-                      <Calendar size={13} className="text-amber-honey" />
+                    <div className="flex items-center gap-1.5 bg-nature-night/5 dark:bg-white/5 border border-nature-night/10 dark:border-white/10 px-3 py-1.5 xs:px-4 xs:py-2 rounded-full">
+                      <Calendar size={12} className="text-amber-honey shrink-0" />
                       <span>{currentEvent?.date ? new Date(currentEvent.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span>
                     </div>
                   </div>
                 </div>
 
                 {!isMeetGreet && totalSeatsCount > 0 && (
-                  <div className="flex flex-col items-start md:items-end gap-1.5 p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
+                  <div className="flex flex-col items-start md:items-end gap-1.5 p-3 xs:p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-honey">Disponibilidad en Vivo</span>
+                      <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-honey">Disponibilidad en Vivo</span>
                     </div>
-                    <p className="text-xl font-black uppercase text-nature-night dark:text-white leading-none">
+                    <p className="text-lg xs:text-xl font-black uppercase text-nature-night dark:text-white leading-none">
                       {availableSeatsCount} <span className="text-xs text-nature-night/50 dark:text-white/50 font-semibold">/ {totalSeatsCount} Butacas</span>
                     </p>
                     <div className="w-full bg-black/20 rounded-full h-1.5 overflow-hidden mt-1">
@@ -608,12 +608,12 @@ const TourPage = () => {
                 )}
 
                 {isMeetGreet && (
-                  <div className="flex flex-col items-start md:items-end gap-1.5 p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
+                  <div className="flex flex-col items-start md:items-end gap-1.5 p-3 xs:p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
                     <div className="flex items-center gap-2">
                       <Star size={14} className="text-amber-honey fill-current animate-pulse" />
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-honey">Pases de Convivencia</span>
+                      <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-honey">Pases de Convivencia</span>
                     </div>
-                    <p className="text-xl font-black uppercase text-nature-night dark:text-white leading-none">
+                    <p className="text-lg xs:text-xl font-black uppercase text-nature-night dark:text-white leading-none">
                       {currentEvent?.mg_available || 0} <span className="text-xs text-nature-night/50 dark:text-white/50 font-semibold">Disponibles</span>
                     </p>
                   </div>
@@ -621,9 +621,9 @@ const TourPage = () => {
               </div>
 
               {isCurrentEventPast && (
-                <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-5 py-2.5 rounded-full w-fit">
+                <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-full w-fit">
                   <CalendarX size={14} className="text-amber-600 dark:text-amber-400" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-600 dark:text-amber-400">Evento Concluido (Modo Informativo)</span>
+                  <span className="text-[8px] xs:text-[9px] font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-600 dark:text-amber-400">Evento Concluido (Modo Informativo)</span>
                 </div>
               )}
             </div>
@@ -631,18 +631,18 @@ const TourPage = () => {
             {/* Ticket Mode Selector & Canvas / Seatless Card Container */}
             {!isMeetGreet && (
               <div className="space-y-4">
-                <div className="flex items-center justify-between gap-3 bg-nature-night/5 dark:bg-white/5 p-1.5 rounded-2xl border border-nature-night/10 dark:border-white/10">
+                <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2 bg-nature-night/5 dark:bg-white/5 p-1.5 rounded-2xl border border-nature-night/10 dark:border-white/10">
                   <button
                     onClick={() => setTicketMode('seat')}
                     className={cn(
-                      "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+                      "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
                       ticketMode === 'seat'
                         ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
                         : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
                     )}
                   >
-                    <Ticket size={14} />
-                    Asientos Numerados (Desde ${getSeatBasePrice().toLocaleString('es-MX')} MXN)
+                    <Ticket size={13} className="shrink-0" />
+                    <span>Numerados (${getSeatBasePrice().toLocaleString('es-MX')} MXN)</span>
                   </button>
                   <button
                     onClick={() => {
@@ -650,20 +650,20 @@ const TourPage = () => {
                       setSelectedSeats([]);
                     }}
                     className={cn(
-                      "flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2",
+                      "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
                       ticketMode === 'seatless'
                         ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
                         : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
                     )}
                   >
-                    <Users size={14} />
-                    Boleto General (${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN)
+                    <Users size={13} className="shrink-0" />
+                    <span>Boleto General (${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN)</span>
                   </button>
                 </div>
 
                 {ticketMode === 'seat' ? (
-                  <div className="relative group rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                    <div className="px-6 py-4 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] font-black uppercase tracking-wider text-white/70">
+                  <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
+                    <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-[9px] xs:text-[10px] font-black uppercase tracking-wider text-white/70">
                       <div className="flex flex-wrap items-center gap-4">
                         <span className="flex items-center gap-1.5">
                           <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30 shadow-[0_0_6px_#22a6b3]" /> Disponible
@@ -776,11 +776,9 @@ const TourPage = () => {
                 </ul>
               </div>
             )}
-          </div>
-
-          {/* ══════ RIGHT COLUMN: Cart Summary ══════ */}
+          </div>          {/* ══════ RIGHT COLUMN: Cart Summary ══════ */}
           <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-8 space-y-6">
-            <motion.div layout className="border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#0e101a] text-slate-900 dark:text-white shadow-2xl shadow-slate-900/10 p-6 md:p-8 rounded-[2.5rem] relative overflow-hidden">
+            <motion.div layout className="border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#0e101a] text-slate-900 dark:text-white shadow-2xl shadow-slate-900/10 p-3.5 xs:p-5 md:p-8 rounded-2xl xs:rounded-[2.5rem] relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-bl-full pointer-events-none blur-2xl" />
 
               <div className="text-center mb-6 border-b border-slate-100 dark:border-white/10 pb-5 relative z-10">
@@ -805,7 +803,7 @@ const TourPage = () => {
               ) : (
                 <>
                   {isMeetGreet && (
-                    <div className="mb-6 p-5 rounded-[2rem] bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-transparent border border-amber-500/20 text-center space-y-4 shadow-sm">
+                    <div className="mb-6 p-4 xs:p-5 rounded-[2rem] bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-transparent border border-amber-500/20 text-center space-y-4 shadow-sm">
                       <p className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-[0.2em]">Cantidad de Boletos M&G</p>
                       <div className="flex items-center justify-center gap-6">
                         <button
@@ -835,7 +833,7 @@ const TourPage = () => {
                       whileTap={currentEvent?.mg_available > 0 ? { scale: 0.985 } : {}}
                       onClick={() => currentEvent?.mg_available > 0 && setWantsMG(!wantsMG)}
                       className={cn(
-                        "mb-5 p-4 sm:p-4.5 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden shadow-md",
+                        "mb-5 p-3 xs:p-4 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden shadow-md",
                         wantsMG
                           ? "bg-gradient-to-br from-amber-500/15 via-amber-400/10 to-amber-600/15 border-2 border-amber-500 dark:border-amber-400 shadow-[0_4px_25px_rgba(245,158,11,0.2)]"
                           : "bg-slate-50 dark:bg-white/[0.03] border-slate-200/80 dark:border-white/10 hover:border-amber-400/50 hover:bg-amber-50/50 dark:hover:bg-amber-400/[0.03]"

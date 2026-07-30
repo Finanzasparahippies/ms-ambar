@@ -63,6 +63,7 @@ const IMAGE_FILTER_OPTIONS = [
 
 const PAGE_SECTIONS = [
   { id: 'hero', label: 'Landing Page: Hero Principal (Portada)', icon: '🌟' },
+  { id: 'biography', label: 'Landing Page: Biografía & Historia Cantautora', icon: '📜' },
   { id: 'events_grid', label: 'Landing Page: Próximos Conciertos y Boletos', icon: '🎫' },
   { id: 'tarot_experience', label: 'Landing Page: Experiencia Tarot & Mística', icon: '🔮' },
   { id: 'tour_timeline', label: 'Landing Page: Línea de Tiempo de Gira', icon: '🗓️' },
@@ -993,6 +994,112 @@ export const ThemeManager: React.FC = () => {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* 📜 DEDICATED BIOGRAPHY CONFIGURATION PANEL */}
+            {(selectedSectionKey === 'biography' || selectedSectionKey === 'tarot_experience') && (
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">📜</span>
+                  <h4 className="text-sm font-black uppercase tracking-wider text-amber-honey">
+                    Configuración de Contenido Autobiográfico de la Artista
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
+                      Insignia / Distintivo (Ej. "La Cantautora")
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSectionSpec.bio_badge || ''}
+                      placeholder="La Cantautora"
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_badge', e.target.value)}
+                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
+                      Nombre de Artista / Título (Ej. "Ms. Ambar")
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSectionSpec.bio_title || ''}
+                      placeholder="Ms. Ambar"
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_title', e.target.value)}
+                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
+                      Ubicación / Origen (Ej. "Hermosillo • México")
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSectionSpec.bio_location || ''}
+                      placeholder="Hermosillo • México"
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_location', e.target.value)}
+                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
+                      URL de la Fotografía Oficial
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSectionSpec.bio_image || ''}
+                      placeholder="/Images/Inicio_Biografia.jpg"
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_image', e.target.value)}
+                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-mono text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
+                      Texto del Botón CTA (Ej. "Ver Próximos Eventos")
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSectionSpec.bio_cta_text || ''}
+                      placeholder="Ver Próximos Eventos"
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_cta_text', e.target.value)}
+                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
+                      Enlace del Botón CTA (Ej. "/tour")
+                    </label>
+                    <input
+                      type="text"
+                      value={currentSectionSpec.bio_cta_url || ''}
+                      placeholder="/tour"
+                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_cta_url', e.target.value)}
+                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-mono text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
+                    Historia / Párrafos de la Biografía (Separa párrafos con saltos de línea):
+                  </label>
+                  <textarea
+                    rows={5}
+                    value={currentSectionSpec.bio_content || ''}
+                    placeholder="Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora..."
+                    onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_content', e.target.value)}
+                    className="w-full bg-[#080c0a] border border-white/15 rounded-2xl p-3.5 text-xs text-[#F4F6F0] leading-relaxed focus:border-amber-honey focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
 
               {/* Dedicated Tour Timeline Ultrapremium Controls */}
               {selectedSectionKey === 'tour_timeline' && (
