@@ -5,9 +5,8 @@ from rest_framework.permissions import IsAdminUser
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
-from django.db.models import Sum, Avg, Count, F
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.db import connection
 
 # Import models from sibling apps
@@ -225,11 +224,11 @@ class AnalyticsOverview(APIView):
                         mo += 12
                         yr -= 1
                     
-                    m_start = datetime(yr, mo, 1, 0, 0, 0, tzinfo=timezone.utc)
+                    m_start = datetime(yr, mo, 1, 0, 0, 0, tzinfo=dt_timezone.utc)
                     if mo == 12:
-                        m_end = datetime(yr + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
+                        m_end = datetime(yr + 1, 1, 1, 0, 0, 0, tzinfo=dt_timezone.utc) - timedelta(seconds=1)
                     else:
-                        m_end = datetime(yr, mo + 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
+                        m_end = datetime(yr, mo + 1, 1, 0, 0, 0, tzinfo=dt_timezone.utc) - timedelta(seconds=1)
 
                     m_label = m_start.strftime('%b %Y')
                     
@@ -372,10 +371,10 @@ class AnalyticsUnitDataView(APIView):
 
         try:
             if data_type == 'tickets':
-                qs = Ticket.objects.filter(status__in=['paid', 'used']).select_related('user', 'event', 'seat', 'ga_zone', 'used_coupon').order_by('-created_at')
+                qs = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon').order_by('-created_at')
                 results = []
                 for t in qs:
-                    user_email = t.user.email if getattr(t, 'user', None) else 'Invitado'
+                    user_email = t.user_email or 'Invitado'
                     event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
                     seat_str = f"Fila {t.seat.row} - #{t.seat.number}" if getattr(t, 'seat', None) else (t.ga_zone.name if getattr(t, 'ga_zone', None) else "General")
                     
@@ -455,10 +454,10 @@ class AnalyticsUnitDataView(APIView):
                 return Response({'type': 'expenses', 'count': len(results), 'data': results[:200]})
 
             elif data_type == 'mg_upgrades':
-                qs = Ticket.objects.filter(has_mg=True, status__in=['paid', 'used']).select_related('user', 'event').order_by('-created_at')
+                qs = Ticket.objects.filter(has_mg=True, status__in=['paid', 'used']).select_related('event').order_by('-created_at')
                 results = []
                 for t in qs:
-                    user_email = t.user.email if getattr(t, 'user', None) else 'Invitado'
+                    user_email = t.user_email or 'Invitado'
                     event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
                     mg_price = float(getattr(t.event, 'mg_price', 0.0) or 0.0) if getattr(t, 'event', None) else 0.0
                     row = {
