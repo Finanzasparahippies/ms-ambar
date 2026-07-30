@@ -44,7 +44,8 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
       size: number;
     }> = [];
 
-    const numParticles = 75;
+    const isMobile = width < 768;
+    const numParticles = isMobile ? 25 : 75;
 
     for (let i = 0; i < numParticles; i++) {
       particles.push({

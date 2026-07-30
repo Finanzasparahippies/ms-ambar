@@ -16,6 +16,12 @@ const PerformanceHUD = () => {
 
     window.addEventListener('keydown', handleKeyDown);
 
+    if (!isVisible) {
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+
     // FPS Counter
     let frameCount = 0;
     let lastTime = performance.now();
@@ -36,7 +42,7 @@ const PerformanceHUD = () => {
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      cancelAnimationFrame(animationId);
+      if (animationId) cancelAnimationFrame(animationId);
     };
   }, [isVisible]);
 

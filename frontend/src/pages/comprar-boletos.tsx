@@ -17,6 +17,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import SeatingChart from '../components/SeatingChart';
 import ThemedSection from '../components/ThemedSection';
+import TourTimeline from '../components/TourTimeline';
 import { useEventTheme } from '../context/EventThemeContext';
 import { showAlert } from '../lib/notifications';
 import { cn, getApiUrl } from '../lib/utils';
