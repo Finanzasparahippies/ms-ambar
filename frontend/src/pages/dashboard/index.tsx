@@ -61,7 +61,16 @@ import {
   AlignLeft,
   AlignCenter,
   AlignRight,
-  AlignJustify
+  AlignJustify,
+  Printer,
+  Maximize2,
+  Minimize2,
+  BarChart2,
+  PieChart,
+  Download,
+  Search,
+  FileText,
+  RefreshCw
 } from 'lucide-react';
 import { getApiUrl } from '../../lib/utils';
 
@@ -214,7 +223,74 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
-  const [chartPeriod, setChartPeriod] = useState<'daily' | 'monthly'>('daily');
+  const [chartPeriod, setChartPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'event'>('daily');
+  const [chartType, setChartType] = useState<'line' | 'bar' | 'area' | 'donut'>('area');
+  const [isFullscreenChartOpen, setIsFullscreenChartOpen] = useState(false);
+
+  // Drill-down Modal State
+  const [drillDownData, setDrillDownData] = useState<any | null>(null);
+
+  // Unit Data Visualizer Modal State
+  const [unitModalType, setUnitModalType] = useState<'tickets' | 'orders' | 'expenses' | 'mg_upgrades' | null>(null);
+  const [unitModalTitle, setUnitModalTitle] = useState('');
+  const [unitDataList, setUnitDataList] = useState<any[]>([]);
+  const [unitDataLoading, setUnitDataLoading] = useState(false);
+  const [unitSearchQuery, setUnitSearchQuery] = useState('');
+
+  const fetchUnitData = async (type: 'tickets' | 'orders' | 'expenses' | 'mg_upgrades', title: string) => {
+    setUnitModalType(type);
+    setUnitModalTitle(title);
+    setUnitDataLoading(true);
+    setUnitSearchQuery('');
+    try {
+      const res = await api.get(`/dashboard/analytics/unit-data/?type=${type}`);
+      setUnitDataList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error('Error loading unit data:', err);
+      showToast.error('Error al cargar registros unitarios.');
+      setUnitDataList([]);
+    } finally {
+      setUnitDataLoading(false);
+    }
+  };
+
+  const handleSearchUnitData = async (query: string) => {
+    setUnitSearchQuery(query);
+    if (!unitModalType) return;
+    try {
+      const res = await api.get(`/dashboard/analytics/unit-data/?type=${unitModalType}&search=${encodeURIComponent(query)}`);
+      setUnitDataList(Array.isArray(res.data?.data) ? res.data.data : []);
+    } catch (err) {
+      console.error('Error searching unit data:', err);
+    }
+  };
+
+  const exportUnitDataCSV = () => {
+    if (!unitDataList || unitDataList.length === 0) {
+      showToast.error('No hay datos para exportar.');
+      return;
+    }
+    const keys = Object.keys(unitDataList[0]);
+    const headers = keys.join(',');
+    const rows = unitDataList.map(item =>
+      keys.map(k => `"${String(item[k] ?? '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `reporte_${unitModalType}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast.success('Archivo CSV descargado.');
+  };
+
+  const handlePrintReport = () => {
+    if (typeof window !== 'undefined') {
+      window.print();
+    }
+  };
 
   // Dashboard Navigation State
   const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme'>('summary');
@@ -2282,8 +2358,18 @@ export default function AdminDashboard() {
   const shop = stats?.shop;
   const vitals = stats?.vitals;
   const dailyData = stats?.charts?.daily_sales || [];
+  const weeklyData = stats?.charts?.weekly_sales || [];
   const monthlyData = stats?.charts?.monthly_sales || [];
-  const chartData = chartPeriod === 'monthly' ? monthlyData : dailyData;
+  const eventData = stats?.charts?.event_sales || [];
+  const breakdownData = stats?.charts?.revenue_breakdown || [];
+
+  const chartData = chartPeriod === 'monthly'
+    ? monthlyData
+    : chartPeriod === 'weekly'
+    ? weeklyData
+    : chartPeriod === 'event'
+    ? eventData
+    : dailyData;
 
   // SVG Area Chart calculations
   const chartWidth = 700;
@@ -2295,11 +2381,12 @@ export default function AdminDashboard() {
 
   const innerWidth = chartWidth - paddingLeft - paddingRight;
   const innerHeight = chartHeight - paddingTop - paddingBottom;
-  const maxVal = Math.max(...chartData.map((d: any) => d.total), 100) * 1.1;
+  const maxVal = Math.max(...chartData.map((d: any) => d.total || 0), 100) * 1.1;
 
   const points = chartData.map((d: any, i: number) => {
-    const x = paddingLeft + (i / (chartData.length - 1)) * innerWidth;
-    const y = paddingTop + innerHeight - (d.total / maxVal) * innerHeight;
+    const denom = Math.max(1, chartData.length - 1);
+    const x = paddingLeft + (i / denom) * innerWidth;
+    const y = paddingTop + innerHeight - ((d.total || 0) / maxVal) * innerHeight;
     return { x, y, data: d };
   });
 
@@ -2586,7 +2673,13 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-4 flex-wrap">
+              <button
+                onClick={handlePrintReport}
+                className="flex items-center gap-2 bg-white/5 hover:bg-amber-honey/20 border border-white/10 hover:border-amber-honey/40 px-5 py-3 rounded-xl shadow-lg transition-all text-xs font-bold uppercase tracking-widest text-[#F4F6F0] hover:text-amber-honey cursor-pointer"
+              >
+                <Printer size={14} className="text-amber-honey" /> Imprimir PDF
+              </button>
               <button
                 onClick={openProfileModal}
                 className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-3 rounded-xl shadow-lg transition-all text-xs font-bold uppercase tracking-widest text-[#F4F6F0]"
@@ -2783,231 +2876,381 @@ export default function AdminDashboard() {
                       value={`$${financials?.gross_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<DollarSign className="text-amber-400" />}
                       color="amber"
-                      detail="Combinado: Taquilla + Tienda"
+                      detail="Combinado: Taquilla + Tienda 🔍"
+                      onClick={() => fetchUnitData('tickets', 'Ingresos Totales - Auditoría de Boletos')}
                     />
                     <StatCard
                       title="Ventas de Tickets"
                       value={`$${financials?.ticket_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<Ticket className="text-amber-300" />}
                       color="gold"
-                      detail={`Boletos: ${tickets?.total_sold} vendidos`}
+                      detail={`Boletos: ${tickets?.total_sold} vendidos 🔍`}
+                      onClick={() => fetchUnitData('tickets', 'Ventas de Tickets Unitarias')}
                     />
                     <StatCard
                       title="Ventas de Tienda"
                       value={`$${financials?.shop_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<ShoppingBag className="text-amber-500" />}
                       color="honey"
-                      detail={`Pedidos: ${shop?.total_orders} completados`}
+                      detail={`Pedidos: ${shop?.total_orders} completados 🔍`}
+                      onClick={() => fetchUnitData('orders', 'Ventas de Tienda (Pedidos Unitarios)')}
                     />
                     <StatCard
                       title="Gastos Operativos"
                       value={`$${financials?.total_expenses?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<TrendingDown className="text-red-400" />}
                       color="honey"
-                      detail="Pérdidas, Envíos & Producción"
+                      detail="Pérdidas, Envíos & Producción 🔍"
+                      onClick={() => fetchUnitData('expenses', 'Control de Gastos Operativos')}
                     />
                     <StatCard
                       title="Beneficio Neto Real"
                       value={`$${financials?.net_profit?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<Landmark className="text-green-400" />}
                       color="amber"
-                      detail="Ingresos libres de gastos"
+                      detail="Ingresos libres de gastos 🔍"
+                      onClick={() => fetchUnitData('tickets', 'Beneficio Neto - Auditoría Financiera')}
                     />
                     <StatCard
                       title="Upgrades M&G"
                       value={tickets?.mg_upgrades}
                       icon={<Users className="text-yellow-400" />}
                       color="yellow"
-                      detail={`Ingreso M&G: $${financials?.mg_revenue.toLocaleString()}`}
+                      detail={`Ingreso M&G: $${financials?.mg_revenue.toLocaleString()} 🔍`}
+                      onClick={() => fetchUnitData('mg_upgrades', 'Upgrades Meet & Greet Unitarios')}
                     />
                   </div>
 
                   {/* Charts and Operations grid */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                    {/* SVG Interactive Area Chart */}
+                    {/* SVG Interactive Multi-type Area/Bar/Line/Donut Chart */}
                     <div className="lg:col-span-2 amber-glass border border-white/10 p-6 rounded-[2rem] shadow-lg shadow-black/20 flex flex-col justify-between">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-6">
                         <div>
                           <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-2 text-[#F4F6F0]">
-                            <TrendingUp size={18} className="text-amber-honey" /> Flujo de Ingresos {chartPeriod === 'monthly' ? 'Mensuales' : 'Diarios'}
+                            <TrendingUp size={18} className="text-amber-honey" /> Analytics de Ventas: {chartPeriod === 'monthly' ? 'Mensual' : chartPeriod === 'weekly' ? 'Semanal' : chartPeriod === 'event' ? 'Por Evento' : 'Diario'}
                           </h3>
                           <p className="text-[#F4F6F0]/50 text-[10px] font-bold uppercase tracking-widest mt-1">
-                            {chartPeriod === 'monthly' ? 'Taquilla & Tienda - Acumulado últimos 12 meses' : 'Taquilla & Tienda - Últimos 30 días'}
+                            Ms. Ámbar • Haz clic en un periodo para ver su desglose en detalle (Drill-Down)
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Granularity Selector */}
                           <div className="bg-black/60 p-1 rounded-xl border border-white/10 flex items-center gap-1 backdrop-blur-md">
                             <button
                               type="button"
                               onClick={() => { setChartPeriod('daily'); setHoveredPoint(null); }}
                               className={cn(
-                                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                                chartPeriod === 'daily'
-                                  ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20"
-                                  : "text-[#F4F6F0]/60 hover:text-white"
+                                "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                                chartPeriod === 'daily' ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20" : "text-[#F4F6F0]/60 hover:text-white"
                               )}
                             >
-                              📅 Diario (30 Días)
+                              Diario
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setChartPeriod('weekly'); setHoveredPoint(null); }}
+                              className={cn(
+                                "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                                chartPeriod === 'weekly' ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20" : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                            >
+                              Semanal
                             </button>
                             <button
                               type="button"
                               onClick={() => { setChartPeriod('monthly'); setHoveredPoint(null); }}
                               className={cn(
-                                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
-                                chartPeriod === 'monthly'
-                                  ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20"
-                                  : "text-[#F4F6F0]/60 hover:text-white"
+                                "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                                chartPeriod === 'monthly' ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20" : "text-[#F4F6F0]/60 hover:text-white"
                               )}
                             >
-                              📊 Mensual (12 Meses)
+                              Mensual
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setChartPeriod('event'); setHoveredPoint(null); }}
+                              className={cn(
+                                "px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                                chartPeriod === 'event' ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20" : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                            >
+                              Por Evento
                             </button>
                           </div>
 
-                          {activePoint && (
-                            <div className="text-right hidden md:block">
-                              <span className="text-amber-honey font-mono text-sm font-bold">
-                                ${activePoint.total.toLocaleString()}
-                              </span>
-                              <p className="text-[9px] text-[#F4F6F0]/50 uppercase font-black tracking-wider">
-                                {activePoint.date === points[points.length - 1]?.data?.date && chartPeriod === 'daily' ? 'Hoy (Día Actual)' : activePoint.date}
-                              </p>
-                            </div>
-                          )}
+                          {/* Chart Type Selector */}
+                          <div className="bg-black/60 p-1 rounded-xl border border-white/10 flex items-center gap-1 backdrop-blur-md">
+                            <button
+                              type="button"
+                              onClick={() => setChartType('area')}
+                              className={cn(
+                                "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                                chartType === 'area' ? "bg-amber-honey text-black" : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                              title="Área con Degradado"
+                            >
+                              <TrendingUp size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setChartType('line')}
+                              className={cn(
+                                "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                                chartType === 'line' ? "bg-amber-honey text-black" : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                              title="Línea Suave"
+                            >
+                              <Activity size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setChartType('bar')}
+                              className={cn(
+                                "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                                chartType === 'bar' ? "bg-amber-honey text-black" : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                              title="Gráfico de Barras"
+                            >
+                              <BarChart2 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setChartType('donut')}
+                              className={cn(
+                                "p-1.5 rounded-lg text-xs transition-all cursor-pointer",
+                                chartType === 'donut' ? "bg-amber-honey text-black" : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                              title="Gráfico de Rosca (Donut)"
+                            >
+                              <PieChart size={14} />
+                            </button>
+                          </div>
+
+                          {/* Fullscreen Modal Toggle Button */}
+                          <button
+                            type="button"
+                            onClick={() => setIsFullscreenChartOpen(true)}
+                            className="bg-amber-honey/20 border border-amber-honey/40 hover:bg-amber-honey hover:text-[#1E2B22] text-amber-honey px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                          >
+                            <Maximize2 size={12} /> Expandir
+                          </button>
                         </div>
                       </div>
 
-                      <div className="relative w-full h-[220px]">
-                        <svg
-                          viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                          className="w-full h-full overflow-visible select-none cursor-crosshair"
-                          onMouseMove={handleMouseMove}
-                          onMouseLeave={() => setHoveredPoint(null)}
-                        >
-                          <defs>
-                            <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#E5A93B" stopOpacity="0.25" />
-                              <stop offset="100%" stopColor="#E5A93B" stopOpacity="0.00" />
-                            </linearGradient>
-                          </defs>
-                          {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
-                            const y = paddingTop + innerHeight * (1 - ratio);
-                            const val = maxVal * ratio;
-                            return (
-                              <g key={idx}>
-                                <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#ffffff" strokeOpacity="0.08" strokeDasharray="4 4" />
-                                <text x={paddingLeft - 8} y={y + 4} fill="#F4F6F0" fillOpacity="0.4" fontSize="9" fontWeight="bold" textAnchor="end">${Math.round(val)}</text>
+                      {chartType === 'donut' ? (
+                        /* Donut / Breakdown Visualization */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center py-4">
+                          <div className="relative w-48 h-48 mx-auto flex items-center justify-center">
+                            <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                              {(() => {
+                                let accumulatedPercent = 0;
+                                const colors = ['#E5A93B', '#F59E0B', '#10B981', '#EF4444'];
+                                return breakdownData.map((item: any, idx: number) => {
+                                  const startAngle = (accumulatedPercent / 100) * 360;
+                                  accumulatedPercent += item.percentage || 0;
+                                  const endAngle = (accumulatedPercent / 100) * 360;
+                                  const strokeDasharray = `${item.percentage * 2.83} 283`;
+                                  const strokeDashoffset = -((startAngle / 360) * 283);
+
+                                  return (
+                                    <circle
+                                      key={idx}
+                                      cx="50"
+                                      cy="50"
+                                      r="40"
+                                      fill="transparent"
+                                      stroke={colors[idx % colors.length]}
+                                      strokeWidth="14"
+                                      strokeDasharray={strokeDasharray}
+                                      strokeDashoffset={strokeDashoffset}
+                                      className="transition-all hover:opacity-80 cursor-pointer"
+                                      onClick={() => setDrillDownData(item)}
+                                    />
+                                  );
+                                });
+                              })()}
+                            </svg>
+                            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                              <span className="text-[9px] text-[#F4F6F0]/50 uppercase font-black tracking-widest">Total Bruto</span>
+                              <span className="text-sm font-black text-amber-honey font-mono">${financials?.gross_sales?.toLocaleString()}</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-3">
+                            {breakdownData.map((item: any, idx: number) => {
+                              const colors = ['bg-amber-400', 'bg-amber-500', 'bg-emerald-500', 'bg-red-500'];
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => setDrillDownData(item)}
+                                  className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-between transition-all cursor-pointer"
+                                >
+                                  <div className="flex items-center gap-2.5">
+                                    <span className={`w-3 h-3 rounded-full ${colors[idx % colors.length]}`} />
+                                    <span className="text-xs font-bold text-[#F4F6F0]">{item.category}</span>
+                                  </div>
+                                  <div className="text-right font-mono">
+                                    <span className="text-xs font-black text-amber-honey">${item.amount?.toLocaleString()}</span>
+                                    <span className="text-[9px] text-[#F4F6F0]/40 block">{item.percentage}%</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Line, Area, or Bar Visualization */
+                        <div className="relative w-full h-[220px]">
+                          <svg
+                            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                            className="w-full h-full overflow-visible select-none cursor-crosshair"
+                            onMouseMove={handleMouseMove}
+                            onMouseLeave={() => setHoveredPoint(null)}
+                          >
+                            <defs>
+                              <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#E5A93B" stopOpacity="0.30" />
+                                <stop offset="100%" stopColor="#E5A93B" stopOpacity="0.00" />
+                              </linearGradient>
+                            </defs>
+
+                            {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
+                              const y = paddingTop + innerHeight * (1 - ratio);
+                              const val = maxVal * ratio;
+                              return (
+                                <g key={idx}>
+                                  <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#ffffff" strokeOpacity="0.08" strokeDasharray="4 4" />
+                                  <text x={paddingLeft - 8} y={y + 4} fill="#F4F6F0" fillOpacity="0.4" fontSize="9" fontWeight="bold" textAnchor="end">${Math.round(val)}</text>
+                                </g>
+                              );
+                            })}
+
+                            {/* X-Axis labels */}
+                            {points.filter((_: any, idx: number) => {
+                              const step = chartPeriod === 'monthly' ? 2 : chartPeriod === 'weekly' ? 2 : 5;
+                              return idx % step === 0 || idx === points.length - 1;
+                            }).map((p: any, idx: number) => {
+                              const isLast = p.data.date === points[points.length - 1]?.data?.date;
+                              return (
+                                <text
+                                  key={idx}
+                                  x={p.x}
+                                  y={paddingTop + innerHeight + 18}
+                                  fill={isLast ? "#E5A93B" : "#F4F6F0"}
+                                  fillOpacity={isLast ? "0.9" : "0.4"}
+                                  fontSize="9"
+                                  fontWeight={isLast ? "black" : "bold"}
+                                  textAnchor="middle"
+                                >
+                                  {isLast && chartPeriod === 'daily' ? "Hoy" : (p.data.event_title || p.data.date)}
+                                </text>
+                              );
+                            })}
+
+                            {chartType === 'bar' ? (
+                              /* Column Bar Rendering */
+                              points.map((p: any, idx: number) => {
+                                const barW = Math.max(8, (innerWidth / points.length) * 0.55);
+                                const barH = paddingTop + innerHeight - p.y;
+                                return (
+                                  <g key={idx} className="cursor-pointer" onClick={() => setDrillDownData(p.data)}>
+                                    <rect
+                                      x={p.x - barW / 2}
+                                      y={p.y}
+                                      width={barW}
+                                      height={barH}
+                                      rx="4"
+                                      fill="#E5A93B"
+                                      fillOpacity={hoveredPoint?.date === p.data.date ? "1" : "0.85"}
+                                      className="transition-all hover:fill-amber-gold"
+                                    />
+                                  </g>
+                                );
+                              })
+                            ) : (
+                              /* Area and Line Rendering */
+                              <>
+                                {chartType === 'area' && areaPath && <path d={areaPath} fill="url(#salesGradient)" />}
+                                {linePath && <path d={linePath} fill="none" stroke="#E5A93B" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
+                              </>
+                            )}
+
+                            {/* Clickable Hover Hit Zones */}
+                            {points.map((p: any, idx: number) => {
+                              const step = points.length > 1 ? innerWidth / (points.length - 1) : innerWidth;
+                              const rectX = idx === 0 ? paddingLeft : p.x - step / 2;
+                              const rectW = (idx === 0 || idx === points.length - 1) ? step / 2 : step;
+                              return (
+                                <rect
+                                  key={`hit-zone-${idx}`}
+                                  x={rectX}
+                                  y={paddingTop}
+                                  width={rectW}
+                                  height={innerHeight}
+                                  fill="transparent"
+                                  className="cursor-pointer"
+                                  onClick={() => setDrillDownData(p.data)}
+                                  onMouseEnter={() => {
+                                    setHoveredPoint({
+                                      ...p.data,
+                                      x: p.x,
+                                      y: p.y
+                                    });
+                                  }}
+                                />
+                              );
+                            })}
+
+                            {/* Active Point Indicator */}
+                            {activePoint && chartType !== 'bar' && (
+                              <g className="pointer-events-none">
+                                <line x1={activePoint.x} y1={paddingTop} x2={activePoint.x} y2={paddingTop + innerHeight} stroke="#E5A93B" strokeOpacity="0.4" strokeDasharray="4 4" strokeWidth="1.5" />
+                                <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="#E5A93B" fillOpacity="0.35" className="animate-pulse" />
+                                <circle cx={activePoint.x} cy={activePoint.y} r="4.5" fill="#E5A93B" stroke="#ffffff" strokeWidth="2" />
                               </g>
-                            );
-                          })}
+                            )}
+                          </svg>
 
-                          {/* X-Axis labels with styled display for daily/monthly periods */}
-                          {points.filter((_: any, idx: number) => {
-                            const step = chartPeriod === 'monthly' ? 2 : 5;
-                            return idx % step === 0 || idx === points.length - 1;
-                          }).map((p: any, idx: number) => {
-                            const isLast = p.data.date === points[points.length - 1]?.data?.date;
-                            return (
-                              <text
-                                key={idx}
-                                x={p.x}
-                                y={paddingTop + innerHeight + 18}
-                                fill={isLast ? "#E5A93B" : "#F4F6F0"}
-                                fillOpacity={isLast ? "0.9" : "0.4"}
-                                fontSize="9"
-                                fontWeight={isLast ? "black" : "bold"}
-                                textAnchor="middle"
-                              >
-                                {isLast && chartPeriod === 'daily' ? "Hoy" : p.data.date}
-                              </text>
-                            );
-                          })}
-
-                          {areaPath && <path d={areaPath} fill="url(#salesGradient)" />}
-                          {linePath && <path d={linePath} fill="none" stroke="#E5A93B" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
-
-                          {/* Invisible Full-Height Column Slices for High-Precision Hover Detection */}
-                          {points.map((p: any, idx: number) => {
-                            const step = points.length > 1 ? innerWidth / (points.length - 1) : innerWidth;
-                            const rectX = idx === 0 ? paddingLeft : p.x - step / 2;
-                            const rectW = (idx === 0 || idx === points.length - 1) ? step / 2 : step;
-                            return (
-                              <rect
-                                key={`hit-zone-${idx}`}
-                                x={rectX}
-                                y={paddingTop}
-                                width={rectW}
-                                height={innerHeight}
-                                fill="transparent"
-                                className="cursor-crosshair"
-                                onMouseEnter={() => {
-                                  setHoveredPoint({
-                                    ...p.data,
-                                    x: p.x,
-                                    y: p.y
-                                  });
+                          {/* Floating Glassmorphic Tooltip */}
+                          <AnimatePresence>
+                            {activePoint && (
+                              <motion.div
+                                key={`tooltip-${activePoint.date}`}
+                                initial={{ opacity: 0, scale: 0.92, y: 5 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.92, y: 5 }}
+                                transition={{ duration: 0.12, ease: 'easeOut' }}
+                                style={{
+                                  position: 'absolute',
+                                  left: `${Math.min(90, Math.max(10, (activePoint.x / chartWidth) * 100))}%`,
+                                  top: `${Math.max(8, (activePoint.y / chartHeight) * 100 - 15)}%`,
+                                  transform: 'translate(-50%, -100%)',
                                 }}
-                              />
-                            );
-                          })}
-
-                          {/* Premium Proximity Guide Line and Glowing Dot */}
-                          {activePoint && (
-                            <g className="pointer-events-none">
-                              {/* Vertical guide line */}
-                              <line
-                                x1={activePoint.x}
-                                y1={paddingTop}
-                                x2={activePoint.x}
-                                y2={paddingTop + innerHeight}
-                                stroke="#E5A93B"
-                                strokeOpacity="0.4"
-                                strokeDasharray="4 4"
-                                strokeWidth="1.5"
-                              />
-                              {/* Concentric glowing indicator */}
-                              <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="#E5A93B" fillOpacity="0.35" className="animate-pulse" />
-                              <circle cx={activePoint.x} cy={activePoint.y} r="4.5" fill="#E5A93B" stroke="#ffffff" strokeWidth="2" />
-                            </g>
-                          )}
-                        </svg>
-
-                        {/* Floating Glassmorphic Tooltip */}
-                        <AnimatePresence>
-                          {activePoint && (
-                            <motion.div
-                              key={`tooltip-${activePoint.date}`}
-                              initial={{ opacity: 0, scale: 0.92, y: 5 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.92, y: 5 }}
-                              transition={{ duration: 0.12, ease: 'easeOut' }}
-                              style={{
-                                position: 'absolute',
-                                left: `${Math.min(90, Math.max(10, (activePoint.x / chartWidth) * 100))}%`,
-                                top: `${Math.max(8, (activePoint.y / chartHeight) * 100 - 15)}%`,
-                                transform: 'translate(-50%, -100%)',
-                              }}
-                              className="pointer-events-none z-[100] bg-[#0B0F0D]/95 border border-amber-honey/40 px-3.5 py-2.5 rounded-2xl flex flex-col gap-1 shadow-2xl shadow-black/60 min-w-[140px] text-center backdrop-blur-md"
-                            >
-                              <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/10">
-                                <span className="text-[9px] text-[#F4F6F0]/60 font-black uppercase tracking-wider">
-                                  {activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy' : activePoint.date}
-                                </span>
-                                <span className="text-[10px] font-black text-amber-honey font-mono">
-                                  ${activePoint.total.toLocaleString()} MXN
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[8px] font-bold text-left pt-0.5">
-                                <span className="text-[#F4F6F0]/70 flex items-center gap-1">🎫 Taquilla:</span>
-                                <span className="text-right text-emerald-400 font-mono">${(activePoint.tickets || 0).toLocaleString()}</span>
-                                <span className="text-[#F4F6F0]/70 flex items-center gap-1">🛍️ Tienda:</span>
-                                <span className="text-right text-cyan-400 font-mono">${(activePoint.shop || 0).toLocaleString()}</span>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
+                                className="pointer-events-none z-[100] bg-[#0B0F0D]/95 border border-amber-honey/40 px-3.5 py-2.5 rounded-2xl flex flex-col gap-1 shadow-2xl shadow-black/60 min-w-[140px] text-center backdrop-blur-md"
+                              >
+                                <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/10">
+                                  <span className="text-[9px] text-[#F4F6F0]/60 font-black uppercase tracking-wider">
+                                    {activePoint.event_title || (activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy' : activePoint.date)}
+                                  </span>
+                                  <span className="text-[10px] font-black text-amber-honey font-mono">
+                                    ${activePoint.total?.toLocaleString() || activePoint.ticket_revenue?.toLocaleString()} MXN
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[8px] font-bold text-left pt-0.5">
+                                  <span className="text-[#F4F6F0]/70 flex items-center gap-1">🎫 Taquilla:</span>
+                                  <span className="text-right text-emerald-400 font-mono">${(activePoint.tickets || activePoint.ticket_revenue || 0).toLocaleString()}</span>
+                                  <span className="text-[#F4F6F0]/70 flex items-center gap-1">🛍️ Tienda:</span>
+                                  <span className="text-right text-cyan-400 font-mono">${(activePoint.shop || 0).toLocaleString()}</span>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </div>
                     </div>
 
                     {/* Quick Operations */}
@@ -8048,12 +8291,367 @@ export default function AdminDashboard() {
           </motion.div>
         </div>
       )}
+
+      {/* ==================== MODAL: VISUALIZADOR DE DATOS UNITARIOS ==================== */}
+      {unitModalType && (
+        <div className="fixed inset-0 bg-[#080C0A]/80 z-[120] flex items-center justify-center p-4 sm:p-8 backdrop-blur-lg">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="amber-glass border border-white/15 w-full max-w-5xl rounded-[2.5rem] p-6 sm:p-8 max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden"
+          >
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-white/10">
+              <div>
+                <span className="text-[9px] text-amber-honey uppercase tracking-widest font-black flex items-center gap-2">
+                  <FileText size={12} /> Bóveda de Registros Unitarios
+                </span>
+                <h3 className="text-2xl font-black uppercase italic tracking-tight text-[#F4F6F0] mt-0.5">
+                  {unitModalTitle}
+                </h3>
+              </div>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <div className="relative flex-1 sm:w-64">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#F4F6F0]/40" />
+                  <input
+                    type="text"
+                    value={unitSearchQuery}
+                    onChange={e => handleSearchUnitData(e.target.value)}
+                    placeholder="Buscar registros..."
+                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-[#F4F6F0] focus:outline-none focus:border-amber-honey font-medium"
+                  />
+                </div>
+                <button
+                  onClick={exportUnitDataCSV}
+                  className="bg-amber-honey/20 border border-amber-honey/40 hover:bg-amber-honey hover:text-black text-amber-honey px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0"
+                >
+                  <Download size={13} /> CSV
+                </button>
+                <button
+                  onClick={() => setUnitModalType(null)}
+                  className="p-2 bg-white/5 hover:bg-white/10 text-[#F4F6F0]/60 hover:text-[#F4F6F0] rounded-xl transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content Table */}
+            <div className="flex-1 overflow-y-auto py-4">
+              {unitDataLoading ? (
+                <div className="py-16 text-center text-amber-honey font-bold uppercase tracking-widest text-xs flex flex-col items-center gap-3">
+                  <RefreshCw size={24} className="animate-spin text-amber-honey" />
+                  Cargando registros unitarios desde el servidor...
+                </div>
+              ) : unitDataList.length === 0 ? (
+                <div className="py-16 text-center text-[#F4F6F0]/40 font-bold uppercase tracking-widest text-xs">
+                  No se encontraron registros unitarios.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/10 text-[9px] uppercase tracking-widest text-[#F4F6F0]/40 font-black">
+                        <th className="py-3 px-3"># ID</th>
+                        {unitModalType === 'tickets' && (
+                          <>
+                            <th className="py-3 px-3">Comprador</th>
+                            <th className="py-3 px-3">Evento</th>
+                            <th className="py-3 px-3">Asiento / Zona</th>
+                            <th className="py-3 px-3">M&G</th>
+                            <th className="py-3 px-3">Cupón</th>
+                            <th className="py-3 px-3 text-right">Monto</th>
+                          </>
+                        )}
+                        {unitModalType === 'orders' && (
+                          <>
+                            <th className="py-3 px-3">Comprador</th>
+                            <th className="py-3 px-3">Items Comprados</th>
+                            <th className="py-3 px-3">Ubicación</th>
+                            <th className="py-3 px-3">Estado</th>
+                            <th className="py-3 px-3 text-right">Total</th>
+                          </>
+                        )}
+                        {unitModalType === 'expenses' && (
+                          <>
+                            <th className="py-3 px-3">Título</th>
+                            <th className="py-3 px-3">Categoría</th>
+                            <th className="py-3 px-3">Descripción</th>
+                            <th className="py-3 px-3 text-right">Monto</th>
+                          </>
+                        )}
+                        {unitModalType === 'mg_upgrades' && (
+                          <>
+                            <th className="py-3 px-3">Comprador</th>
+                            <th className="py-3 px-3">Concierto</th>
+                            <th className="py-3 px-3 text-right">Precio M&G</th>
+                          </>
+                        )}
+                        <th className="py-3 px-3 text-right">Fecha</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unitDataList.map((item: any, idx: number) => (
+                        <tr key={idx} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-all text-xs font-bold text-[#F4F6F0]">
+                          <td className="py-3 px-3 font-mono text-amber-honey">#{item.id}</td>
+
+                          {unitModalType === 'tickets' && (
+                            <>
+                              <td className="py-3 px-3 font-medium text-[#F4F6F0]/90">{item.buyer}</td>
+                              <td className="py-3 px-3 italic">{item.event}</td>
+                              <td className="py-3 px-3 font-mono text-amber-300">{item.seat}</td>
+                              <td className="py-3 px-3">
+                                {item.has_mg ? (
+                                  <span className="bg-amber-500/20 text-amber-honey text-[9px] px-2 py-0.5 rounded-full font-black uppercase">VIP M&G</span>
+                                ) : (
+                                  <span className="text-[#F4F6F0]/30 text-[9px]">Estándar</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-[10px] text-[#F4F6F0]/50">{item.coupon}</td>
+                              <td className="py-3 px-3 text-right font-mono text-emerald-400 font-black">${item.amount?.toFixed(2)}</td>
+                            </>
+                          )}
+
+                          {unitModalType === 'orders' && (
+                            <>
+                              <td className="py-3 px-3 font-medium text-[#F4F6F0]/90">{item.buyer}</td>
+                              <td className="py-3 px-3 text-amber-honey">{item.items_summary}</td>
+                              <td className="py-3 px-3 text-[#F4F6F0]/60">{item.city}</td>
+                              <td className="py-3 px-3">
+                                <span className="bg-cyan-500/20 text-cyan-300 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">{item.status}</span>
+                              </td>
+                              <td className="py-3 px-3 text-right font-mono text-emerald-400 font-black">${item.amount?.toFixed(2)}</td>
+                            </>
+                          )}
+
+                          {unitModalType === 'expenses' && (
+                            <>
+                              <td className="py-3 px-3 text-[#F4F6F0]/90">{item.title}</td>
+                              <td className="py-3 px-3 text-amber-honey">{item.category}</td>
+                              <td className="py-3 px-3 text-[#F4F6F0]/50 text-[10px]">{item.description || '-'}</td>
+                              <td className="py-3 px-3 text-right font-mono text-red-400 font-black">${item.amount?.toFixed(2)}</td>
+                            </>
+                          )}
+
+                          {unitModalType === 'mg_upgrades' && (
+                            <>
+                              <td className="py-3 px-3 text-[#F4F6F0]/90">{item.buyer}</td>
+                              <td className="py-3 px-3 italic">{item.event}</td>
+                              <td className="py-3 px-3 text-right font-mono text-yellow-400 font-black">${item.mg_price?.toFixed(2)}</td>
+                            </>
+                          )}
+
+                          <td className="py-3 px-3 text-right text-[10px] font-mono text-[#F4F6F0]/40">
+                            {item.created_at ? new Date(item.created_at).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ==================== MODAL: GRÁFICO EXPANDIDO EN PANTALLA COMPLETA ==================== */}
+      {isFullscreenChartOpen && (
+        <div className="fixed inset-0 bg-[#080C0A]/95 z-[130] p-6 sm:p-10 flex flex-col justify-between backdrop-blur-2xl overflow-y-auto">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-white/10">
+            <div>
+              <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center gap-2">
+                <Maximize2 size={12} /> Pantalla Completa • Consola de Análisis Visual
+              </span>
+              <h2 className="text-3xl font-black uppercase italic tracking-tight text-[#F4F6F0] mt-1">
+                Evolución de Ingresos y Tendencias
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Granularity Selector */}
+              <div className="bg-black/60 p-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
+                {['daily', 'weekly', 'monthly', 'event'].map(p => (
+                  <button
+                    key={p}
+                    onClick={() => setChartPeriod(p as any)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all",
+                      chartPeriod === p ? "bg-amber-honey text-black" : "text-[#F4F6F0]/60 hover:text-white"
+                    )}
+                  >
+                    {p === 'daily' ? 'Diario' : p === 'weekly' ? 'Semanal' : p === 'monthly' ? 'Mensual' : 'Por Evento'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Chart Type Selector */}
+              <div className="bg-black/60 p-1.5 rounded-xl border border-white/10 flex items-center gap-1.5">
+                {['area', 'line', 'bar', 'donut'].map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setChartType(t as any)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all",
+                      chartType === t ? "bg-amber-honey text-black" : "text-[#F4F6F0]/60 hover:text-white"
+                    )}
+                  >
+                    {t === 'area' ? 'Área' : t === 'line' ? 'Línea' : t === 'bar' ? 'Barras' : 'Rosca'}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setIsFullscreenChartOpen(false)}
+                className="bg-white/10 hover:bg-white/20 text-[#F4F6F0] p-2.5 rounded-xl font-bold transition-all flex items-center gap-2 text-xs uppercase"
+              >
+                <Minimize2 size={16} /> Cerrar
+              </button>
+            </div>
+          </div>
+
+          {/* Large Viewport Chart */}
+          <div className="relative w-full h-[450px] my-6 amber-glass border border-white/10 p-6 rounded-[2.5rem] flex items-center justify-center">
+            <svg
+              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+              className="w-full h-full overflow-visible select-none cursor-crosshair"
+              onMouseMove={handleMouseMove}
+              onMouseLeave={() => setHoveredPoint(null)}
+            >
+              <defs>
+                <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#E5A93B" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#E5A93B" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+
+              {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
+                const y = paddingTop + innerHeight * (1 - ratio);
+                const val = maxVal * ratio;
+                return (
+                  <g key={idx}>
+                    <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#ffffff" strokeOpacity="0.1" strokeDasharray="4 4" />
+                    <text x={paddingLeft - 8} y={y + 4} fill="#F4F6F0" fillOpacity="0.6" fontSize="10" fontWeight="bold" textAnchor="end">${Math.round(val)}</text>
+                  </g>
+                );
+              })}
+
+              {points.map((p: any, idx: number) => (
+                <text
+                  key={idx}
+                  x={p.x}
+                  y={paddingTop + innerHeight + 20}
+                  fill="#F4F6F0"
+                  fillOpacity="0.6"
+                  fontSize="9"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                >
+                  {p.data.event_title || p.data.date}
+                </text>
+              ))}
+
+              {chartType === 'area' && areaPath && <path d={areaPath} fill="url(#fullSalesGradient)" />}
+              {linePath && <path d={linePath} fill="none" stroke="#E5A93B" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />}
+
+              {points.map((p: any, idx: number) => (
+                <circle
+                  key={idx}
+                  cx={p.x}
+                  cy={p.y}
+                  r="5"
+                  fill="#E5A93B"
+                  stroke="#080C0A"
+                  strokeWidth="2"
+                  className="cursor-pointer hover:scale-150 transition-transform"
+                  onClick={() => setDrillDownData(p.data)}
+                />
+              ))}
+            </svg>
+          </div>
+
+          {/* Comprehensive Data Table */}
+          <div className="amber-glass border border-white/10 p-6 rounded-[2rem] max-h-48 overflow-y-auto">
+            <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey mb-3">Tabla Completa de Registros del Periodo</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              {chartData.map((d: any, idx: number) => (
+                <div key={idx} className="p-3 bg-white/5 border border-white/10 rounded-xl text-left font-mono">
+                  <span className="text-[9px] text-[#F4F6F0]/40 block uppercase">{d.date || d.event_title}</span>
+                  <span className="text-sm font-black text-amber-honey block mt-0.5">${(d.total || d.ticket_revenue || 0).toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL: DRILL-DOWN DE PERIODO/EVENTO ==================== */}
+      {drillDownData && (
+        <div className="fixed inset-0 bg-[#080C0A]/80 z-[140] flex items-center justify-center p-6 backdrop-blur-lg">
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="amber-glass border border-amber-honey/30 max-w-lg w-full p-8 rounded-[2.5rem] text-center shadow-2xl relative"
+          >
+            <button
+              onClick={() => setDrillDownData(null)}
+              className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 text-[#F4F6F0]/60 rounded-xl transition-all"
+            >
+              <X size={18} />
+            </button>
+
+            <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black block mb-1">
+              🔍 Desglose de Periodo (Drill-Down)
+            </span>
+            <h3 className="text-2xl font-black uppercase italic tracking-tight text-[#F4F6F0] mb-6">
+              {drillDownData.event_title || drillDownData.date || drillDownData.category}
+            </h3>
+
+            <div className="space-y-3 text-left bg-white/5 border border-white/10 p-5 rounded-2xl mb-6">
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-xs text-[#F4F6F0]/60 uppercase font-bold">Ventas de Taquilla:</span>
+                <span className="text-sm font-black text-emerald-400 font-mono">${(drillDownData.tickets || drillDownData.ticket_revenue || drillDownData.amount || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <span className="text-xs text-[#F4F6F0]/60 uppercase font-bold">Ventas de Tienda:</span>
+                <span className="text-sm font-black text-cyan-400 font-mono">${(drillDownData.shop || 0).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-xs font-black uppercase text-amber-honey">Total del Periodo:</span>
+                <span className="text-base font-black text-amber-honey font-mono">${(drillDownData.total || drillDownData.amount || 0).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => {
+                  setDrillDownData(null);
+                  fetchUnitData('tickets', `Boletos: ${drillDownData.event_title || drillDownData.date}`);
+                }}
+                className="bg-amber-honey text-[#1E2B22] font-black uppercase tracking-widest text-xs px-6 py-3 rounded-xl hover:bg-amber-gold transition-all shadow-md"
+              >
+                Ver Boletos
+              </button>
+              <button
+                onClick={() => setDrillDownData(null)}
+                className="bg-white/10 text-[#F4F6F0] font-black uppercase tracking-widest text-xs px-6 py-3 rounded-xl hover:bg-white/20 transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
 
 // Stat Card Component
-const StatCard = ({ icon, title, value, detail, color }: any) => {
+const StatCard = ({ icon, title, value, detail, color, onClick }: any) => {
   const glowColors: any = {
     amber: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
     gold: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
@@ -8064,7 +8662,8 @@ const StatCard = ({ icon, title, value, detail, color }: any) => {
   return (
     <motion.div
       whileHover={{ y: -4 }}
-      className={`amber-glass border rounded-[2rem] p-6 transition-all duration-300 relative group overflow-hidden ${glowColors[color]}`}
+      onClick={onClick}
+      className={`amber-glass border rounded-[2rem] p-6 transition-all duration-300 relative group overflow-hidden ${glowColors[color]} ${onClick ? 'cursor-pointer hover:border-amber-honey/60' : ''}`}
     >
       <div className="flex items-center justify-between mb-4">
         <span className="text-[10px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">{title}</span>
@@ -8073,7 +8672,10 @@ const StatCard = ({ icon, title, value, detail, color }: any) => {
         </div>
       </div>
       <div className="text-2xl md:text-3xl font-black text-[#F4F6F0] tracking-tight mb-2">{value}</div>
-      <div className="text-[#F4F6F0]/40 text-[9px] uppercase tracking-widest font-black">{detail}</div>
+      <div className="text-[#F4F6F0]/40 text-[9px] uppercase tracking-widest font-black flex items-center justify-between">
+        <span>{detail}</span>
+        {onClick && <span className="text-amber-honey opacity-0 group-hover:opacity-100 transition-opacity">Ver →</span>}
+      </div>
     </motion.div>
   );
 };
