@@ -13,8 +13,7 @@ import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useEventTheme } from '../context/EventThemeContext';
 import ThemedSection from '../components/ThemedSection';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from '../lib/utils';
 
 // ─── PARTICLE BACKGROUND COMPONENT (WITH MORPHING) ───
 const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => {
@@ -839,7 +838,8 @@ const Home = () => {
 
   useEffect(() => {
     setIsMounted(true);
-    axios.get(`${API_URL}/tickets/events/`)
+    const apiUrl = getApiUrl();
+    axios.get(`${apiUrl}/tickets/events/`)
       .then(res => {
         if (res.data && res.data.length > 0) {
           const now = new Date();
@@ -904,7 +904,8 @@ const Home = () => {
     setNewsletterErrorMessage('');
 
     try {
-      await axios.post(`${API_URL}/blog/subscribers/`, {
+      const apiUrl = getApiUrl();
+      await axios.post(`${apiUrl}/blog/subscribers/`, {
         email: newsletterEmail,
         name: newsletterName
       });

@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Check, AlertCircle, X, Mail } from 'lucide-react';
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from '../lib/utils';
 
 interface Toast {
   id: number;
@@ -23,8 +22,8 @@ export default function Suscribirse() {
 
   // Check if already subscribed in this browser
   useEffect(() => {
-    const storedEmail = localStorage.getItem('ms_ambar_subscriber_email');
-    if (storedEmail) {
+    const saved = localStorage.getItem('ms_ambar_subscriber_email');
+    if (saved) {
       setNewsletterSuccess(true);
     }
   }, []);
@@ -34,7 +33,7 @@ export default function Suscribirse() {
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
-    }, 6000);
+    }, 4000);
   };
 
   const handleSubscribe = async (e: React.FormEvent) => {
@@ -42,7 +41,8 @@ export default function Suscribirse() {
     if (!newsletterEmail.trim()) return;
     setNewsletterSubmitting(true);
     try {
-      await axios.post(`${API_URL}/blog/subscribers/`, {
+      const apiUrl = getApiUrl();
+      await axios.post(`${apiUrl}/blog/subscribers/`, {
         email: newsletterEmail,
         name: newsletterName
       });

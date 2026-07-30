@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from '../lib/utils';
 
 export interface SectionThemeSpec {
   bg_color?: string;
@@ -168,9 +167,10 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
   const fetchThemeForEvent = async (eventId?: number | string) => {
     try {
       setLoading(true);
+      const apiUrl = getApiUrl();
       const url = eventId 
-        ? `${API_URL}/tickets/theme/active/?event_id=${eventId}`
-        : `${API_URL}/tickets/theme/active/`;
+        ? `${apiUrl}/tickets/theme/active/?event_id=${eventId}`
+        : `${apiUrl}/tickets/theme/active/`;
       
       const res = await axios.get(url);
       if (res.data) {

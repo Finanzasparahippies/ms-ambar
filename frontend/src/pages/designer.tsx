@@ -14,7 +14,7 @@ import {
   X, Info, Circle as CircleIcon, Triangle, Hexagon, Octagon,
   Shield, Lock
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, getApiUrl } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showConfirm } from '../lib/notifications';
 
@@ -170,10 +170,7 @@ export default function DesignerPage() {
   const [theaterModalError, setTheaterModalError] = useState<string | null>(null);
   const [generateSeatsStatus, setGenerateSeatsStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ||
-    (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
-      ? window.location.origin.replace(window.location.port, '8000') + '/api'
-      : 'http://localhost:8000/api');
+  const apiUrl = getApiUrl();
 
   const fetchTheaters = async () => {
     try {

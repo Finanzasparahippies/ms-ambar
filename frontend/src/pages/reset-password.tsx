@@ -4,8 +4,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Eye, EyeOff, ShieldAlert, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from '../lib/utils';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -36,7 +35,8 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      await axios.post(`${API_URL}/users/password-reset-confirm/`, {
+      const apiUrl = getApiUrl();
+      await axios.post(`${apiUrl}/users/password-reset-confirm/`, {
         uid,
         token,
         email,

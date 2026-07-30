@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Calendar, MapPin, Armchair, Mail, ChevronLeft, ShieldCheck, AlertCircle } from 'lucide-react';
+import { getApiUrl } from '../../lib/utils';
 
 const formatoHoraOficial = (fechaString: string) => {
   if (!fechaString) return "--:--";
@@ -47,13 +48,6 @@ export default function TicketPage() {
   const [error, setError] = useState<string | null>(null);
   const [isStaff, setIsStaff] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
-
-  const getApiUrl = () => {
-    return process.env.NEXT_PUBLIC_API_URL ||
-      (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
-        ? window.location.origin.replace(window.location.port, '8000') + '/api'
-        : 'http://localhost:8000/api');
-  };
 
   useEffect(() => {
     if (!token) return;

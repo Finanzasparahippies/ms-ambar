@@ -1,20 +1,20 @@
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from './utils';
 
 export const reportWebVitalsToBackend = (metric: any) => {
+  const apiUrl = getApiUrl();
   const body = {
     name: metric.name,
     value: metric.value,
-    path: window.location.pathname,
+    path: typeof window !== 'undefined' ? window.location.pathname : '',
   };
 
   // Use sendBeacon if available for better reliability on page hide
-  if (navigator.sendBeacon) {
+  if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
     const blob = new Blob([JSON.stringify(body)], { type: 'application/json' });
-    navigator.sendBeacon(`${API_URL}/performance/vitals/`, blob);
+    navigator.sendBeacon(`${apiUrl}/performance/vitals/`, blob);
   } else {
-    axios.post(`${API_URL}/performance/vitals/`, body).catch(() => {
+    axios.post(`${apiUrl}/performance/vitals/`, body).catch(() => {
       // Ignore errors in performance reporting
     });
   }

@@ -3,8 +3,7 @@ import axios from 'axios';
 import { useEventTheme, ThemeConfig, SectionThemeSpec } from '../context/EventThemeContext';
 import { Palette, Sparkles, Check, RefreshCw, Eye, Sliders, Layers, Type, Paintbrush, Layout, Settings } from 'lucide-react';
 import { showToast } from '../lib/notifications';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from '../lib/utils';
 
 const SHAPE_OPTIONS = [
   { id: 'moon', label: 'Media Luna', icon: '🌙' },
@@ -116,7 +115,8 @@ export const ThemeManager: React.FC = () => {
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const res = await axios.get(`${API_URL}/tickets/events/`);
+        const apiUrl = getApiUrl();
+        const res = await axios.get(`${apiUrl}/tickets/events/`);
         if (res.data && Array.isArray(res.data)) {
           setEvents(res.data);
           if (res.data.length > 0 && !selectedEventId) {
@@ -134,8 +134,9 @@ export const ThemeManager: React.FC = () => {
   const loadThemeConfig = async () => {
     setLoading(true);
     try {
+      const apiUrl = getApiUrl();
       if (scope === 'global') {
-        const res = await axios.get(`${API_URL}/tickets/settings/`);
+        const res = await axios.get(`${apiUrl}/tickets/settings/`);
         if (res.data) {
           const cfg = res.data.theme_config || res.data;
           setPrimaryColor(cfg.primary_color || '#E5A93B');
@@ -160,7 +161,7 @@ export const ThemeManager: React.FC = () => {
           setSectionThemes(cfg.section_themes || res.data.section_themes || {});
         }
       } else if (selectedEventId) {
-        const res = await axios.get(`${API_URL}/tickets/events/${selectedEventId}/`);
+        const res = await axios.get(`${apiUrl}/tickets/events/${selectedEventId}/`);
         if (res.data) {
           const cfg = res.data.theme_config || res.data;
           setPrimaryColor(res.data.primary_color || cfg.primary_color || '#E5A93B');
@@ -263,11 +264,12 @@ export const ThemeManager: React.FC = () => {
     };
 
     try {
+      const apiUrl = getApiUrl();
       if (scope === 'global') {
-        await axios.post(`${API_URL}/tickets/settings/`, payload, { headers });
+        await axios.post(`${apiUrl}/tickets/settings/`, payload, { headers });
         showToast.success('¡Configuración de tema y secciones guardada en todo el sitio!');
       } else if (selectedEventId) {
-        await axios.patch(`${API_URL}/tickets/events/${selectedEventId}/`, payload, { headers });
+        await axios.patch(`${apiUrl}/tickets/events/${selectedEventId}/`, payload, { headers });
         showToast.success('¡Tema y secciones personalizadas del evento actualizados con éxito!');
       }
       fetchThemeForEvent(scope === 'event' ? selectedEventId || undefined : undefined);

@@ -58,18 +58,18 @@ import {
   Camera,
   AlignLeft,
   AlignCenter,
-  AlignRight,
   AlignJustify
 } from 'lucide-react';
+import { getApiUrl } from '../../lib/utils';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_URL = typeof window !== 'undefined' ? getApiUrl() : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
 
 const resolveMediaUrl = (url: string | null | undefined) => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
-  const backendRoot = API_URL.replace(/\/api$/, '');
+  const backendRoot = getApiUrl().replace(/\/api$/, '');
   return `${backendRoot}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 

@@ -17,10 +17,9 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
 import SeatingChart from '../components/SeatingChart';
 import ThemedSection from '../components/ThemedSection';
-import TourTimeline from '../components/TourTimeline';
 import { useEventTheme } from '../context/EventThemeContext';
 import { showAlert } from '../lib/notifications';
-import { cn } from '../lib/utils';
+import { cn, getApiUrl } from '../lib/utils';
 
 // ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
 const STRIPE_PCT_FEE = 0.036;   // 3.6%
@@ -158,13 +157,6 @@ const TourPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [createdTickets, setCreatedTickets] = useState<any[]>([]);
-
-  const getApiUrl = () => {
-    return process.env.NEXT_PUBLIC_API_URL ||
-      (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
-        ? window.location.origin.replace(window.location.port, '8000') + '/api'
-        : 'http://localhost:8000/api');
-  };
 
   const handleValidateCoupon = async (overrideCode?: any, overrideEmail?: any) => {
     const codeToUse = typeof overrideCode === 'string' ? overrideCode.trim() : (couponCode || '').trim();

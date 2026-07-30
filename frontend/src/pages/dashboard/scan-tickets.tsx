@@ -6,6 +6,7 @@ import {
   Camera, ShieldCheck, AlertCircle, CheckCircle, ArrowLeft, RefreshCw, Smartphone, Keyboard, Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getApiUrl } from '../../lib/utils';
 
 export default function ScanTicketsPage() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function ScanTicketsPage() {
   const [selectedCameraId, setSelectedCameraId] = useState<string>('');
   const [isManualCameraSelect, setIsManualCameraSelect] = useState(false);
   const [manualToken, setManualToken] = useState('');
+  const [html5QrCode, setHtml5QrCode] = useState<any>(null);
+  const readerRef = useRef<HTMLDivElement>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
 
@@ -28,13 +31,6 @@ export default function ScanTicketsPage() {
 
   const html5QrCodeRef = useRef<any>(null);
   const readerId = "qr-reader-container";
-
-  const getApiUrl = () => {
-    return process.env.NEXT_PUBLIC_API_URL ||
-      (typeof window !== 'undefined' && window.location.origin.includes('github.dev')
-        ? window.location.origin.replace(window.location.port, '8000') + '/api'
-        : 'http://localhost:8000/api');
-  };
 
   // 1. Auth check
   useEffect(() => {

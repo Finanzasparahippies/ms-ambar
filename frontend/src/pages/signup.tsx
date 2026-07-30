@@ -4,8 +4,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Phone, Lock, Eye, EyeOff, ShieldAlert, CheckCircle, ArrowRight } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from '../lib/utils';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -33,7 +32,8 @@ export default function SignupPage() {
     }
 
     try {
-      const res = await axios.post(`${API_URL}/users/register/`, {
+      const apiUrl = getApiUrl();
+      const res = await axios.post(`${apiUrl}/users/register/`, {
         email,
         username,
         phone: phone || null,

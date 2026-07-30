@@ -6,8 +6,7 @@ import { Send, Mail, Download, ArrowRight, CheckCircle, Calendar, Phone, Award }
 import axios from 'axios';
 import { showAlert } from '../lib/notifications';
 import ThemedSection from '../components/ThemedSection';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { getApiUrl } from '../lib/utils';
 
 const ContactPage = () => {
   const [name, setName] = useState('');
@@ -34,7 +33,8 @@ const ContactPage = () => {
         venue_type: venueType,
         message,
       };
-      const res = await axios.post(`${API_URL}/bookings/inquiries/`, payload);
+      const apiUrl = getApiUrl();
+      const res = await axios.post(`${apiUrl}/bookings/inquiries/`, payload);
       setSuccessData(res.data);
     } catch (err: any) {
       console.error(err);
