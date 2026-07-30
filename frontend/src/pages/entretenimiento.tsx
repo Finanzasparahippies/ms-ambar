@@ -7,6 +7,7 @@ import {
   Sparkles, Sliders, Volume2, Layers, VolumeX, Activity, ChevronRight, ArrowRight
 } from 'lucide-react';
 import axios from 'axios';
+import ThemedSection from '../components/ThemedSection';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -292,7 +293,7 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
           const dy = target.y - p.y;
           p.x += dx * 0.08;
           p.y += dy * 0.08;
-          ctx.fillStyle = 'rgba(255, 191, 0, 0.85)';
+          ctx.fillStyle = 'rgba(var(--amber-primary, 229, 169, 59), 0.85)';
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * 1.2, 0, Math.PI * 2);
           ctx.fill();
@@ -1025,7 +1026,7 @@ const Entretenimiento = () => {
   if (!isMounted) return null;
 
   return (
-    <div className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit text-white min-h-screen relative">
+    <ThemedSection sectionKey="entretenimiento" className="selection:bg-amber-honey/30 overflow-x-hidden font-outfit min-h-screen relative">
       <Head>
         <title>Ms Ambar | Entretenimiento & Oráculo Sensorial</title>
         <meta name="description" content="Oráculo Interactivo y Consola de Frecuencias de MS Ambar. Sintoniza tus arcanos y modula la energía de nuestra escenografía virtual." />
@@ -1531,7 +1532,7 @@ const Entretenimiento = () => {
           </div>
         </section>
       </div>
-    </div>
+    </ThemedSection>
   );
 };
 

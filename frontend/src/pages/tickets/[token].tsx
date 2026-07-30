@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Calendar, MapPin, Armchair, Mail, ChevronLeft, ShieldCheck, AlertCircle } from 'lucide-react';
 import { getApiUrl } from '../../lib/utils';
+import ThemedSection from '../../components/ThemedSection';
 
 const formatoHoraOficial = (fechaString: string) => {
   if (!fechaString) return "--:--";
@@ -142,7 +143,7 @@ export default function TicketPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-amber-500/30">
+    <ThemedSection sectionKey="ticket_detail" className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans selection:bg-amber-500/30">
       <Head>
         <title>Boleto Digital | Ms Ambar</title>
       </Head>
@@ -354,6 +355,6 @@ export default function TicketPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </ThemedSection>
   );
 }

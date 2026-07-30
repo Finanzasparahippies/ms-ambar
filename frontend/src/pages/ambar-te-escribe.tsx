@@ -29,6 +29,7 @@ import {
 import Head from 'next/head';
 import React, { useEffect, useRef, useState } from 'react';
 import { showToast as premiumToast, showConfirm } from '../lib/notifications';
+import ThemedSection from '../components/ThemedSection';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -401,7 +402,7 @@ export default function AmbarTeEscribePage() {
     : posts.filter(p => p.category_name === selectedCategory || (p.category && String(p.category) === selectedCategory));
 
   return (
-    <div className="selection:bg-amber-honey/30 min-h-screen text-white relative">
+    <ThemedSection sectionKey="ambar_te_escribe" className="selection:bg-amber-honey/30 min-h-screen relative">
       <Head>
         <title>Ms Ambar | Ambar te escribe</title>
         <style>{`
@@ -411,7 +412,7 @@ export default function AmbarTeEscribePage() {
             margin-top: 1.75rem;
             margin-bottom: 0.75rem;
             letter-spacing: -0.025em;
-            color: #ffffff;
+            color: var(--heading-color, #ffffff);
           }
           .rich-text-content h3 {
             font-size: 1.5rem;
@@ -419,30 +420,30 @@ export default function AmbarTeEscribePage() {
             margin-top: 1.5rem;
             margin-bottom: 0.5rem;
             letter-spacing: -0.025em;
-            color: #f3f4f6;
+            color: var(--subtitle-color, #f3f4f6);
           }
           .rich-text-content p {
             font-size: 0.95rem;
             line-height: 1.75;
             margin-bottom: 1.25rem;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--text-color, rgba(255, 255, 255, 0.75));
           }
           .rich-text-content ul {
             list-style-type: disc;
             list-style-position: inside;
             margin-bottom: 1.25rem;
             padding-left: 1rem;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--text-color, rgba(255, 255, 255, 0.75));
           }
           .rich-text-content ol {
             list-style-type: decimal;
             list-style-position: inside;
             margin-bottom: 1.25rem;
             padding-left: 1rem;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--text-color, rgba(255, 255, 255, 0.75));
           }
           .rich-text-content blockquote {
-            border-left: 4px solid #e5a93b;
+            border-left: 4px solid var(--primary-color, #e5a93b);
             background: rgba(255, 255, 255, 0.02);
             padding: 1rem 1.25rem;
             border-radius: 0 1rem 1rem 0;
@@ -1207,6 +1208,6 @@ export default function AmbarTeEscribePage() {
         </AnimatePresence>
       </div>
 
-    </div>
+    </ThemedSection>
   );
 }

@@ -17,6 +17,7 @@ import {
   User,
   ShoppingBag as CartIcon
 } from 'lucide-react';
+import ThemedSection from '../components/ThemedSection';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -140,7 +141,7 @@ export default function MerchPage() {
   };
 
   return (
-    <div className="selection:bg-amber-honey/30 relative">
+    <ThemedSection sectionKey="tienda" className="selection:bg-amber-honey/30 min-h-screen relative">
       <Head>
         <title>Ms Ambar | Tienda</title>
       </Head>
@@ -485,6 +486,6 @@ export default function MerchPage() {
           </>
         )}
       </AnimatePresence>
-    </div>
+    </ThemedSection>
   );
 }

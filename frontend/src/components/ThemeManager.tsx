@@ -70,9 +70,18 @@ const PAGE_SECTIONS = [
   { id: 'tickets_page', label: 'Página de Compra: Encabezado y Accesos', icon: '🎟️' },
   { id: 'seating_map', label: 'Página de Compra: Mapa Interactivo de Asientos', icon: '🗺️' },
   { id: 'checkout_modal', label: 'Modal de Checkout y Resumen de Compra', icon: '💳' },
-  { id: 'contact_section', label: 'Página de Contacto y Formulario', icon: '📬' },
-  { id: 'footer', label: 'Pie de Página y Redes Sociales', icon: '⚓' },
+  { id: 'ambar_te_escribe', label: 'Página: Ambar Te Escribe (Blog & Crónicas)', icon: '✍️' },
+  { id: 'entretenimiento', label: 'Página: Entretenimiento Interactivo & Canvas', icon: '🎨' },
+  { id: 'tienda', label: 'Página: Tienda Oficial & Merch', icon: '🛍️' },
+  { id: 'musica', label: 'Página: Música & Discografía', icon: '🎵' },
+  { id: 'contact_section', label: 'Página: Contacto & Solicitud de Booking', icon: '📬' },
+  { id: 'ticket_detail', label: 'Página: Detalle de Boleto & Código QR', icon: '🎟️' },
+  { id: 'dashboard', label: 'Panel: Dashboard & Administración', icon: '📊' },
+  { id: 'auth_pages', label: 'Páginas: Autenticación (Login, Registro)', icon: '🔐' },
+  { id: 'navbar', label: 'Barra de Navegación Global (Header)', icon: '🧭' },
+  { id: 'footer', label: 'Pie de Página y Redes Sociales (Footer)', icon: '⚓' },
 ];
+
 
 const COLOR_PRESETS = [
   { id: 'amber-honey', name: 'Ámbar Místico', primary: '#E5A93B', secondary: '#22A6B7', start: '#080c0a', end: '#040605', card: '#0c0f0d', text: '#F4F6F0', heading: '#E5A93B' },

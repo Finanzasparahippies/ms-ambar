@@ -2,6 +2,7 @@ import React from 'react';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
 import { Play, Share2, Disc, ExternalLink, Youtube, Music } from 'lucide-react';
+import ThemedSection from '../components/ThemedSection';
 
 const ALBUMS = [
   { id: 1, title: 'Eclipse', year: '2026', tracks: 12, cover: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=500&q=80' },
@@ -11,7 +12,7 @@ const ALBUMS = [
 
 const MusicPage = () => {
   return (
-    <div className="selection:bg-amber-honey/30">
+    <ThemedSection sectionKey="musica" className="selection:bg-amber-honey/30 min-h-screen relative">
       <Head>
         <title>Ms Ambar | Discografía</title>
       </Head>
@@ -120,7 +121,7 @@ const MusicPage = () => {
           ))}
         </div>
       </div>
-    </div>
+    </ThemedSection>
   );
 };
 

@@ -28,12 +28,13 @@ const Layout = ({ children }: LayoutProps) => {
   }, [isAuthOrAdmin]);
 
   if (isAuthOrAdmin) {
+    const authSectionKey = router.pathname.startsWith('/dashboard') || router.pathname.startsWith('/admin') ? 'dashboard' : 'auth_pages';
     return (
-      <div data-theme="dark" className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative bg-gradient-to-br from-[#080c0a] to-[#040605] text-[#F4F6F0]">
+      <ThemedSection sectionKey={authSectionKey} className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative">
         <main className="relative z-10 min-h-screen">
           {children}
         </main>
-      </div>
+      </ThemedSection>
     );
   }
 

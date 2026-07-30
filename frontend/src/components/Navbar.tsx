@@ -110,10 +110,12 @@ const Navbar = () => {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-500 ease-in-out ${isScrolled || isMobileMenuOpen
-          ? 'border-b border-white/5 bg-[#080C0A]/90 backdrop-blur-md shadow-lg shadow-black/30'
+          ? 'border-b border-white/10 backdrop-blur-md shadow-lg shadow-black/30'
           : 'border-b border-transparent bg-transparent'
         }`}
       style={{
+        backgroundColor: (isScrolled || isMobileMenuOpen) ? 'var(--card-bg, rgba(8, 12, 10, 0.9))' : 'transparent',
+        borderColor: (isScrolled || isMobileMenuOpen) ? 'var(--border-color, rgba(229, 169, 59, 0.2))' : 'transparent',
         transform: isVisible ? 'translateY(0)' : 'translateY(-100%)',
         opacity: isVisible ? 1 : 0,
         pointerEvents: isVisible ? 'auto' : 'none',

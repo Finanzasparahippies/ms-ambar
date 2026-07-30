@@ -31,7 +31,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [hoveredEventId, setHoveredEventId] = useState<number | null>(null);
   const { getSectionTheme, theme } = useEventTheme();
-  const secTheme = getSectionTheme('timeline_section');
+  const secTheme = getSectionTheme('tour_timeline');
 
   const years = useMemo(() => {
     const yearsSet = new Set(events.map(e => new Date(e.date).getFullYear()));
