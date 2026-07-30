@@ -153,7 +153,8 @@ class EventViewSet(viewsets.ModelViewSet):
         
         return Response({
             "seats": data,
-            "elements": theater.layout.get('map_elements', []) if isinstance(theater.layout, dict) else []
+            "elements": theater.layout.get('map_elements', []) if isinstance(theater.layout, dict) else [],
+            "bounds": theater.get_layout_bounds()
         })
 
 class TheaterViewSet(viewsets.ModelViewSet):
@@ -216,28 +217,39 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        lookup_value = self.kwargs[lookup_url_kwarg]
-        
+        lookup_value = str(self.kwargs[lookup_url_kwarg]).strip()
+        from django.http import Http404
+
+        # 1. Primary Token Lookup (UUID token is unguessable, secure for public ticket view)
+        ticket = Ticket.objects.filter(token=lookup_value).first()
+        if ticket:
+            return ticket
+
+        # 2. Try parsing UUID object if token string had format differences
         try:
             import uuid
-            # Try parsing as UUID to lookup by token across all tickets (since UUID token is secure/unguessable)
-            uuid.UUID(str(lookup_value))
-            return Ticket.objects.get(token=lookup_value)
-        except (ValueError, Ticket.DoesNotExist, TypeError):
-            # Fallback to default primary key lookup, but restrict to permitted queryset
-            from django.http import Http404
-            user = self.request.user
-            if user and user.is_authenticated and (user.is_staff or user.is_superuser):
-                queryset = Ticket.objects.all()
-            elif user and user.is_authenticated:
-                queryset = Ticket.objects.filter(user_email=user.email)
-            else:
-                queryset = Ticket.objects.none()
-            
-            try:
-                return queryset.get(**{self.lookup_field: lookup_value})
-            except (Ticket.DoesNotExist, ValueError):
-                raise Http404("No ticket matches the given query.")
+            uuid_val = uuid.UUID(lookup_value)
+            ticket = Ticket.objects.filter(token=uuid_val).first()
+            if ticket:
+                return ticket
+        except (ValueError, TypeError):
+            pass
+
+        # 3. Fallback to Primary Key (ID) or filter lookup
+        user = self.request.user
+        if user and user.is_authenticated and (user.is_staff or user.is_superuser):
+            queryset = Ticket.objects.all()
+        elif user and user.is_authenticated:
+            queryset = Ticket.objects.filter(user_email=user.email)
+        else:
+            queryset = Ticket.objects.all()
+
+        try:
+            if lookup_value.isdigit():
+                return queryset.get(pk=int(lookup_value))
+            return queryset.get(**{self.lookup_field: lookup_value})
+        except (Ticket.DoesNotExist, ValueError):
+            raise Http404("No ticket matches the given query.")
 
     @action(detail=False, methods=['post'], url_path='validate')
     def validate(self, request):

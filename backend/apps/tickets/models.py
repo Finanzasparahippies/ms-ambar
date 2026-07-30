@@ -45,6 +45,82 @@ class Theater(models.Model):
             self.layout['map_elements'] = filtered_elements
             self.save(update_fields=['layout'])
 
+    def get_layout_bounds(self, seat_padding=20):
+        """
+        Calcula las métricas de bounding box (min_x, min_y, max_x, max_y, width, height, center_x, center_y)
+        del layout 2D guardado en el teatro para referencia y validación de endpoints/UI.
+        """
+        if not isinstance(self.layout, dict):
+            return {
+                "min_x": -300.0, "min_y": -200.0, "max_x": 300.0, "max_y": 200.0,
+                "width": 600.0, "height": 400.0, "center_x": 0.0, "center_y": 0.0
+            }
+
+        seats_data = self.layout.get('seats', [])
+        map_elements = self.layout.get('map_elements', [])
+
+        if not isinstance(seats_data, list):
+            seats_data = []
+        if not isinstance(map_elements, list):
+            map_elements = []
+
+        if not seats_data and not map_elements:
+            return {
+                "min_x": -300.0, "min_y": -200.0, "max_x": 300.0, "max_y": 200.0,
+                "width": 600.0, "height": 400.0, "center_x": 0.0, "center_y": 0.0
+            }
+
+        min_x = float('inf')
+        min_y = float('inf')
+        max_x = float('-inf')
+        max_y = float('-inf')
+
+        for s in seats_data:
+            if isinstance(s, dict) and 'x' in s and 'y' in s:
+                try:
+                    sx, sy = float(s['x']), float(s['y'])
+                    min_x = min(min_x, sx - seat_padding)
+                    max_x = max(max_x, sx + seat_padding)
+                    min_y = min(min_y, sy - seat_padding)
+                    max_y = max(max_y, sy + seat_padding)
+                except (ValueError, TypeError):
+                    continue
+
+        for el in map_elements:
+            if isinstance(el, dict) and 'x' in el and 'y' in el:
+                try:
+                    ex, ey = float(el['x']), float(el['y'])
+                    half_w = float(el.get('w', 100)) / 2.0 + seat_padding
+                    half_h = float(el.get('h', 100)) / 2.0 + seat_padding
+                    min_x = min(min_x, ex - half_w)
+                    max_x = max(max_x, ex + half_w)
+                    min_y = min(min_y, ey - half_h)
+                    max_y = max(max_y, ey + half_h)
+                except (ValueError, TypeError):
+                    continue
+
+        if min_x == float('inf') or max_x == float('-inf'):
+            return {
+                "min_x": -300.0, "min_y": -200.0, "max_x": 300.0, "max_y": 200.0,
+                "width": 600.0, "height": 400.0, "center_x": 0.0, "center_y": 0.0
+            }
+
+        w = max(50.0, max_x - min_x)
+        h = max(50.0, max_y - min_y)
+        cx = (min_x + max_x) / 2.0
+        cy = (min_y + max_y) / 2.0
+
+        return {
+            "min_x": round(min_x, 2),
+            "min_y": round(min_y, 2),
+            "max_x": round(max_x, 2),
+            "max_y": round(max_y, 2),
+            "width": round(w, 2),
+            "height": round(h, 2),
+            "center_x": round(cx, 2),
+            "center_y": round(cy, 2)
+        }
+
     def generate_seats(self):
         """
         Generates Seat objects with 2D coordinates.

@@ -67,6 +67,22 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(vip_seats.count(), 5)
         self.assertEqual(vip_seats.first().base_price, 1500)
 
+    def test_get_layout_bounds(self):
+        """Verify calculation of layout bounds metadata for theater."""
+        bounds = self.theater.get_layout_bounds()
+        self.assertIn("width", bounds)
+        self.assertIn("height", bounds)
+        self.assertIn("center_x", bounds)
+        self.assertIn("center_y", bounds)
+
+    def test_event_seats_bounds(self):
+        """Verify event seats endpoint returns bounds metadata."""
+        url = reverse('event-seats', kwargs={'pk': self.event.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('bounds', response.data)
+        self.assertIn('width', response.data['bounds'])
+
     def test_event_list(self):
         """Verify retrieval of active events."""
         url = reverse('event-list')

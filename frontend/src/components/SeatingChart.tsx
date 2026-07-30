@@ -1,5 +1,11 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { cn } from '../lib/utils';
+import {
+  calculateLayoutBounds,
+  calculateFitTransform,
+  clampTransform,
+  LayoutBounds
+} from '../utils/seatingBounds';
 
 interface Seat {
   id: string | number;
@@ -63,6 +69,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number>();
+  const hasAutoFittedRef = useRef<boolean>(false);
 
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [elements, setElements] = useState<MapElement[]>(initialElements);
@@ -88,7 +95,62 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   useEffect(() => { setElements(initialElements); }, [initialElements]);
   useEffect(() => { setSelectedIds(externalSelectedIds); }, [externalSelectedIds]);
 
-  // Non-passive native wheel listener to zoom canvas without scrolling outer web page
+  // Compute Layout Bounds
+  const bounds: LayoutBounds = useMemo(() => {
+    return calculateLayoutBounds(seats, elements);
+  }, [seats, elements]);
+
+  const boundsRef = useRef<LayoutBounds>(bounds);
+  useEffect(() => { boundsRef.current = bounds; }, [bounds]);
+
+  // Handler to fit view cleanly on screen
+  const handleFitToView = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    if (w <= 0 || h <= 0) return;
+    const fit = calculateFitTransform(boundsRef.current, w, h);
+    setTransform(fit);
+    hasAutoFittedRef.current = true;
+  }, []);
+
+  // Auto-fit on layout load or size change
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !container) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+
+      if (!hasAutoFittedRef.current && w > 0 && h > 0) {
+        const fit = calculateFitTransform(boundsRef.current, w, h);
+        setTransform(fit);
+        hasAutoFittedRef.current = true;
+      }
+    };
+
+    const observer = new ResizeObserver(handleResize);
+    observer.observe(container);
+    handleResize();
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Re-fit when initial seats/elements load if not fitted yet
+  useEffect(() => {
+    if ((seats.length > 0 || elements.length > 0) && !hasAutoFittedRef.current) {
+      handleFitToView();
+    }
+  }, [seats.length, elements.length, handleFitToView]);
+
+  // Non-passive native wheel listener with constrained zoom/pan bounds
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -96,10 +158,23 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      setTransform(prev => ({
-        ...prev,
-        scale: Math.max(0.05, Math.min(prev.scale * (e.deltaY > 0 ? 0.9 : 1.1), 5))
-      }));
+      const container = containerRef.current;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const containerW = container?.clientWidth || rect.width || 800;
+      const containerH = container?.clientHeight || rect.height || 600;
+
+      setTransform(prev => {
+        const zoomFactor = e.deltaY > 0 ? 0.88 : 1.14;
+        const rawScale = prev.scale * zoomFactor;
+        const newX = mouseX - (mouseX - prev.x) * (rawScale / prev.scale);
+        const newY = mouseY - (mouseY - prev.y) * (rawScale / prev.scale);
+
+        const currentBounds = boundsRef.current;
+        const fitScale = calculateFitTransform(currentBounds, containerW, containerH).scale;
+        return clampTransform({ x: newX, y: newY, scale: rawScale }, currentBounds, containerW, containerH, fitScale);
+      });
     };
 
     canvas.addEventListener('wheel', handleWheel, { passive: false });
@@ -107,7 +182,24 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       canvas.removeEventListener('wheel', handleWheel);
     };
   }, []);
-  
+
+  // Incremental button zoom handler
+  const handleStepZoom = useCallback((factor: number) => {
+    const container = containerRef.current;
+    const cW = container?.clientWidth || 800;
+    const cH = container?.clientHeight || 600;
+    const centerX = cW / 2;
+    const centerY = cH / 2;
+
+    setTransform(prev => {
+      const rawScale = prev.scale * factor;
+      const newX = centerX - (centerX - prev.x) * (rawScale / prev.scale);
+      const newY = centerY - (centerY - prev.y) * (rawScale / prev.scale);
+      const fitScale = calculateFitTransform(bounds, cW, cH).scale;
+      return clampTransform({ x: newX, y: newY, scale: rawScale }, bounds, cW, cH, fitScale);
+    });
+  }, [bounds]);
+
   const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
   const hoveredSeat = useMemo(() => {
     if (!hoveredId) return null;
@@ -148,7 +240,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const isHovered = hoveredId === el.id;
       if (isSelected) { ctx.shadowBlur = 15; ctx.shadowColor = '#FFBF00'; }
       else if (isHovered) { ctx.shadowBlur = 10; ctx.shadowColor = theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'; }
-      
+
       if (el.isGA) {
         ctx.setLineDash([5, 5]);
         ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,191,0,0.05)' : 'rgba(255,191,0,0.05)');
@@ -319,12 +411,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         fillColor = theme === 'dark' ? 'rgba(30, 41, 59, 0.75)' : 'rgba(226, 232, 240, 0.85)';
         strokeColor = theme === 'dark' ? 'rgba(239, 68, 68, 0.45)' : 'rgba(239, 68, 68, 0.35)';
       } else {
-        // Priority 1: Custom color set in Nectar Studio Designer
         if (seat.color && typeof seat.color === 'string' && seat.color.trim() !== '') {
           fillColor = seat.color;
           strokeColor = theme === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)';
         } else {
-          // Priority 2: Category fallback
           const cat = String(seat.category || '').toLowerCase();
           if (cat === 'vip') {
             fillColor = 'rgba(245, 158, 11, 0.85)';
@@ -362,7 +452,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.fill();
       ctx.stroke();
 
-      // Render Checkmark inside selected seats
       if (isSelected) {
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 2;
@@ -373,7 +462,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.stroke();
       }
 
-      // Render Lock/X icon inside occupied/reserved seats
       if (isOccupied && !isSelected) {
         ctx.strokeStyle = theme === 'dark' ? 'rgba(239, 68, 68, 0.65)' : 'rgba(220, 38, 38, 0.65)';
         ctx.lineWidth = 1.5;
@@ -383,7 +471,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.stroke();
       }
 
-      // Render seat number label on zoom
       if (transform.scale >= 0.45) {
         ctx.font = '900 8px Outfit, sans-serif';
         ctx.fillStyle = isSelected ? '#000000' : (isOccupied ? (theme === 'dark' ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)') : '#ffffff');
@@ -418,17 +505,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
   const animate = useCallback(() => { draw(); requestRef.current = requestAnimationFrame(animate); }, [draw]);
   useEffect(() => { requestRef.current = requestAnimationFrame(animate); return () => cancelAnimationFrame(requestRef.current!); }, [animate]);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver(() => {
-      const canvas = canvasRef.current; const container = containerRef.current;
-      if (!canvas || !container) return;
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = container.clientWidth * dpr; canvas.height = container.clientHeight * dpr;
-    });
-    observer.observe(containerRef.current); return () => observer.disconnect();
-  }, []);
 
   const getMouseCoords = (e: React.MouseEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -530,6 +606,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    const container = containerRef.current;
+    const cW = container?.clientWidth || 800;
+    const cH = container?.clientHeight || 600;
+
     if (e.touches.length === 1) {
       const touch = e.touches[0];
       const { x, y } = getTouchCoords(e);
@@ -557,7 +637,12 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         return;
       }
       if (isPanning) {
-        setTransform(prev => ({ ...prev, x: prev.x + (touch.clientX - lastMousePos.x), y: prev.y + (touch.clientY - lastMousePos.y) }));
+        setTransform(prev => {
+          const nextX = prev.x + (touch.clientX - lastMousePos.x);
+          const nextY = prev.y + (touch.clientY - lastMousePos.y);
+          const fitScale = calculateFitTransform(bounds, cW, cH).scale;
+          return clampTransform({ x: nextX, y: nextY, scale: prev.scale }, bounds, cW, cH, fitScale);
+        });
         setLastMousePos({ x: touch.clientX, y: touch.clientY });
       }
     } else if (e.touches.length === 2 && lastTouchDistRef.current !== null) {
@@ -566,7 +651,11 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
       const factor = dist / lastTouchDistRef.current;
       if (factor > 0.5 && factor < 2.0) {
-        setTransform(prev => ({ ...prev, scale: Math.max(0.05, Math.min(prev.scale * factor, 5)) }));
+        setTransform(prev => {
+          const nextScale = prev.scale * factor;
+          const fitScale = calculateFitTransform(bounds, cW, cH).scale;
+          return clampTransform({ x: prev.x, y: prev.y, scale: nextScale }, bounds, cW, cH, fitScale);
+        });
       }
       lastTouchDistRef.current = dist;
     }
@@ -649,7 +738,18 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       }
       return;
     }
-    if (isPanning) { setTransform(prev => ({ ...prev, x: prev.x + (e.clientX - lastMousePos.x), y: prev.y + (e.clientY - lastMousePos.y) })); setLastMousePos({ x: e.clientX, y: e.clientY }); }
+    if (isPanning) {
+      setTransform(prev => {
+        const nextX = prev.x + (e.clientX - lastMousePos.x);
+        const nextY = prev.y + (e.clientY - lastMousePos.y);
+        const container = containerRef.current;
+        const cW = container?.clientWidth || 800;
+        const cH = container?.clientHeight || 600;
+        const fitScale = calculateFitTransform(bounds, cW, cH).scale;
+        return clampTransform({ x: nextX, y: nextY, scale: prev.scale }, bounds, cW, cH, fitScale);
+      });
+      setLastMousePos({ x: e.clientX, y: e.clientY });
+    }
   };
 
   const handleMouseUp = () => {
@@ -698,10 +798,41 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
           </span>
         </div>
       )}
-      <div className="absolute bottom-6 left-6 flex gap-2">
-        <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50 hidden sm:block">Del: Borrar | Shift+Drag: Multi | Arrows: Precision</div>
+      <div className="absolute bottom-6 left-6 flex gap-2 z-10 pointer-events-none">
+        <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50 hidden sm:block">
+          Del: Borrar | Shift+Drag: Multi | Scroll: Zoom | Arrastrar: Paneo
+        </div>
       </div>
-      <div className="absolute bottom-6 right-6 px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full text-[10px] font-black opacity-50 uppercase tracking-widest">Zoom: {Math.round(transform.scale * 100)}%</div>
+      
+      {/* Interactive Zoom Controls & Recenter Button */}
+      <div className="absolute bottom-6 right-6 flex items-center gap-2 z-20">
+        <button
+          onClick={() => handleStepZoom(0.8)}
+          title="Alejar Zoom"
+          className="w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white/80 border border-white/15 backdrop-blur-xl flex items-center justify-center font-bold text-sm transition-all hover:scale-105 active:scale-95"
+        >
+          -
+        </button>
+
+        <button
+          onClick={handleFitToView}
+          title="Ajustar mapa a pantalla (Recentrar)"
+          className="px-3.5 py-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-xl border border-white/15 hover:border-amber-400/40 rounded-full text-[10px] font-black text-white/90 uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 shadow-lg"
+        >
+          <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+          <span>{Math.round(transform.scale * 100)}%</span>
+        </button>
+
+        <button
+          onClick={() => handleStepZoom(1.25)}
+          title="Acercar Zoom"
+          className="w-8 h-8 rounded-full bg-black/70 hover:bg-black/90 text-white/80 border border-white/15 backdrop-blur-xl flex items-center justify-center font-bold text-sm transition-all hover:scale-105 active:scale-95"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 };

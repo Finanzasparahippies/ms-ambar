@@ -97,14 +97,15 @@ def add_buyer_to_event_marketing_list(email, event):
     )
 
     # 2. Obtener o crear la lista de marketing asociada al evento
-    event_slug = slugify(event.title)
-    list_name = f"Compradores - {event.title}"
+    event_slug = slugify(event.title)[:100]
+    list_name = f"Compradores - {event.title}"[:250]
+    m_slug = slugify(f"compradores-{event_slug}-{event.id}")[:200]
     marketing_list, created_list = MarketingList.objects.get_or_create(
         event=event,
         defaults={
             'name': list_name,
             'description': f"Contactos que adquirieron boletos para el evento: {event.title}",
-            'slug': f"compradores-{event_slug}-{event.id}"
+            'slug': m_slug
         }
     )
 
