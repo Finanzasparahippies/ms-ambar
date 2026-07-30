@@ -325,6 +325,8 @@ class TicketViewSet(viewsets.ModelViewSet):
             if is_seatless and event.event_type != 'meet_greet' and not event.allow_seatless_tickets:
                 return Response({'error': 'Este evento no permite la venta de boletos generales sin asiento.'}, status=status.HTTP_400_BAD_REQUEST)
         else:
+            if event.event_type != 'meet_greet' and not event.allow_numbered_tickets:
+                return Response({'error': 'Este evento no permite la venta de boletos numerados reservables.'}, status=status.HTTP_400_BAD_REQUEST)
             if not seat_ids:
                 return Response({'error': 'Debes seleccionar al menos un asiento o elegir la opción de boleto general sin asiento.'}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -465,7 +467,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     quantity=quantity,
                     has_mg=has_mg,
                     phone=phone,
-                    is_seatless=is_seatless
+                    is_seatless=is_seatless,
+                    coupon=coupon_obj
                 )
                 session_id = session.id
                 session_url = session.url

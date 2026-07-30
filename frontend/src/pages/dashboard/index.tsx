@@ -618,6 +618,7 @@ export default function AdminDashboard() {
   const [eventEnableDynamicPricing, setEventEnableDynamicPricing] = useState(true);
   const [eventMonthlyIncrement, setEventMonthlyIncrement] = useState('50.00');
   const [eventAllowSeatless, setEventAllowSeatless] = useState(true);
+  const [eventAllowNumbered, setEventAllowNumbered] = useState(true);
   const [eventIsActive, setEventIsActive] = useState(true);
   const [eventImageFile, setEventImageFile] = useState<File | null>(null);
   const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
@@ -1780,6 +1781,8 @@ export default function AdminDashboard() {
     setEventMgPrice('0');
     setEventMgLimit('0');
     setEventPriceMultiplier('1.0');
+    setEventAllowSeatless(true);
+    setEventAllowNumbered(true);
     setEventIsActive(true);
     setEventImageFile(null);
     setEventImagePreview(null);
@@ -1813,6 +1816,7 @@ export default function AdminDashboard() {
     setEventEnableDynamicPricing(event.enable_dynamic_pricing !== false);
     setEventMonthlyIncrement(String(event.monthly_price_increment ?? '50.00'));
     setEventAllowSeatless(event.allow_seatless_tickets !== false);
+    setEventAllowNumbered(event.allow_numbered_tickets !== false);
     setEventIsActive(event.is_active);
     setEventImageFile(null);
     setEventImagePreview(event.image ? resolveMediaUrl(event.image) : null);
@@ -1856,6 +1860,7 @@ export default function AdminDashboard() {
     formData.append('enable_dynamic_pricing', eventEnableDynamicPricing ? 'true' : 'false');
     formData.append('monthly_price_increment', eventMonthlyIncrement || '50.00');
     formData.append('allow_seatless_tickets', eventAllowSeatless ? 'true' : 'false');
+    formData.append('allow_numbered_tickets', eventAllowNumbered ? 'true' : 'false');
     formData.append('is_active', eventIsActive ? 'true' : 'false');
     formData.append('mg_price', eventMgPrice || '0.00');
     formData.append('mg_limit', eventMgLimit || '0');
@@ -4127,15 +4132,28 @@ export default function AdminDashboard() {
                                 />
                               </div>
 
-                              <div className="col-span-2 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
+                              <div className="col-span-2 sm:col-span-1 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
                                 <div>
-                                  <span className="text-[10px] font-black uppercase tracking-wider text-white block">Permitir Venta de Boletos Generales</span>
-                                  <span className="text-[8px] text-[#F4F6F0]/50 block">Permite comprar accesos sin asiento reservado</span>
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-white block">Boletos Generales</span>
+                                  <span className="text-[8px] text-[#F4F6F0]/50 block">Activar boletos sin asiento</span>
                                 </div>
                                 <input
                                   type="checkbox"
                                   checked={eventAllowSeatless}
                                   onChange={(e) => setEventAllowSeatless(e.target.checked)}
+                                  className="w-4 h-4 accent-amber-honey rounded cursor-pointer"
+                                />
+                              </div>
+
+                              <div className="col-span-2 sm:col-span-1 flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10">
+                                <div>
+                                  <span className="text-[10px] font-black uppercase tracking-wider text-white block">Boletos Numerados</span>
+                                  <span className="text-[8px] text-[#F4F6F0]/50 block">Activar reservas en mapa</span>
+                                </div>
+                                <input
+                                  type="checkbox"
+                                  checked={eventAllowNumbered}
+                                  onChange={(e) => setEventAllowNumbered(e.target.checked)}
                                   className="w-4 h-4 accent-amber-honey rounded cursor-pointer"
                                 />
                               </div>
@@ -5005,11 +5023,19 @@ export default function AdminDashboard() {
                                 <>
                                   <div className="flex justify-between">
                                     <span>Boleto General:</span>
-                                    <span className="text-[#F4F6F0] font-black">${Number(event.effective_seatless_ticket_price ?? event.seatless_ticket_price ?? 500).toLocaleString()} MXN</span>
+                                    {event.allow_seatless_tickets !== false ? (
+                                      <span className="text-[#F4F6F0] font-black">${Number(event.effective_seatless_ticket_price ?? event.seatless_ticket_price ?? 500).toLocaleString()} MXN</span>
+                                    ) : (
+                                      <span className="text-red-400 font-bold">(Desactivado)</span>
+                                    )}
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Asiento Numerado:</span>
-                                    <span className="text-[#F4F6F0] font-black">${Number(event.numbered_seat_base_price ?? event.numbered_ticket_price ?? 1000).toLocaleString()} MXN</span>
+                                    {event.allow_numbered_tickets !== false ? (
+                                      <span className="text-[#F4F6F0] font-black">${Number(event.numbered_seat_base_price ?? event.numbered_ticket_price ?? 1000).toLocaleString()} MXN</span>
+                                    ) : (
+                                      <span className="text-red-400 font-bold">(Desactivado)</span>
+                                    )}
                                   </div>
                                   <div className="flex justify-between border-t border-white/5 pt-1">
                                     <span>Precio Mínimo Entrada:</span>

@@ -16,8 +16,8 @@ class TheaterAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ('title', 'artist', 'date', 'event_type', 'allow_seatless_tickets', 'is_active')
-    list_filter = ('is_active', 'event_type', 'date', 'allow_seatless_tickets')
+    list_display = ('title', 'artist', 'date', 'event_type', 'allow_seatless_tickets', 'allow_numbered_tickets', 'is_active')
+    list_filter = ('is_active', 'event_type', 'date', 'allow_seatless_tickets', 'allow_numbered_tickets')
     fieldsets = (
         ('Información del Evento', {
             'fields': ('title', 'artist', 'date', 'doors_open', 'duration_minutes', 'venue_name', 'venue_address', 'theater', 'is_active', 'event_type', 'price_multiplier')
@@ -36,8 +36,8 @@ class EventAdmin(admin.ModelAdmin):
             'description': 'Ajusta automáticamente los precios de boletos por mes previo al evento (ej. -$50.00 MXN por mes de anticipación).'
         }),
         ('Tarifas Base de Boletos', {
-            'fields': ('allow_seatless_tickets', 'seatless_ticket_price', 'numbered_ticket_price'),
-            'description': 'Tarifas mínimas base para boletos generales sin asiento y boletos numerados en mesas.'
+            'fields': ('allow_seatless_tickets', 'allow_numbered_tickets', 'seatless_ticket_price', 'numbered_ticket_price'),
+            'description': 'Tarifas mínimas base y activación para boletos generales sin asiento y boletos numerados en mesas.'
         }),
         ('Imágenes', {
             'fields': ('image', 'flyer'),

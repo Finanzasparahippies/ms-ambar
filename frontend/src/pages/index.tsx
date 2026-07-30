@@ -1108,32 +1108,36 @@ const Home = () => {
                       ) : (
                         <div className="space-y-2.5">
                           {/* Boleto General (Sin Asiento) */}
-                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
-                            <div className="flex flex-col text-left">
-                              <span className="text-white font-bold">🎟️ Entrada General (Sin Asiento)</span>
-                              <span className="text-[10px] text-pink-200/60">Acceso preferencial a zona general</span>
+                          {nextEvent.allow_seatless_tickets !== false && (
+                            <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
+                              <div className="flex flex-col text-left">
+                                <span className="text-white font-bold">🎟️ Entrada General (Sin Asiento)</span>
+                                <span className="text-[10px] text-pink-200/60">Acceso preferencial a zona general</span>
+                              </div>
+                              <span className="text-pink-300 font-black text-sm md:text-base">
+                                ${Math.round(nextEvent.effective_seatless_ticket_price !== undefined
+                                  ? Number(nextEvent.effective_seatless_ticket_price)
+                                  : getDynamicPrice(nextEvent, Number(nextEvent.seatless_ticket_price ?? 0))
+                                ).toLocaleString('es-MX')} MXN
+                              </span>
                             </div>
-                            <span className="text-pink-300 font-black text-sm md:text-base">
-                              ${Math.round(nextEvent.effective_seatless_ticket_price !== undefined
-                                ? Number(nextEvent.effective_seatless_ticket_price)
-                                : getDynamicPrice(nextEvent, Number(nextEvent.seatless_ticket_price ?? 0))
-                              ).toLocaleString('es-MX')} MXN
-                            </span>
-                          </div>
+                          )}
 
                           {/* Boleto Numerado (Asiento de Mesa) */}
-                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
-                            <div className="flex flex-col text-left">
-                              <span className="text-white font-bold">🪑 Asiento Numerado (Mesas)</span>
-                              <span className="text-[10px] text-pink-200/60">Lugar reservado en 42 mesas x 4 butacas</span>
+                          {nextEvent.allow_numbered_tickets !== false && (
+                            <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
+                              <div className="flex flex-col text-left">
+                                <span className="text-white font-bold">🪑 Asiento Numerado (Mesas)</span>
+                                <span className="text-[10px] text-pink-200/60">Lugar reservado en 42 mesas x 4 butacas</span>
+                              </div>
+                              <span className="text-pink-300 font-black text-sm md:text-base">
+                                ${Math.round(nextEvent.numbered_seat_base_price !== undefined
+                                  ? Number(nextEvent.numbered_seat_base_price)
+                                  : getDynamicPrice(nextEvent, Number(nextEvent.numbered_ticket_price ?? 1000))
+                                ).toLocaleString('es-MX')} MXN
+                              </span>
                             </div>
-                            <span className="text-pink-300 font-black text-sm md:text-base">
-                              ${Math.round(nextEvent.numbered_seat_base_price !== undefined
-                                ? Number(nextEvent.numbered_seat_base_price)
-                                : getDynamicPrice(nextEvent, Number(nextEvent.numbered_ticket_price ?? 1000))
-                              ).toLocaleString('es-MX')} MXN
-                            </span>
-                          </div>
+                          )}
 
                           {/* Meet & Greet Adicional (Opcional) */}
                           {nextEvent.mg_limit > 0 && (

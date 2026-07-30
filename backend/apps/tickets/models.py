@@ -287,6 +287,7 @@ class Event(models.Model):
 
     # Seatless & Numbered Ticket base price options
     allow_seatless_tickets = models.BooleanField(default=True, help_text="Permite la compra de boletos generales sin asiento reservado")
+    allow_numbered_tickets = models.BooleanField(default=True, help_text="Permite la compra de boletos numerados reservables en mapa del teatro")
     seatless_ticket_price = models.DecimalField(max_digits=10, decimal_places=2, default=500.00, help_text="Precio base de boleto general sin asiento")
     numbered_ticket_price = models.DecimalField(max_digits=10, decimal_places=2, default=1000.00, help_text="Precio base de boleto numerado reservado")
 
@@ -528,12 +529,13 @@ class Event(models.Model):
         if self.allow_seatless_tickets and self.seatless_ticket_price is not None:
             prices.append(float(self.effective_seatless_ticket_price))
 
-        prices.append(float(self.numbered_seat_base_price))
+        if self.allow_numbered_tickets:
+            prices.append(float(self.numbered_seat_base_price))
 
         if prices:
             return min(prices)
         
-        return float(self.effective_seatless_ticket_price or 0.0)
+        return float(self.effective_seatless_ticket_price or self.numbered_seat_base_price or 0.0)
 
     @property
     def end_date(self):
