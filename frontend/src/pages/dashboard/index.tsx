@@ -58,6 +58,7 @@ import {
   Camera,
   AlignLeft,
   AlignCenter,
+  AlignRight,
   AlignJustify
 } from 'lucide-react';
 import { getApiUrl } from '../../lib/utils';
