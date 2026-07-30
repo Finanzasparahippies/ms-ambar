@@ -2436,9 +2436,33 @@ export default function AdminDashboard() {
 
   return (
     <div data-theme="dark" className="min-h-screen text-[#F4F6F0] py-12 px-6 lg:px-12 relative overflow-hidden font-sans">
+      <style>{`
+        @media print {
+          body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            font-family: system-ui, sans-serif !important;
+          }
+          header, nav, button, a[href], .no-print, input, select {
+            display: none !important;
+          }
+          .amber-glass {
+            background: #ffffff !important;
+            border: 1px solid #d1d5db !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+          }
+          h1, h2, h3, h4, span, p, td, th {
+            color: #000000 !important;
+          }
+          .text-amber-honey, .text-emerald-400, .text-cyan-400 {
+            color: #d97706 !important;
+          }
+        }
+      `}</style>
       {/* Background Decorative Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-honey/[0.03] blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none no-print" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-honey/[0.03] blur-[120px] rounded-full pointer-events-none no-print" />
 
       {!isStaff ? (
         /* ==================== CLIENT DASHBOARD ==================== */
@@ -3250,7 +3274,6 @@ export default function AdminDashboard() {
                           </AnimatePresence>
                         </div>
                       )}
-                    </div>
                     </div>
 
                     {/* Quick Operations */}
