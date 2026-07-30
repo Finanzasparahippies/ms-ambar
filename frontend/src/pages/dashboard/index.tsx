@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import api from '../../lib/api';
 import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -674,53 +675,25 @@ export default function AdminDashboard() {
         if (!superuserFlag && activeTab === 'summary') {
           setActiveTab('orders');
         }
-        // Staff/Admin Data Fetching
-        const [analyticsRes, systemRes, ordersRes, expensesRes, productsRes, categoriesRes, theatersRes, contractsRes, campaignsRes, subscribersRes, profileRes, templateImagesRes, eventsRes, siteSettingsRes, marketingListsRes, couponsRes] = await Promise.all([
-          axios.get(`${API_URL}/dashboard/analytics/`, { headers }),
-          axios.get(`${API_URL}/dashboard/system/`, { headers }).catch(err => {
+        // Essential Initial Staff Data Fetching via singleton api client
+        const [analyticsRes, systemRes, ordersRes, profileRes] = await Promise.all([
+          api.get('/dashboard/analytics/').catch(() => ({ data: null })),
+          api.get('/dashboard/system/').catch(err => {
             console.error("System metrics fetch failed, using fallback", err);
             return { data: null };
           }),
-          axios.get(`${API_URL}/dashboard/orders/`, { headers }),
-          axios.get(`${API_URL}/dashboard/expenses/`, { headers }),
-          axios.get(`${API_URL}/shop/products/`, { headers }),
-          axios.get(`${API_URL}/shop/categories/`, { headers }),
-          axios.get(`${API_URL}/tickets/theaters/`).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/bookings/contracts/`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/blog/campaigns/`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/blog/subscribers/`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/users/profile/`, { headers }).catch(() => ({ data: null })),
-          axios.get(`${API_URL}/blog/campaign-template-images/`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/tickets/events/`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/tickets/settings/`).catch(() => ({ data: null })),
-          axios.get(`${API_URL}/blog/marketing-lists/`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_URL}/tickets/coupons/`, { headers }).catch(() => ({ data: [] })),
+          api.get('/dashboard/orders/').catch(() => ({ data: [] })),
+          api.get('/users/profile/').catch(() => ({ data: null })),
         ]);
 
-        setStats(analyticsRes.data);
-        setOrders(ordersRes.data);
-        setExpenses(expensesRes.data);
-        setProducts(productsRes.data);
-        setCategories(categoriesRes.data);
-        setTheaters(Array.isArray(theatersRes.data) ? theatersRes.data : []);
-        setContracts(Array.isArray(contractsRes.data) ? contractsRes.data : []);
-        setCampaigns(Array.isArray(campaignsRes.data) ? campaignsRes.data : []);
-        setSubscribers(Array.isArray(subscribersRes.data) ? subscribersRes.data : []);
-        setTemplateImages(Array.isArray(templateImagesRes.data) ? templateImagesRes.data : []);
-        setEvents(Array.isArray(eventsRes.data) ? eventsRes.data : []);
-        setMarketingLists(Array.isArray(marketingListsRes.data) ? marketingListsRes.data : []);
-        setCoupons(Array.isArray(couponsRes.data) ? couponsRes.data : []);
-        if (siteSettingsRes?.data) {
-          if (siteSettingsRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(siteSettingsRes.data.tickets_page_subtitle);
-          if (siteSettingsRes.data.homepage_cta_text) setSiteSettingsCta(siteSettingsRes.data.homepage_cta_text);
-        }
+        if (analyticsRes?.data) setStats(analyticsRes.data);
+        if (Array.isArray(ordersRes?.data)) setOrders(ordersRes.data);
         if (profileRes && profileRes.data) {
           setClientProfile(profileRes.data);
           const realSuperuser = profileRes.data.is_superuser || false;
           if (!realSuperuser && activeTab === 'summary') {
             setActiveTab('orders');
           }
-          // Sync superuser status in currentUser and localStorage
           const userStr = localStorage.getItem('user');
           if (userStr) {
             try {
@@ -733,14 +706,14 @@ export default function AdminDashboard() {
             } catch (err) {}
           }
         }
-        if (systemRes.data) {
+        if (systemRes?.data) {
           setSysMetrics(systemRes.data);
         }
       } else {
         // Client Data Fetching
         const [profileRes, ticketsRes] = await Promise.all([
-          axios.get(`${API_URL}/users/profile/`, { headers }),
-          axios.get(`${API_URL}/tickets/tickets/`, { headers }).catch(() => ({ data: [] }))
+          api.get('/users/profile/'),
+          api.get('/tickets/tickets/').catch(() => ({ data: [] }))
         ]);
 
         setClientProfile(profileRes.data);
@@ -761,9 +734,65 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchTabData = async (tabName: string) => {
+    try {
+      if (tabName === 'expenses') {
+        const res = await api.get('/dashboard/expenses/');
+        setExpenses(Array.isArray(res.data) ? res.data : []);
+      } else if (tabName === 'catalog') {
+        const [pRes, cRes] = await Promise.all([
+          api.get('/shop/products/'),
+          api.get('/shop/categories/')
+        ]);
+        setProducts(Array.isArray(pRes.data) ? pRes.data : []);
+        setCategories(Array.isArray(cRes.data) ? cRes.data : []);
+      } else if (tabName === 'theaters') {
+        const res = await api.get('/tickets/theaters/');
+        setTheaters(Array.isArray(res.data) ? res.data : []);
+      } else if (tabName === 'contracts') {
+        const res = await api.get('/bookings/contracts/');
+        setContracts(Array.isArray(res.data) ? res.data : []);
+      } else if (tabName === 'campaigns') {
+        const [campRes, subRes, tplRes, listRes] = await Promise.all([
+          api.get('/blog/campaigns/').catch(() => ({ data: [] })),
+          api.get('/blog/subscribers/').catch(() => ({ data: [] })),
+          api.get('/blog/campaign-template-images/').catch(() => ({ data: [] })),
+          api.get('/blog/marketing-lists/').catch(() => ({ data: [] }))
+        ]);
+        setCampaigns(Array.isArray(campRes.data) ? campRes.data : []);
+        const rawSubData = subRes.data;
+        const subList = Array.isArray(rawSubData) ? rawSubData : (Array.isArray(rawSubData?.results) ? rawSubData.results : []);
+        setSubscribers(subList);
+        setTemplateImages(Array.isArray(tplRes.data) ? tplRes.data : []);
+        setMarketingLists(Array.isArray(listRes.data) ? listRes.data : []);
+      } else if (tabName === 'events') {
+        const [evRes, stRes] = await Promise.all([
+          api.get('/tickets/events/').catch(() => ({ data: [] })),
+          api.get('/tickets/settings/').catch(() => ({ data: null }))
+        ]);
+        setEvents(Array.isArray(evRes.data) ? evRes.data : []);
+        if (stRes?.data) {
+          if (stRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(stRes.data.tickets_page_subtitle);
+          if (stRes.data.homepage_cta_text) setSiteSettingsCta(stRes.data.homepage_cta_text);
+        }
+      } else if (tabName === 'coupons') {
+        const res = await api.get('/tickets/coupons/');
+        setCoupons(Array.isArray(res.data) ? res.data : []);
+      }
+    } catch (e) {
+      console.error(`Error loading tab ${tabName}:`, e);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    if (isStaff) {
+      fetchTabData(activeTab);
+    }
+  }, [activeTab, isStaff]);
 
   useEffect(() => {
     if (campaignEditorRef.current) {
@@ -790,10 +819,7 @@ export default function AdminDashboard() {
       interval = setInterval(async () => {
         if (typeof document !== 'undefined' && document.hidden) return;
         try {
-          const token = localStorage.getItem('token');
-          const res = await axios.get(`${API_URL}/dashboard/system/`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const res = await api.get('/dashboard/system/');
           setSysMetrics(res.data);
         } catch (e) {
           // Silent error for polling
