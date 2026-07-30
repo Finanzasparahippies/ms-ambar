@@ -72,6 +72,8 @@ const PAGE_SECTIONS = [
   { id: 'checkout_modal', label: 'Modal de Checkout y Resumen de Compra', icon: '💳' },
   { id: 'contact_section', label: 'Página de Contacto y Formulario', icon: '📬' },
   { id: 'footer', label: 'Pie de Página y Redes Sociales', icon: '⚓' },
+];
+
 const COLOR_PRESETS = [
   { id: 'amber-honey', name: 'Ámbar Místico', primary: '#E5A93B', secondary: '#22A6B7', start: '#080c0a', end: '#040605', card: '#0c0f0d', text: '#F4F6F0', heading: '#E5A93B' },
   { id: 'emerald-desert', name: 'Noche Esmeralda', primary: '#10B981', secondary: '#06B6D4', start: '#022c22', end: '#021e17', card: '#064e3b', text: '#ECFDF5', heading: '#34D399' },
