@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, CheckCircle, ShieldAlert, ArrowLeft, ArrowRight, ExternalLink } from 'lucide-react';
-import { getApiUrl } from '../lib/utils';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -19,8 +18,7 @@ export default function ForgotPasswordPage() {
     setDevResetUrl(null);
 
     try {
-      const apiUrl = getApiUrl();
-      const res = await axios.post(`${apiUrl}/users/password-reset/`, { email });
+      const res = await api.post('/users/password-reset/', { email });
       setSuccess(true);
 
       // Capture the developer convenience link if returned by Django in DEBUG mode

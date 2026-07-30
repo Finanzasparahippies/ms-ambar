@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../lib/api';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Calendar, CalendarX,
@@ -178,8 +178,7 @@ const TourPage = () => {
     setIsValidatingCoupon(true);
     setCouponError('');
     try {
-      const apiUrl = getApiUrl();
-      const res = await axios.post(`${apiUrl}/tickets/coupons/validate/`, {
+      const res = await api.post('/tickets/coupons/validate/', {
         code: codeToUse,
         event_id: currentEvent?.id,
         email: emailToUse || undefined
@@ -221,15 +220,14 @@ const TourPage = () => {
 
     if (success === 'true' && session_id) {
       setIsLoading(true);
-      const apiUrl = getApiUrl();
       let attempts = 0;
       const maxAttempts = 5;
 
       const checkTicketsStatus = async () => {
         try {
-          const res = await fetch(`${apiUrl}/tickets/tickets/by_session/?session_id=${session_id}`);
+          const res = await api.get(`/tickets/tickets/by_session/?session_id=${session_id}`).catch(err => err.response);
 
-          if (res.status === 204 || res.status === 404) {
+          if (!res || res.status === 204 || res.status === 404) {
             if (attempts < maxAttempts) {
               attempts++;
               setTimeout(checkTicketsStatus, 1500);
@@ -239,9 +237,7 @@ const TourPage = () => {
             }
           }
 
-          if (!res.ok) throw new Error('No se pudieron recuperar los boletos.');
-
-          const tickets = await res.json();
+          const tickets = res.data;
           if (tickets && tickets.length > 0) {
             setCreatedTickets(tickets);
             setEmail(tickets[0].user_email || '');
@@ -268,11 +264,10 @@ const TourPage = () => {
   useEffect(() => {
     setIsMounted(true);
     document.documentElement.setAttribute('data-theme', theme);
-    const apiUrl = getApiUrl();
 
     Promise.all([
-      fetch(`${apiUrl}/tickets/events/`).then(r => r.json()),
-      fetch(`${apiUrl}/tickets/settings/`).then(r => r.json()).catch(() => null),
+      api.get('/tickets/events/').then(r => r.data).catch(() => []),
+      api.get('/tickets/settings/').then(r => r.data).catch(() => null),
     ]).then(([eventsData, settingsData]) => {
       if (eventsData && Array.isArray(eventsData) && eventsData.length > 0) {
         const now = new Date();
@@ -342,10 +337,9 @@ const TourPage = () => {
 
   const fetchSeats = () => {
     if (!currentEvent) return;
-    const apiUrl = getApiUrl();
-    fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
-      .then(res => res.json())
-      .then(data => {
+    api.get(`/tickets/events/${currentEvent.id}/seats/`)
+      .then(res => {
+        const data = res.data;
         if (data.seats) {
           setSeats(data.seats);
           setElements(data.elements || []);
@@ -504,7 +498,7 @@ const TourPage = () => {
         payload.is_seatless = false;
       }
 
-      const res = await axios.post(`${apiUrl}/tickets/tickets/checkout/`, payload);
+      const res = await api.post('/tickets/tickets/checkout/', payload);
 
       if (res.data.session_url) {
         window.location.href = res.data.session_url;

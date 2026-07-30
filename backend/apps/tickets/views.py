@@ -680,17 +680,11 @@ class SiteSettingsView(APIView):
 
     def post(self, request):
         settings_obj = SiteSettings.get()
-        for field in [
-            'tickets_page_subtitle', 'homepage_cta_text',
-            'primary_color', 'secondary_color', 'background_start', 'background_end',
-            'accent_color', 'card_background', 'text_color', 'particle_shape',
-            'card_style', 'background_pattern', 'font_preset', 'custom_css', 'section_themes'
-        ]:
-            if field in request.data:
-                setattr(settings_obj, field, request.data[field])
-        settings_obj.save()
-        serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
-        return Response(serializer.data)
+        serializer = SiteSettingsSerializer(settings_obj, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ActiveThemeView(APIView):

@@ -4,8 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Check, AlertCircle, X, Mail } from 'lucide-react';
-import axios from 'axios';
-import { getApiUrl } from '../lib/utils';
+import api from '../lib/api';
 
 interface Toast {
   id: number;
@@ -41,8 +40,7 @@ export default function Suscribirse() {
     if (!newsletterEmail.trim()) return;
     setNewsletterSubmitting(true);
     try {
-      const apiUrl = getApiUrl();
-      await axios.post(`${apiUrl}/blog/subscribers/`, {
+      await api.post('/blog/subscribers/', {
         email: newsletterEmail,
         name: newsletterName
       });

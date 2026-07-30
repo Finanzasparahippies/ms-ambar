@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -11,9 +10,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { useEventTheme } from '../context/EventThemeContext';
 import ThemedSection from '../components/ThemedSection';
-import { getApiUrl } from '../lib/utils';
+import { useEventTheme } from '../context/EventThemeContext';
+import api from '../lib/api';
 
 // ─── PARTICLE BACKGROUND COMPONENT (WITH MORPHING) ───
 const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => {
@@ -854,30 +853,33 @@ const Home = () => {
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [newsletterErrorMessage, setNewsletterErrorMessage] = useState('');
   const [nextEvent, setNextEvent] = useState<any>(null);
+  const [siteSettings, setSiteSettings] = useState<any>(null);
 
   useEffect(() => {
     setIsMounted(true);
-    const apiUrl = getApiUrl();
-    axios.get(`${apiUrl}/tickets/events/`)
-      .then(res => {
-        if (res.data && res.data.length > 0) {
-          const now = new Date();
-          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          const upcoming = res.data
-            .filter((e: any) => e.is_active !== false)
-            .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
-            .filter((e: any) => e.dateObj >= startOfToday)
-            .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
+    Promise.all([
+      api.get('/tickets/events/').catch(() => ({ data: [] })),
+      api.get('/tickets/settings/').catch(() => ({ data: null })),
+    ]).then(([evRes, stRes]) => {
+      if (stRes?.data) {
+        setSiteSettings(stRes.data);
+      }
+      if (evRes.data && Array.isArray(evRes.data) && evRes.data.length > 0) {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const upcoming = evRes.data
+          .filter((e: any) => e.is_active !== false)
+          .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
+          .filter((e: any) => e.dateObj >= startOfToday)
+          .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
 
-          if (upcoming.length > 0) {
-            setNextEvent(upcoming[0]);
-          } else {
-            setNextEvent(null);
-          }
-          console.log("Upcoming events:", upcoming);
+        if (upcoming.length > 0) {
+          setNextEvent(upcoming[0]);
+        } else {
+          setNextEvent(null);
         }
-      })
-      .catch(err => console.error("Error fetching next event:", err));
+      }
+    }).catch(err => console.error("Error fetching homepage data:", err));
   }, []);
 
   const getFormattedEventDate = (dateStr: string) => {
@@ -923,8 +925,7 @@ const Home = () => {
     setNewsletterErrorMessage('');
 
     try {
-      const apiUrl = getApiUrl();
-      await axios.post(`${apiUrl}/blog/subscribers/`, {
+      await api.post('/blog/subscribers/', {
         email: newsletterEmail,
         name: newsletterName
       });
@@ -1193,21 +1194,21 @@ const Home = () => {
       {/* ─── BIOGRAPHY SECTION ─── */}
       {(() => {
         const bioTheme = { ...getSectionTheme('tarot_experience'), ...getSectionTheme('biography') };
-        const bioBadge = bioTheme.bio_badge || "La Cantautora";
-        const bioTitle = bioTheme.bio_title || "Ms. Ambar";
-        const bioImage = bioTheme.bio_image || "/Images/Inicio_Biografia.jpg";
-        const bioLocation = bioTheme.bio_location || "Hermosillo • México";
-        const bioCtaText = bioTheme.bio_cta_text || "Ver Próximos Eventos";
-        const bioCtaUrl = bioTheme.bio_cta_url || "/tour";
-        
-        const rawContent = bioTheme.bio_content;
+        const bioBadge = siteSettings?.bio_badge || bioTheme.bio_badge || "La Cantautora";
+        const bioTitle = siteSettings?.bio_title || bioTheme.bio_title || "Ms. Ambar";
+        const bioImage = siteSettings?.bio_image_url || siteSettings?.bio_image || bioTheme.bio_image || "/Images/Inicio_Biografia.jpg";
+        const bioLocation = siteSettings?.bio_location || bioTheme.bio_location || "Hermosillo • México";
+        const bioCtaText = siteSettings?.bio_cta_text || bioTheme.bio_cta_text || "Ver Próximos Eventos";
+        const bioCtaUrl = siteSettings?.bio_cta_url || bioTheme.bio_cta_url || "/tour";
+
+        const rawContent = siteSettings?.bio_content || bioTheme.bio_content;
         const paragraphs: string[] = rawContent
           ? rawContent.split('\n').filter((p: string) => p.trim().length > 0)
           : [
-              'Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda "Moonset", pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.',
-              'Su primer álbum formal, "14•28", fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.',
-              'Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción "No te voy a llorar", consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.'
-            ];
+            'Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda "Moonset", pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.',
+            'Su primer álbum formal, "14•28", fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.',
+            'Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción "No te voy a llorar", consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.'
+          ];
 
         return (
           <ThemedSection sectionKey="biography" className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden bg-[#06070b]">

@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../lib/api';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,

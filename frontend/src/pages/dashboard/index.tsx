@@ -642,6 +642,14 @@ export default function AdminDashboard() {
   // ─── Site Settings State (Dynamic Texts) ───
   const [siteSettingsSubtitle, setSiteSettingsSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
   const [siteSettingsCta, setSiteSettingsCta] = useState('¡Próximamente nuevo evento!');
+  const [siteBioBadge, setSiteBioBadge] = useState('La Cantautora');
+  const [siteBioTitle, setSiteBioTitle] = useState('Ms. Ambar');
+  const [siteBioLocation, setSiteBioLocation] = useState('Hermosillo • México');
+  const [siteBioContent, setSiteBioContent] = useState('');
+  const [siteBioCtaText, setSiteBioCtaText] = useState('Ver Próximos Eventos');
+  const [siteBioCtaUrl, setSiteBioCtaUrl] = useState('/tour');
+  const [siteBioImageFile, setSiteBioImageFile] = useState<File | null>(null);
+  const [siteBioImagePreview, setSiteBioImagePreview] = useState<string | null>(null);
   const [siteSettingsLoading, setSiteSettingsLoading] = useState(false);
   const [siteSettingsSuccess, setSiteSettingsSuccess] = useState<string | null>(null);
 
@@ -775,6 +783,15 @@ export default function AdminDashboard() {
         if (stRes?.data) {
           if (stRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(stRes.data.tickets_page_subtitle);
           if (stRes.data.homepage_cta_text) setSiteSettingsCta(stRes.data.homepage_cta_text);
+          if (stRes.data.bio_badge) setSiteBioBadge(stRes.data.bio_badge);
+          if (stRes.data.bio_title) setSiteBioTitle(stRes.data.bio_title);
+          if (stRes.data.bio_location) setSiteBioLocation(stRes.data.bio_location);
+          if (stRes.data.bio_content) setSiteBioContent(stRes.data.bio_content);
+          if (stRes.data.bio_cta_text) setSiteBioCtaText(stRes.data.bio_cta_text);
+          if (stRes.data.bio_cta_url) setSiteBioCtaUrl(stRes.data.bio_cta_url);
+          if (stRes.data.bio_image_url || stRes.data.bio_image) {
+            setSiteBioImagePreview(stRes.data.bio_image_url || resolveMediaUrl(stRes.data.bio_image));
+          }
         }
       } else if (tabName === 'coupons') {
         const res = await api.get('/tickets/coupons/');
@@ -4872,18 +4889,19 @@ export default function AdminDashboard() {
                   className="space-y-6"
                 >
                   {/* Site Settings Panel */}
-                  <div className="bg-white/5 border border-amber-honey/20 rounded-[2rem] p-6 space-y-4">
+                  <div className="bg-white/5 border border-amber-honey/20 rounded-[2rem] p-6 space-y-6">
                     <div>
-                      <h3 className="text-sm font-black uppercase italic tracking-tight text-amber-honey flex items-center gap-2">⚙️ Textos Dinámicos del Sitio</h3>
+                      <h3 className="text-sm font-black uppercase italic tracking-tight text-amber-honey flex items-center gap-2">⚙️ Textos Dinámicos & Biografía del Sitio</h3>
                       <p className="text-[9px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold mt-1">Actualiza los textos que aparecen en la página de accesos y la landing page.</p>
                     </div>
+
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Subtítulo de Página de Accesos</label>
                         <textarea
                           value={siteSettingsSubtitle}
                           onChange={e => setSiteSettingsSubtitle(e.target.value)}
-                          rows={3}
+                          rows={2}
                           className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all resize-none"
                           placeholder="Selecciona tu concierto, explora el mapa..."
                         />
@@ -4899,19 +4917,132 @@ export default function AdminDashboard() {
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
+
+                    {/* Section: Biografía Personalizada */}
+                    <div className="border-t border-white/10 pt-4 space-y-4">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey">📖 Personalización de la Biografía (Landing Page)</h4>
+                      
+                      <div className="grid sm:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Badge Biografía</label>
+                          <input
+                            type="text"
+                            value={siteBioBadge}
+                            onChange={e => setSiteBioBadge(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                            placeholder="La Cantautora"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Título Principal</label>
+                          <input
+                            type="text"
+                            value={siteBioTitle}
+                            onChange={e => setSiteBioTitle(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                            placeholder="Ms. Ambar"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Ubicación / Origen</label>
+                          <input
+                            type="text"
+                            value={siteBioLocation}
+                            onChange={e => setSiteBioLocation(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                            placeholder="Hermosillo • México"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Texto Botón CTA</label>
+                          <input
+                            type="text"
+                            value={siteBioCtaText}
+                            onChange={e => setSiteBioCtaText(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                            placeholder="Ver Próximos Eventos"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">URL Botón CTA</label>
+                          <input
+                            type="text"
+                            value={siteBioCtaUrl}
+                            onChange={e => setSiteBioCtaUrl(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                            placeholder="/tour"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Contenido Completo Biografía (Párrafos)</label>
+                        <textarea
+                          value={siteBioContent}
+                          onChange={e => setSiteBioContent(e.target.value)}
+                          rows={5}
+                          className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all resize-y"
+                          placeholder="Ingresa la historia o biografía completa. Separa cada párrafo presionando Enter."
+                        />
+                        <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Consejo: Separa los párrafos usando un salto de línea.</span>
+                      </div>
+
+                      {/* Bio Image Upload & Preview */}
+                      <div className="space-y-2 pt-2">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Imagen Oficial de Biografía</label>
+                        <div className="flex flex-wrap items-center gap-4">
+                          {siteBioImagePreview && (
+                            <div className="w-20 h-24 rounded-xl overflow-hidden border border-white/20 shrink-0 relative bg-black/40">
+                              <img src={siteBioImagePreview} alt="Previsualización Biografía" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-[200px]">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setSiteBioImageFile(file);
+                                  setSiteBioImagePreview(URL.createObjectURL(file));
+                                }
+                              }}
+                              className="w-full text-xs text-white/70 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-amber-honey file:text-black hover:file:bg-amber-gold cursor-pointer"
+                            />
+                            <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block mt-1">Sube una imagen vertical de alta calidad (JPG, PNG, WebP).</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 pt-2">
                       <button
                         onClick={async () => {
                           setSiteSettingsLoading(true);
                           try {
                             const token = localStorage.getItem('token');
-                            // POST to create or update the singleton
+                            const formData = new FormData();
+                            formData.append('tickets_page_subtitle', siteSettingsSubtitle);
+                            formData.append('homepage_cta_text', siteSettingsCta);
+                            formData.append('bio_badge', siteBioBadge);
+                            formData.append('bio_title', siteBioTitle);
+                            formData.append('bio_location', siteBioLocation);
+                            formData.append('bio_content', siteBioContent);
+                            formData.append('bio_cta_text', siteBioCtaText);
+                            formData.append('bio_cta_url', siteBioCtaUrl);
+                            if (siteBioImageFile) {
+                              formData.append('bio_image', siteBioImageFile);
+                            }
+
                             await fetch(`${API_URL}/tickets/settings/`, {
                               method: 'POST',
-                              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ tickets_page_subtitle: siteSettingsSubtitle, homepage_cta_text: siteSettingsCta })
+                              headers: { 'Authorization': `Bearer ${token}` },
+                              body: formData
                             });
-                            setSiteSettingsSuccess('¡Configuración guardada exitosamente!');
+                            setSiteSettingsSuccess('¡Configuración de biografía guardada exitosamente!');
                             setTimeout(() => setSiteSettingsSuccess(null), 3000);
                           } catch (err) {
                             console.error('Error saving site settings:', err);
@@ -4922,7 +5053,7 @@ export default function AdminDashboard() {
                         disabled={siteSettingsLoading}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-honey text-black font-black uppercase tracking-widest text-[9px] hover:bg-amber-gold transition-all disabled:opacity-50 shadow-[0_4px_20px_rgba(245,158,11,0.15)]"
                       >
-                        {siteSettingsLoading ? 'Guardando...' : '💾 Guardar Configuración'}
+                        {siteSettingsLoading ? 'Guardando...' : '💾 Guardar Configuración Biografía'}
                       </button>
                       {siteSettingsSuccess && (
                         <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">{siteSettingsSuccess}</p>

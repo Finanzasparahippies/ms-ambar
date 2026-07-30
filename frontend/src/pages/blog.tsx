@@ -7,10 +7,7 @@ import {
   ListOrdered, Link2, Image as ImageIcon, Eye, Settings, Upload,
   FolderPlus, Globe, FileText, Check, ChevronRight, AlertCircle, Sparkles
 } from 'lucide-react';
-import axios from 'axios';
-import { showConfirm, showToast as premiumToast } from '../lib/notifications';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import api from '../lib/api';
 
 interface Post {
   id: number;
@@ -100,7 +97,7 @@ export default function BlogPage() {
     if (!newsletterEmail.trim()) return;
     setNewsletterSubmitting(true);
     try {
-      await axios.post(`${API_URL}/blog/subscribers/`, {
+      await api.post('/blog/subscribers/', {
         email: newsletterEmail,
         name: newsletterName
       });
@@ -122,12 +119,9 @@ export default function BlogPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
       const [postsRes, catsRes] = await Promise.all([
-        axios.get(`${API_URL}/blog/posts/`, { headers }),
-        axios.get(`${API_URL}/blog/categories/`, { headers }),
+        api.get('/blog/posts/'),
+        api.get('/blog/categories/'),
       ]);
 
       setPosts(postsRes.data);
@@ -157,7 +151,7 @@ export default function BlogPage() {
       const params = new URLSearchParams(window.location.search);
       const emailToUnsubscribe = params.get('unsubscribe');
       if (emailToUnsubscribe) {
-        axios.post(`${API_URL}/blog/subscribers/unsubscribe/`, { email: emailToUnsubscribe })
+        api.post('/blog/subscribers/unsubscribe/', { email: emailToUnsubscribe })
           .then(() => {
             showToast('Te has desuscrito con éxito del Club de Ms Ambar.', 'success');
             // Clean url params
@@ -242,14 +236,10 @@ export default function BlogPage() {
 
   // Inline Quick Category Creation
   const handleCreateCategory = async (e: React.FormEvent) => {
-    e.preventDefault();
     if (!newCatName.trim()) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const res = await axios.post(`${API_URL}/blog/categories/`, { name: newCatName }, { headers });
+      const res = await api.post('/blog/categories/', { name: newCatName });
       setCategories([...categories, res.data]);
       setEditorCategory(String(res.data.id));
       setNewCatName('');
@@ -274,11 +264,6 @@ export default function BlogPage() {
 
     setEditorSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? {
-        Authorization: `Bearer ${token}`,
-      } : {};
-
       const formData = new FormData();
       formData.append('title', editorTitle);
       formData.append('slug', editorSlug);
@@ -292,12 +277,12 @@ export default function BlogPage() {
       }
 
       if (editingPost) {
-        await axios.patch(`${API_URL}/blog/posts/${editingPost.id}/`, formData, {
-          headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        await api.patch(`/blog/posts/${editingPost.id}/`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
       } else {
-        await axios.post(`${API_URL}/blog/posts/`, formData, {
-          headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        await api.post('/blog/posts/', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
 
@@ -319,11 +304,9 @@ export default function BlogPage() {
       'Eliminar Post'
     );
     if (!isConfirmed) return;
- 
+
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.delete(`${API_URL}/blog/posts/${id}/`, { headers });
+      await api.delete(`/blog/posts/${id}/`);
       fetchData();
     } catch (err) {
       console.error('Failed to delete post:', err);

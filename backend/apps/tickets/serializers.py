@@ -125,15 +125,25 @@ class TicketSerializer(serializers.ModelSerializer):
 class SiteSettingsSerializer(serializers.ModelSerializer):
     fee_config = serializers.SerializerMethodField()
     theme_config = serializers.ReadOnlyField(source='get_theme_config')
+    bio_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = SiteSettings
         fields = [
             'tickets_page_subtitle', 'homepage_cta_text', 'fee_config', 'theme_config',
+            'bio_badge', 'bio_title', 'bio_image', 'bio_image_url', 'bio_location', 'bio_content', 'bio_cta_text', 'bio_cta_url',
             'theme_mode', 'primary_color', 'secondary_color', 'background_start', 'background_end',
             'accent_color', 'card_background', 'text_color', 'particle_shape',
             'card_style', 'background_pattern', 'font_preset', 'custom_css', 'section_themes'
         ]
+
+    def get_bio_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.bio_image and request:
+            return request.build_absolute_uri(obj.bio_image.url)
+        elif obj.bio_image:
+            return obj.bio_image.url
+        return None
 
     def get_fee_config(self, obj):
         return get_fee_config()

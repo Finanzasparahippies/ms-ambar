@@ -86,6 +86,10 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             'fields': ('homepage_cta_text',),
             'description': 'Texto del badge de CTA cuando no hay eventos próximos programados.'
         }),
+        ('Personalización de la Biografía (Index)', {
+            'fields': ('bio_badge', 'bio_title', 'bio_image', 'bio_location', 'bio_content', 'bio_cta_text', 'bio_cta_url'),
+            'description': 'Personaliza el texto, badge, imagen oficial y enlace CTA de la sección Biografía en la landing page.'
+        }),
         ('Personalización Global del Tema (Frontend Todo el Sitio)', {
             'fields': (
                 'primary_color', 'secondary_color', 'background_start', 'background_end',

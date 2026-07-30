@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Phone, Lock, Eye, EyeOff, ShieldAlert, CheckCircle, ArrowRight } from 'lucide-react';
-import { getApiUrl } from '../lib/utils';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -32,8 +31,7 @@ export default function SignupPage() {
     }
 
     try {
-      const apiUrl = getApiUrl();
-      const res = await axios.post(`${apiUrl}/users/register/`, {
+      const res = await api.post('/users/register/', {
         email,
         username,
         phone: phone || null,

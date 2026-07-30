@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, Eye, EyeOff, ShieldAlert, CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react';
-import { getApiUrl } from '../lib/utils';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -35,8 +34,7 @@ export default function ResetPasswordPage() {
     }
 
     try {
-      const apiUrl = getApiUrl();
-      await axios.post(`${apiUrl}/users/password-reset-confirm/`, {
+      await api.post('/users/password-reset-confirm/', {
         uid,
         token,
         email,

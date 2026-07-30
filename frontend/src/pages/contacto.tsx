@@ -3,10 +3,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Mail, Download, ArrowRight, CheckCircle, Calendar, Phone, Award } from 'lucide-react';
-import axios from 'axios';
+import api from '../lib/api';
 import { showAlert } from '../lib/notifications';
 import ThemedSection from '../components/ThemedSection';
-import { getApiUrl } from '../lib/utils';
 
 const ContactPage = () => {
   const [name, setName] = useState('');
@@ -33,8 +32,7 @@ const ContactPage = () => {
         venue_type: venueType,
         message,
       };
-      const apiUrl = getApiUrl();
-      const res = await axios.post(`${apiUrl}/bookings/inquiries/`, payload);
+      const res = await api.post('/bookings/inquiries/', payload);
       setSuccessData(res.data);
     } catch (err: any) {
       console.error(err);

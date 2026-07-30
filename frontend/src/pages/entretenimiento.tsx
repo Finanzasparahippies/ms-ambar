@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Sliders, Volume2, Layers, VolumeX, Activity, ChevronRight, ArrowRight
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../lib/api';
 import ThemedSection from '../components/ThemedSection';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
