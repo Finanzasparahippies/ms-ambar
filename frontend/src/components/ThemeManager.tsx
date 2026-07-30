@@ -72,13 +72,21 @@ const PAGE_SECTIONS = [
   { id: 'checkout_modal', label: 'Modal de Checkout y Resumen de Compra', icon: '💳' },
   { id: 'contact_section', label: 'Página de Contacto y Formulario', icon: '📬' },
   { id: 'footer', label: 'Pie de Página y Redes Sociales', icon: '⚓' },
+const COLOR_PRESETS = [
+  { id: 'amber-honey', name: 'Ámbar Místico', primary: '#E5A93B', secondary: '#22A6B7', start: '#080c0a', end: '#040605', card: '#0c0f0d', text: '#F4F6F0', heading: '#E5A93B' },
+  { id: 'emerald-desert', name: 'Noche Esmeralda', primary: '#10B981', secondary: '#06B6D4', start: '#022c22', end: '#021e17', card: '#064e3b', text: '#ECFDF5', heading: '#34D399' },
+  { id: 'neon-violet', name: 'Violeta Neón', primary: '#8B5CF6', secondary: '#EC4899', start: '#0f0728', end: '#090319', card: '#1e1035', text: '#F5F3FF', heading: '#A78BFA' },
+  { id: 'royal-gold', name: 'Oro Imperial', primary: '#F59E0B', secondary: '#D97706', start: '#1c1305', end: '#0f0a02', card: '#291b07', text: '#FFFBEB', heading: '#FBBF24' },
+  { id: 'crimson-rose', name: 'Rosa Carmesí', primary: '#F43F5E', secondary: '#FB7185', start: '#1f040a', end: '#120205', card: '#330812', text: '#FFF1F2', heading: '#FDA4AF' },
+  { id: 'cyber-ocean', name: 'Océano Futuro', primary: '#0EA5E9', secondary: '#6366F1', start: '#031a2b', end: '#020f1a', card: '#082f49', text: '#F0F9FF', heading: '#38BDF8' }
 ];
 
 export const ThemeManager: React.FC = () => {
-  const { theme, setThemeOverride, fetchThemeForEvent } = useEventTheme();
+  const { theme, setThemeOverride, fetchThemeForEvent, resetThemeToDefaults, clearSectionOverrides } = useEventTheme();
   
   const [scope, setScope] = useState<'global' | 'event'>('global');
   const [activeTabMode, setActiveTabMode] = useState<'general' | 'sections'>('general');
+  const [themeMode, setThemeMode] = useState<'global' | 'section'>(theme.themeMode || 'global');
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
@@ -200,6 +208,7 @@ export const ThemeManager: React.FC = () => {
   // Preview theme changes in real time as user edits form
   const handleLivePreview = () => {
     setThemeOverride({
+      themeMode,
       primaryColor,
       secondaryColor,
       backgroundStart,
@@ -225,7 +234,19 @@ export const ThemeManager: React.FC = () => {
 
   useEffect(() => {
     handleLivePreview();
-  }, [primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, animationPreset, imageFilter, customCss, sectionThemes]);
+  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, animationPreset, imageFilter, customCss, sectionThemes]);
+
+  const applyPreset = (preset: typeof COLOR_PRESETS[0]) => {
+    setPrimaryColor(preset.primary);
+    setSecondaryColor(preset.secondary);
+    setBackgroundStart(preset.start);
+    setBackgroundEnd(preset.end);
+    setCardBackground(preset.card);
+    setTextColor(preset.text);
+    setHeadingColor(preset.heading);
+    setThemeMode('global');
+    showToast.success(`Paleta "${preset.name}" aplicada correctamente en modo global.`);
+  };
 
   const updateSectionProp = (key: string, field: keyof SectionThemeSpec, val: any) => {
     setSectionThemes(prev => {
@@ -241,6 +262,7 @@ export const ThemeManager: React.FC = () => {
     const headers = { Authorization: `Bearer ${token}` };
 
     const payload = {
+      theme_mode: themeMode,
       primary_color: primaryColor,
       secondary_color: secondaryColor,
       background_start: backgroundStart,
@@ -301,15 +323,90 @@ export const ThemeManager: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => {
+                clearSectionOverrides();
+                setThemeMode('global');
+                showToast.success('🧹 Secciones limpiadas. Se ha activado la Paleta Global Unificada.');
+              }}
+              className="bg-white/10 hover:bg-white/20 text-[#F4F6F0] font-black uppercase tracking-widest text-[10px] px-4 py-3 rounded-2xl transition-all border border-white/10 flex items-center gap-1.5"
+            >
+              🧹 Limpiar Secciones
+            </button>
+
+            <button
+              onClick={() => {
+                resetThemeToDefaults();
+                showToast.success('🔄 Tema restablecido a los valores predeterminados del sistema.');
+              }}
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-300 font-black uppercase tracking-widest text-[10px] px-4 py-3 rounded-2xl transition-all border border-red-500/20 flex items-center gap-1.5"
+            >
+              🔄 Restablecer Todo
+            </button>
+
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-amber-honey hover:bg-amber-butterscotch text-[#1E2B22] font-black uppercase tracking-widest text-xs px-7 py-3.5 rounded-2xl transition-all shadow-xl shadow-amber-honey/20 flex items-center gap-2 disabled:opacity-50"
+              className="bg-amber-honey hover:bg-amber-butterscotch text-[#1E2B22] font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-2xl transition-all shadow-xl shadow-amber-honey/20 flex items-center gap-2 disabled:opacity-50"
             >
               {saving ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />}
-              Guardar Cambios
+              Guardar en Servidor
             </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Explicit Theme Mode Selector: Global Palette vs Section Override Mode */}
+      <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-black text-[#F4F6F0] uppercase tracking-wider flex items-center gap-2">
+              <Sliders size={16} className="text-amber-honey" /> Modo de Aplicación de Estilos
+            </h3>
+            <p className="text-xs text-[#F4F6F0]/60 mt-0.5">
+              Elige si deseas aplicar la paleta de colores uniformemente en todo el sitio o permitir personalizaciones por sección.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 bg-[#080c0a] p-1.5 rounded-2xl border border-white/15">
+            <button
+              onClick={() => setThemeMode('global')}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${themeMode === 'global' ? 'bg-amber-honey text-black shadow-md' : 'text-white/60 hover:text-white'}`}
+            >
+              Paleta Global Unificada
+            </button>
+            <button
+              onClick={() => setThemeMode('section')}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${themeMode === 'section' ? 'bg-amber-honey text-black shadow-md' : 'text-white/60 hover:text-white'}`}
+            >
+              Personalización por Sección
+            </button>
+          </div>
+        </div>
+
+        {/* 1-Click Preset Palettes */}
+        <div className="pt-4 border-t border-white/10 space-y-3">
+          <span className="text-[10px] font-black uppercase tracking-widest text-amber-honey block">
+            Paletas de Colores Rápidas (1-Clic):
+          </span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+            {COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => applyPreset(preset)}
+                className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex flex-col gap-2 text-left group"
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: preset.primary }} />
+                  <span className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: preset.secondary }} />
+                  <span className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: preset.card }} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-tight text-white/90 group-hover:text-amber-honey line-clamp-1">
+                  {preset.name}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </div>

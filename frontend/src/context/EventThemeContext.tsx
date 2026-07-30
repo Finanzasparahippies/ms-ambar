@@ -24,6 +24,7 @@ export interface SectionThemeSpec {
 }
 
 export interface ThemeConfig {
+  themeMode?: 'global' | 'section';
   primaryColor: string;
   secondaryColor: string;
   backgroundStart: string;
@@ -48,7 +49,10 @@ export interface ThemeConfig {
   eventTitle?: string | null;
 }
 
+const LOCAL_STORAGE_THEME_KEY = 'ms_ambar_theme_override_v2';
+
 const DEFAULT_THEME: ThemeConfig = {
+  themeMode: 'global',
   primaryColor: '#E5A93B',
   secondaryColor: '#22A6B7',
   backgroundStart: '#080c0a',
@@ -79,6 +83,8 @@ interface EventThemeContextType {
   setThemeOverride: (override: Partial<ThemeConfig>) => void;
   fetchThemeForEvent: (eventId?: number | string) => Promise<void>;
   getSectionTheme: (sectionKey: string) => SectionThemeSpec;
+  resetThemeToDefaults: () => void;
+  clearSectionOverrides: () => void;
 }
 
 const EventThemeContext = createContext<EventThemeContextType>({
@@ -87,6 +93,8 @@ const EventThemeContext = createContext<EventThemeContextType>({
   setThemeOverride: () => {},
   fetchThemeForEvent: async () => {},
   getSectionTheme: () => ({}),
+  resetThemeToDefaults: () => {},
+  clearSectionOverrides: () => {},
 });
 
 export const useEventTheme = () => useContext(EventThemeContext);
@@ -153,6 +161,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.setAttribute('data-theme-card-style', cfg.cardStyle || 'rounded-full');
     root.setAttribute('data-theme-animation', cfg.animationPreset || 'none');
     root.setAttribute('data-theme-image-filter', cfg.imageFilter || 'none');
+    root.setAttribute('data-theme-mode', cfg.themeMode || 'global');
 
     // Custom CSS injection
     let customStyleTag = document.getElementById('ms-ambar-custom-theme-css');
@@ -164,6 +173,16 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     customStyleTag.textContent = cfg.customCss || '';
   };
 
+  const getSavedLocalTheme = (): Partial<ThemeConfig> | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_THEME_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
   const fetchThemeForEvent = async (eventId?: number | string) => {
     try {
       setLoading(true);
@@ -173,9 +192,12 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
         : `${apiUrl}/tickets/theme/active/`;
       
       const res = await axios.get(url);
+      let baseThemeData: ThemeConfig = DEFAULT_THEME;
+
       if (res.data) {
         const d = res.data;
-        const newTheme: ThemeConfig = {
+        baseThemeData = {
+          themeMode: d.theme_mode || 'global',
           primaryColor: d.primary_color || DEFAULT_THEME.primaryColor,
           secondaryColor: d.secondary_color || DEFAULT_THEME.secondaryColor,
           backgroundStart: d.background_start || DEFAULT_THEME.backgroundStart,
@@ -199,12 +221,20 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
           eventId: d.event_id || null,
           eventTitle: d.event_title || null,
         };
-        setTheme(newTheme);
-        applyThemeToDOM(newTheme);
       }
+
+      // Merge local draft override if available so changes persist across navigations
+      const localDraft = getSavedLocalTheme();
+      const finalTheme = localDraft ? { ...baseThemeData, ...localDraft } : baseThemeData;
+
+      setTheme(finalTheme);
+      applyThemeToDOM(finalTheme);
     } catch (err) {
       console.warn('[EventThemeContext] Failed to load theme from backend, applying defaults:', err);
-      applyThemeToDOM(DEFAULT_THEME);
+      const localDraft = getSavedLocalTheme();
+      const finalTheme = localDraft ? { ...DEFAULT_THEME, ...localDraft } : DEFAULT_THEME;
+      setTheme(finalTheme);
+      applyThemeToDOM(finalTheme);
     } finally {
       setLoading(false);
     }
@@ -214,12 +244,54 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     setTheme(prev => {
       const updated = { ...prev, ...override };
       applyThemeToDOM(updated);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(LOCAL_STORAGE_THEME_KEY, JSON.stringify(updated));
+        } catch (e) {
+          console.error('[EventThemeContext] Error writing local theme draft:', e);
+        }
+      }
       return updated;
     });
   };
 
+  const resetThemeToDefaults = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(LOCAL_STORAGE_THEME_KEY);
+    }
+    setTheme(DEFAULT_THEME);
+    applyThemeToDOM(DEFAULT_THEME);
+  };
+
+  const clearSectionOverrides = () => {
+    setThemeOverride({
+      themeMode: 'global',
+      sectionThemes: {},
+    });
+  };
+
   const getSectionTheme = (sectionKey: string): SectionThemeSpec => {
-    return theme.sectionThemes?.[sectionKey] || {};
+    // Edgecase resolution: In Global mode, ignore section overrides so styles never collide!
+    if (theme.themeMode === 'global') {
+      return {};
+    }
+
+    const sec = theme.sectionThemes?.[sectionKey] || {};
+    return {
+      heading_color: sec.heading_color || theme.headingColor || theme.primaryColor,
+      text_color: sec.text_color || theme.textColor,
+      subtitle_color: sec.subtitle_color || theme.subtitleColor || theme.textColor,
+      accent_color: sec.accent_color || theme.accentColor || theme.primaryColor,
+      card_bg: sec.card_bg || theme.cardBackground,
+      border_color: sec.border_color || theme.borderColor,
+      button_bg: sec.button_bg || theme.buttonBg || theme.primaryColor,
+      button_text: sec.button_text || theme.buttonText,
+      particle_shape: sec.particle_shape || theme.particleShape,
+      card_style: sec.card_style || theme.cardStyle,
+      animation_preset: sec.animation_preset || theme.animationPreset,
+      image_filter: sec.image_filter || theme.imageFilter,
+      custom_css: sec.custom_css || '',
+    };
   };
 
   useEffect(() => {
@@ -227,7 +299,15 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
   }, []);
 
   return (
-    <EventThemeContext.Provider value={{ theme, loading, setThemeOverride, fetchThemeForEvent, getSectionTheme }}>
+    <EventThemeContext.Provider value={{ 
+      theme, 
+      loading, 
+      setThemeOverride, 
+      fetchThemeForEvent, 
+      getSectionTheme,
+      resetThemeToDefaults,
+      clearSectionOverrides 
+    }}>
       {children}
     </EventThemeContext.Provider>
   );

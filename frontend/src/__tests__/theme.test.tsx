@@ -93,9 +93,10 @@ describe('EventThemeContext Unit Tests', () => {
     expect(document.documentElement.getAttribute('data-theme-card-style')).toBe('rounded-2xl');
   });
 
-  test('debe proporcionar estilos de sección específicos (heading_color, card_bg, border_color) a componentes consumidores', async () => {
+  test('debe proporcionar estilos de sección específicos cuando theme_mode es "section"', async () => {
     mockedAxios.get.mockResolvedValueOnce({
       data: {
+        theme_mode: 'section',
         primary_color: '#E5A93B',
         section_themes: {
           timeline_section: {
@@ -128,6 +129,41 @@ describe('EventThemeContext Unit Tests', () => {
     await waitFor(() => {
       expect(screen.getByTestId('sec-heading')).toHaveTextContent('#F59E0B');
       expect(screen.getByTestId('sec-bg')).toHaveTextContent('#0f172a');
+    });
+  });
+
+  test('debe ignorar las sobrescrituras de sección cuando theme_mode es "global" para evitar colisión de estilos', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        theme_mode: 'global',
+        primary_color: '#E5A93B',
+        section_themes: {
+          timeline_section: {
+            heading_color: '#F59E0B',
+          },
+        },
+      },
+    });
+
+    const GlobalIsolationTestComponent = () => {
+      const { getSectionTheme, loading } = useEventTheme();
+      if (loading) return null;
+      const sec = getSectionTheme('timeline_section');
+      return (
+        <div>
+          <span data-testid="sec-heading-empty">{sec.heading_color || 'none'}</span>
+        </div>
+      );
+    };
+
+    render(
+      <EventThemeContextProvider>
+        <GlobalIsolationTestComponent />
+      </EventThemeContextProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sec-heading-empty')).toHaveTextContent('none');
     });
   });
 });

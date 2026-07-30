@@ -698,12 +698,14 @@ class SiteSettings(models.Model):
     particle_shape = models.CharField(max_length=50, choices=PARTICLE_SHAPE_CHOICES, default='moon', help_text="Figura geométrica del Canvas de partículas")
     card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, default='rounded-full', help_text="Estilo de bordes de tarjetas y botones")
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
+    theme_mode = models.CharField(max_length=20, default='global', help_text="Modo de aplicación de tema: 'global' o 'section'")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, default='cormorant', help_text="Preset de fuentes tipográficas")
     custom_css = models.TextField(blank=True, null=True, default='', help_text="CSS personalizado global para todo el sitio")
     section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección del sitio (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 
     def get_theme_config(self):
         return {
+            'theme_mode': self.theme_mode or 'global',
             'primary_color': self.primary_color or '#E5A93B',
             'secondary_color': self.secondary_color or '#22A6B7',
             'background_start': self.background_start or '#080c0a',
