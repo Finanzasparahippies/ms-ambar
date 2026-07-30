@@ -121,12 +121,9 @@ export default function AmbarTeEscribePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
       const [postsRes, catsRes] = await Promise.all([
-        axios.get(`${API_URL}/blog/posts/`, { headers }),
-        axios.get(`${API_URL}/blog/categories/`, { headers }),
+        api.get('/blog/posts/'),
+        api.get('/blog/categories/'),
       ]);
 
       setPosts(postsRes.data);
@@ -165,14 +162,14 @@ export default function AmbarTeEscribePage() {
 
         if (emailToUnsubscribe) {
           // Process unsubscribe
-          axios.post(`${API_URL}/blog/subscribers/unsubscribe/`, { email: emailToUnsubscribe })
+          api.post('/blog/subscribers/unsubscribe/', { email: emailToUnsubscribe })
             .then(() => {
               showToast('Te has desuscrito con éxito del Club de Ms Ambar.', 'success');
               localStorage.removeItem('ms_ambar_subscriber_email');
               setIsUnlocked(false);
               window.history.replaceState({}, document.title, window.location.pathname);
             })
-            .catch((err) => {
+            .catch((err: any) => {
               console.error('Error desuscribiendo:', err);
               showToast('Hubo un problema al procesar tu desuscripción.', 'error');
               window.history.replaceState({}, document.title, window.location.pathname);
@@ -195,7 +192,7 @@ export default function AmbarTeEscribePage() {
     if (!newsletterEmail.trim()) return;
     setNewsletterSubmitting(true);
     try {
-      await axios.post(`${API_URL}/blog/subscribers/`, {
+      await api.post('/blog/subscribers/', {
         email: newsletterEmail,
         name: newsletterName
       });
@@ -296,10 +293,7 @@ export default function AmbarTeEscribePage() {
     if (!newCatName.trim()) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-      const res = await axios.post(`${API_URL}/blog/categories/`, { name: newCatName }, { headers });
+      const res = await api.post('/blog/categories/', { name: newCatName });
       setCategories([...categories, res.data]);
       setEditorCategory(String(res.data.id));
       setNewCatName('');
@@ -323,9 +317,6 @@ export default function AmbarTeEscribePage() {
 
     setEditorSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
       const formData = new FormData();
       formData.append('title', editorTitle);
       formData.append('slug', editorSlug);
@@ -339,12 +330,12 @@ export default function AmbarTeEscribePage() {
       }
 
       if (editingPost) {
-        await axios.patch(`${API_URL}/blog/posts/${editingPost.id}/`, formData, {
-          headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        await api.patch(`/blog/posts/${editingPost.id}/`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
       } else {
-        await axios.post(`${API_URL}/blog/posts/`, formData, {
-          headers: { ...headers, 'Content-Type': 'multipart/form-data' }
+        await api.post('/blog/posts/', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
 
@@ -367,9 +358,7 @@ export default function AmbarTeEscribePage() {
     if (!isConfirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      await axios.delete(`${API_URL}/blog/posts/${id}/`, { headers });
+      await api.delete(`/blog/posts/${id}/`);
       fetchData();
     } catch (err) {
       console.error('Failed to delete post:', err);
