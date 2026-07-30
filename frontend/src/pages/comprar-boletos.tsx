@@ -521,7 +521,7 @@ const TourPage = () => {
       </Head>
 
       {/* ─── Header Section ─── */}
-      <ThemedSection sectionKey="tickets_page" className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative z-10 overflow-hidden">
+      <ThemedSection sectionKey="tickets_page" className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative z-10">
         <div className="absolute top-[-10%] left-[-15%] w-[45%] h-[45%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
         <div className="max-w-4xl mx-auto space-y-4">
           <motion.div
@@ -536,7 +536,7 @@ const TourPage = () => {
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase italic leading-tight px-2 py-2"
+            className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter uppercase italic leading-tight px-2 py-2 text-[var(--heading-color,#E5A93B)]"
           >
             ACCESOS <span className="text-glow text-gradient-theme px-2">OFICIALES 2026</span>
           </motion.h1>
@@ -544,7 +544,7 @@ const TourPage = () => {
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-nature-night/70 dark:text-[#F4F6F0]/70 text-xs md:text-sm uppercase tracking-[0.35em] max-w-2xl mx-auto leading-relaxed"
+            className="text-xs md:text-sm uppercase tracking-[0.35em] max-w-2xl mx-auto leading-relaxed text-[var(--subtitle-color,#F4F6F0)] opacity-90"
           >
             {pageSubtitle}
           </motion.p>
@@ -576,7 +576,7 @@ const TourPage = () => {
                     key={currentEvent?.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase italic leading-tight"
+                    className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight uppercase italic leading-tight text-[var(--heading-color,#E5A93B)]"
                   >
                     {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
                   </motion.h2>
