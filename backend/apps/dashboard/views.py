@@ -190,11 +190,11 @@ class AnalyticsOverview(APIView):
                     mo += 12
                     yr -= 1
                 
-                m_start = timezone.datetime(yr, mo, 1, 0, 0, 0, tzinfo=timezone.utc)
+                m_start = datetime(yr, mo, 1, 0, 0, 0, tzinfo=timezone.utc)
                 if mo == 12:
-                    m_end = timezone.datetime(yr + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
+                    m_end = datetime(yr + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
                 else:
-                    m_end = timezone.datetime(yr, mo + 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
+                    m_end = datetime(yr, mo + 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
 
                 m_label = m_start.strftime('%b %Y')
                 
