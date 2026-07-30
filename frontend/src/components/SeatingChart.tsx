@@ -72,8 +72,29 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const requestRef = useRef<number>();
   const hasAutoFittedRef = useRef<boolean>(false);
-  const allowZoomRef = useRef<boolean>(allowZoom);
-  useEffect(() => { allowZoomRef.current = allowZoom; }, [allowZoom]);
+  const [userZoomPreference, setUserZoomPreference] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('user_allow_canvas_zoom');
+      if (stored !== null) {
+        setUserZoomPreference(stored === 'true');
+      }
+    } catch (e) {}
+  }, []);
+
+  const effectiveAllowZoom = userZoomPreference !== null ? userZoomPreference : allowZoom;
+
+  const allowZoomRef = useRef<boolean>(effectiveAllowZoom);
+  useEffect(() => { allowZoomRef.current = effectiveAllowZoom; }, [effectiveAllowZoom]);
+
+  const toggleUserZoomPreference = () => {
+    const nextVal = !effectiveAllowZoom;
+    setUserZoomPreference(nextVal);
+    try {
+      localStorage.setItem('user_allow_canvas_zoom', String(nextVal));
+    } catch (e) {}
+  };
 
   const [seats, setSeats] = useState<Seat[]>(initialSeats);
   const [elements, setElements] = useState<MapElement[]>(initialElements);
@@ -811,13 +832,33 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       )}
       <div className="absolute bottom-6 left-6 flex gap-2 z-10 pointer-events-none">
         <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50 hidden sm:block">
-          Del: Borrar | Shift+Drag: Multi | {allowZoom ? 'Scroll: Zoom | ' : ''}Arrastrar: Paneo
+          Del: Borrar | Shift+Drag: Multi | {effectiveAllowZoom ? 'Scroll: Zoom | ' : ''}Arrastrar: Paneo
         </div>
       </div>
       
-      {/* Interactive Zoom Controls & Recenter Button */}
+      {/* Interactive Zoom Controls & User Preference Toggle */}
       <div className="absolute bottom-6 right-6 flex items-center gap-2 z-20">
-        {allowZoom ? (
+        <button
+          onClick={toggleUserZoomPreference}
+          title={effectiveAllowZoom ? "Guardar preferencia: Fijar zoom" : "Guardar preferencia: Permitir zoom interactivo"}
+          className="px-3 py-1.5 bg-black/70 hover:bg-black/90 backdrop-blur-xl border border-white/15 hover:border-amber-400/40 rounded-full text-[10px] font-black text-white/90 uppercase tracking-widest transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 shadow-lg pointer-events-auto"
+        >
+          {effectiveAllowZoom ? (
+            <>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Zoom On</span>
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span>Zoom Fijo</span>
+            </>
+          )}
+        </button>
+
+        {effectiveAllowZoom ? (
           <>
             <button
               onClick={() => handleStepZoom(0.8)}
@@ -849,13 +890,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ) : (
           <button
             onClick={handleFitToView}
-            title="Vista Fija del Evento (Zoom Bloqueado)"
+            title="Ajustar a pantalla"
             className="px-3.5 py-1.5 bg-amber-500/20 backdrop-blur-xl border border-amber-400/30 rounded-full text-[10px] font-black text-amber-300 uppercase tracking-widest flex items-center gap-1.5 shadow-lg pointer-events-auto"
           >
-            <svg className="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <span>Zoom Fijo</span>
+            <span>{Math.round(transform.scale * 100)}%</span>
           </button>
         )}
       </div>

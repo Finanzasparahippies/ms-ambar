@@ -180,6 +180,46 @@ class AnalyticsOverview(APIView):
                     'total': round(t_daily_sales + s_daily_sales, 2)
                 })
 
+            # 7. Monthly Chart Data (Last 12 months aggregated)
+            monthly_stats = []
+            now = timezone.now()
+            for i in range(11, -1, -1):
+                yr = now.year
+                mo = now.month - i
+                while mo <= 0:
+                    mo += 12
+                    yr -= 1
+                
+                m_start = timezone.datetime(yr, mo, 1, 0, 0, 0, tzinfo=timezone.utc)
+                if mo == 12:
+                    m_end = timezone.datetime(yr + 1, 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
+                else:
+                    m_end = timezone.datetime(yr, mo + 1, 1, 0, 0, 0, tzinfo=timezone.utc) - timedelta(seconds=1)
+
+                m_label = m_start.strftime('%b %Y')
+                
+                m_tickets = Ticket.objects.filter(
+                    status__in=['paid', 'used'],
+                    created_at__gte=m_start,
+                    created_at__lte=m_end
+                )
+                t_m_sales = sum(_get_ticket_price(t) for t in m_tickets)
+
+                s_m_sales = Order.objects.filter(
+                    status__in=['paid', 'shipped', 'delivered'],
+                    created_at__gte=m_start,
+                    created_at__lte=m_end
+                ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                s_m_sales = float(s_m_sales)
+
+                monthly_stats.append({
+                    'date': m_label,
+                    'month_key': m_start.strftime('%Y-%m'),
+                    'tickets': round(t_m_sales, 2),
+                    'shop': round(s_m_sales, 2),
+                    'total': round(t_m_sales + s_m_sales, 2)
+                })
+
             metrics = {
                 'financials': {
                     'gross_sales': round(gross_sales, 2),
@@ -201,7 +241,8 @@ class AnalyticsOverview(APIView):
                 },
                 'vitals': vitals,
                 'charts': {
-                    'daily_sales': daily_stats
+                    'daily_sales': daily_stats,
+                    'monthly_sales': monthly_stats
                 },
                 'status': 'success'
             }

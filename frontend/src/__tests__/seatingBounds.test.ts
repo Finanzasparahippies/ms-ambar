@@ -47,8 +47,8 @@ describe('seatingBounds utility unit tests', () => {
     const bounds = calculateLayoutBounds(sampleSeats, sampleElements, 20);
     const fit = calculateFitTransform(bounds, 1000, 800, 50);
 
-    expect(fit.scale).toBeGreaterThan(0.5);
-    expect(fit.scale).toBeLessThan(2.5);
+    expect(fit.scale).toBeGreaterThan(0.15);
+    expect(fit.scale).toBeLessThanOrEqual(0.42);
 
     // Layout center on screen should equal container center (500, 400)
     const screenCenterX = fit.x + bounds.centerX * fit.scale;

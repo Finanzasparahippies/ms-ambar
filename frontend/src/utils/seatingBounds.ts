@@ -114,11 +114,16 @@ export function calculateFitTransform(
   bounds: LayoutBounds,
   containerWidth: number,
   containerHeight: number,
-  padding = 60
+  padding = 40
 ): TransformState {
   if (containerWidth <= 0 || containerHeight <= 0) {
-    return { x: 0, y: 0, scale: 0.8 };
+    return { x: 0, y: 0, scale: 0.42 };
   }
+
+  // Large screens (Desktop >= 768px): target 42% scale (0.42)
+  // Small screens (Mobile < 768px): target 33% scale (0.33)
+  const isDesktop = containerWidth >= 768;
+  const targetDefaultScale = isDesktop ? 0.42 : 0.33;
 
   const availW = Math.max(50, containerWidth - padding * 2);
   const availH = Math.max(50, containerHeight - padding * 2);
@@ -126,8 +131,8 @@ export function calculateFitTransform(
   const scaleX = availW / bounds.width;
   const scaleY = availH / bounds.height;
   
-  // Calculate scale fitting full layout, bounded between 0.15 and 2.5
-  const fitScale = Math.max(0.15, Math.min(Math.min(scaleX, scaleY), 2.5));
+  // Calculate fit scale bounded to target scale (0.42 desktop / 0.33 mobile)
+  const fitScale = Math.max(0.15, Math.min(Math.min(scaleX, scaleY), targetDefaultScale));
 
   // Center layout in canvas container
   const x = (containerWidth / 2) - (bounds.centerX * fitScale);

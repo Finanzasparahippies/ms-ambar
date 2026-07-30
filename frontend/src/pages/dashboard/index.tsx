@@ -214,6 +214,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+  const [chartPeriod, setChartPeriod] = useState<'daily' | 'monthly'>('daily');
 
   // Dashboard Navigation State
   const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme'>('summary');
@@ -2244,7 +2245,9 @@ export default function AdminDashboard() {
   const tickets = stats?.tickets;
   const shop = stats?.shop;
   const vitals = stats?.vitals;
-  const chartData = stats?.charts?.daily_sales || [];
+  const dailyData = stats?.charts?.daily_sales || [];
+  const monthlyData = stats?.charts?.monthly_sales || [];
+  const chartData = chartPeriod === 'monthly' ? monthlyData : dailyData;
 
   // SVG Area Chart calculations
   const chartWidth = 700;
@@ -2788,25 +2791,55 @@ export default function AdminDashboard() {
 
                     {/* SVG Interactive Area Chart */}
                     <div className="lg:col-span-2 amber-glass border border-white/10 p-6 rounded-[2rem] shadow-lg shadow-black/20 flex flex-col justify-between">
-                      <div className="flex justify-between items-start mb-6">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                         <div>
                           <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-2 text-[#F4F6F0]">
-                            <TrendingUp size={18} className="text-amber-honey" /> Flujo de Ingresos Diarios
+                            <TrendingUp size={18} className="text-amber-honey" /> Flujo de Ingresos {chartPeriod === 'monthly' ? 'Mensuales' : 'Diarios'}
                           </h3>
                           <p className="text-[#F4F6F0]/50 text-[10px] font-bold uppercase tracking-widest mt-1">
-                            Taquilla & Tienda - Últimos 30 días
+                            {chartPeriod === 'monthly' ? 'Taquilla & Tienda - Acumulado últimos 12 meses' : 'Taquilla & Tienda - Últimos 30 días'}
                           </p>
                         </div>
-                        {activePoint && (
-                          <div className="text-right">
-                            <span className="text-amber-honey font-mono text-sm font-bold">
-                              ${activePoint.total.toLocaleString()}
-                            </span>
-                            <p className="text-[9px] text-[#F4F6F0]/50 uppercase font-black tracking-wider">
-                              {activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy (Día Actual)' : activePoint.date}
-                            </p>
+
+                        <div className="flex items-center gap-3">
+                          <div className="bg-black/60 p-1 rounded-xl border border-white/10 flex items-center gap-1 backdrop-blur-md">
+                            <button
+                              type="button"
+                              onClick={() => { setChartPeriod('daily'); setHoveredPoint(null); }}
+                              className={cn(
+                                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                                chartPeriod === 'daily'
+                                  ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20"
+                                  : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                            >
+                              📅 Diario (30 Días)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setChartPeriod('monthly'); setHoveredPoint(null); }}
+                              className={cn(
+                                "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                                chartPeriod === 'monthly'
+                                  ? "bg-amber-honey text-black shadow-md shadow-amber-honey/20"
+                                  : "text-[#F4F6F0]/60 hover:text-white"
+                              )}
+                            >
+                              📊 Mensual (12 Meses)
+                            </button>
                           </div>
-                        )}
+
+                          {activePoint && (
+                            <div className="text-right hidden md:block">
+                              <span className="text-amber-honey font-mono text-sm font-bold">
+                                ${activePoint.total.toLocaleString()}
+                              </span>
+                              <p className="text-[9px] text-[#F4F6F0]/50 uppercase font-black tracking-wider">
+                                {activePoint.date === points[points.length - 1]?.data?.date && chartPeriod === 'daily' ? 'Hoy (Día Actual)' : activePoint.date}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="relative w-full h-[220px]">
@@ -2833,8 +2866,11 @@ export default function AdminDashboard() {
                             );
                           })}
 
-                          {/* X-Axis labels with explicit and styled label for the current day (Hoy) */}
-                          {points.filter((_: any, idx: number) => idx % 5 === 0 || idx === points.length - 1).map((p: any, idx: number) => {
+                          {/* X-Axis labels with styled display for daily/monthly periods */}
+                          {points.filter((_: any, idx: number) => {
+                            const step = chartPeriod === 'monthly' ? 2 : 5;
+                            return idx % step === 0 || idx === points.length - 1;
+                          }).map((p: any, idx: number) => {
                             const isLast = p.data.date === points[points.length - 1]?.data?.date;
                             return (
                               <text
@@ -2847,7 +2883,7 @@ export default function AdminDashboard() {
                                 fontWeight={isLast ? "black" : "bold"}
                                 textAnchor="middle"
                               >
-                                {isLast ? "Hoy" : p.data.date}
+                                {isLast && chartPeriod === 'daily' ? "Hoy" : p.data.date}
                               </text>
                             );
                           })}
