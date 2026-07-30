@@ -678,7 +678,7 @@ const TourPage = () => {
                           <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
                         </span>
                       </div>
-                      <span className="text-[9px] text-amber-honey tracking-widest font-black">
+                      <span className="text-[9px] tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
                         Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
                       </span>
                     </div>

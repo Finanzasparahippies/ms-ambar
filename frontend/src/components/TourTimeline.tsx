@@ -99,9 +99,9 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
       {/* Timeline Track */}
       <div className="relative group z-30">
         {/* Luminous Track Line */}
-        <div className="absolute top-[15.5rem] left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-500/30 dark:via-amber-400/20 to-transparent z-0 pointer-events-none" />
+        <div className="absolute top-[4.5rem] left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-500/30 dark:via-amber-400/20 to-transparent z-0 pointer-events-none" />
 
-        <div className="flex gap-8 overflow-x-auto pb-12 pt-44 px-4 no-scrollbar scroll-smooth relative z-30">
+        <div className="flex gap-8 overflow-x-auto pb-8 pt-4 px-4 no-scrollbar scroll-smooth relative z-30">
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedYear}
@@ -137,21 +137,30 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                       onMouseEnter={() => setHoveredEventId(event.id)}
                       onMouseLeave={() => setHoveredEventId(null)}
                     >
-                      {/* Floating Cover Image Balloon Tooltip */}
+                      {/* Floating Cover Image Balloon Tooltip (Downward Pop) */}
                       <AnimatePresence>
                         {isHovered && (
                           <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                            initial={{ opacity: 0, y: -8, scale: 0.94 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 8, scale: 0.9 }}
+                            exit={{ opacity: 0, y: -6, scale: 0.94 }}
                             transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="absolute -top-[12.8rem] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-72 p-3 bg-slate-950/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-amber-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_25px_rgba(245,158,11,0.25)] flex flex-col gap-2.5 text-left"
+                            className="absolute top-[5.2rem] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-72 p-3 bg-slate-950/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-amber-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_25px_rgba(245,158,11,0.25)] flex flex-col gap-2.5 text-left"
                             style={{
                               backgroundColor: secTheme.card_bg ? `${secTheme.card_bg}f2` : undefined,
                               borderColor: secTheme.border_color || undefined
                             }}
                           >
-                            <div className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-900 border border-amber-500/20 shadow-inner group/img">
+                            {/* Balloon Tail Arrow Pointing UP to Date Bubble */}
+                            <div 
+                              className="w-3.5 h-3.5 bg-slate-950 border-t border-l border-amber-500/40 rotate-45 absolute -top-1.5 left-1/2 -translate-x-1/2 z-10" 
+                              style={{ 
+                                backgroundColor: secTheme.card_bg || undefined, 
+                                borderColor: secTheme.border_color || undefined 
+                              }} 
+                            />
+
+                            <div className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-900 border border-amber-500/20 shadow-inner group/img z-20">
                               {coverImg ? (
                                 <img
                                   src={coverImg}
@@ -170,7 +179,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                               </div>
                             </div>
 
-                            <div className="px-1 space-y-1">
+                            <div className="px-1 space-y-1 z-20">
                               <h5 className="text-xs font-black text-white line-clamp-1 uppercase tracking-tight" style={{ color: secTheme.heading_color || undefined }}>
                                 {displayName}
                               </h5>
@@ -183,9 +192,6 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                                 <span className="text-white/60">Clic para reservar</span>
                               </div>
                             </div>
-
-                            {/* Balloon Tail Arrow Pointing DOWN */}
-                            <div className="w-3.5 h-3.5 bg-slate-950 border-b border-r border-amber-500/40 rotate-45 absolute -bottom-1.5 left-1/2 -translate-x-1/2" style={{ backgroundColor: secTheme.card_bg || undefined, borderColor: secTheme.border_color || undefined }} />
                           </motion.div>
                         )}
                       </AnimatePresence>

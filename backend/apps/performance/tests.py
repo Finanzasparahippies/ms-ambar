@@ -63,6 +63,18 @@ class PerformanceAppTests(APITestCase):
         self.assertEqual(metric.value, 2500.5)
         self.assertEqual(metric.path, '/tour/')
 
+    def test_report_vitals_batch_array(self):
+        """Verify that the frontend can submit batch arrays of Web Vitals metrics without network spikes."""
+        url = '/api/performance/vitals/'
+        data = [
+            {'name': 'LCP', 'value': 1200.0, 'path': '/comprar-boletos/'},
+            {'name': 'CLS', 'value': 0.02, 'path': '/comprar-boletos/'},
+            {'name': 'FID', 'value': 4.5, 'path': '/comprar-boletos/'}
+        ]
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(PerformanceMetric.objects.count(), 3)
+
     def test_report_vitals_invalid(self):
         """Verify invalid metrics are rejected with 400 Bad Request."""
         url = '/api/performance/vitals/'

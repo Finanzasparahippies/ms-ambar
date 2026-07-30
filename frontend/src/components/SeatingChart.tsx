@@ -274,8 +274,12 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       }
       ctx.shadowBlur = 0;
       if (el.label) {
+        const themeObj = typeof theme === 'object' ? (theme as any) : null;
+        const headingColor = themeObj?.headingColor || themeObj?.primaryColor || (theme === 'dark' ? '#E5A93B' : '#000');
+        const textColor = themeObj?.textColor || (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)');
+
         ctx.font = '800 12px Outfit';
-        ctx.fillStyle = isSelected ? '#000' : (theme === 'dark' ? 'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)');
+        ctx.fillStyle = isSelected ? '#000' : headingColor;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(el.label.toUpperCase(), 0, (el.isGA && el.capacity) ? -8 : 0);
 
@@ -283,7 +287,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
           const sold = occupancy[el.id] || 0;
           const ratio = sold / el.capacity;
           ctx.font = '800 9px Outfit';
-          ctx.fillStyle = isSelected ? '#000' : (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)');
+          ctx.fillStyle = isSelected ? '#000' : textColor;
           ctx.fillText(`${sold} / ${el.capacity}`, 0, 8);
 
           // Progress Bar

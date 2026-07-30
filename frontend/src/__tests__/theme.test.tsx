@@ -92,4 +92,42 @@ describe('EventThemeContext Unit Tests', () => {
     expect(document.documentElement.getAttribute('data-theme-shape')).toBe('cactus');
     expect(document.documentElement.getAttribute('data-theme-card-style')).toBe('rounded-2xl');
   });
+
+  test('debe proporcionar estilos de sección específicos (heading_color, card_bg, border_color) a componentes consumidores', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        primary_color: '#E5A93B',
+        section_themes: {
+          timeline_section: {
+            heading_color: '#F59E0B',
+            card_bg: '#0f172a',
+            border_color: 'rgba(245,158,11,0.4)',
+          },
+        },
+      },
+    });
+
+    const SectionTestComponent = () => {
+      const { getSectionTheme, loading } = useEventTheme();
+      if (loading) return null;
+      const sec = getSectionTheme('timeline_section');
+      return (
+        <div>
+          <span data-testid="sec-heading">{sec.heading_color}</span>
+          <span data-testid="sec-bg">{sec.card_bg}</span>
+        </div>
+      );
+    };
+
+    render(
+      <EventThemeContextProvider>
+        <SectionTestComponent />
+      </EventThemeContextProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sec-heading')).toHaveTextContent('#F59E0B');
+      expect(screen.getByTestId('sec-bg')).toHaveTextContent('#0f172a');
+    });
+  });
 });
