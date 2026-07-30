@@ -279,7 +279,21 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
     });
     resizeObserver.observe(canvas);
 
+    let isCanvasVisible = true;
+    const observer = new IntersectionObserver(([entry]) => {
+      isCanvasVisible = entry.isIntersecting;
+      if (isCanvasVisible && !animationFrameId) {
+        animationFrameId = requestAnimationFrame(animate);
+      }
+    }, { threshold: 0.01 });
+    observer.observe(canvas);
+
     const animate = () => {
+      if (!isCanvasVisible || typeof document !== 'undefined' && document.hidden) {
+        animationFrameId = 0;
+        return;
+      }
+
       ctx.fillStyle = 'rgba(6, 7, 11, 0.2)';
       ctx.fillRect(0, 0, width, height);
 
@@ -319,7 +333,8 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
     animate();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      observer.disconnect();
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       resizeObserver.disconnect();
     };
   }, []);

@@ -165,6 +165,8 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                                 <img
                                   src={coverImg}
                                   alt={displayName}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover object-center transition-transform duration-500 group-hover/img:scale-105"
                                 />
                               ) : (

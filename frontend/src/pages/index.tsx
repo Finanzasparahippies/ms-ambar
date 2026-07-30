@@ -438,20 +438,48 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
     };
     window.addEventListener('resize', handleResize);
 
+    let isCanvasVisible = true;
+    const observer = new IntersectionObserver(([entry]) => {
+      isCanvasVisible = entry.isIntersecting;
+      if (isCanvasVisible && !animationFrameId) {
+        animationFrameId = requestAnimationFrame(draw);
+      }
+    }, { threshold: 0.01 });
+
+    observer.observe(canvas);
+
+    const parseRgbNums = (hex: string): [number, number, number] => {
+      if (!hex) return [229, 169, 59];
+      let clean = hex.replace('#', '');
+      if (clean.length === 3) clean = clean.split('').map(c => c + c).join('');
+      if (clean.length !== 6) return [229, 169, 59];
+      const num = parseInt(clean, 16);
+      return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+    };
+
     const draw = () => {
+      if (!isCanvasVisible || typeof document !== 'undefined' && document.hidden) {
+        animationFrameId = 0;
+        return;
+      }
+
       ctx.clearRect(0, 0, width, height);
 
       const targetMode = morphTargetRef.current;
       const targetShape = targetMode && targetMode !== 'none' ? shapes[targetMode] : null;
 
-      // Draw lines & particles
+      const [pR, pG, pB] = parseRgbNums(theme.primaryColor || '#E5A93B');
+      const [sR, sG, sB] = parseRgbNums(theme.secondaryColor || '#22A6B7');
+
+      const fillPrimary = `rgba(${pR}, ${pG}, ${pB}, ${targetShape ? 0.85 : 0.6})`;
+      const fillSecondary = `rgba(${sR}, ${sG}, ${sB}, ${targetShape ? 0.85 : 0.5})`;
+
+      // Draw particles
       for (let i = 0; i < particles.length; i++) {
         const p1 = particles[i];
 
         if (targetShape && targetShape[i]) {
           const target = targetShape[i];
-          // Easing transition towards the target coordinates
-          // If it's a beehive (hexagon) or bee, add a slight jitter for organic buzzing
           const jitter = (targetMode === 'hexagon' || targetMode === 'bee') ? (Math.random() - 0.5) * 1.8 : 0;
           p1.x += (target.x + jitter - p1.x) * 0.08;
           p1.y += (target.y + jitter - p1.y) * 0.08;
@@ -473,41 +501,29 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
           }
         }
 
-        const hexToRgb = (hex: string, alpha: number) => {
-          if (!hex) return `rgba(229, 169, 59, ${alpha})`;
-          let cleanHex = hex.replace('#', '');
-          if (cleanHex.length === 3) cleanHex = cleanHex.split('').map(c => c + c).join('');
-          if (cleanHex.length !== 6) return `rgba(229, 169, 59, ${alpha})`;
-          const num = parseInt(cleanHex, 16);
-          const r = (num >> 16) & 255;
-          const g = (num >> 8) & 255;
-          const b = num & 255;
-          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-        };
-
-        const fillPrimary = hexToRgb(theme.primaryColor || '#E5A93B', targetShape ? 0.85 : 0.6);
-        const fillSecondary = hexToRgb(theme.secondaryColor || '#22A6B7', targetShape ? 0.85 : 0.5);
-
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, p1.size, 0, Math.PI * 2);
         ctx.fillStyle = i % 2 === 0 ? fillPrimary : fillSecondary;
         ctx.fill();
 
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const dx = p1.x - p2.x;
-          const dy = p1.y - p2.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
+        // Omit heavy N^2 line calculations on mobile touch devices
+        if (!isMobile) {
+          for (let j = i + 1; j < particles.length; j++) {
+            const p2 = particles[j];
+            const dx = p1.x - p2.x;
+            const dy = p1.y - p2.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
 
-          if (dist < 120) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            const baseAlpha = targetShape ? 0.35 : 0.18;
-            const alpha = (1 - dist / 120) * baseAlpha;
-            ctx.strokeStyle = i % 2 === 0 ? hexToRgb(theme.primaryColor || '#E5A93B', alpha) : hexToRgb(theme.secondaryColor || '#22A6B7', alpha);
-            ctx.lineWidth = targetShape ? 1.1 : 0.7;
-            ctx.stroke();
+            if (dist < 120) {
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              const baseAlpha = targetShape ? 0.35 : 0.18;
+              const alpha = (1 - dist / 120) * baseAlpha;
+              ctx.strokeStyle = i % 2 === 0 ? `rgba(${pR}, ${pG}, ${pB}, ${alpha})` : `rgba(${sR}, ${sG}, ${sB}, ${alpha})`;
+              ctx.lineWidth = targetShape ? 1.1 : 0.7;
+              ctx.stroke();
+            }
           }
         }
       }
@@ -518,7 +534,8 @@ const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => 
     draw();
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      observer.disconnect();
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
       if (parent) {
         parent.removeEventListener('mousemove', handleMouseMove);
@@ -1189,6 +1206,8 @@ const Home = () => {
                   <img
                     src="/Images/Inicio_Biografia.jpg"
                     alt="Ms. Ámbar"
+                    loading="lazy"
+                    decoding="async"
                     className="object-cover w-full h-full grayscale group-hover:grayscale-0 scale-100 group-hover:scale-105 transition-all duration-700 ease-out"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#06070b]/60 via-transparent to-transparent opacity-60" />

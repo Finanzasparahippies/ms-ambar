@@ -34,7 +34,7 @@ export const reportWebVitalsToBackend = (metric: any) => {
   });
 
   if (vitalsTimer) clearTimeout(vitalsTimer);
-  vitalsTimer = setTimeout(flushVitals, 1500);
+  vitalsTimer = setTimeout(flushVitals, 10000);
 };
 
 if (typeof window !== 'undefined') {

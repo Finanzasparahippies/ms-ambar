@@ -1,6 +1,10 @@
+# frontend/.gitignore
+
 .env
 .env.*
 !.env.staging.example
 node_modules/
 __pycache__/
 frontend/tsconfig.tsbuildinfo
+*.tsbuildinfo
+tsconfig.tsbuildinfo

@@ -44,8 +44,8 @@ const Layout = ({ children }: LayoutProps) => {
 
       {/* Decorative Nature Elements (Static Background) */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-honey/10 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-nature-sky/5 blur-[100px] rounded-full" />
+        <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-amber-honey/10 blur-2xl md:blur-[120px] rounded-full will-change-transform opacity-70 md:opacity-100" />
+        <div className="absolute bottom-[-5%] left-[-5%] w-[40%] h-[40%] bg-nature-sky/5 blur-xl md:blur-[100px] rounded-full will-change-transform opacity-70 md:opacity-100" />
       </div>
 
       <main className="relative z-10 pt-32">
