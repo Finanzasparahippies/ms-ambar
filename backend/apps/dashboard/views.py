@@ -64,34 +64,58 @@ class AnalyticsOverview(APIView):
             end_date = timezone.now()
             start_date = end_date - timedelta(days=29)
             
+            def _get_ticket_price(t):
+                base = 0.0
+                if t.seat:
+                    base = float(t.seat.base_price)
+                    multiplier = float(t.event.price_multiplier) if (t.event and t.event.price_multiplier) else 1.0
+                    raw_price = base * multiplier
+                elif t.ga_zone:
+                    raw_price = float(t.ga_zone.base_price)
+                elif t.event:
+                    if t.event.allow_seatless_tickets and t.event.seatless_ticket_price is not None:
+                        raw_price = float(t.event.seatless_ticket_price)
+                    elif t.event.numbered_ticket_price is not None and float(t.event.numbered_ticket_price) > 0:
+                        raw_price = float(t.event.numbered_ticket_price) * float(t.event.price_multiplier or 1.0)
+                    else:
+                        raw_price = float(t.event.base_price or 0.0)
+                else:
+                    raw_price = 0.0
+
+                # Dynamic pricing calculation
+                if t.event and getattr(t.event, 'enable_dynamic_pricing', False):
+                    price = t.event.get_dynamic_price(raw_price, purchase_date=t.created_at)
+                else:
+                    price = round(raw_price, 2)
+
+                # Meet & Greet Upgrade
+                if t.has_mg and t.event:
+                    price += float(t.event.mg_price or 0.0)
+
+                # Apply Coupon Discount if present
+                if t.used_coupon:
+                    dp = float(t.used_coupon.discount_percent or 0.0)
+                    da = float(t.used_coupon.discount_amount or 0.0)
+                    if dp > 0:
+                        price = price * (1.0 - (dp / 100.0))
+                    elif da > 0:
+                        price = max(0.0, price - da)
+
+                return round(price, 2)
+
             # 2. Financial Metrics - Tickets
             paid_tickets = Ticket.objects.filter(status__in=['paid', 'used'])
             total_tickets_sold = paid_tickets.count()
             
-            ticket_sales = 0
+            ticket_sales = 0.0
             mg_upgrades_sold = 0
-            mg_revenue = 0
+            mg_revenue = 0.0
             
             for t in paid_tickets:
-                # Get base price of the seat or GA zone
-                base = 0
-                if t.seat:
-                    base = t.seat.base_price
-                elif t.ga_zone:
-                    base = t.ga_zone.base_price
-                
-                # Apply event multiplier
-                multiplier = float(t.event.price_multiplier) if t.event else 1.0
-                t_price = float(base) * multiplier
-                
-                # Add Meet & Greet if upgraded
-                if t.has_mg:
+                if t.has_mg and t.event:
                     mg_upgrades_sold += 1
-                    mg_price = float(t.event.mg_price) if t.event else 0.0
-                    t_price += mg_price
-                    mg_revenue += mg_price
-                    
-                ticket_sales += t_price
+                    mg_revenue += float(t.event.mg_price or 0.0)
+                ticket_sales += _get_ticket_price(t)
 
             # 3. Financial Metrics - Shop / Merch
             paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
@@ -147,14 +171,7 @@ class AnalyticsOverview(APIView):
                     status__in=['paid', 'used'],
                     created_at__date=current_date.date()
                 )
-                t_daily_sales = 0
-                for t in date_tickets:
-                    base = t.seat.base_price if t.seat else (t.ga_zone.base_price if t.ga_zone else 0)
-                    multiplier = float(t.event.price_multiplier) if t.event else 1.0
-                    t_price = float(base) * multiplier
-                    if t.has_mg:
-                        t_price += float(t.event.mg_price) if t.event else 0.0
-                    t_daily_sales += t_price
+                t_daily_sales = sum(_get_ticket_price(t) for t in date_tickets)
                     
                 # Shop sales on this date
                 s_daily_sales = Order.objects.filter(

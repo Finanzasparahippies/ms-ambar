@@ -2855,9 +2855,34 @@ export default function AdminDashboard() {
                           {areaPath && <path d={areaPath} fill="url(#salesGradient)" />}
                           {linePath && <path d={linePath} fill="none" stroke="#E5A93B" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" />}
 
+                          {/* Invisible Full-Height Column Slices for High-Precision Hover Detection */}
+                          {points.map((p: any, idx: number) => {
+                            const step = points.length > 1 ? innerWidth / (points.length - 1) : innerWidth;
+                            const rectX = idx === 0 ? paddingLeft : p.x - step / 2;
+                            const rectW = (idx === 0 || idx === points.length - 1) ? step / 2 : step;
+                            return (
+                              <rect
+                                key={`hit-zone-${idx}`}
+                                x={rectX}
+                                y={paddingTop}
+                                width={rectW}
+                                height={innerHeight}
+                                fill="transparent"
+                                className="cursor-crosshair"
+                                onMouseEnter={() => {
+                                  setHoveredPoint({
+                                    ...p.data,
+                                    x: p.x,
+                                    y: p.y
+                                  });
+                                }}
+                              />
+                            );
+                          })}
+
                           {/* Premium Proximity Guide Line and Glowing Dot */}
                           {activePoint && (
-                            <g>
+                            <g className="pointer-events-none">
                               {/* Vertical guide line */}
                               <line
                                 x1={activePoint.x}
@@ -2865,7 +2890,7 @@ export default function AdminDashboard() {
                                 x2={activePoint.x}
                                 y2={paddingTop + innerHeight}
                                 stroke="#E5A93B"
-                                strokeOpacity="0.3"
+                                strokeOpacity="0.4"
                                 strokeDasharray="4 4"
                                 strokeWidth="1.5"
                               />
@@ -2887,18 +2912,26 @@ export default function AdminDashboard() {
                               transition={{ duration: 0.12, ease: 'easeOut' }}
                               style={{
                                 position: 'absolute',
-                                left: `${(activePoint.x / chartWidth) * 100}%`,
-                                top: `${(activePoint.y / chartHeight) * 100 - 15}%`,
+                                left: `${Math.min(90, Math.max(10, (activePoint.x / chartWidth) * 100))}%`,
+                                top: `${Math.max(8, (activePoint.y / chartHeight) * 100 - 15)}%`,
                                 transform: 'translate(-50%, -100%)',
                               }}
-                              className="pointer-events-none z-[100] bg-[#0B0F0D] border border-amber-honey/30 px-3 py-2 rounded-xl flex flex-col gap-0.5 shadow-xl shadow-black/30 min-w-[100px] text-center backdrop-blur-md"
+                              className="pointer-events-none z-[100] bg-[#0B0F0D]/95 border border-amber-honey/40 px-3.5 py-2.5 rounded-2xl flex flex-col gap-1 shadow-2xl shadow-black/60 min-w-[140px] text-center backdrop-blur-md"
                             >
-                              <span className="text-[10px] font-black text-amber-honey font-mono tracking-tight">
-                                ${activePoint.total.toLocaleString()}
-                              </span>
-                              <span className="text-[8px] text-[#F4F6F0]/50 uppercase font-black tracking-wider">
-                                {activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy' : activePoint.date}
-                              </span>
+                              <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/10">
+                                <span className="text-[9px] text-[#F4F6F0]/60 font-black uppercase tracking-wider">
+                                  {activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy' : activePoint.date}
+                                </span>
+                                <span className="text-[10px] font-black text-amber-honey font-mono">
+                                  ${activePoint.total.toLocaleString()} MXN
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-[8px] font-bold text-left pt-0.5">
+                                <span className="text-[#F4F6F0]/70 flex items-center gap-1">🎫 Taquilla:</span>
+                                <span className="text-right text-emerald-400 font-mono">${(activePoint.tickets || 0).toLocaleString()}</span>
+                                <span className="text-[#F4F6F0]/70 flex items-center gap-1">🛍️ Tienda:</span>
+                                <span className="text-right text-cyan-400 font-mono">${(activePoint.shop || 0).toLocaleString()}</span>
+                              </div>
                             </motion.div>
                           )}
                         </AnimatePresence>
