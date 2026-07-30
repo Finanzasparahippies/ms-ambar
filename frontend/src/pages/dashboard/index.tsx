@@ -4920,6 +4920,39 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
+                    {/* Section: Zoom en Canvas de Asientos */}
+                    <div className="border-t border-white/10 pt-4 space-y-2">
+                      <div className="p-4 rounded-2xl border border-amber-honey/30 bg-black/40 flex items-center justify-between gap-4">
+                        <div>
+                          <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey flex items-center gap-2">
+                            <span>🔍</span> Zoom Interactivo en Canvas de Asientos
+                          </h4>
+                          <p className="text-[10px] text-[#F4F6F0]/60 mt-0.5 font-medium">
+                            {allowCanvasZoom
+                              ? 'ACTIVADO: Los compradores pueden usar zoom interactivo (+ / - / rueda) en el mapa de boletos.'
+                              : 'DESACTIVADO (Bloqueado): El mapa se mantiene en zoom fijo ajustado a pantalla sin desajustarse.'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAllowCanvasZoom(!allowCanvasZoom)}
+                          className={cn(
+                            "w-14 h-7 rounded-full p-1 transition-all duration-300 relative flex items-center shrink-0 border cursor-pointer",
+                            allowCanvasZoom
+                              ? "bg-amber-honey border-amber-honey shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                              : "bg-white/10 border-white/20"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "w-5 h-5 rounded-full bg-black transition-transform duration-300 shadow-md",
+                              allowCanvasZoom ? "translate-x-7" : "translate-x-0"
+                            )}
+                          />
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Section: Biografía Personalizada */}
                     <div className="border-t border-white/10 pt-4 space-y-4">
                       <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey">📖 Personalización de la Biografía (Landing Page)</h4>
@@ -5029,6 +5062,7 @@ export default function AdminDashboard() {
                             const formData = new FormData();
                             formData.append('tickets_page_subtitle', siteSettingsSubtitle);
                             formData.append('homepage_cta_text', siteSettingsCta);
+                            formData.append('allow_canvas_zoom', String(allowCanvasZoom));
                             formData.append('bio_badge', siteBioBadge);
                             formData.append('bio_title', siteBioTitle);
                             formData.append('bio_location', siteBioLocation);
