@@ -521,7 +521,7 @@ const TourPage = () => {
       </Head>
 
       {/* ─── Header Section ─── */}
-      <ThemedSection sectionKey="tickets_page" className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative overflow-hidden">
+      <ThemedSection sectionKey="tickets_page" className="pt-8 pb-10 max-w-[1600px] mx-auto px-6 md:px-10 text-center relative z-10 overflow-hidden">
         <div className="absolute top-[-10%] left-[-15%] w-[45%] h-[45%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
         <div className="max-w-4xl mx-auto space-y-4">
           <motion.div
@@ -552,7 +552,7 @@ const TourPage = () => {
       </ThemedSection>
 
       {/* ─── Main Reservation Section ─── */}
-      <ThemedSection sectionKey="seating_map" className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10">
+      <ThemedSection sectionKey="seating_map" className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 relative z-30">
         <TourTimeline
           events={events}
           onEventSelect={(event) => {

@@ -90,11 +90,11 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
       </div>
 
       {/* Timeline Track */}
-      <div className="relative group">
+      <div className="relative group z-30">
         {/* Luminous Track Line */}
-        <div className="absolute top-[4.5rem] left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-500/30 dark:via-amber-400/20 to-transparent z-0 pointer-events-none" />
+        <div className="absolute top-[16.5rem] left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-amber-500/30 dark:via-amber-400/20 to-transparent z-0 pointer-events-none" />
 
-        <div className="flex gap-8 overflow-x-auto pb-14 pt-6 px-4 no-scrollbar scroll-smooth">
+        <div className="flex gap-8 overflow-x-auto pb-14 pt-56 px-4 no-scrollbar scroll-smooth relative z-30">
           <AnimatePresence mode="wait">
             <motion.div
               key={selectedYear}
@@ -123,7 +123,10 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.08 }}
-                      className="flex-shrink-0 w-[330px] relative z-10"
+                      className={cn(
+                        "flex-shrink-0 w-[330px] relative transition-all duration-300",
+                        isHovered ? "z-50" : "z-10"
+                      )}
                       onMouseEnter={() => setHoveredEventId(event.id)}
                       onMouseLeave={() => setHoveredEventId(null)}
                     >
