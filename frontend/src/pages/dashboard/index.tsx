@@ -2209,9 +2209,45 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen text-[#F4F6F0] flex flex-col items-center justify-center gap-4">
-        <div className="w-12 h-12 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-        <p className="text-[#F4F6F0]/60 tracking-widest font-black uppercase text-xs">Cargando Bóveda Ms Ambar...</p>
+      <div data-theme="dark" className="min-h-screen bg-[#080C0A] text-[#F4F6F0] flex flex-col items-center justify-center relative overflow-hidden font-sans">
+        {/* Background Glowing Orbs */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-amber-honey/10 blur-[150px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] bg-amber-500/5 blur-[90px] rounded-full pointer-events-none animate-pulse" />
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
+          className="relative z-10 flex flex-col items-center text-center p-8 max-w-sm"
+        >
+          {/* Concentric Glowing Rings Spinner */}
+          <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-2 border-amber-honey/20 border-t-amber-honey animate-spin" style={{ animationDuration: '1.5s' }} />
+            <div className="absolute inset-2 rounded-full border-2 border-amber-honey/10 border-b-amber-gold animate-spin" style={{ animationDuration: '2.5s', animationDirection: 'reverse' }} />
+            <div className="w-12 h-12 rounded-2xl bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center text-amber-honey shadow-[0_0_25px_rgba(245,158,11,0.3)] backdrop-blur-md">
+              <span className="text-xl font-black italic">Á</span>
+            </div>
+          </div>
+
+          <motion.h2
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="text-lg font-black uppercase italic tracking-wider text-white"
+          >
+            Bóveda Ms. Ámbar
+          </motion.h2>
+
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="text-[10px] text-amber-honey font-bold uppercase tracking-[0.25em] mt-1.5 flex items-center gap-2"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-honey animate-ping" />
+            Cargando Análisis & Taquilla...
+          </motion.p>
+        </motion.div>
       </div>
     );
   }
