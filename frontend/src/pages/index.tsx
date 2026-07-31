@@ -632,7 +632,7 @@ const Home = () => {
                       }`}
                   >
                     <Ticket size={14} />
-                    {nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0 ? 'Cupos Agotados' : 'Adquirir Accesos Hadas en el Desierto'}
+                    {nextEvent.event_type === 'meet_greet' && nextEvent.mg_available === 0 ? 'Cupos Agotados' : 'Adquirir Accesos'}
                   </Link>
                 </div>
               </div>
