@@ -53,8 +53,7 @@ def get_ticket_actual_price(t):
         elif seat:
             base = float(getattr(seat, 'base_price', 0.0) or 0.0)
             multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0)
-            raw_price = base * multiplier
-            price = event.get_dynamic_price(raw_price, purchase_date=created_at) if hasattr(event, 'get_dynamic_price') else raw_price
+            price = base * multiplier
             if getattr(t, 'has_mg', False):
                 price += float(getattr(event, 'mg_price', 0.0) or 0.0)
         elif ga_zone:
