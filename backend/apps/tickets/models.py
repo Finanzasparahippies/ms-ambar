@@ -796,13 +796,20 @@ class SiteSettings(models.Model):
     section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección del sitio (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 
     def get_theme_config(self):
+        bio_image_str = None
+        if self.bio_image and getattr(self.bio_image, 'name', None):
+            try:
+                bio_image_str = self.bio_image.url
+            except (ValueError, AttributeError):
+                bio_image_str = str(self.bio_image) if self.bio_image.name else None
+
         sec_themes = self.section_themes or {}
         bio_sec = sec_themes.get('biography', {})
         bio_merged = {
             'bio_badge': bio_sec.get('bio_badge', self.bio_badge),
             'bio_title': bio_sec.get('bio_title', self.bio_title),
             'bio_content': bio_sec.get('bio_content', self.bio_content),
-            'bio_image': bio_sec.get('bio_image', self.bio_image),
+            'bio_image': bio_sec.get('bio_image', bio_image_str),
             'bio_location': bio_sec.get('bio_location', self.bio_location),
             'bio_cta_text': bio_sec.get('bio_cta_text', self.bio_cta_text),
             'bio_cta_url': bio_sec.get('bio_cta_url', self.bio_cta_url),
@@ -827,7 +834,7 @@ class SiteSettings(models.Model):
             'bio_badge': self.bio_badge,
             'bio_title': self.bio_title,
             'bio_content': self.bio_content,
-            'bio_image': self.bio_image,
+            'bio_image': bio_image_str,
             'bio_location': self.bio_location,
             'bio_cta_text': self.bio_cta_text,
             'bio_cta_url': self.bio_cta_url,
