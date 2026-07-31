@@ -112,10 +112,13 @@ class Theater(models.Model):
 
         if seats_data is not None:
             existing_seats_by_id = {s.id: s for s in Seat.objects.filter(theater=self)}
-            existing_seats_by_key = {
-                (s.section, str(s.row), s.number): s
-                for s in existing_seats_by_id.values()
-            }
+            existing_seats_by_key = {}
+            for s in existing_seats_by_id.values():
+                k = (s.section, str(s.row), s.number)
+                if k not in existing_seats_by_key:
+                    existing_seats_by_key[k] = []
+                existing_seats_by_key[k].append(s)
+
             seats_to_create = []
             seats_to_update = []
             active_ids = set()
@@ -145,8 +148,8 @@ class Theater(models.Model):
                 except (ValueError, TypeError):
                     seat = None
 
-                if not seat and key in existing_seats_by_key:
-                    seat = existing_seats_by_key[key]
+                if not seat and key in existing_seats_by_key and existing_seats_by_key[key]:
+                    seat = existing_seats_by_key[key].pop(0)
 
                 if seat:
                     active_ids.add(seat.id)

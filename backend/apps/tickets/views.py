@@ -107,6 +107,12 @@ class EventViewSet(viewsets.ModelViewSet):
                 "elements": [],
                 "message": "Este evento es un Meet & Greet y no requiere mapa de asientos."
             })
+        if isinstance(theater.layout, dict) and 'seats' in theater.layout:
+            layout_seats_count = len(theater.layout.get('seats', []))
+            db_seats_count = Seat.objects.filter(theater=theater).count()
+            if layout_seats_count > 0 and db_seats_count != layout_seats_count:
+                theater.generate_seats()
+
         seats = Seat.objects.filter(theater=theater)
         
         # Get occupied seats for this event
