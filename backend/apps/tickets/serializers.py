@@ -126,6 +126,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
     fee_config = serializers.SerializerMethodField()
     theme_config = serializers.ReadOnlyField(source='get_theme_config')
     bio_image_url = serializers.SerializerMethodField()
+    bio_image = serializers.ImageField(required=False, allow_null=True)
 
     class Meta:
         model = SiteSettings
@@ -139,11 +140,25 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
 
     def get_bio_image_url(self, obj):
         request = self.context.get('request')
-        if obj.bio_image and request:
-            return request.build_absolute_uri(obj.bio_image.url)
-        elif obj.bio_image:
+        if not obj.bio_image or not getattr(obj.bio_image, 'name', None):
+            return None
+        try:
+            if request:
+                return request.build_absolute_uri(obj.bio_image.url)
             return obj.bio_image.url
-        return None
+        except (ValueError, AttributeError):
+            return None
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.bio_image and getattr(instance.bio_image, 'name', None):
+            try:
+                ret['bio_image'] = instance.bio_image.url
+            except (ValueError, AttributeError):
+                ret['bio_image'] = None
+        else:
+            ret['bio_image'] = None
+        return ret
 
     def get_fee_config(self, obj):
         return get_fee_config()
