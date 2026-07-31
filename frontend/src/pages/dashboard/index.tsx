@@ -3231,11 +3231,11 @@ export default function AdminDashboard() {
                               </>
                             )}
 
-                            {/* Clickable Hover Hit Zones */}
+                            {/* Clickable Hover & Touch Hit Zones */}
                             {points.map((p: any, idx: number) => {
                               const step = points.length > 1 ? innerWidth / (points.length - 1) : innerWidth;
-                              const rectX = idx === 0 ? paddingLeft : p.x - step / 2;
-                              const rectW = (idx === 0 || idx === points.length - 1) ? step / 2 : step;
+                              const rectX = idx === 0 ? paddingLeft - 10 : p.x - step / 2;
+                              const rectW = idx === 0 ? step / 2 + 10 : idx === points.length - 1 ? step / 2 + 15 : step;
                               return (
                                 <rect
                                   key={`hit-zone-${idx}`}
@@ -3246,13 +3246,10 @@ export default function AdminDashboard() {
                                   fill="transparent"
                                   className="cursor-pointer"
                                   onClick={() => setDrillDownData(p.data)}
-                                  onMouseEnter={() => {
-                                    setHoveredPoint({
-                                      ...p.data,
-                                      x: p.x,
-                                      y: p.y
-                                    });
-                                  }}
+                                  onMouseEnter={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
+                                  onMouseMove={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
+                                  onTouchStart={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
+                                  onTouchMove={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
                                 />
                               );
                             })}
@@ -8566,63 +8563,206 @@ export default function AdminDashboard() {
           </div>
 
           {/* Large Viewport Chart */}
-          <div className="relative w-full h-[450px] my-6 amber-glass border border-white/10 p-6 rounded-[2.5rem] flex items-center justify-center">
-            <svg
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              className="w-full h-full overflow-visible select-none cursor-crosshair"
-              onMouseMove={handleMouseMove}
-              onMouseLeave={() => setHoveredPoint(null)}
-            >
-              <defs>
-                <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#E5A93B" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#E5A93B" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
+          <div className="relative w-full h-[380px] sm:h-[450px] my-6 amber-glass border border-white/10 p-4 sm:p-6 rounded-[2.5rem] flex items-center justify-center overflow-hidden">
+            {chartType === 'donut' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center py-4 w-full h-full">
+                <div className="relative w-48 h-48 sm:w-56 sm:h-56 mx-auto flex items-center justify-center">
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                    {(() => {
+                      let accumulatedPercent = 0;
+                      const colors = ['#E5A93B', '#F59E0B', '#10B981', '#EF4444'];
+                      return breakdownData.map((item: any, idx: number) => {
+                        const startAngle = (accumulatedPercent / 100) * 360;
+                        accumulatedPercent += item.percentage || 0;
+                        const strokeDasharray = `${item.percentage * 2.83} 283`;
+                        const strokeDashoffset = -((startAngle / 360) * 283);
 
-              {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
-                const y = paddingTop + innerHeight * (1 - ratio);
-                const val = maxVal * ratio;
-                return (
-                  <g key={idx}>
-                    <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#ffffff" strokeOpacity="0.1" strokeDasharray="4 4" />
-                    <text x={paddingLeft - 8} y={y + 4} fill="#F4F6F0" fillOpacity="0.6" fontSize="10" fontWeight="bold" textAnchor="end">${Math.round(val)}</text>
-                  </g>
-                );
-              })}
+                        return (
+                          <circle
+                            key={idx}
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            fill="transparent"
+                            stroke={colors[idx % colors.length]}
+                            strokeWidth="14"
+                            strokeDasharray={strokeDasharray}
+                            strokeDashoffset={strokeDashoffset}
+                            className="transition-all hover:opacity-80 cursor-pointer"
+                            onClick={() => setDrillDownData(item)}
+                          />
+                        );
+                      });
+                    })()}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <span className="text-[9px] text-[#F4F6F0]/50 uppercase font-black tracking-widest">Total Bruto</span>
+                    <span className="text-sm sm:text-base font-black text-amber-honey font-mono">${financials?.gross_sales?.toLocaleString()}</span>
+                  </div>
+                </div>
 
-              {points.map((p: any, idx: number) => (
-                <text
-                  key={idx}
-                  x={p.x}
-                  y={paddingTop + innerHeight + 20}
-                  fill="#F4F6F0"
-                  fillOpacity="0.6"
-                  fontSize="9"
-                  fontWeight="bold"
-                  textAnchor="middle"
+                <div className="space-y-3">
+                  {breakdownData.map((item: any, idx: number) => {
+                    const colors = ['bg-amber-400', 'bg-amber-500', 'bg-emerald-500', 'bg-red-500'];
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => setDrillDownData(item)}
+                        className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl flex items-center justify-between transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span className={`w-3 h-3 rounded-full ${colors[idx % colors.length]}`} />
+                          <span className="text-xs font-bold text-[#F4F6F0]">{item.category}</span>
+                        </div>
+                        <div className="text-right font-mono">
+                          <span className="text-xs font-black text-amber-honey">${item.amount?.toLocaleString()}</span>
+                          <span className="text-[9px] text-[#F4F6F0]/40 block">{item.percentage}%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="relative w-full h-full">
+                <svg
+                  viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                  className="w-full h-full overflow-visible select-none cursor-crosshair touch-none"
+                  onMouseLeave={() => setHoveredPoint(null)}
+                  onTouchEnd={() => setHoveredPoint(null)}
                 >
-                  {p.data.event_title || p.data.date}
-                </text>
-              ))}
+                  <defs>
+                    <linearGradient id="fullSalesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#E5A93B" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#E5A93B" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
 
-              {chartType === 'area' && areaPath && <path d={areaPath} fill="url(#fullSalesGradient)" />}
-              {linePath && <path d={linePath} fill="none" stroke="#E5A93B" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />}
+                  {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
+                    const y = paddingTop + innerHeight * (1 - ratio);
+                    const val = maxVal * ratio;
+                    return (
+                      <g key={idx}>
+                        <line x1={paddingLeft} y1={y} x2={chartWidth - paddingRight} y2={y} stroke="#ffffff" strokeOpacity="0.1" strokeDasharray="4 4" />
+                        <text x={paddingLeft - 8} y={y + 4} fill="#F4F6F0" fillOpacity="0.6" fontSize="10" fontWeight="bold" textAnchor="end">${Math.round(val)}</text>
+                      </g>
+                    );
+                  })}
 
-              {points.map((p: any, idx: number) => (
-                <circle
-                  key={idx}
-                  cx={p.x}
-                  cy={p.y}
-                  r="5"
-                  fill="#E5A93B"
-                  stroke="#080C0A"
-                  strokeWidth="2"
-                  className="cursor-pointer hover:scale-150 transition-transform"
-                  onClick={() => setDrillDownData(p.data)}
-                />
-              ))}
-            </svg>
+                  {points.filter((_: any, idx: number) => {
+                    const step = chartPeriod === 'monthly' ? 2 : chartPeriod === 'weekly' ? 2 : 5;
+                    return idx % step === 0 || idx === points.length - 1;
+                  }).map((p: any, idx: number) => (
+                    <text
+                      key={idx}
+                      x={p.x}
+                      y={paddingTop + innerHeight + 20}
+                      fill="#F4F6F0"
+                      fillOpacity="0.6"
+                      fontSize="9"
+                      fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {p.data.event_title || p.data.date}
+                    </text>
+                  ))}
+
+                  {chartType === 'bar' ? (
+                    points.map((p: any, idx: number) => {
+                      const barW = Math.max(8, (innerWidth / points.length) * 0.55);
+                      const barH = paddingTop + innerHeight - p.y;
+                      const isHovered = activePoint?.date === p.data.date;
+                      return (
+                        <g key={idx} className="cursor-pointer" onClick={() => setDrillDownData(p.data)}>
+                          <rect
+                            x={p.x - barW / 2}
+                            y={p.y}
+                            width={barW}
+                            height={barH}
+                            rx="4"
+                            fill="#E5A93B"
+                            fillOpacity={isHovered ? "1" : "0.85"}
+                            className="transition-all hover:fill-amber-gold"
+                          />
+                        </g>
+                      );
+                    })
+                  ) : (
+                    <>
+                      {chartType === 'area' && areaPath && <path d={areaPath} fill="url(#fullSalesGradient)" />}
+                      {linePath && <path d={linePath} fill="none" stroke="#E5A93B" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />}
+                    </>
+                  )}
+
+                  {/* Clickable Hover Hit Zones */}
+                  {points.map((p: any, idx: number) => {
+                    const step = points.length > 1 ? innerWidth / (points.length - 1) : innerWidth;
+                    const rectX = idx === 0 ? paddingLeft - 10 : p.x - step / 2;
+                    const rectW = idx === 0 ? step / 2 + 10 : idx === points.length - 1 ? step / 2 + 15 : step;
+                    return (
+                      <rect
+                        key={`full-hit-zone-${idx}`}
+                        x={rectX}
+                        y={paddingTop}
+                        width={rectW}
+                        height={innerHeight}
+                        fill="transparent"
+                        className="cursor-pointer"
+                        onClick={() => setDrillDownData(p.data)}
+                        onMouseEnter={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
+                        onMouseMove={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
+                        onTouchStart={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
+                        onTouchMove={() => setHoveredPoint({ ...p.data, x: p.x, y: p.y })}
+                      />
+                    );
+                  })}
+
+                  {/* Active Point Indicator */}
+                  {activePoint && chartType !== 'bar' && (
+                    <g className="pointer-events-none">
+                      <line x1={activePoint.x} y1={paddingTop} x2={activePoint.x} y2={paddingTop + innerHeight} stroke="#E5A93B" strokeOpacity="0.4" strokeDasharray="4 4" strokeWidth="1.5" />
+                      <circle cx={activePoint.x} cy={activePoint.y} r="8" fill="#E5A93B" fillOpacity="0.35" className="animate-pulse" />
+                      <circle cx={activePoint.x} cy={activePoint.y} r="4.5" fill="#E5A93B" stroke="#ffffff" strokeWidth="2" />
+                    </g>
+                  )}
+                </svg>
+
+                {/* Floating Glassmorphic Tooltip in Fullscreen Modal */}
+                <AnimatePresence>
+                  {activePoint && (
+                    <motion.div
+                      key={`full-tooltip-${activePoint.date}`}
+                      initial={{ opacity: 0, scale: 0.92, y: 5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: 5 }}
+                      transition={{ duration: 0.12, ease: 'easeOut' }}
+                      style={{
+                        position: 'absolute',
+                        left: `${Math.min(88, Math.max(12, (activePoint.x / chartWidth) * 100))}%`,
+                        top: `${Math.max(4, Math.min(75, (activePoint.y / chartHeight) * 100 - 10))}%`,
+                        transform: 'translate(-50%, -100%)',
+                      }}
+                      className="pointer-events-none z-[100] bg-[#0B0F0D]/95 border border-amber-honey/40 px-4 py-3 rounded-2xl flex flex-col gap-1 shadow-2xl shadow-black/60 min-w-[160px] text-center backdrop-blur-md"
+                    >
+                      <div className="flex items-center justify-between gap-2 pb-1 border-b border-white/10">
+                        <span className="text-[10px] text-[#F4F6F0]/60 font-black uppercase tracking-wider">
+                          {activePoint.event_title || (activePoint.date === points[points.length - 1]?.data?.date ? 'Hoy' : activePoint.date)}
+                        </span>
+                        <span className="text-xs font-black text-amber-honey font-mono">
+                          ${activePoint.total?.toLocaleString() || activePoint.ticket_revenue?.toLocaleString()} MXN
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[9px] font-bold text-left pt-1">
+                        <span className="text-[#F4F6F0]/70 flex items-center gap-1">🎫 Taquilla:</span>
+                        <span className="text-right text-emerald-400 font-mono">${(activePoint.tickets || activePoint.ticket_revenue || 0).toLocaleString()}</span>
+                        <span className="text-[#F4F6F0]/70 flex items-center gap-1">🛍️ Tienda:</span>
+                        <span className="text-right text-cyan-400 font-mono">${(activePoint.shop || 0).toLocaleString()}</span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
 
           {/* Comprehensive Data Table */}
