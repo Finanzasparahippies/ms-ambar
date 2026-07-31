@@ -765,19 +765,6 @@ class SiteSettings(models.Model):
         help_text="Texto del badge de próximo evento en la landing page cuando no hay eventos programados."
     )
 
-<<<<<<< HEAD
-    # Configuración de Biografía de la Artista
-    bio_badge = models.CharField(max_length=255, default="La Cantautora", help_text="Insignia / Distintivo del encabezado de la biografía.")
-    bio_title = models.CharField(max_length=255, default="Ms. Ambar", help_text="Título / Nombre artístico principal.")
-    bio_content = models.TextField(
-        default="Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda 'Moonset', pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.\n\nSu primer álbum formal, '14•28', fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.\n\nUn hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción 'No te voy a llorar', consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.",
-        help_text="Párrafos de la historia autobiográfica de la artista."
-    )
-    bio_image = models.CharField(max_length=500, default="/Images/Inicio_Biografia.jpg", help_text="URL o ruta de la fotografía oficial de biografía.")
-    bio_location = models.CharField(max_length=255, default="Hermosillo • México", help_text="Ubicación u origen de la artista.")
-    bio_cta_text = models.CharField(max_length=255, default="Ver Próximos Eventos", help_text="Texto del botón de acción (CTA).")
-    bio_cta_url = models.CharField(max_length=255, default="/tour", help_text="Enlace del botón de acción (CTA).")
-=======
     # Configuración de Biografía (Index)
     bio_badge = models.CharField(max_length=255, default="La Cantautora", help_text="Badge superior de la sección de biografía.")
     bio_title = models.CharField(max_length=255, default="Ms. Ambar", help_text="Título principal de la biografía.")
@@ -790,7 +777,6 @@ class SiteSettings(models.Model):
     )
     bio_cta_text = models.CharField(max_length=255, default="Ver Próximos Eventos", help_text="Texto del botón CTA de biografía.")
     bio_cta_url = models.CharField(max_length=255, default="/tour", help_text="URL o enlace del botón CTA de biografía.")
->>>>>>> d4403a82186205fa8bbcf4e650c09669e93e3883
 
     # Configuración Global de Tema Visual (Valores por defecto para todo el sitio)
     primary_color = models.CharField(max_length=50, default='#E5A93B', help_text="Color primario de acentos, botones y luces (ej. #E5A93B)")

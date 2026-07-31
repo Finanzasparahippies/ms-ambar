@@ -131,11 +131,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
         model = SiteSettings
         fields = [
             'tickets_page_subtitle', 'homepage_cta_text', 'fee_config', 'theme_config',
-<<<<<<< HEAD
-            'bio_badge', 'bio_title', 'bio_content', 'bio_image', 'bio_location', 'bio_cta_text', 'bio_cta_url',
-=======
             'bio_badge', 'bio_title', 'bio_image', 'bio_image_url', 'bio_location', 'bio_content', 'bio_cta_text', 'bio_cta_url',
->>>>>>> d4403a82186205fa8bbcf4e650c09669e93e3883
             'theme_mode', 'primary_color', 'secondary_color', 'background_start', 'background_end',
             'accent_color', 'card_background', 'text_color', 'particle_shape',
             'card_style', 'background_pattern', 'font_preset', 'allow_canvas_zoom', 'custom_css', 'section_themes'

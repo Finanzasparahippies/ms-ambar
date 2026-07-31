@@ -86,23 +86,9 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             'fields': ('homepage_cta_text',),
             'description': 'Texto del badge de CTA cuando no hay eventos próximos programados.'
         }),
-<<<<<<< HEAD
-        ('Biografía de la Artista (Landing Page / Sección Biografía)', {
-            'fields': (
-                'bio_badge',
-                'bio_title',
-                'bio_location',
-                'bio_image',
-                'bio_cta_text',
-                'bio_cta_url',
-                'bio_content',
-            ),
-            'description': 'Configura el título, historia autobiográfica, fotografía oficial, ubicación y botón de acción de la biografía de la artista.'
-=======
         ('Personalización de la Biografía (Index)', {
             'fields': ('bio_badge', 'bio_title', 'bio_image', 'bio_location', 'bio_content', 'bio_cta_text', 'bio_cta_url'),
             'description': 'Personaliza el texto, badge, imagen oficial y enlace CTA de la sección Biografía en la landing page.'
->>>>>>> d4403a82186205fa8bbcf4e650c09669e93e3883
         }),
         ('Personalización Global del Tema (Frontend Todo el Sitio)', {
             'fields': (
