@@ -93,28 +93,31 @@ class AnalyticsOverview(APIView):
             def _get_ticket_price(t):
                 try:
                     event = getattr(t, 'event', None)
+                    if not event:
+                        return 0.0
+
                     seat = getattr(t, 'seat', None)
                     ga_zone = getattr(t, 'ga_zone', None)
+                    event_type = getattr(event, 'event_type', 'concert')
 
-                    if seat:
+                    if event_type == 'meet_greet':
+                        # Meet & Greet event: Ticket price is the mg_price of the event
+                        price = float(getattr(event, 'mg_price', 0.0) or 0.0)
+                    elif seat:
                         base = float(getattr(seat, 'base_price', 0.0) or 0.0)
-                        multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0) if event else 1.0
+                        multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0)
                         price = base * multiplier
+                        if getattr(t, 'has_mg', False):
+                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
                     elif ga_zone:
                         price = float(getattr(ga_zone, 'base_price', 0.0) or 0.0)
-                    elif event:
-                        if getattr(event, 'allow_seatless_tickets', True) and getattr(event, 'seatless_ticket_price', None) is not None:
-                            price = float(getattr(event, 'effective_seatless_ticket_price', 0.0) or 0.0)
-                        elif getattr(event, 'numbered_ticket_price', None) is not None and float(getattr(event, 'numbered_ticket_price', 0.0) or 0.0) > 0:
-                            price = float(getattr(event, 'numbered_seat_base_price', 0.0) or 0.0)
-                        else:
-                            price = float(getattr(event, 'base_price', 0.0) or 0.0)
+                        if getattr(t, 'has_mg', False):
+                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
                     else:
-                        price = 0.0
-
-                    # Meet & Greet Upgrade
-                    if getattr(t, 'has_mg', False) and event:
-                        price += float(getattr(event, 'mg_price', 0.0) or 0.0)
+                        # General / Seatless ticket for a concert
+                        price = float(getattr(event, 'effective_seatless_ticket_price', 0.0) or getattr(event, 'base_price', 0.0) or 0.0)
+                        if getattr(t, 'has_mg', False):
+                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
 
                     # Apply Coupon Discount if present
                     used_coupon = getattr(t, 'used_coupon', None)
@@ -149,7 +152,7 @@ class AnalyticsOverview(APIView):
             for t in paid_tickets:
                 try:
                     event = getattr(t, 'event', None)
-                    if getattr(t, 'has_mg', False) and event:
+                    if event and (getattr(t, 'has_mg', False) or getattr(event, 'event_type', '') == 'meet_greet'):
                         mg_upgrades_sold += 1
                         mg_revenue += float(getattr(event, 'mg_price', 0.0) or 0.0)
                     ticket_sales += _get_ticket_price(t)
