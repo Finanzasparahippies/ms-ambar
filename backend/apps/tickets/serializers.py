@@ -3,6 +3,16 @@ from .models import Event, Theater, Seat, Ticket, GADeclaration, SiteSettings, C
 from .fees import calculate_total_with_fee, get_fee_config
 
 
+class SafeImageField(serializers.ImageField):
+    def to_representation(self, value):
+        if not value or not getattr(value, 'name', None):
+            return None
+        try:
+            return super().to_representation(value)
+        except (ValueError, AttributeError):
+            return None
+
+
 class SeatSerializer(serializers.ModelSerializer):
     class Meta:
         model = Seat
@@ -35,6 +45,8 @@ class CouponSerializer(serializers.ModelSerializer):
 class EventSerializer(serializers.ModelSerializer):
     theater_name = serializers.SerializerMethodField()
     theater_location = serializers.SerializerMethodField()
+    image = SafeImageField(required=False, allow_null=True)
+    flyer = SafeImageField(required=False, allow_null=True)
     image_url = serializers.SerializerMethodField()
     flyer_url = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
@@ -73,14 +85,20 @@ class EventSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         request = self.context.get('request')
-        if obj.image and request:
-            return request.build_absolute_uri(obj.image.url)
+        if obj.image and getattr(obj.image, 'name', None) and request:
+            try:
+                return request.build_absolute_uri(obj.image.url)
+            except (ValueError, AttributeError):
+                return None
         return None
 
     def get_flyer_url(self, obj):
         request = self.context.get('request')
-        if obj.flyer and request:
-            return request.build_absolute_uri(obj.flyer.url)
+        if obj.flyer and getattr(obj.flyer, 'name', None) and request:
+            try:
+                return request.build_absolute_uri(obj.flyer.url)
+            except (ValueError, AttributeError):
+                return None
         return None
 
     def get_base_price(self, obj):
@@ -126,7 +144,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
     fee_config = serializers.SerializerMethodField()
     theme_config = serializers.ReadOnlyField(source='get_theme_config')
     bio_image_url = serializers.SerializerMethodField()
-    bio_image = serializers.ImageField(required=False, allow_null=True)
+    bio_image = SafeImageField(required=False, allow_null=True)
 
     class Meta:
         model = SiteSettings
@@ -140,25 +158,14 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
 
     def get_bio_image_url(self, obj):
         request = self.context.get('request')
-        if not obj.bio_image or not getattr(obj.bio_image, 'name', None):
-            return None
-        try:
-            if request:
-                return request.build_absolute_uri(obj.bio_image.url)
-            return obj.bio_image.url
-        except (ValueError, AttributeError):
-            return None
-
-    def to_representation(self, instance):
-        ret = super().to_representation(instance)
-        if instance.bio_image and getattr(instance.bio_image, 'name', None):
+        if obj.bio_image and getattr(obj.bio_image, 'name', None):
             try:
-                ret['bio_image'] = instance.bio_image.url
+                if request:
+                    return request.build_absolute_uri(obj.bio_image.url)
+                return obj.bio_image.url
             except (ValueError, AttributeError):
-                ret['bio_image'] = None
-        else:
-            ret['bio_image'] = None
-        return ret
+                return None
+        return None
 
     def get_fee_config(self, obj):
         return get_fee_config()
