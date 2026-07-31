@@ -1,8 +1,7 @@
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import * as React from 'react';
 import Navbar from './Navbar';
-import { useRouter } from 'next/router';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
 import ThemedSection from './ThemedSection';
 
 interface LayoutProps {
@@ -68,7 +67,7 @@ const Layout = ({ children }: LayoutProps) => {
             <ul className="space-y-4 text-xs font-bold opacity-60">
               <li><a href="/" className="hover:text-amber-honey">Inicio</a></li>
               <li><a href="/comprar-boletos" className="hover:text-amber-honey">Accesos</a></li>
-              <li><a href="/tienda" className="hover:text-amber-honey">Tienda</a></li>
+              {/* <li><a href="/tienda" className="hover:text-amber-honey">Tienda</a></li> */}
               <li><a href="/ambar-te-escribe" className="hover:text-amber-honey">Ambar Te escribe</a></li>
               <li><a href="/contacto" className="hover:text-amber-honey">Contacto</a></li>
             </ul>
