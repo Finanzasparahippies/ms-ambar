@@ -28,6 +28,70 @@ User = get_user_model()
 logger = logging.getLogger("apps.dashboard")
 
 
+def get_ticket_actual_price(t):
+    """
+    Calcula el precio real pagado por un boleto de forma precisa e inmutable.
+    1. Si 'amount_paid' está guardado en el boleto, usa ese monto exacto.
+    2. De lo contrario, calcula el precio dinámico utilizando t.created_at como fecha de compra,
+       garantizando que la variación dinámica futura no infle los ingresos del pasado.
+    """
+    try:
+        if getattr(t, 'amount_paid', None) is not None and float(t.amount_paid) > 0:
+            return round(float(t.amount_paid), 2)
+
+        event = getattr(t, 'event', None)
+        if not event:
+            return 0.0
+
+        seat = getattr(t, 'seat', None)
+        ga_zone = getattr(t, 'ga_zone', None)
+        event_type = getattr(event, 'event_type', 'concert')
+        created_at = getattr(t, 'created_at', None)
+
+        if event_type == 'meet_greet':
+            price = float(getattr(event, 'mg_price', 0.0) or 0.0)
+        elif seat:
+            base = float(getattr(seat, 'base_price', 0.0) or 0.0)
+            multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0)
+            raw_price = base * multiplier
+            price = event.get_dynamic_price(raw_price, purchase_date=created_at) if hasattr(event, 'get_dynamic_price') else raw_price
+            if getattr(t, 'has_mg', False):
+                price += float(getattr(event, 'mg_price', 0.0) or 0.0)
+        elif ga_zone:
+            raw_price = float(getattr(ga_zone, 'base_price', 0.0) or 0.0)
+            price = event.get_dynamic_price(raw_price, purchase_date=created_at) if hasattr(event, 'get_dynamic_price') else raw_price
+            if getattr(t, 'has_mg', False):
+                price += float(getattr(event, 'mg_price', 0.0) or 0.0)
+        else:
+            seatless_base = float(getattr(event, 'seatless_ticket_price', 500.00) or 500.00)
+            multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0)
+            raw_price = seatless_base * multiplier
+            price = event.get_dynamic_price(raw_price, purchase_date=created_at) if hasattr(event, 'get_dynamic_price') else raw_price
+            if getattr(t, 'has_mg', False):
+                price += float(getattr(event, 'mg_price', 0.0) or 0.0)
+
+        # Aplicar cupones de descuento si existen
+        used_coupon = getattr(t, 'used_coupon', None)
+        if used_coupon:
+            dt = getattr(used_coupon, 'discount_type', '')
+            dp = float(getattr(used_coupon, 'discount_percent', 0.0) or (getattr(used_coupon, 'discount_value', 0.0) if dt == 'percentage' else 0.0))
+            da = float(getattr(used_coupon, 'discount_amount', 0.0) or (getattr(used_coupon, 'discount_value', 0.0) if dt == 'fixed' else 0.0))
+            if dt == 'free_vip':
+                price = 0.0
+            elif dp > 0:
+                price = price * (1.0 - (dp / 100.0))
+            elif da > 0:
+                price = max(0.0, price - da)
+
+        return round(float(price), 2)
+    except (ObjectDoesNotExist, AttributeError, ValueError, TypeError) as ex:
+        logger.warning(f"[get_ticket_actual_price] Fallback for ticket #{getattr(t, 'id', 'unknown')}: {ex}")
+        return 0.0
+    except Exception as ex:
+        logger.error(f"[get_ticket_actual_price] Error calculating ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
+        return 0.0
+
+
 class AnalyticsOverview(APIView):
     permission_classes = [IsAdminUser]
 
@@ -90,53 +154,6 @@ class AnalyticsOverview(APIView):
                 except (ValueError, TypeError):
                     pass
             
-            def _get_ticket_price(t):
-                try:
-                    event = getattr(t, 'event', None)
-                    if not event:
-                        return 0.0
-
-                    seat = getattr(t, 'seat', None)
-                    ga_zone = getattr(t, 'ga_zone', None)
-                    event_type = getattr(event, 'event_type', 'concert')
-
-                    if event_type == 'meet_greet':
-                        # Meet & Greet event: Ticket price is the mg_price of the event
-                        price = float(getattr(event, 'mg_price', 0.0) or 0.0)
-                    elif seat:
-                        base = float(getattr(seat, 'base_price', 0.0) or 0.0)
-                        multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0)
-                        price = base * multiplier
-                        if getattr(t, 'has_mg', False):
-                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
-                    elif ga_zone:
-                        price = float(getattr(ga_zone, 'base_price', 0.0) or 0.0)
-                        if getattr(t, 'has_mg', False):
-                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
-                    else:
-                        # General / Seatless ticket for a concert
-                        price = float(getattr(event, 'effective_seatless_ticket_price', 0.0) or getattr(event, 'base_price', 0.0) or 0.0)
-                        if getattr(t, 'has_mg', False):
-                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
-
-                    # Apply Coupon Discount if present
-                    used_coupon = getattr(t, 'used_coupon', None)
-                    if used_coupon:
-                        dp = float(getattr(used_coupon, 'discount_percent', 0.0) or 0.0)
-                        da = float(getattr(used_coupon, 'discount_amount', 0.0) or 0.0)
-                        if dp > 0:
-                            price = price * (1.0 - (dp / 100.0))
-                        elif da > 0:
-                            price = max(0.0, price - da)
-
-                    return round(float(price), 2)
-                except (ObjectDoesNotExist, AttributeError, ValueError, TypeError) as ex:
-                    logger.warning(f"[AnalyticsOverview] Safe price fallback for ticket #{getattr(t, 'id', 'unknown')}: {ex}")
-                    return 0.0
-                except Exception as ex:
-                    logger.error(f"[AnalyticsOverview] Unexpected error calculating price for ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
-                    return 0.0
-
             # 2. Financial Metrics - Tickets (Filtered by Active Period)
             paid_tickets = Ticket.objects.filter(
                 status__in=['paid', 'used'],
@@ -155,7 +172,7 @@ class AnalyticsOverview(APIView):
                     if event and (getattr(t, 'has_mg', False) or getattr(event, 'event_type', '') == 'meet_greet'):
                         mg_upgrades_sold += 1
                         mg_revenue += float(getattr(event, 'mg_price', 0.0) or 0.0)
-                    ticket_sales += _get_ticket_price(t)
+                    ticket_sales += get_ticket_actual_price(t)
                 except Exception as ex:
                     logger.warning(f"[AnalyticsOverview] Error processing paid ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
                     continue
@@ -231,7 +248,7 @@ class AnalyticsOverview(APIView):
                         status__in=['paid', 'used'],
                         created_at__date=current_date.date()
                     ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                    t_daily_sales = sum(_get_ticket_price(t) for t in date_tickets)
+                    t_daily_sales = sum(get_ticket_actual_price(t) for t in date_tickets)
                         
                     s_daily_sales = Order.objects.filter(
                         status__in=['paid', 'shipped', 'delivered'],
@@ -273,7 +290,7 @@ class AnalyticsOverview(APIView):
                         created_at__gte=m_start,
                         created_at__lte=m_end
                     ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                    t_m_sales = sum(_get_ticket_price(t) for t in m_tickets)
+                    t_m_sales = sum(get_ticket_actual_price(t) for t in m_tickets)
 
                     s_m_sales = Order.objects.filter(
                         status__in=['paid', 'shipped', 'delivered'],
@@ -306,7 +323,7 @@ class AnalyticsOverview(APIView):
                         created_at__gte=w_start,
                         created_at__lte=w_end
                     ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                    t_w_sales = sum(_get_ticket_price(t) for t in w_tickets)
+                    t_w_sales = sum(get_ticket_actual_price(t) for t in w_tickets)
 
                     s_w_sales = Order.objects.filter(
                         status__in=['paid', 'shipped', 'delivered'],
@@ -332,7 +349,7 @@ class AnalyticsOverview(APIView):
                 for ev in Event.objects.all().order_by('-date'):
                     ev_tickets = Ticket.objects.filter(event=ev, status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
                     ev_t_sold = ev_tickets.count()
-                    ev_t_revenue = sum(_get_ticket_price(t) for t in ev_tickets)
+                    ev_t_revenue = sum(get_ticket_actual_price(t) for t in ev_tickets)
                     ev_mg_count = sum(1 for t in ev_tickets if getattr(t, 'has_mg', False))
                     ev_mg_revenue = ev_mg_count * float(getattr(ev, 'mg_price', 0.0) or 0.0)
 
@@ -414,13 +431,7 @@ class AnalyticsUnitDataView(APIView):
                     event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
                     seat_str = f"Fila {t.seat.row} - #{t.seat.number}" if getattr(t, 'seat', None) else (t.ga_zone.name if getattr(t, 'ga_zone', None) else "General")
                     
-                    price = 0.0
-                    try:
-                        price = float(getattr(t.seat, 'base_price', 0.0) or 0.0) if getattr(t, 'seat', None) else float(getattr(t.ga_zone, 'base_price', 0.0) or 0.0)
-                        if getattr(t, 'has_mg', False) and getattr(t, 'event', None):
-                            price += float(getattr(t.event, 'mg_price', 0.0) or 0.0)
-                    except Exception:
-                        price = 0.0
+                    price = get_ticket_actual_price(t)
 
                     row = {
                         'id': t.id,

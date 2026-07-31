@@ -35,13 +35,14 @@ import { showAlert } from '../lib/notifications';
 import { cn, getApiUrl } from '../lib/utils';
 
 // ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
-const STRIPE_PCT_FEE = 0.036;   // 3.6%
-const STRIPE_FLAT_FEE = 3.00;   // $3.00 MXN
+// Incluye el 16% de IVA trasladado por Stripe sobre su propia comisión bancaria (3.6% * 1.16 = 4.176%, $3.00 * 1.16 = $3.48 MXN)
+const EFFECTIVE_PCT_FEE = 0.04176;   // 3.6% base + 16% IVA
+const EFFECTIVE_FLAT_FEE = 3.48;     // $3.00 base + 16% IVA
 
 const calculateTotalWithFee = (baseAmount: number): { base_price: number; service_fee: number; total: number } => {
   if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
   const base_price = Math.round(baseAmount * 100) / 100;
-  const total = Math.round(((base_price + STRIPE_FLAT_FEE) / (1 - STRIPE_PCT_FEE)) * 100) / 100;
+  const total = Math.round(((base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE)) * 100) / 100;
   const service_fee = Math.round((total - base_price) * 100) / 100;
   return {
     base_price,

@@ -38,18 +38,18 @@ El sistema incluye una tecnología de **Precios Dinámicos por Venta Anticipada 
 ### ¿Cómo funciona el procesamiento bancario?
 Para procesar cobros de tarjetas de débito y crédito en línea de forma segura, el sistema utiliza **Stripe**, la pasarela de pagos líder a nivel mundial.
 
-### El Modelo de Cargo de Servicio (Protección del 100% de tus Ingresos)
-Las comisiones bancarias de Stripe en México corresponden a un **3.6% + $3.00 MXN** por transacción exitosa (más el 16% de IVA sobre dicha comisión).
+### El Modelo de Cargo de Servicio (Protección del 100% de tus Ingresos Netos)
+Las comisiones bancarias de Stripe en México corresponden a un **3.6% + $3.00 MXN** por transacción exitosa en tarjetas nacionales (y **4.4% + $3.00 MXN** en tarjetas internacionales/pagos en USD), más el **16% de IVA** sobre la propia comisión bancaria de Stripe.
 
-Para garantizar que el artista o la taquilla reciba **íntegro el 100% del precio oficial del boleto**, el sistema calcula de forma transparente un **Cargo de Servicio** que se añade al carrito de compra del cliente.
+Para garantizar que la taquilla o el artista reciba **íntegro el 100% del precio base de los boletos**, el sistema calcula de forma transparente un **Cargo de Servicio** que el comprador cubre durante su proceso de compra.
 
-#### 📊 Ejemplo Numérico: Compra de Boletos por $20,000.00 MXN
+#### 📊 Caso de Estudio Real: Compra de $1,100.00 MXN Base (2 Boletos + 2 Upgrades M&G)
 
-1. **Tus Ingresos Oficiales (Subtotal Boletos)**: **$20,000.00 MXN**
-2. **Cargo de Servicio Calculado (Stripe)**: **$750.00 MXN**
-3. **Total Cobrado a la Tarjeta del Fan**: **$20,750.00 MXN**
-4. **Comisión Retenida por Stripe**: $750.00 MXN
-5. **Depósito Neto Recibido en tu Cuenta Bancaria**: **$20,000.00 MXN** *(Recibes exactamente tu precio base sin deducciones bancarias)*.
+- **Tus Ingresos Oficiales a Recibir (Subtotal Boletos)**: **$1,100.00 MXN**
+- **Cargo de Servicio Calculado (Con IVA de Stripe)**: **$51.57 MXN** *(Tarjetas Nacionales)* o **$62.83 MXN** *(Tarjetas Internacionales / EE.UU.)*
+- **Total Cobrado al Cliente**: **$1,151.57 MXN** (Nacional) / **$1,162.83 MXN** (Internacional)
+- **Retención Total de Stripe (Comisión + 16% IVA + Divisas)**: -$51.57 MXN / -$62.83 MXN
+- **Depósito Neto Recibido en tu Cuenta Bancaria**: **$1,100.00 MXN EXACTOS** *(Recibes el 100% de tu taquilla sin que el banco te descuente ningún peso).*
 
 ---
 

@@ -48,40 +48,66 @@ Para asegurar que la taquilla o el artista reciba el **100% del precio base** co
 - **Comisión Fija**: $3.00 MXN por transacción exitosa.
 - **Impuesto sobre la Comisión**: Stripe traslada el **16% de IVA sobre su propia comisión bancaria** al comercio.
 
-### B. Fórmula de Cálculo Gross-Up (`calculate_total_with_fee`)
+## 💳 2. Mecanismo Numérico de Comisiones Stripe MX (`Stripe Fee Mirror`)
 
-$$total = \frac{\text{precio\_base} + \text{STRIPE\_FLAT\_FEE}}{1 - \text{STRIPE\_PCT\_FEE}} = \frac{\text{precio\_base} + 3.00}{1 - 0.036}$$
+Para asegurar que la taquilla o el artista reciba el **100% del precio base** configurado para cada boleto, MS AMBAR aplica la fórmula matemática de **Gross-Up / Recargo de Servicio** en el backend ([fees.py](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/backend/apps/tickets/fees.py)) y en el frontend ([comprar-boletos.tsx](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/frontend/src/pages/comprar-boletos.tsx)).
+
+### A. Tarifas Estándar Stripe en México
+- **Tarjeta Nacional (México)**: 3.6% + $3.00 MXN base.
+- **Tarjeta Internacional / Adaptive Pricing (USD / Extranjero)**: 4.4% + $3.00 MXN base.
+- **Impuesto sobre la Comisión de Stripe**: Stripe México cobra e incluye **16% de IVA sobre su propia comisión bancaria**.
+
+#### Tasas Efectivas de Retención Stripe (Comisión + IVA):
+- **Nacional Efectiva**: $(3.6\% \times 1.16) = \mathbf{4.176\%}$ y $(\$3.00 \times 1.16) = \mathbf{\$3.48 \text{ MXN}}$
+- **Internacional Efectiva**: $(4.4\% \times 1.16) = \mathbf{5.104\%}$ y $(\$3.00 \times 1.16) = \mathbf{\$3.48 \text{ MXN}}$
+
+### B. Fórmulas Matemáticas de Recargo (Gross-Up)
+
+$$total_{\text{nacional}} = \frac{\text{precio\_base} + 3.48}{1 - 0.04176} = \frac{\text{precio\_base} + 3.48}{0.95824}$$
+
+$$total_{\text{internacional}} = \frac{\text{precio\_base} + 3.48}{1 - 0.05104} = \frac{\text{precio\_base} + 3.48}{0.94896}$$
 
 $$\text{cargo\_servicio} = total - \text{precio\_base}$$
 
 ---
 
-## 📊 3. Ejemplo Práctico de Desglose Financiero (Venta de $20,000.00 MXN)
+## 📊 3. Ejemplo Práctico y Análisis de Venta Real ($1,100.00 MXN Base)
 
-A continuación se detalla el flujo numérico completo para una compra total de **$20,000.00 MXN** en boletos:
+### Caso de Estudio: Venta Real con Tarjeta Internacional (Stacy Téllez / EE.UU.)
 
-### 1. Desglose del Cobro al Comprador (Gross-Up)
-- **Subtotal Precios Base de Boletos**: $20,000.00 MXN
-- **Cálculo del Total con Recargo**:
-  $$total = \frac{20000.00 + 3.00}{1 - 0.036} = \frac{20003.00}{0.964} \approx \mathbf{\$20,750.00 \text{ MXN}}$$
-- **Cargo de Servicio Agregado**: $\$20,750.00 - \$20,000.00 = \mathbf{\$750.00 \text{ MXN}}$
-- **Monto Cobrado en Tarjeta del Fan**: **$20,750.00 MXN**
+#### ❌ Diagnóstico de la Fórmula Anterior (Sin IVA en Comisión / Sin Tarifa Internacional):
+En una compra de 2 boletos ($400 c/u) + 2 upgrades M&G ($150 c/u) = **$1,100.00 MXN base**:
+- La fórmula anterior usaba $(1100 + 3) / (1 - 0.036) = \mathbf{\$1,144.19 \text{ MXN}}$ (cargo de servicio $44.19 MXN).
+- Al pagar desde EE.UU. en USD (Adaptive Pricing), Stripe dedujo:
+  - Comisión procesadora: **$49.91 MXN**
+  - 16% IVA sobre la comisión: **$7.99 MXN**
+  - Deducción total de Stripe: **$57.90 MXN**
+- **Resultado en depósito neto**: $\$1,144.19 - \$57.90 = \mathbf{\$1,086.29 \text{ MXN}}$ *(Faltaban $13.71 MXN para completar los $1,100 exactos)*.
 
-### 2. Retención y Cobro por parte de Stripe
-Stripe descuenta su tarifa sobre los $20,750.00 MXN cobrados:
-- **Comisión Porcentual (3.6% de $20,750.00)**: $747.00 MXN
-- **Comisión Fija**: $3.00 MXN
-- **Retención Total Bruta de Stripe**: $\$747.00 + \$3.00 = \mathbf{\$750.00 \text{ MXN}}$
-- **Depósito Neto al Organizador**: $\$20,750.00 - \$750.00 = \mathbf{\$20,000.00 \text{ MXN}}$ *(Ingreso base 100% protegido)*.
+#### ✅ Solución con la Nueva Fórmula de Recargo Exacto:
 
-### 3. Impuestos Involucrados en la Operación
+1. **Para Tarjetas Nacionales México ($1,100 MXN base)**:
+   $$total = \frac{1100 + 3.48}{0.95824} = \mathbf{\$1,151.57 \text{ MXN}}$$
+   - Cargo de servicio exhibido al fan: **$51.57 MXN**
+   - Deducción total de Stripe (3.6% + $3.00 MXN + 16% IVA): **$51.57 MXN**
+   - **Depósito Neto al Comercio**: $\$1,151.57 - \$51.57 = \mathbf{\$1,100.00 \text{ MXN EXACTOS}}$
 
-| Capa Fiscal / Impuesto | Concepto | Monto en Venta de $20,000 MXN | Responsable / Tratamiento |
+2. **Para Tarjetas Internacionales / Adaptive Pricing USD ($1,100 MXN base)**:
+   $$total = \frac{1100 + 3.48}{0.94896} = \mathbf{\$1,162.83 \text{ MXN}}$$
+   - Cargo de servicio exhibido al fan: **$62.83 MXN**
+   - Deducción total de Stripe (4.4% + $3.00 MXN + 16% IVA + FX): **$62.83 MXN**
+   - **Depósito Neto al Comercio**: $\$1,162.83 - \$62.83 = \mathbf{\$1,100.00 \text{ MXN EXACTOS}}$
+
+---
+
+### 📋 Cuadro Resumen de Impuestos y Deducciones en Transacciones
+
+| Capa Fiscal / Impuesto | Concepto | Tratamiento en la Venta | Responsable |
 | :--- | :--- | :--- | :--- |
-| **IVA sobre Venta de Boleto** | 16% IVA sobre el boleto (si precio incluye IVA) | **$2,758.62 MXN**<br>*(Base: $17,241.38 + IVA: $2,758.62 = $20,000)* | El organizador debe declarar y trasladar este IVA al SAT mediante CFDI 4.0. |
-| **IVA sobre Comisión Stripe** | 16% IVA sobre los $750.00 MXN de tarifa Stripe | **$120.00 MXN**<br>*(Incluido en la factura mensual expedida por Stripe)* | Es **IVA Acreditable** para el organizador; se deduce del IVA a pagar al SAT. |
-| **Retenciones SAT Plataformas Digitales** | Retención de ISR (2.1%-4%) e IVA (50%/8%) | *Aplica solo si MS AMBAR opera como marketplace intermediario de terceros* | Si MS AMBAR es el organizador directo, no hay retención de intermediario; declara ISR anual/mensual sobre utilidad. |
-| **Impuesto Local Espectáculos** | Impuesto Estatal/Municipal sobre taquilla bruta | **4% a 8%** *(según el estado/municipio de la función)* | Retenido o pagado directamente a la tesorería local según la legislación del recinto. |
+| **IVA sobre Venta de Boleto** | 16% IVA incluido en el precio base | $1,100 MXN base = $948.28 neto + $151.72 IVA | El organizador declara y traslada este IVA al SAT vía CFDI 4.0. |
+| **IVA sobre Comisión Stripe** | 16% IVA sobre la tarifa de procesamiento de Stripe | Incluido en el recargo de servicio ($7.11 a $8.67 MXN) | Es **IVA Acreditable** para el organizador; se deduce del IVA a pagar en su declaración mensual. |
+| **Recargo Internacional / USD** | Tarifas de conversión de divisa / tarjetas extranjeras | Cubierto mediante la tasa de recargo internacional ($62.83 MXN total) | Protege al comercio para no absorber costos cambiarios. |
+
 
 ---
 
