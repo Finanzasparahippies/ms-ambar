@@ -162,6 +162,16 @@ class TheaterViewSet(viewsets.ModelViewSet):
     serializer_class = TheaterSerializer
     permission_classes = [permissions.AllowAny]  # Open for Nectar Designer integration
 
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        if instance.layout:
+            instance.generate_seats()
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.layout:
+            instance.generate_seats()
+
     @action(detail=True, methods=['post'], url_path='generate_seats')
     def generate_seats(self, request, pk=None):
         """

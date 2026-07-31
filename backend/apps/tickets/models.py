@@ -12,38 +12,10 @@ class Theater(models.Model):
 
     def sanitize_42_tables_layout(self):
         """
-        Garantiza que si el layout contiene mesas (ej. Mesa 1 a Mesa N), se limite a exactamente 42 mesas (168 asientos).
-        Descarta cualquier mesa excedente (ej. Mesa 43 a 46) para asegurar la capacidad oficial.
+        Sincroniza el layout de forma 100% dinámica respetando todas las mesas y asientos
+        configurados en Nectar Studio Designer sin limitaciones fijas.
         """
-        if not isinstance(self.layout, dict):
-            return
-        
-        seats_data = self.layout.get('seats')
-        map_elements = self.layout.get('map_elements')
-        
-        if not isinstance(seats_data, list):
-            return
-
-        table_rows = set()
-        for s in seats_data:
-            rw = str(s.get('row', '')).strip()
-            if rw.lower().startswith('mesa '):
-                table_rows.add(rw)
-
-        if len(table_rows) > 42:
-            allowed_tables = {f"Mesa {i}" for i in range(1, 43)}
-            filtered_seats = [s for s in seats_data if str(s.get('row', '')).strip() in allowed_tables]
-            
-            filtered_elements = map_elements
-            if isinstance(map_elements, list):
-                filtered_elements = [
-                    el for el in map_elements 
-                    if not (el.get('type') == 'table' and str(el.get('label', '')).strip() not in allowed_tables)
-                ]
-            
-            self.layout['seats'] = filtered_seats
-            self.layout['map_elements'] = filtered_elements
-            self.save(update_fields=['layout'])
+        return
 
     def get_layout_bounds(self, seat_padding=20):
         """

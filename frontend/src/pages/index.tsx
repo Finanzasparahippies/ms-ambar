@@ -599,7 +599,7 @@ const Home = () => {
                             <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
                               <div className="flex flex-col text-left">
                                 <span className="text-white font-bold">🪑 Asiento Numerado (Mesas)</span>
-                                <span className="text-[10px] text-pink-200/60">Lugar reservado en 42 mesas x 4 butacas</span>
+                                <span className="text-[10px] text-pink-200/60">Lugar reservado en mapa de mesas interactivo</span>
                               </div>
                               <span className="text-pink-300 font-black text-sm md:text-base">
                                 ${Math.round(nextEvent.numbered_seat_base_price !== undefined
