@@ -122,15 +122,21 @@ class Theater(models.Model):
             seats_to_create = []
             seats_to_update = []
             active_ids = set()
-            active_keys = set()
+            used_batch_keys = set()
             created_count = len(seats_data)
 
             for seat_data in seats_data:
                 sec = seat_data.get('section', 'General')
                 rw = str(seat_data.get('row', '1'))
-                num = int(seat_data.get('number', 1))
-                key = (sec, rw, num)
-                active_keys.add(key)
+                try:
+                    num = int(seat_data.get('number', 1))
+                except (ValueError, TypeError):
+                    num = 1
+
+                # Disambiguate duplicate keys within the payload batch
+                while (sec, rw, num) in used_batch_keys:
+                    num += 1
+                used_batch_keys.add((sec, rw, num))
 
                 cat = seat_data.get('category', 'standard')
                 st = seat_data.get('status', 'available')
@@ -148,6 +154,7 @@ class Theater(models.Model):
                 except (ValueError, TypeError):
                     seat = None
 
+                key = (sec, rw, num)
                 if not seat and key in existing_seats_by_key and existing_seats_by_key[key]:
                     seat = existing_seats_by_key[key].pop(0)
 
@@ -179,18 +186,19 @@ class Theater(models.Model):
                         color=clr
                     ))
 
+            # Clean up stale seats not present in active_ids before bulk operations to avoid unique constraint conflicts
+            stale_seats = Seat.objects.filter(theater=self).exclude(id__in=active_ids)
+            stale_seats.filter(ticket__isnull=True).delete()
+
+            if seats_to_update:
+                Seat.objects.bulk_update(
+                    seats_to_update,
+                    ['section', 'row', 'number', 'category', 'status', 'base_price', 'x', 'y', 'angle', 'color'],
+                    batch_size=500
+                )
+
             if seats_to_create:
                 Seat.objects.bulk_create(seats_to_create, batch_size=500)
-            if seats_to_update:
-                Seat.objects.bulk_update(seats_to_update, ['section', 'row', 'number', 'category', 'status', 'base_price', 'x', 'y', 'angle', 'color'], batch_size=500)
-
-            # Ticket-safe cleanup of unused seats
-            stale_ids = [
-                s.id for s in existing_seats_by_id.values()
-                if s.id not in active_ids and (s.section, str(s.row), s.number) not in active_keys
-            ]
-            if stale_ids:
-                Seat.objects.filter(id__in=stale_ids, ticket__isnull=True).delete()
 
             # Sync GA Zones
             elements_data = self.layout.get('map_elements', []) if isinstance(self.layout, dict) else []
