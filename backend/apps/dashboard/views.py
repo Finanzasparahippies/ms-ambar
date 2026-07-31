@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
-from django.db import models
+from django.db.models import Sum, Avg, Count, F
 from django.utils import timezone
 from datetime import datetime, timedelta, timezone as dt_timezone
 from django.db import connection
@@ -64,35 +64,60 @@ class AnalyticsOverview(APIView):
                     'is_restricted': True
                 })
 
-            # 1. Date range for charts (Last 30 days)
+            # 1. Date range for charts and period financial metrics (Default last 30 days or specified period)
+            period_param = str(request.query_params.get('period', '30d')).lower()
             end_date = timezone.now()
-            start_date = end_date - timedelta(days=29)
+
+            if period_param == '7d':
+                start_date = end_date - timedelta(days=6)
+            elif period_param == '90d':
+                start_date = end_date - timedelta(days=89)
+            elif period_param in ['365d', '1y']:
+                start_date = end_date - timedelta(days=364)
+            elif period_param == 'all':
+                start_date = datetime(2020, 1, 1, tzinfo=dt_timezone.utc)
+            else:
+                start_date = end_date - timedelta(days=29)
+
+            if request.query_params.get('start_date'):
+                try:
+                    start_date = datetime.fromisoformat(request.query_params['start_date']).replace(tzinfo=dt_timezone.utc)
+                except (ValueError, TypeError):
+                    pass
+            if request.query_params.get('end_date'):
+                try:
+                    end_date = datetime.fromisoformat(request.query_params['end_date']).replace(tzinfo=dt_timezone.utc)
+                except (ValueError, TypeError):
+                    pass
             
             def _get_ticket_price(t):
                 try:
                     event = getattr(t, 'event', None)
+                    if not event:
+                        return 0.0
+
                     seat = getattr(t, 'seat', None)
                     ga_zone = getattr(t, 'ga_zone', None)
+                    event_type = getattr(event, 'event_type', 'concert')
 
-                    if seat:
+                    if event_type == 'meet_greet':
+                        # Meet & Greet event: Ticket price is the mg_price of the event
+                        price = float(getattr(event, 'mg_price', 0.0) or 0.0)
+                    elif seat:
                         base = float(getattr(seat, 'base_price', 0.0) or 0.0)
-                        multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0) if event else 1.0
+                        multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0)
                         price = base * multiplier
+                        if getattr(t, 'has_mg', False):
+                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
                     elif ga_zone:
                         price = float(getattr(ga_zone, 'base_price', 0.0) or 0.0)
-                    elif event:
-                        if getattr(event, 'allow_seatless_tickets', True) and getattr(event, 'seatless_ticket_price', None) is not None:
-                            price = float(getattr(event, 'effective_seatless_ticket_price', 0.0) or 0.0)
-                        elif getattr(event, 'numbered_ticket_price', None) is not None and float(getattr(event, 'numbered_ticket_price', 0.0) or 0.0) > 0:
-                            price = float(getattr(event, 'numbered_seat_base_price', 0.0) or 0.0)
-                        else:
-                            price = float(getattr(event, 'base_price', 0.0) or 0.0)
+                        if getattr(t, 'has_mg', False):
+                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
                     else:
-                        price = 0.0
-
-                    # Meet & Greet Upgrade
-                    if getattr(t, 'has_mg', False) and event:
-                        price += float(getattr(event, 'mg_price', 0.0) or 0.0)
+                        # General / Seatless ticket for a concert
+                        price = float(getattr(event, 'effective_seatless_ticket_price', 0.0) or getattr(event, 'base_price', 0.0) or 0.0)
+                        if getattr(t, 'has_mg', False):
+                            price += float(getattr(event, 'mg_price', 0.0) or 0.0)
 
                     # Apply Coupon Discount if present
                     used_coupon = getattr(t, 'used_coupon', None)
@@ -112,8 +137,12 @@ class AnalyticsOverview(APIView):
                     logger.error(f"[AnalyticsOverview] Unexpected error calculating price for ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
                     return 0.0
 
-            # 2. Financial Metrics - Tickets
-            paid_tickets = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+            # 2. Financial Metrics - Tickets (Filtered by Active Period)
+            paid_tickets = Ticket.objects.filter(
+                status__in=['paid', 'used'],
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
             total_tickets_sold = paid_tickets.count()
             
             ticket_sales = 0.0
@@ -123,7 +152,7 @@ class AnalyticsOverview(APIView):
             for t in paid_tickets:
                 try:
                     event = getattr(t, 'event', None)
-                    if getattr(t, 'has_mg', False) and event:
+                    if event and (getattr(t, 'has_mg', False) or getattr(event, 'event_type', '') == 'meet_greet'):
                         mg_upgrades_sold += 1
                         mg_revenue += float(getattr(event, 'mg_price', 0.0) or 0.0)
                     ticket_sales += _get_ticket_price(t)
@@ -131,18 +160,25 @@ class AnalyticsOverview(APIView):
                     logger.warning(f"[AnalyticsOverview] Error processing paid ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
                     continue
 
-            # 3. Financial Metrics - Shop / Merch
-            paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
+            # 3. Financial Metrics - Shop / Merch (Filtered by Active Period)
+            paid_orders = Order.objects.filter(
+                status__in=['paid', 'shipped', 'delivered'],
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            )
             total_orders_count = paid_orders.count()
-            shop_sales = paid_orders.aggregate(sum('total_amount'))['total_amount__sum'] or 0
+            shop_sales = paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
             shop_sales = float(shop_sales)
             
-            # Gross Sales combined
+            # Gross Sales combined for active period
             gross_sales = ticket_sales + shop_sales
 
-            # 3b. Expenses & Net Profit
-            total_expenses = Expense.objects.aggregate(sum('amount'))['amount__sum'] or 0
-            total_expenses = float(total_expenses)
+            # 3b. Expenses & Net Profit for active period
+            period_expenses = Expense.objects.filter(
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            ).aggregate(Sum('amount'))['amount__sum'] or 0
+            total_expenses = float(period_expenses)
             net_profit = gross_sales - total_expenses
             
             # 4. Inventory Alerts
@@ -200,7 +236,7 @@ class AnalyticsOverview(APIView):
                     s_daily_sales = Order.objects.filter(
                         status__in=['paid', 'shipped', 'delivered'],
                         created_at__date=current_date.date()
-                    ).aggregate(sum('total_amount'))['total_amount__sum'] or 0
+                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
                     s_daily_sales = float(s_daily_sales)
                     
                     daily_stats.append({
@@ -243,7 +279,7 @@ class AnalyticsOverview(APIView):
                         status__in=['paid', 'shipped', 'delivered'],
                         created_at__gte=m_start,
                         created_at__lte=m_end
-                    ).aggregate(sum('total_amount'))['total_amount__sum'] or 0
+                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
                     s_m_sales = float(s_m_sales)
 
                     monthly_stats.append({
@@ -276,7 +312,7 @@ class AnalyticsOverview(APIView):
                         status__in=['paid', 'shipped', 'delivered'],
                         created_at__gte=w_start,
                         created_at__lte=w_end
-                    ).aggregate(sum('total_amount'))['total_amount__sum'] or 0
+                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
                     s_w_sales = float(s_w_sales)
 
                     weekly_stats.append({

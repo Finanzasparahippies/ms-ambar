@@ -107,6 +107,12 @@ class EventViewSet(viewsets.ModelViewSet):
                 "elements": [],
                 "message": "Este evento es un Meet & Greet y no requiere mapa de asientos."
             })
+        if isinstance(theater.layout, dict) and 'seats' in theater.layout:
+            layout_seats_count = len(theater.layout.get('seats', []))
+            db_seats_count = Seat.objects.filter(theater=theater).count()
+            if layout_seats_count > 0 and db_seats_count != layout_seats_count:
+                theater.generate_seats()
+
         seats = Seat.objects.filter(theater=theater)
         
         # Get occupied seats for this event
@@ -161,6 +167,16 @@ class TheaterViewSet(viewsets.ModelViewSet):
     queryset = Theater.objects.all()
     serializer_class = TheaterSerializer
     permission_classes = [permissions.AllowAny]  # Open for Nectar Designer integration
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        if instance.layout:
+            instance.generate_seats()
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.layout:
+            instance.generate_seats()
 
     @action(detail=True, methods=['post'], url_path='generate_seats')
     def generate_seats(self, request, pk=None):

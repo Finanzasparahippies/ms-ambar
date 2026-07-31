@@ -12,38 +12,10 @@ class Theater(models.Model):
 
     def sanitize_42_tables_layout(self):
         """
-        Garantiza que si el layout contiene mesas (ej. Mesa 1 a Mesa N), se limite a exactamente 42 mesas (168 asientos).
-        Descarta cualquier mesa excedente (ej. Mesa 43 a 46) para asegurar la capacidad oficial.
+        Sincroniza el layout de forma 100% dinámica respetando todas las mesas y asientos
+        configurados en Nectar Studio Designer sin limitaciones fijas.
         """
-        if not isinstance(self.layout, dict):
-            return
-        
-        seats_data = self.layout.get('seats')
-        map_elements = self.layout.get('map_elements')
-        
-        if not isinstance(seats_data, list):
-            return
-
-        table_rows = set()
-        for s in seats_data:
-            rw = str(s.get('row', '')).strip()
-            if rw.lower().startswith('mesa '):
-                table_rows.add(rw)
-
-        if len(table_rows) > 42:
-            allowed_tables = {f"Mesa {i}" for i in range(1, 43)}
-            filtered_seats = [s for s in seats_data if str(s.get('row', '')).strip() in allowed_tables]
-            
-            filtered_elements = map_elements
-            if isinstance(map_elements, list):
-                filtered_elements = [
-                    el for el in map_elements 
-                    if not (el.get('type') == 'table' and str(el.get('label', '')).strip() not in allowed_tables)
-                ]
-            
-            self.layout['seats'] = filtered_seats
-            self.layout['map_elements'] = filtered_elements
-            self.save(update_fields=['layout'])
+        return
 
     def get_layout_bounds(self, seat_padding=20):
         """
@@ -123,14 +95,12 @@ class Theater(models.Model):
 
     def generate_seats(self):
         """
-        Generates Seat objects with 2D coordinates.
-        Supports:
-        1. Schema-based: {"sections": [...]}
-        2. Direct list: [{"row": "A", "number": 1, "x": 100, "y": 100, ...}]
+        Generates/updates Seat objects with 2D coordinates and custom colors idempotently.
+        Supports matching by seat ID or (section, row, number) composite key.
         """
         import math
         
-        # Auto-sanitize table layout to 42 tables (168 seats max) if excess tables present
+        # Auto-sanitize table layout if excess tables present (>42)
         self.sanitize_42_tables_layout()
 
         # Case 1: Direct list or Object with seats key
@@ -141,21 +111,32 @@ class Theater(models.Model):
             seats_data = self.layout['seats']
 
         if seats_data is not None:
-            existing_seats_map = {
-                (s.section, str(s.row), s.number): s
-                for s in Seat.objects.filter(theater=self)
-            }
+            existing_seats_by_id = {s.id: s for s in Seat.objects.filter(theater=self)}
+            existing_seats_by_key = {}
+            for s in existing_seats_by_id.values():
+                k = (s.section, str(s.row), s.number)
+                if k not in existing_seats_by_key:
+                    existing_seats_by_key[k] = []
+                existing_seats_by_key[k].append(s)
+
             seats_to_create = []
             seats_to_update = []
-            active_keys = set()
+            active_ids = set()
+            used_batch_keys = set()
             created_count = len(seats_data)
 
             for seat_data in seats_data:
                 sec = seat_data.get('section', 'General')
                 rw = str(seat_data.get('row', '1'))
-                num = int(seat_data.get('number', 1))
-                key = (sec, rw, num)
-                active_keys.add(key)
+                try:
+                    num = int(seat_data.get('number', 1))
+                except (ValueError, TypeError):
+                    num = 1
+
+                # Disambiguate duplicate keys within the payload batch
+                while (sec, rw, num) in used_batch_keys:
+                    num += 1
+                used_batch_keys.add((sec, rw, num))
 
                 cat = seat_data.get('category', 'standard')
                 st = seat_data.get('status', 'available')
@@ -165,8 +146,23 @@ class Theater(models.Model):
                 ang = seat_data.get('angle', 0)
                 clr = seat_data.get('color', '')
 
-                if key in existing_seats_map:
-                    seat = existing_seats_map[key]
+                s_id = seat_data.get('id')
+                seat = None
+                try:
+                    if s_id and int(s_id) in existing_seats_by_id:
+                        seat = existing_seats_by_id[int(s_id)]
+                except (ValueError, TypeError):
+                    seat = None
+
+                key = (sec, rw, num)
+                if not seat and key in existing_seats_by_key and existing_seats_by_key[key]:
+                    seat = existing_seats_by_key[key].pop(0)
+
+                if seat:
+                    active_ids.add(seat.id)
+                    seat.section = sec
+                    seat.row = rw
+                    seat.number = num
                     seat.category = cat
                     seat.status = st
                     seat.base_price = price
@@ -190,18 +186,19 @@ class Theater(models.Model):
                         color=clr
                     ))
 
+            # Clean up stale seats not present in active_ids before bulk operations to avoid unique constraint conflicts
+            stale_seats = Seat.objects.filter(theater=self).exclude(id__in=active_ids)
+            stale_seats.filter(ticket__isnull=True).delete()
+
+            if seats_to_update:
+                Seat.objects.bulk_update(
+                    seats_to_update,
+                    ['section', 'row', 'number', 'category', 'status', 'base_price', 'x', 'y', 'angle', 'color'],
+                    batch_size=500
+                )
+
             if seats_to_create:
                 Seat.objects.bulk_create(seats_to_create, batch_size=500)
-            if seats_to_update:
-                Seat.objects.bulk_update(seats_to_update, ['category', 'status', 'base_price', 'x', 'y', 'angle', 'color'], batch_size=500)
-
-            # Bulk delete seats no longer present in layout
-            stale_ids = [
-                seat.id for key, seat in existing_seats_map.items()
-                if key not in active_keys
-            ]
-            if stale_ids:
-                Seat.objects.filter(id__in=stale_ids).delete()
 
             # Sync GA Zones
             elements_data = self.layout.get('map_elements', []) if isinstance(self.layout, dict) else []
@@ -792,10 +789,32 @@ class SiteSettings(models.Model):
     theme_mode = models.CharField(max_length=20, default='global', help_text="Modo de aplicación de tema: 'global' o 'section'")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, default='cormorant', help_text="Preset de fuentes tipográficas")
     allow_canvas_zoom = models.BooleanField(default=True, help_text="Permite o bloquea el zoom interactivo en el canvas de selección de asientos")
+    pass_fees_to_buyer = models.BooleanField(default=True, help_text="Si está activo, transfiere el recargo (Gross-Up) del 3.6% + $3.00 MXN al comprador en Checkout para recibir el 100% íntegro de la venta en banco.")
     custom_css = models.TextField(blank=True, null=True, default='', help_text="CSS personalizado global para todo el sitio")
     section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección del sitio (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 
     def get_theme_config(self):
+        bio_image_str = None
+        if self.bio_image and getattr(self.bio_image, 'name', None):
+            try:
+                bio_image_str = self.bio_image.url
+            except (ValueError, AttributeError):
+                bio_image_str = str(self.bio_image) if self.bio_image.name else None
+
+        sec_themes = self.section_themes or {}
+        bio_sec = sec_themes.get('biography', {})
+        bio_merged = {
+            'bio_badge': bio_sec.get('bio_badge', self.bio_badge),
+            'bio_title': bio_sec.get('bio_title', self.bio_title),
+            'bio_content': bio_sec.get('bio_content', self.bio_content),
+            'bio_image': bio_sec.get('bio_image', bio_image_str),
+            'bio_location': bio_sec.get('bio_location', self.bio_location),
+            'bio_cta_text': bio_sec.get('bio_cta_text', self.bio_cta_text),
+            'bio_cta_url': bio_sec.get('bio_cta_url', self.bio_cta_url),
+            **bio_sec
+        }
+        sec_themes['biography'] = bio_merged
+
         return {
             'theme_mode': self.theme_mode or 'global',
             'primary_color': self.primary_color or '#E5A93B',
@@ -810,7 +829,15 @@ class SiteSettings(models.Model):
             'background_pattern': self.background_pattern or 'stars',
             'font_preset': self.font_preset or 'cormorant',
             'custom_css': self.custom_css or '',
-            'section_themes': self.section_themes or {},
+            'bio_badge': self.bio_badge,
+            'bio_title': self.bio_title,
+            'bio_content': self.bio_content,
+            'bio_image': bio_image_str,
+            'bio_location': self.bio_location,
+            'bio_cta_text': self.bio_cta_text,
+            'bio_cta_url': self.bio_cta_url,
+            'pass_fees_to_buyer': self.pass_fees_to_buyer,
+            'section_themes': sec_themes,
         }
 
     class Meta:

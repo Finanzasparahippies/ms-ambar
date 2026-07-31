@@ -53,6 +53,13 @@ export interface ThemeConfig {
   animationPreset?: string;
   imageFilter?: string;
   customCss: string;
+  bioBadge?: string;
+  bioTitle?: string;
+  bioContent?: string;
+  bioImage?: string;
+  bioLocation?: string;
+  bioCtaText?: string;
+  bioCtaUrl?: string;
   sectionThemes?: Record<string, SectionThemeSpec>;
   eventId?: number | null;
   eventTitle?: string | null;
@@ -81,6 +88,13 @@ const DEFAULT_THEME: ThemeConfig = {
   animationPreset: 'none',
   imageFilter: 'none',
   customCss: '',
+  bioBadge: 'La Cantautora',
+  bioTitle: 'Ms. Ambar',
+  bioContent: '',
+  bioImage: '/Images/Inicio_Biografia.jpg',
+  bioLocation: 'Hermosillo • México',
+  bioCtaText: 'Ver Próximos Eventos',
+  bioCtaUrl: '/tour',
   sectionThemes: {},
   eventId: null,
   eventTitle: null,

@@ -96,9 +96,21 @@ const PriceBreakdown = ({ baseTotal, label = 'Subtotal boletos' }: { baseTotal: 
         </div>
       </div>
 
-      <p className="text-[8.5px] text-slate-400 dark:text-slate-400 font-medium leading-relaxed">
-        El precio incluye un cargo de servicio de plataforma. El monto final a pagar es ${total.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN.
-      </p>
+      {/* Transparencia Tarifaria Notice */}
+      <div className="p-3.5 rounded-xl bg-amber-500/10 dark:bg-amber-400/[0.06] border border-amber-500/25 dark:border-amber-400/25 space-y-1.5">
+        <div className="flex items-center justify-between text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider">
+          <span className="flex items-center gap-1.5">
+            <ShieldCheck size={14} className="text-amber-500 shrink-0" />
+            Transparencia Tarifaria
+          </span>
+          <span className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            Stripe MX
+          </span>
+        </div>
+        <p className="text-[9.5px] text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
+          El subtotal de tus accesos (<strong className="font-mono text-slate-900 dark:text-white">${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) va íntegramente al artista. El cargo de servicio (<strong className="font-mono text-amber-600 dark:text-amber-400">${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) cubre el procesamiento seguro con cifrado bancario Stripe (3.6% + $3.00 MXN).
+        </p>
+      </div>
     </div>
   );
 };
@@ -690,13 +702,7 @@ const TourPage = () => {
                     <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-[9px] xs:text-[10px] font-black uppercase tracking-wider text-white/70">
                       <div className="flex flex-wrap items-center gap-4">
                         <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30 shadow-[0_0_6px_#22a6b3]" /> Disponible
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#f59e0b] border border-white/30 shadow-[0_0_6px_#f59e0b]" /> VIP
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
+                          <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
                         </span>
                         <span className="flex items-center gap-1.5">
                           <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
@@ -714,7 +720,7 @@ const TourPage = () => {
                       </div>
                     ) : (
                       <div className={cn(
-                        "h-[480px] lg:h-[580px] relative w-full",
+                        "h-[400px] xs:h-[480px] lg:h-[580px] relative w-full overflow-hidden",
                         isCurrentEventPast && "pointer-events-none opacity-85"
                       )}>
                         {isCurrentEventPast && (
@@ -1270,10 +1276,13 @@ const TourPage = () => {
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
                           <span className="text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                            <Info size={9} /> Cargo de servicio (3.6% + $3.00)
+                            <Info size={10} className="shrink-0" /> Cargo de servicio (Stripe MX 3.6% + $3.00)
                           </span>
                           <span className="font-bold font-mono text-amber-600 dark:text-amber-400">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
+                        <p className="text-[8.5px] text-slate-500 dark:text-slate-400 pt-0.5 leading-snug">
+                          🔒 <strong>Garantía de Transparencia:</strong> Recargo de procesamiento bancario seguro para validar tus accesos oficiales sin comisiones ocultas.
+                        </p>
                         <div className="flex justify-between items-end pt-2 border-t border-slate-200 dark:border-white/10">
                           <span className="text-[10px] uppercase font-bold text-slate-400">Total a Pagar</span>
                           <span className="text-lg font-black font-mono text-amber-600 dark:text-amber-400">${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
