@@ -3157,10 +3157,7 @@ export default function AdminDashboard() {
                           <svg
                             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                             className="w-full h-full overflow-visible select-none cursor-crosshair touch-none"
-                            onMouseMove={handleMouseMove}
                             onMouseLeave={() => setHoveredPoint(null)}
-                            onTouchStart={handleTouchMove}
-                            onTouchMove={handleTouchMove}
                             onTouchEnd={() => setHoveredPoint(null)}
                           >
                             <defs>
