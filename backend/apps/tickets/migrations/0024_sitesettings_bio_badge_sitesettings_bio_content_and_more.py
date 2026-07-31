@@ -10,39 +10,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='sitesettings',
-            name='bio_badge',
-            field=models.CharField(default='La Cantautora', help_text='Insignia / Distintivo del encabezado de la biografía.', max_length=255),
-        ),
-        migrations.AddField(
-            model_name='sitesettings',
-            name='bio_content',
-            field=models.TextField(default="Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda 'Moonset', pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.\n\nSu primer álbum formal, '14•28', fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.\n\nUn hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción 'No te voy a llorar', consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.", help_text='Párrafos de la historia autobiográfica de la artista.'),
-        ),
-        migrations.AddField(
-            model_name='sitesettings',
-            name='bio_cta_text',
-            field=models.CharField(default='Ver Próximos Eventos', help_text='Texto del botón de acción (CTA).', max_length=255),
-        ),
-        migrations.AddField(
-            model_name='sitesettings',
-            name='bio_cta_url',
-            field=models.CharField(default='/tour', help_text='Enlace del botón de acción (CTA).', max_length=255),
-        ),
-        migrations.AddField(
-            model_name='sitesettings',
-            name='bio_image',
-            field=models.CharField(default='/Images/Inicio_Biografia.jpg', help_text='URL o ruta de la fotografía oficial de biografía.', max_length=500),
-        ),
-        migrations.AddField(
-            model_name='sitesettings',
-            name='bio_location',
-            field=models.CharField(default='Hermosillo • México', help_text='Ubicación u origen de la artista.', max_length=255),
-        ),
-        migrations.AddField(
-            model_name='sitesettings',
-            name='bio_title',
-            field=models.CharField(default='Ms. Ambar', help_text='Título / Nombre artístico principal.', max_length=255),
-        ),
+        # Bio fields already added in 0018_sitesettings_bio_fields.py
     ]
