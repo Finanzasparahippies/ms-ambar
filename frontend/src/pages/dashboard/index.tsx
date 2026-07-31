@@ -2896,44 +2896,44 @@ export default function AdminDashboard() {
                   {/* stat cards (3x2 Grid) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard
-                      title="Ingresos Totales"
+                      title="Ingresos del Período"
                       value={`$${financials?.gross_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<DollarSign className="text-amber-400" />}
                       color="amber"
-                      detail="Combinado: Taquilla + Tienda 🔍"
-                      onClick={() => fetchUnitData('tickets', 'Ingresos Totales - Auditoría de Boletos')}
+                      detail="Ventas del Período: Taquilla + Tienda 🔍"
+                      onClick={() => fetchUnitData('tickets', 'Ingresos del Período - Auditoría de Boletos')}
                     />
                     <StatCard
-                      title="Ventas de Tickets"
+                      title="Ventas del Período (Tickets)"
                       value={`$${financials?.ticket_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<Ticket className="text-amber-300" />}
                       color="gold"
-                      detail={`Boletos: ${tickets?.total_sold} vendidos 🔍`}
-                      onClick={() => fetchUnitData('tickets', 'Ventas de Tickets Unitarias')}
+                      detail={`Boletos: ${tickets?.total_sold} vendidos en el período 🔍`}
+                      onClick={() => fetchUnitData('tickets', 'Ventas del Período (Tickets Unitarios)')}
                     />
                     <StatCard
-                      title="Ventas de Tienda"
+                      title="Ventas del Período (Tienda)"
                       value={`$${financials?.shop_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<ShoppingBag className="text-amber-500" />}
                       color="honey"
-                      detail={`Pedidos: ${shop?.total_orders} completados 🔍`}
-                      onClick={() => fetchUnitData('orders', 'Ventas de Tienda (Pedidos Unitarios)')}
+                      detail={`Pedidos: ${shop?.total_orders} completados en el período 🔍`}
+                      onClick={() => fetchUnitData('orders', 'Ventas del Período (Pedidos Unitarios)')}
                     />
                     <StatCard
-                      title="Gastos Operativos"
+                      title="Gastos del Período"
                       value={`$${financials?.total_expenses?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<TrendingDown className="text-red-400" />}
                       color="honey"
-                      detail="Pérdidas, Envíos & Producción 🔍"
-                      onClick={() => fetchUnitData('expenses', 'Control de Gastos Operativos')}
+                      detail="Gastos registrados en el período 🔍"
+                      onClick={() => fetchUnitData('expenses', 'Gastos Operativos del Período')}
                     />
                     <StatCard
-                      title="Beneficio Neto Real"
+                      title="Beneficio Neto del Período"
                       value={`$${financials?.net_profit?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                       icon={<Landmark className="text-green-400" />}
                       color="amber"
-                      detail="Ingresos libres de gastos 🔍"
-                      onClick={() => fetchUnitData('tickets', 'Beneficio Neto - Auditoría Financiera')}
+                      detail="Ingresos del período libres de gastos 🔍"
+                      onClick={() => fetchUnitData('tickets', 'Beneficio Neto del Período - Auditoría')}
                     />
                     <StatCard
                       title="Upgrades M&G"

@@ -64,9 +64,31 @@ class AnalyticsOverview(APIView):
                     'is_restricted': True
                 })
 
-            # 1. Date range for charts (Last 30 days)
+            # 1. Date range for charts and period financial metrics (Default last 30 days or specified period)
+            period_param = str(request.query_params.get('period', '30d')).lower()
             end_date = timezone.now()
-            start_date = end_date - timedelta(days=29)
+
+            if period_param == '7d':
+                start_date = end_date - timedelta(days=6)
+            elif period_param == '90d':
+                start_date = end_date - timedelta(days=89)
+            elif period_param in ['365d', '1y']:
+                start_date = end_date - timedelta(days=364)
+            elif period_param == 'all':
+                start_date = datetime(2020, 1, 1, tzinfo=dt_timezone.utc)
+            else:
+                start_date = end_date - timedelta(days=29)
+
+            if request.query_params.get('start_date'):
+                try:
+                    start_date = datetime.fromisoformat(request.query_params['start_date']).replace(tzinfo=dt_timezone.utc)
+                except (ValueError, TypeError):
+                    pass
+            if request.query_params.get('end_date'):
+                try:
+                    end_date = datetime.fromisoformat(request.query_params['end_date']).replace(tzinfo=dt_timezone.utc)
+                except (ValueError, TypeError):
+                    pass
             
             def _get_ticket_price(t):
                 try:
@@ -112,8 +134,12 @@ class AnalyticsOverview(APIView):
                     logger.error(f"[AnalyticsOverview] Unexpected error calculating price for ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
                     return 0.0
 
-            # 2. Financial Metrics - Tickets
-            paid_tickets = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+            # 2. Financial Metrics - Tickets (Filtered by Active Period)
+            paid_tickets = Ticket.objects.filter(
+                status__in=['paid', 'used'],
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
             total_tickets_sold = paid_tickets.count()
             
             ticket_sales = 0.0
@@ -131,18 +157,25 @@ class AnalyticsOverview(APIView):
                     logger.warning(f"[AnalyticsOverview] Error processing paid ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
                     continue
 
-            # 3. Financial Metrics - Shop / Merch
-            paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
+            # 3. Financial Metrics - Shop / Merch (Filtered by Active Period)
+            paid_orders = Order.objects.filter(
+                status__in=['paid', 'shipped', 'delivered'],
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            )
             total_orders_count = paid_orders.count()
             shop_sales = paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
             shop_sales = float(shop_sales)
             
-            # Gross Sales combined
+            # Gross Sales combined for active period
             gross_sales = ticket_sales + shop_sales
 
-            # 3b. Expenses & Net Profit
-            total_expenses = Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0
-            total_expenses = float(total_expenses)
+            # 3b. Expenses & Net Profit for active period
+            period_expenses = Expense.objects.filter(
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            ).aggregate(Sum('amount'))['amount__sum'] or 0
+            total_expenses = float(period_expenses)
             net_profit = gross_sales - total_expenses
             
             # 4. Inventory Alerts

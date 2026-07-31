@@ -690,13 +690,7 @@ const TourPage = () => {
                     <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-[9px] xs:text-[10px] font-black uppercase tracking-wider text-white/70">
                       <div className="flex flex-wrap items-center gap-4">
                         <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#22a6b3] border border-white/30 shadow-[0_0_6px_#22a6b3]" /> Disponible
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#f59e0b] border border-white/30 shadow-[0_0_6px_#f59e0b]" /> VIP
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-[#E5A93B] shadow-[0_0_8px_#E5A93B]" /> Tu Selección
+                          <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
                         </span>
                         <span className="flex items-center gap-1.5">
                           <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
@@ -714,7 +708,7 @@ const TourPage = () => {
                       </div>
                     ) : (
                       <div className={cn(
-                        "h-[480px] lg:h-[580px] relative w-full",
+                        "h-[400px] xs:h-[480px] lg:h-[580px] relative w-full overflow-hidden",
                         isCurrentEventPast && "pointer-events-none opacity-85"
                       )}>
                         {isCurrentEventPast && (

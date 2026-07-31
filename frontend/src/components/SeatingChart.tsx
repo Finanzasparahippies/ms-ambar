@@ -148,7 +148,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const handleResize = () => {
       const canvas = canvasRef.current;
       if (!canvas || !container) return;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = container.clientWidth;
       const h = container.clientHeight;
       canvas.width = w * dpr;
@@ -245,7 +245,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -465,10 +465,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       }
 
       if (isSelected) {
-        fillColor = '#FFBF00';
+        fillColor = '#2563EB';
         strokeColor = '#ffffff';
         ctx.shadowBlur = 14;
-        ctx.shadowColor = '#FFBF00';
+        ctx.shadowColor = '#2563EB';
       } else if (isHovered && !isOccupied) {
         fillColor = '#38bdf8';
         strokeColor = '#ffffff';

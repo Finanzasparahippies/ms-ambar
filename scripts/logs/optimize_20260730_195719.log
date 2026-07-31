@@ -1,0 +1,21 @@
+2026-07-30 19:57:19,545 [INFO] 🚀 Starting Ms Ambar Image Optimization Process
+2026-07-30 19:57:19,546 [INFO] Input Directory:  optimizar/
+2026-07-30 19:57:19,546 [INFO] Output Directory: optimizadas
+2026-07-30 19:57:19,546 [INFO] In-place mode:    False
+2026-07-30 19:57:19,546 [INFO] Convert to WebP:  False
+2026-07-30 19:57:19,546 [INFO] Quality target:   50
+2026-07-30 19:57:19,546 [INFO] Max dimension:    720px
+2026-07-30 19:57:19,546 [INFO] ⚙️ Optimizing: AMBAR68692.jpg (30.46 MB)
+2026-07-30 19:57:20,329 [INFO]    Resized from 5464x8192 to 480x720
+2026-07-30 19:57:20,338 [INFO]    Saved: 31189.0KB → 28.0KB (-31161.0KB / -99.9%)
+2026-07-30 19:57:20,339 [INFO] ⚙️ Optimizing: Flyer_Hadas_en_el_Desierto_Historias.jpg (1.34 MB)
+2026-07-30 19:57:20,399 [INFO]    Resized from 1080x1920 to 405x720
+2026-07-30 19:57:20,402 [INFO]    Saved: 1373.1KB → 31.3KB (-1341.8KB / -97.7%)
+2026-07-30 19:57:20,402 [INFO] 📊 ===== IMAGE OPTIMIZATION REPORT =====
+2026-07-30 19:57:20,403 [INFO] Files Processed:   2
+2026-07-30 19:57:20,403 [INFO] Files Skipped:     0
+2026-07-30 19:57:20,403 [INFO] Original Size:     31.80 MB
+2026-07-30 19:57:20,403 [INFO] Optimized Size:    0.06 MB
+2026-07-30 19:57:20,403 [INFO] Disk Space Saved:  31.74 MB (99.8% reduction)
+2026-07-30 19:57:20,403 [INFO] Log saved at:      logs/optimize_20260730_195719.log
+2026-07-30 19:57:20,403 [INFO] Manifest updated:  /home/saulvillecruz/proyectos/repositorios/ms-ambar/scripts/.optimized_manifest.json

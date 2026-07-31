@@ -123,14 +123,12 @@ class Theater(models.Model):
 
     def generate_seats(self):
         """
-        Generates Seat objects with 2D coordinates.
-        Supports:
-        1. Schema-based: {"sections": [...]}
-        2. Direct list: [{"row": "A", "number": 1, "x": 100, "y": 100, ...}]
+        Generates/updates Seat objects with 2D coordinates and custom colors idempotently.
+        Supports matching by seat ID or (section, row, number) composite key.
         """
         import math
         
-        # Auto-sanitize table layout to 42 tables (168 seats max) if excess tables present
+        # Auto-sanitize table layout if excess tables present (>42)
         self.sanitize_42_tables_layout()
 
         # Case 1: Direct list or Object with seats key
@@ -141,12 +139,14 @@ class Theater(models.Model):
             seats_data = self.layout['seats']
 
         if seats_data is not None:
-            existing_seats_map = {
+            existing_seats_by_id = {s.id: s for s in Seat.objects.filter(theater=self)}
+            existing_seats_by_key = {
                 (s.section, str(s.row), s.number): s
-                for s in Seat.objects.filter(theater=self)
+                for s in existing_seats_by_id.values()
             }
             seats_to_create = []
             seats_to_update = []
+            active_ids = set()
             active_keys = set()
             created_count = len(seats_data)
 
@@ -165,8 +165,22 @@ class Theater(models.Model):
                 ang = seat_data.get('angle', 0)
                 clr = seat_data.get('color', '')
 
-                if key in existing_seats_map:
-                    seat = existing_seats_map[key]
+                s_id = seat_data.get('id')
+                seat = None
+                try:
+                    if s_id and int(s_id) in existing_seats_by_id:
+                        seat = existing_seats_by_id[int(s_id)]
+                except (ValueError, TypeError):
+                    seat = None
+
+                if not seat and key in existing_seats_by_key:
+                    seat = existing_seats_by_key[key]
+
+                if seat:
+                    active_ids.add(seat.id)
+                    seat.section = sec
+                    seat.row = rw
+                    seat.number = num
                     seat.category = cat
                     seat.status = st
                     seat.base_price = price
@@ -193,15 +207,15 @@ class Theater(models.Model):
             if seats_to_create:
                 Seat.objects.bulk_create(seats_to_create, batch_size=500)
             if seats_to_update:
-                Seat.objects.bulk_update(seats_to_update, ['category', 'status', 'base_price', 'x', 'y', 'angle', 'color'], batch_size=500)
+                Seat.objects.bulk_update(seats_to_update, ['section', 'row', 'number', 'category', 'status', 'base_price', 'x', 'y', 'angle', 'color'], batch_size=500)
 
-            # Bulk delete seats no longer present in layout
+            # Ticket-safe cleanup of unused seats
             stale_ids = [
-                seat.id for key, seat in existing_seats_map.items()
-                if key not in active_keys
+                s.id for s in existing_seats_by_id.values()
+                if s.id not in active_ids and (s.section, str(s.row), s.number) not in active_keys
             ]
             if stale_ids:
-                Seat.objects.filter(id__in=stale_ids).delete()
+                Seat.objects.filter(id__in=stale_ids, ticket__isnull=True).delete()
 
             # Sync GA Zones
             elements_data = self.layout.get('map_elements', []) if isinstance(self.layout, dict) else []
