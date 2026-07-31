@@ -480,7 +480,7 @@ const Home = () => {
               href="/comprar-boletos"
               className="px-8 py-5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 text-[#06070b] shadow-xl shadow-pink-500/25 hover:scale-105 hover:shadow-pink-500/45 transition-all flex items-center gap-3 font-extrabold"
             >
-              <Ticket size={14} /> Adquirir Accesos "Hadas en el Desierto"
+              <Ticket size={18} /> Adquirir Accesos
             </Link>
             {/*<Link
               href="/contacto"
