@@ -110,6 +110,6 @@ El sistema de boletines y newsletter está completamente automatizado a nivel ba
 
 ## 📑 Guías de Documentación Adicionales
 
-- 💻 **[README_DEV.md](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/README_DEV.md)**: Documentación de arquitectura de ingeniería, motor dinámico de precios, límites de precio piso, fórmulas de Stripe y APIs.
-- 🎟️ **[README_CLIENTE.md](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/README_CLIENTE.md)**: Guía práctica y no técnica para la administración de taquilla, tipos de boletos y configuración de precios para Ms. Ambar y el equipo de producción.
+- 💻 **[README_DEV.md](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/README_DEV.md)**: Documentación de arquitectura de ingeniería, motor dinámico de precios, pasarela Stripe, fórmulas de Gross-Up de comisiones, lógica anti-compras rechazadas, diagnóstico fiscal y el blueprint de integración para **Facturapi** (SAT CFDI 4.0).
+- 🎟️ **[README_CLIENTE.md](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/README_CLIENTE.md)**: Guía práctica y administrativa para el equipo de producción y taquilla, explicando el modelo de cargo de servicio Stripe, protección de pagos fallidos, desgloses financieros de ejemplo y el módulo de autofacturación para fans.
 
