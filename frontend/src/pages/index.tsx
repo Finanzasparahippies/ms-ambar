@@ -9,9 +9,9 @@ import {
 import Head from 'next/head';
 import Link from 'next/link';
 import * as React from 'react';
-import { useEffect, useRef, useState } from 'react';
-import ThemedSection from '../components/ThemedSection';
+import { useEffect, useState } from 'react';
 import CanvasParticles from '../components/CanvasParticles';
+import ThemedSection from '../components/ThemedSection';
 import { useEventTheme } from '../context/EventThemeContext';
 import api from '../lib/api';
 
@@ -759,9 +759,9 @@ const Home = () => {
 
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
       <ThemedSection sectionKey="contact_section" className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] sm:w-[450px] h-[280px] sm:h-[450px] bg-amber-honey/5 rounded-full blur-2xl md:blur-[120px] pointer-events-none will-change-transform" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] sm:w-[450px] h-[280px] sm:h-[450px] bg-pink-500/5 rounded-full blur-2xl md:blur-[120px] pointer-events-none will-change-transform" />
 
-        <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-[#0c140f] border border-amber-honey/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
+        <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-[#0c140f] border border-pink-500/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
           <div className="space-y-3">
             <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Esto es solo para los reales</span>
             <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
@@ -785,7 +785,7 @@ const Home = () => {
                   </div>
                   <h4 className="font-bold uppercase tracking-wider text-[11px] mt-2">¡Suscripción Completada!</h4>
                   <p className="text-[10px] text-white/80 leading-relaxed">
-                    Te has unido con éxito a las cartas de Ms Ambar.
+                    Te has unido con éxito al club oficial de Ms Ambar.
                   </p>
                 </motion.div>
               ) : (
@@ -824,7 +824,7 @@ const Home = () => {
 
                     <button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-amber-honey via-amber-gold to-amber-500 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#06070b] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
+                      className="w-full bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#06070b] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
                       disabled={newsletterStatus === 'submitting'}
                     >
                       {newsletterStatus === 'submitting' ? (
