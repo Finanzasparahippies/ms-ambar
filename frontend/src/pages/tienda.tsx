@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import axios from 'axios';
+import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShoppingBag,
@@ -18,8 +18,6 @@ import {
   ShoppingBag as CartIcon
 } from 'lucide-react';
 import ThemedSection from '../components/ThemedSection';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 const FALLBACK_PRODUCTS = [
   { id: 1, name: 'Vinilo "Eclipse" Edición Limitada', price: 850, image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=500&q=80', category: { name: 'Música' } },
@@ -47,7 +45,7 @@ export default function MerchPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await axios.get(`${API_URL}/shop/products/`);
+        const res = await api.get('/shop/products/');
         if (res.data && res.data.length > 0) {
           setProducts(res.data);
         } else {
@@ -116,7 +114,7 @@ export default function MerchPage() {
     }));
 
     try {
-      const res = await axios.post(`${API_URL}/shop/checkout/`, {
+      const res = await api.post('/shop/checkout/', {
         email,
         full_name: fullName,
         address,

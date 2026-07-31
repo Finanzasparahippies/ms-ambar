@@ -6,6 +6,7 @@ import {
   Camera, ShieldCheck, AlertCircle, CheckCircle, ArrowLeft, RefreshCw, Smartphone, Keyboard, Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from '../../lib/api';
 import { getApiUrl } from '../../lib/utils';
 
 export default function ScanTicketsPage() {
@@ -39,17 +40,9 @@ export default function ScanTicketsPage() {
       router.replace('/dashboard'); // Not logged in
       return;
     }
-    const apiUrl = getApiUrl();
-    fetch(`${apiUrl}/users/profile/`, {
-      headers: {
-        'Authorization': `Bearer ${jwtToken}`
-      }
-    })
+    api.get('/users/profile/')
       .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Not authorized');
-      })
-      .then(data => {
+        const data = res.data;
         if (data.is_staff) {
           setIsStaff(true);
         } else {
@@ -214,27 +207,16 @@ export default function ScanTicketsPage() {
     setIsValidating(true);
     stopScanner(); // Pause camera reader during api validation
 
-    const apiUrl = getApiUrl();
-    const jwtToken = localStorage.getItem('token');
-
     try {
-      const res = await fetch(`${apiUrl}/tickets/tickets/validate/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': jwtToken ? `Bearer ${jwtToken}` : ''
-        },
-        body: JSON.stringify({ token })
-      });
+      const res = await api.post('/tickets/tickets/validate/', { token }).catch(err => err.response);
+      const data = res?.data || {};
 
-      const data = await res.json();
-      if (res.ok) {
+      if (res && res.status === 200) {
         if (data.status === 'success') {
           playSound('success');
           setScanResult(data);
           setScanStatusType('success');
         } else {
-          // Fallback if status exists but isn't success
           playSound('error');
           setScanError(data.message || 'Error de validación');
           setScanStatusType('error');

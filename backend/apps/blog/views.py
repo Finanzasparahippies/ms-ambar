@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils.html import strip_tags
@@ -12,6 +13,16 @@ import requests
 import threading
 
 logger = logging.getLogger(__name__)
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
+    def paginate_queryset(self, queryset, request, view=None):
+        if request.query_params.get('all') == 'true':
+            return None
+        return super().paginate_queryset(queryset, request, view)
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -199,8 +210,9 @@ class PostViewSet(viewsets.ModelViewSet):
             post.save()
 
 class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
-    queryset = NewsletterSubscriber.objects.all()
+    queryset = NewsletterSubscriber.objects.all().order_by('-created_at')
     serializer_class = NewsletterSubscriberSerializer
+    pagination_class = StandardResultsSetPagination
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'destroy']:

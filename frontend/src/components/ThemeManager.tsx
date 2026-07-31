@@ -120,6 +120,7 @@ export const ThemeManager: React.FC = () => {
   const [cardStyle, setCardStyle] = useState('rounded-full');
   const [backgroundPattern, setBackgroundPattern] = useState('stars');
   const [fontPreset, setFontPreset] = useState('cormorant');
+  const [allowCanvasZoom, setAllowCanvasZoom] = useState<boolean>(true);
   const [animationPreset, setAnimationPreset] = useState('none');
   const [imageFilter, setImageFilter] = useState('none');
   const [customCss, setCustomCss] = useState('');
@@ -175,6 +176,7 @@ export const ThemeManager: React.FC = () => {
           setCardStyle(cfg.card_style || 'rounded-full');
           setBackgroundPattern(cfg.background_pattern || 'stars');
           setFontPreset(cfg.font_preset || 'cormorant');
+          setAllowCanvasZoom(res.data.allow_canvas_zoom ?? true);
           setAnimationPreset(cfg.animation_preset || 'none');
           setImageFilter(cfg.image_filter || 'none');
           setCustomCss(cfg.custom_css || '');
@@ -291,6 +293,7 @@ export const ThemeManager: React.FC = () => {
       card_style: cardStyle,
       background_pattern: backgroundPattern,
       font_preset: fontPreset,
+      allow_canvas_zoom: allowCanvasZoom,
       animation_preset: animationPreset,
       image_filter: imageFilter,
       custom_css: customCss,
@@ -805,6 +808,24 @@ export const ThemeManager: React.FC = () => {
                 className="w-full bg-[#080c0a] border border-white/15 rounded-2xl p-4 text-xs font-mono text-amber-honey focus:border-amber-honey focus:outline-none"
               />
             </div>
+
+            {/* Canvas & Seat Map Zoom Toggle */}
+            <div className="pt-4 border-t border-white/10">
+              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Comportamiento del Canvas de Asientos</label>
+              <div className="p-4 rounded-2xl border border-white/10 bg-[#080c0a]/60 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-[#F4F6F0] uppercase tracking-wider">Permitir Zoom Interactivo</h4>
+                  <p className="text-[10px] text-[#F4F6F0]/60">Al desactivar, el mapa se fija en zoom estable centrado en pantalla.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAllowCanvasZoom(!allowCanvasZoom)}
+                  className={`w-14 h-7 rounded-full p-1 transition-colors relative flex items-center ${allowCanvasZoom ? 'bg-amber-honey' : 'bg-white/20'}`}
+                >
+                  <span className={`w-5 h-5 rounded-full bg-[#1E2B22] transition-transform ${allowCanvasZoom ? 'translate-x-7' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1144,8 +1165,7 @@ export const ThemeManager: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };

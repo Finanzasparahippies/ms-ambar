@@ -1,11 +1,12 @@
+import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum, Avg, Count, F
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.db import connection
 
 # Import models from sibling apps
@@ -14,7 +15,7 @@ from apps.shop.models import Order, Product, OrderItem, Expense
 
 try:
     from apps.performance.models import PerformanceMetric
-except ImportError:
+except ImportError as e:
     PerformanceMetric = None
 
 # Safe import for psutil
@@ -24,6 +25,8 @@ except ImportError:
     psutil = None
 
 User = get_user_model()
+logger = logging.getLogger("apps.dashboard")
+
 
 class AnalyticsOverview(APIView):
     permission_classes = [IsAdminUser]
@@ -54,7 +57,8 @@ class AnalyticsOverview(APIView):
                     },
                     'vitals': [],
                     'charts': {
-                        'daily_sales': []
+                        'daily_sales': [],
+                        'monthly_sales': []
                     },
                     'status': 'success',
                     'is_restricted': True
@@ -64,34 +68,68 @@ class AnalyticsOverview(APIView):
             end_date = timezone.now()
             start_date = end_date - timedelta(days=29)
             
+            def _get_ticket_price(t):
+                try:
+                    event = getattr(t, 'event', None)
+                    seat = getattr(t, 'seat', None)
+                    ga_zone = getattr(t, 'ga_zone', None)
+
+                    if seat:
+                        base = float(getattr(seat, 'base_price', 0.0) or 0.0)
+                        multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0) if event else 1.0
+                        price = base * multiplier
+                    elif ga_zone:
+                        price = float(getattr(ga_zone, 'base_price', 0.0) or 0.0)
+                    elif event:
+                        if getattr(event, 'allow_seatless_tickets', True) and getattr(event, 'seatless_ticket_price', None) is not None:
+                            price = float(getattr(event, 'effective_seatless_ticket_price', 0.0) or 0.0)
+                        elif getattr(event, 'numbered_ticket_price', None) is not None and float(getattr(event, 'numbered_ticket_price', 0.0) or 0.0) > 0:
+                            price = float(getattr(event, 'numbered_seat_base_price', 0.0) or 0.0)
+                        else:
+                            price = float(getattr(event, 'base_price', 0.0) or 0.0)
+                    else:
+                        price = 0.0
+
+                    # Meet & Greet Upgrade
+                    if getattr(t, 'has_mg', False) and event:
+                        price += float(getattr(event, 'mg_price', 0.0) or 0.0)
+
+                    # Apply Coupon Discount if present
+                    used_coupon = getattr(t, 'used_coupon', None)
+                    if used_coupon:
+                        dp = float(getattr(used_coupon, 'discount_percent', 0.0) or 0.0)
+                        da = float(getattr(used_coupon, 'discount_amount', 0.0) or 0.0)
+                        if dp > 0:
+                            price = price * (1.0 - (dp / 100.0))
+                        elif da > 0:
+                            price = max(0.0, price - da)
+
+                    return round(float(price), 2)
+                except (ObjectDoesNotExist, AttributeError, ValueError, TypeError) as ex:
+                    logger.warning(f"[AnalyticsOverview] Safe price fallback for ticket #{getattr(t, 'id', 'unknown')}: {ex}")
+                    return 0.0
+                except Exception as ex:
+                    logger.error(f"[AnalyticsOverview] Unexpected error calculating price for ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
+                    return 0.0
+
             # 2. Financial Metrics - Tickets
-            paid_tickets = Ticket.objects.filter(status__in=['paid', 'used'])
+            paid_tickets = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
             total_tickets_sold = paid_tickets.count()
             
-            ticket_sales = 0
+            ticket_sales = 0.0
             mg_upgrades_sold = 0
-            mg_revenue = 0
+            mg_revenue = 0.0
             
             for t in paid_tickets:
-                # Get base price of the seat or GA zone
-                base = 0
-                if t.seat:
-                    base = t.seat.base_price
-                elif t.ga_zone:
-                    base = t.ga_zone.base_price
-                
-                # Apply event multiplier
-                multiplier = float(t.event.price_multiplier) if t.event else 1.0
-                t_price = float(base) * multiplier
-                
-                # Add Meet & Greet if upgraded
-                if t.has_mg:
-                    mg_upgrades_sold += 1
-                    mg_price = float(t.event.mg_price) if t.event else 0.0
-                    t_price += mg_price
-                    mg_revenue += mg_price
-                    
-                ticket_sales += t_price
+                try:
+                    event = getattr(t, 'event', None)
+                    if getattr(t, 'has_mg', False) and event:
+                        mg_upgrades_sold += 1
+                        mg_revenue += float(getattr(event, 'mg_price', 0.0) or 0.0)
+                    ticket_sales += _get_ticket_price(t)
+                except Exception as ex:
+                    logger.warning(f"[AnalyticsOverview] Error processing paid ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
+                    continue
 
             # 3. Financial Metrics - Shop / Merch
             paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
@@ -114,61 +152,177 @@ class AnalyticsOverview(APIView):
             # Top Merchandise Products
             product_revenue = {}
             for item in OrderItem.objects.filter(order__status__in=['paid', 'shipped', 'delivered']).select_related('product'):
-                name = item.product.name
-                qty = item.quantity
-                rev = float(item.price) * qty
-                if name not in product_revenue:
-                    product_revenue[name] = {'name': name, 'quantity': 0, 'revenue': 0.0}
-                product_revenue[name]['quantity'] += qty
-                product_revenue[name]['revenue'] += rev
+                try:
+                    if not item.product:
+                        continue
+                    name = item.product.name
+                    qty = item.quantity
+                    rev = float(item.price) * qty
+                    if name not in product_revenue:
+                        product_revenue[name] = {'name': name, 'quantity': 0, 'revenue': 0.0}
+                    product_revenue[name]['quantity'] += qty
+                    product_revenue[name]['revenue'] += rev
+                except Exception as ex:
+                    logger.warning(f"[AnalyticsOverview] Error processing order item #{getattr(item, 'id', 'unknown')}: {ex}")
+                    continue
             
             top_products = sorted(product_revenue.values(), key=lambda x: x['revenue'], reverse=True)[:5]
 
             # 5. Core Web Vitals averages
             vitals = []
             if PerformanceMetric:
-                for metric_name, display_name in PerformanceMetric.METRIC_TYPES:
-                    avg_val = PerformanceMetric.objects.filter(name=metric_name).aggregate(Avg('value'))['value__avg']
-                    if avg_val is not None:
-                        vitals.append({
-                            'name': metric_name,
-                            'display': display_name,
-                            'value': round(avg_val, 2)
-                        })
+                try:
+                    for metric_name, display_name in PerformanceMetric.METRIC_TYPES:
+                        avg_val = PerformanceMetric.objects.filter(name=metric_name).aggregate(Avg('value'))['value__avg']
+                        if avg_val is not None:
+                            vitals.append({
+                                'name': metric_name,
+                                'display': display_name,
+                                'value': round(avg_val, 2)
+                            })
+                except Exception as ex:
+                    logger.warning(f"[AnalyticsOverview] Error calculating PerformanceMetrics: {ex}", exc_info=True)
+                    vitals = []
 
             # 6. Chart Data (Daily ticket sales and shop sales for the last 30 days)
             daily_stats = []
             for i in range(30):
-                current_date = start_date + timedelta(days=i)
-                date_str = current_date.strftime('%d %b')
-                
-                # Ticket sales on this date
-                date_tickets = Ticket.objects.filter(
-                    status__in=['paid', 'used'],
-                    created_at__date=current_date.date()
-                )
-                t_daily_sales = 0
-                for t in date_tickets:
-                    base = t.seat.base_price if t.seat else (t.ga_zone.base_price if t.ga_zone else 0)
-                    multiplier = float(t.event.price_multiplier) if t.event else 1.0
-                    t_price = float(base) * multiplier
-                    if t.has_mg:
-                        t_price += float(t.event.mg_price) if t.event else 0.0
-                    t_daily_sales += t_price
+                try:
+                    current_date = start_date + timedelta(days=i)
+                    date_str = current_date.strftime('%d %b')
                     
-                # Shop sales on this date
-                s_daily_sales = Order.objects.filter(
-                    status__in=['paid', 'shipped', 'delivered'],
-                    created_at__date=current_date.date()
-                ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-                s_daily_sales = float(s_daily_sales)
-                
-                daily_stats.append({
-                    'date': date_str,
-                    'tickets': round(t_daily_sales, 2),
-                    'shop': round(s_daily_sales, 2),
-                    'total': round(t_daily_sales + s_daily_sales, 2)
-                })
+                    date_tickets = Ticket.objects.filter(
+                        status__in=['paid', 'used'],
+                        created_at__date=current_date.date()
+                    ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+                    t_daily_sales = sum(_get_ticket_price(t) for t in date_tickets)
+                        
+                    s_daily_sales = Order.objects.filter(
+                        status__in=['paid', 'shipped', 'delivered'],
+                        created_at__date=current_date.date()
+                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                    s_daily_sales = float(s_daily_sales)
+                    
+                    daily_stats.append({
+                        'date': date_str,
+                        'tickets': round(t_daily_sales, 2),
+                        'shop': round(s_daily_sales, 2),
+                        'total': round(t_daily_sales + s_daily_sales, 2)
+                    })
+                except Exception as ex:
+                    logger.warning(f"[AnalyticsOverview] Error calculating daily stats iteration i={i}: {ex}")
+                    continue
+
+            # 7. Monthly Chart Data (Last 12 months aggregated)
+            monthly_stats = []
+            now = timezone.now()
+            for i in range(11, -1, -1):
+                try:
+                    yr = now.year
+                    mo = now.month - i
+                    while mo <= 0:
+                        mo += 12
+                        yr -= 1
+                    
+                    m_start = datetime(yr, mo, 1, 0, 0, 0, tzinfo=dt_timezone.utc)
+                    if mo == 12:
+                        m_end = datetime(yr + 1, 1, 1, 0, 0, 0, tzinfo=dt_timezone.utc) - timedelta(seconds=1)
+                    else:
+                        m_end = datetime(yr, mo + 1, 1, 0, 0, 0, tzinfo=dt_timezone.utc) - timedelta(seconds=1)
+
+                    m_label = m_start.strftime('%b %Y')
+                    
+                    m_tickets = Ticket.objects.filter(
+                        status__in=['paid', 'used'],
+                        created_at__gte=m_start,
+                        created_at__lte=m_end
+                    ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+                    t_m_sales = sum(_get_ticket_price(t) for t in m_tickets)
+
+                    s_m_sales = Order.objects.filter(
+                        status__in=['paid', 'shipped', 'delivered'],
+                        created_at__gte=m_start,
+                        created_at__lte=m_end
+                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                    s_m_sales = float(s_m_sales)
+
+                    monthly_stats.append({
+                        'date': m_label,
+                        'month_key': m_start.strftime('%Y-%m'),
+                        'tickets': round(t_m_sales, 2),
+                        'shop': round(s_m_sales, 2),
+                        'total': round(t_m_sales + s_m_sales, 2)
+                    })
+                except Exception as ex:
+                    logger.warning(f"[AnalyticsOverview] Error calculating monthly stats iteration i={i}: {ex}")
+                    continue
+
+            # 8. Weekly Chart Data (Last 12 weeks)
+            weekly_stats = []
+            for i in range(11, -1, -1):
+                try:
+                    w_start = end_date - timedelta(weeks=i+1)
+                    w_end = end_date - timedelta(weeks=i)
+                    w_label = f"Sem {12-i}"
+
+                    w_tickets = Ticket.objects.filter(
+                        status__in=['paid', 'used'],
+                        created_at__gte=w_start,
+                        created_at__lte=w_end
+                    ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+                    t_w_sales = sum(_get_ticket_price(t) for t in w_tickets)
+
+                    s_w_sales = Order.objects.filter(
+                        status__in=['paid', 'shipped', 'delivered'],
+                        created_at__gte=w_start,
+                        created_at__lte=w_end
+                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+                    s_w_sales = float(s_w_sales)
+
+                    weekly_stats.append({
+                        'date': w_label,
+                        'range': f"{w_start.strftime('%d %b')} - {w_end.strftime('%d %b')}",
+                        'tickets': round(t_w_sales, 2),
+                        'shop': round(s_w_sales, 2),
+                        'total': round(t_w_sales + s_w_sales, 2)
+                    })
+                except Exception as ex:
+                    logger.warning(f"[AnalyticsOverview] Error calculating weekly stats iteration i={i}: {ex}")
+                    continue
+
+            # 9. Event-level sales breakdown
+            event_stats = []
+            try:
+                for ev in Event.objects.all().order_by('-date'):
+                    ev_tickets = Ticket.objects.filter(event=ev, status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+                    ev_t_sold = ev_tickets.count()
+                    ev_t_revenue = sum(_get_ticket_price(t) for t in ev_tickets)
+                    ev_mg_count = sum(1 for t in ev_tickets if getattr(t, 'has_mg', False))
+                    ev_mg_revenue = ev_mg_count * float(getattr(ev, 'mg_price', 0.0) or 0.0)
+
+                    event_stats.append({
+                        'id': ev.id,
+                        'date': ev.date.strftime('%d %b %Y') if getattr(ev, 'date', None) else '',
+                        'event_title': ev.title,
+                        'artist': ev.artist,
+                        'tickets_sold': ev_t_sold,
+                        'ticket_revenue': round(ev_t_revenue, 2),
+                        'mg_upgrades': ev_mg_count,
+                        'mg_revenue': round(ev_mg_revenue, 2),
+                        'total': round(ev_t_revenue, 2)
+                    })
+            except Exception as ex:
+                logger.warning(f"[AnalyticsOverview] Error calculating event stats: {ex}")
+                event_stats = []
+
+            # 10. Revenue distribution breakdown for Pie/Donut Chart
+            total_rev_pool = max(1.0, gross_sales)
+            revenue_breakdown = [
+                {'category': 'Boletos General/Numerado', 'amount': round(max(0.0, ticket_sales - mg_revenue), 2), 'percentage': round((max(0.0, ticket_sales - mg_revenue) / total_rev_pool) * 100, 1)},
+                {'category': 'Upgrades Meet & Greet', 'amount': round(mg_revenue, 2), 'percentage': round((mg_revenue / total_rev_pool) * 100, 1)},
+                {'category': 'Mercancía Tienda', 'amount': round(shop_sales, 2), 'percentage': round((shop_sales / total_rev_pool) * 100, 1)},
+                {'category': 'Gastos Operativos', 'amount': round(total_expenses, 2), 'percentage': round((total_expenses / total_rev_pool) * 100, 1)}
+            ]
 
             metrics = {
                 'financials': {
@@ -191,13 +345,142 @@ class AnalyticsOverview(APIView):
                 },
                 'vitals': vitals,
                 'charts': {
-                    'daily_sales': daily_stats
+                    'daily_sales': daily_stats,
+                    'weekly_sales': weekly_stats,
+                    'monthly_sales': monthly_stats,
+                    'event_sales': event_stats,
+                    'revenue_breakdown': revenue_breakdown
                 },
                 'status': 'success'
             }
             return Response(metrics)
         except Exception as e:
+            logger.error(f"[AnalyticsOverview] Unhandled Error in analytics: {e}", exc_info=True)
             return Response({'error': str(e), 'status': 'error'}, status=500)
+
+
+class AnalyticsUnitDataView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        if not request.user.is_superuser:
+            return Response({'error': 'Acceso denegado.'}, status=403)
+
+        data_type = request.query_params.get('type', 'tickets')
+        search_query = request.query_params.get('search', '').strip().lower()
+
+        try:
+            if data_type == 'tickets':
+                qs = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon').order_by('-created_at')
+                results = []
+                for t in qs:
+                    user_email = t.user_email or 'Invitado'
+                    event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
+                    seat_str = f"Fila {t.seat.row} - #{t.seat.number}" if getattr(t, 'seat', None) else (t.ga_zone.name if getattr(t, 'ga_zone', None) else "General")
+                    
+                    price = 0.0
+                    try:
+                        price = float(getattr(t.seat, 'base_price', 0.0) or 0.0) if getattr(t, 'seat', None) else float(getattr(t.ga_zone, 'base_price', 0.0) or 0.0)
+                        if getattr(t, 'has_mg', False) and getattr(t, 'event', None):
+                            price += float(getattr(t.event, 'mg_price', 0.0) or 0.0)
+                    except Exception:
+                        price = 0.0
+
+                    row = {
+                        'id': t.id,
+                        'buyer': user_email,
+                        'event': event_title,
+                        'seat': seat_str,
+                        'has_mg': getattr(t, 'has_mg', False),
+                        'coupon': t.used_coupon.code if getattr(t, 'used_coupon', None) else 'Ninguno',
+                        'status': t.status,
+                        'amount': round(price, 2),
+                        'created_at': t.created_at.isoformat() if getattr(t, 'created_at', None) else ''
+                    }
+
+                    if search_query:
+                        if (search_query in user_email.lower() or 
+                            search_query in event_title.lower() or 
+                            search_query in seat_str.lower() or 
+                            search_query in str(t.id)):
+                            results.append(row)
+                    else:
+                        results.append(row)
+                return Response({'type': 'tickets', 'count': len(results), 'data': results[:200]})
+
+            elif data_type == 'orders':
+                qs = Order.objects.filter(status__in=['paid', 'shipped', 'delivered']).prefetch_related('items__product').order_by('-created_at')
+                results = []
+                for o in qs:
+                    items_str = ", ".join([f"{item.quantity}x {item.product.name if item.product else 'Prod'}" for item in o.items.all()])
+                    row = {
+                        'id': o.id,
+                        'buyer': f"{o.full_name} ({o.user_email})",
+                        'items_summary': items_str or 'Sin items',
+                        'city': f"{o.city}, {o.country}",
+                        'status': o.status,
+                        'amount': float(o.total_amount),
+                        'created_at': o.created_at.isoformat()
+                    }
+                    if search_query:
+                        if (search_query in o.full_name.lower() or 
+                            search_query in o.user_email.lower() or 
+                            search_query in items_str.lower() or 
+                            search_query in str(o.id)):
+                            results.append(row)
+                    else:
+                        results.append(row)
+                return Response({'type': 'orders', 'count': len(results), 'data': results[:200]})
+
+            elif data_type == 'expenses':
+                qs = Expense.objects.all().order_by('-created_at')
+                results = []
+                for e in qs:
+                    row = {
+                        'id': e.id,
+                        'title': e.title,
+                        'category': e.category,
+                        'description': e.description,
+                        'amount': float(e.amount),
+                        'created_at': e.created_at.isoformat()
+                    }
+                    if search_query:
+                        if (search_query in e.title.lower() or 
+                            search_query in e.category.lower() or 
+                            search_query in (e.description or '').lower()):
+                            results.append(row)
+                    else:
+                        results.append(row)
+                return Response({'type': 'expenses', 'count': len(results), 'data': results[:200]})
+
+            elif data_type == 'mg_upgrades':
+                qs = Ticket.objects.filter(has_mg=True, status__in=['paid', 'used']).select_related('event').order_by('-created_at')
+                results = []
+                for t in qs:
+                    user_email = t.user_email or 'Invitado'
+                    event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
+                    mg_price = float(getattr(t.event, 'mg_price', 0.0) or 0.0) if getattr(t, 'event', None) else 0.0
+                    row = {
+                        'id': t.id,
+                        'buyer': user_email,
+                        'event': event_title,
+                        'mg_price': mg_price,
+                        'status': t.status,
+                        'created_at': t.created_at.isoformat() if getattr(t, 'created_at', None) else ''
+                    }
+                    if search_query:
+                        if (search_query in user_email.lower() or search_query in event_title.lower()):
+                            results.append(row)
+                    else:
+                        results.append(row)
+                return Response({'type': 'mg_upgrades', 'count': len(results), 'data': results[:200]})
+
+            else:
+                return Response({'error': 'Tipo de dato no válido.'}, status=400)
+
+        except Exception as ex:
+            logger.error(f"[AnalyticsUnitDataView] Error fetching unit data: {ex}", exc_info=True)
+            return Response({'error': str(ex)}, status=500)
 
 
 class SystemMetricsView(APIView):
@@ -212,7 +495,8 @@ class SystemMetricsView(APIView):
                 row = cursor.fetchone()
                 if row:
                     db_status = "Conectado"
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[SystemMetricsView] DB connection check failed: {e}")
             db_status = "Error"
 
         # Check if psutil is available
@@ -263,10 +547,9 @@ class SystemMetricsView(APIView):
                 }
                 return Response(metrics)
             except Exception as e:
-                # Fallback in case of runtime permissions error in container
+                logger.warning(f"[SystemMetricsView] Metric collection failed, serving fallback: {e}", exc_info=True)
                 return Response(self._get_fallback_metrics(db_status, str(e)))
         else:
-            # Fallback when psutil is not installed
             return Response(self._get_fallback_metrics(db_status, "psutil no está disponible"))
 
     def _get_fallback_metrics(self, db_status, message):
@@ -306,9 +589,10 @@ class DashboardOrdersView(APIView):
             for o in orders:
                 items_data = []
                 for item in o.items.all().select_related('product'):
+                    prod = getattr(item, 'product', None)
                     items_data.append({
-                        'product_id': item.product.id,
-                        'product_name': item.product.name,
+                        'product_id': prod.id if prod else None,
+                        'product_name': prod.name if prod else "Producto descontinuado",
                         'quantity': item.quantity,
                         'price': float(item.price),
                         'total': float(item.price) * item.quantity
@@ -329,6 +613,7 @@ class DashboardOrdersView(APIView):
             
             return Response(orders_data)
         except Exception as e:
+            logger.error(f"[DashboardOrdersView] Error listing orders: {e}", exc_info=True)
             return Response({'error': str(e)}, status=500)
 
     def patch(self, request, pk=None):
@@ -354,6 +639,7 @@ class DashboardOrdersView(APIView):
         except Order.DoesNotExist:
             return Response({"error": "Pedido no encontrado."}, status=404)
         except Exception as e:
+            logger.error(f"[DashboardOrdersView] Error updating order status: {e}", exc_info=True)
             return Response({'error': str(e)}, status=500)
 
 
@@ -375,6 +661,7 @@ class DashboardExpensesView(APIView):
             } for e in expenses]
             return Response(expenses_data)
         except Exception as e:
+            logger.error(f"[DashboardExpensesView] Error listing expenses: {e}", exc_info=True)
             return Response({'error': str(e)}, status=500)
 
     def post(self, request):
@@ -407,4 +694,5 @@ class DashboardExpensesView(APIView):
                 }
             }, status=201)
         except Exception as e:
+            logger.error(f"[DashboardExpensesView] Error creating expense: {e}", exc_info=True)
             return Response({'error': str(e)}, status=500)

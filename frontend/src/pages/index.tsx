@@ -1,4 +1,3 @@
-import axios from 'axios';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
@@ -11,9 +10,9 @@ import Head from 'next/head';
 import Link from 'next/link';
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
-import { useEventTheme } from '../context/EventThemeContext';
 import ThemedSection from '../components/ThemedSection';
-import { getApiUrl } from '../lib/utils';
+import { useEventTheme } from '../context/EventThemeContext';
+import api from '../lib/api';
 
 // ─── PARTICLE BACKGROUND COMPONENT (WITH MORPHING) ───
 const CanvasParticles = ({ morphTarget = 'none' }: { morphTarget?: string }) => {
@@ -847,36 +846,40 @@ const formatoHoraOficial = (fechaString: string) => {
 };
 
 const Home = () => {
+  const { getSectionTheme } = useEventTheme();
   const [isMounted, setIsMounted] = useState(false);
   const [newsletterName, setNewsletterName] = useState('');
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [newsletterErrorMessage, setNewsletterErrorMessage] = useState('');
   const [nextEvent, setNextEvent] = useState<any>(null);
+  const [siteSettings, setSiteSettings] = useState<any>(null);
 
   useEffect(() => {
     setIsMounted(true);
-    const apiUrl = getApiUrl();
-    axios.get(`${apiUrl}/tickets/events/`)
-      .then(res => {
-        if (res.data && res.data.length > 0) {
-          const now = new Date();
-          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          const upcoming = res.data
-            .filter((e: any) => e.is_active !== false)
-            .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
-            .filter((e: any) => e.dateObj >= startOfToday)
-            .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
+    Promise.all([
+      api.get('/tickets/events/').catch(() => ({ data: [] })),
+      api.get('/tickets/settings/').catch(() => ({ data: null })),
+    ]).then(([evRes, stRes]) => {
+      if (stRes?.data) {
+        setSiteSettings(stRes.data);
+      }
+      if (evRes.data && Array.isArray(evRes.data) && evRes.data.length > 0) {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const upcoming = evRes.data
+          .filter((e: any) => e.is_active !== false)
+          .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
+          .filter((e: any) => e.dateObj >= startOfToday)
+          .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
 
-          if (upcoming.length > 0) {
-            setNextEvent(upcoming[0]);
-          } else {
-            setNextEvent(null);
-          }
-          console.log("Upcoming events:", upcoming);
+        if (upcoming.length > 0) {
+          setNextEvent(upcoming[0]);
+        } else {
+          setNextEvent(null);
         }
-      })
-      .catch(err => console.error("Error fetching next event:", err));
+      }
+    }).catch(err => console.error("Error fetching homepage data:", err));
   }, []);
 
   const getFormattedEventDate = (dateStr: string) => {
@@ -922,8 +925,7 @@ const Home = () => {
     setNewsletterErrorMessage('');
 
     try {
-      const apiUrl = getApiUrl();
-      await axios.post(`${apiUrl}/blog/subscribers/`, {
+      await api.post('/blog/subscribers/', {
         email: newsletterEmail,
         name: newsletterName
       });
@@ -1107,32 +1109,36 @@ const Home = () => {
                       ) : (
                         <div className="space-y-2.5">
                           {/* Boleto General (Sin Asiento) */}
-                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
-                            <div className="flex flex-col text-left">
-                              <span className="text-white font-bold">🎟️ Entrada General (Sin Asiento)</span>
-                              <span className="text-[10px] text-pink-200/60">Acceso preferencial a zona general</span>
+                          {nextEvent.allow_seatless_tickets !== false && (
+                            <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
+                              <div className="flex flex-col text-left">
+                                <span className="text-white font-bold">🎟️ Entrada General (Sin Asiento)</span>
+                                <span className="text-[10px] text-pink-200/60">Acceso preferencial a zona general</span>
+                              </div>
+                              <span className="text-pink-300 font-black text-sm md:text-base">
+                                ${Math.round(nextEvent.effective_seatless_ticket_price !== undefined
+                                  ? Number(nextEvent.effective_seatless_ticket_price)
+                                  : getDynamicPrice(nextEvent, Number(nextEvent.seatless_ticket_price ?? 0))
+                                ).toLocaleString('es-MX')} MXN
+                              </span>
                             </div>
-                            <span className="text-pink-300 font-black text-sm md:text-base">
-                              ${Math.round(nextEvent.effective_seatless_ticket_price !== undefined
-                                ? Number(nextEvent.effective_seatless_ticket_price)
-                                : getDynamicPrice(nextEvent, Number(nextEvent.seatless_ticket_price ?? 0))
-                              ).toLocaleString('es-MX')} MXN
-                            </span>
-                          </div>
+                          )}
 
                           {/* Boleto Numerado (Asiento de Mesa) */}
-                          <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
-                            <div className="flex flex-col text-left">
-                              <span className="text-white font-bold">🪑 Asiento Numerado (Mesas)</span>
-                              <span className="text-[10px] text-pink-200/60">Lugar reservado en 42 mesas x 4 butacas</span>
+                          {nextEvent.allow_numbered_tickets !== false && (
+                            <div className="flex items-center justify-between text-xs md:text-sm bg-white/[0.04] p-3 rounded-xl border border-pink-500/20">
+                              <div className="flex flex-col text-left">
+                                <span className="text-white font-bold">🪑 Asiento Numerado (Mesas)</span>
+                                <span className="text-[10px] text-pink-200/60">Lugar reservado en 42 mesas x 4 butacas</span>
+                              </div>
+                              <span className="text-pink-300 font-black text-sm md:text-base">
+                                ${Math.round(nextEvent.numbered_seat_base_price !== undefined
+                                  ? Number(nextEvent.numbered_seat_base_price)
+                                  : getDynamicPrice(nextEvent, Number(nextEvent.numbered_ticket_price ?? 1000))
+                                ).toLocaleString('es-MX')} MXN
+                              </span>
                             </div>
-                            <span className="text-pink-300 font-black text-sm md:text-base">
-                              ${Math.round(nextEvent.numbered_seat_base_price !== undefined
-                                ? Number(nextEvent.numbered_seat_base_price)
-                                : getDynamicPrice(nextEvent, Number(nextEvent.numbered_ticket_price ?? 1000))
-                              ).toLocaleString('es-MX')} MXN
-                            </span>
-                          </div>
+                          )}
 
                           {/* Meet & Greet Adicional (Opcional) */}
                           {nextEvent.mg_limit > 0 && (
@@ -1188,21 +1194,21 @@ const Home = () => {
       {/* ─── BIOGRAPHY SECTION ─── */}
       {(() => {
         const bioTheme = { ...getSectionTheme('tarot_experience'), ...getSectionTheme('biography') };
-        const bioBadge = bioTheme.bio_badge || "La Cantautora";
-        const bioTitle = bioTheme.bio_title || "Ms. Ambar";
-        const bioImage = bioTheme.bio_image || "/Images/Inicio_Biografia.jpg";
-        const bioLocation = bioTheme.bio_location || "Hermosillo • México";
-        const bioCtaText = bioTheme.bio_cta_text || "Ver Próximos Eventos";
-        const bioCtaUrl = bioTheme.bio_cta_url || "/tour";
-        
-        const rawContent = bioTheme.bio_content;
-        const paragraphs = rawContent
-          ? rawContent.split('\n').filter(p => p.trim().length > 0)
+        const bioBadge = siteSettings?.bio_badge || bioTheme.bio_badge || "La Cantautora";
+        const bioTitle = siteSettings?.bio_title || bioTheme.bio_title || "Ms. Ambar";
+        const bioImage = siteSettings?.bio_image_url || siteSettings?.bio_image || bioTheme.bio_image || "/Images/Inicio_Biografia.jpg";
+        const bioLocation = siteSettings?.bio_location || bioTheme.bio_location || "Hermosillo • México";
+        const bioCtaText = siteSettings?.bio_cta_text || bioTheme.bio_cta_text || "Ver Próximos Eventos";
+        const bioCtaUrl = siteSettings?.bio_cta_url || bioTheme.bio_cta_url || "/tour";
+
+        const rawContent = siteSettings?.bio_content || bioTheme.bio_content;
+        const paragraphs: string[] = rawContent
+          ? rawContent.split('\n').filter((p: string) => p.trim().length > 0)
           : [
-              'Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda "Moonset", pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.',
-              'Su primer álbum formal, "14•28", fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.',
-              'Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción "No te voy a llorar", consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.'
-            ];
+            'Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda "Moonset", pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.',
+            'Su primer álbum formal, "14•28", fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.',
+            'Un hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción "No te voy a llorar", consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.'
+          ];
 
         return (
           <ThemedSection sectionKey="biography" className="pt-8 pb-16 md:pt-12 md:pb-24 relative overflow-hidden bg-[#06070b]">
@@ -1257,7 +1263,7 @@ const Home = () => {
                   </div>
 
                   <div className="space-y-4 sm:space-y-6 text-[#F4F6F0]/85 text-xs sm:text-sm md:text-base font-medium leading-relaxed font-sans" style={{ color: bioTheme.text_color || undefined }}>
-                    {paragraphs.map((para, idx) => (
+                    {paragraphs.map((para: string, idx: number) => (
                       <p key={idx}>{para}</p>
                     ))}
                   </div>

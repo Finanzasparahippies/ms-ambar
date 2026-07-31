@@ -45,6 +45,82 @@ class Theater(models.Model):
             self.layout['map_elements'] = filtered_elements
             self.save(update_fields=['layout'])
 
+    def get_layout_bounds(self, seat_padding=20):
+        """
+        Calcula las métricas de bounding box (min_x, min_y, max_x, max_y, width, height, center_x, center_y)
+        del layout 2D guardado en el teatro para referencia y validación de endpoints/UI.
+        """
+        if not isinstance(self.layout, dict):
+            return {
+                "min_x": -300.0, "min_y": -200.0, "max_x": 300.0, "max_y": 200.0,
+                "width": 600.0, "height": 400.0, "center_x": 0.0, "center_y": 0.0
+            }
+
+        seats_data = self.layout.get('seats', [])
+        map_elements = self.layout.get('map_elements', [])
+
+        if not isinstance(seats_data, list):
+            seats_data = []
+        if not isinstance(map_elements, list):
+            map_elements = []
+
+        if not seats_data and not map_elements:
+            return {
+                "min_x": -300.0, "min_y": -200.0, "max_x": 300.0, "max_y": 200.0,
+                "width": 600.0, "height": 400.0, "center_x": 0.0, "center_y": 0.0
+            }
+
+        min_x = float('inf')
+        min_y = float('inf')
+        max_x = float('-inf')
+        max_y = float('-inf')
+
+        for s in seats_data:
+            if isinstance(s, dict) and 'x' in s and 'y' in s:
+                try:
+                    sx, sy = float(s['x']), float(s['y'])
+                    min_x = min(min_x, sx - seat_padding)
+                    max_x = max(max_x, sx + seat_padding)
+                    min_y = min(min_y, sy - seat_padding)
+                    max_y = max(max_y, sy + seat_padding)
+                except (ValueError, TypeError):
+                    continue
+
+        for el in map_elements:
+            if isinstance(el, dict) and 'x' in el and 'y' in el:
+                try:
+                    ex, ey = float(el['x']), float(el['y'])
+                    half_w = float(el.get('w', 100)) / 2.0 + seat_padding
+                    half_h = float(el.get('h', 100)) / 2.0 + seat_padding
+                    min_x = min(min_x, ex - half_w)
+                    max_x = max(max_x, ex + half_w)
+                    min_y = min(min_y, ey - half_h)
+                    max_y = max(max_y, ey + half_h)
+                except (ValueError, TypeError):
+                    continue
+
+        if min_x == float('inf') or max_x == float('-inf'):
+            return {
+                "min_x": -300.0, "min_y": -200.0, "max_x": 300.0, "max_y": 200.0,
+                "width": 600.0, "height": 400.0, "center_x": 0.0, "center_y": 0.0
+            }
+
+        w = max(50.0, max_x - min_x)
+        h = max(50.0, max_y - min_y)
+        cx = (min_x + max_x) / 2.0
+        cy = (min_y + max_y) / 2.0
+
+        return {
+            "min_x": round(min_x, 2),
+            "min_y": round(min_y, 2),
+            "max_x": round(max_x, 2),
+            "max_y": round(max_y, 2),
+            "width": round(w, 2),
+            "height": round(h, 2),
+            "center_x": round(cx, 2),
+            "center_y": round(cy, 2)
+        }
+
     def generate_seats(self):
         """
         Generates Seat objects with 2D coordinates.
@@ -287,6 +363,7 @@ class Event(models.Model):
 
     # Seatless & Numbered Ticket base price options
     allow_seatless_tickets = models.BooleanField(default=True, help_text="Permite la compra de boletos generales sin asiento reservado")
+    allow_numbered_tickets = models.BooleanField(default=True, help_text="Permite la compra de boletos numerados reservables en mapa del teatro")
     seatless_ticket_price = models.DecimalField(max_digits=10, decimal_places=2, default=500.00, help_text="Precio base de boleto general sin asiento")
     numbered_ticket_price = models.DecimalField(max_digits=10, decimal_places=2, default=1000.00, help_text="Precio base de boleto numerado reservado")
 
@@ -528,12 +605,13 @@ class Event(models.Model):
         if self.allow_seatless_tickets and self.seatless_ticket_price is not None:
             prices.append(float(self.effective_seatless_ticket_price))
 
-        prices.append(float(self.numbered_seat_base_price))
+        if self.allow_numbered_tickets:
+            prices.append(float(self.numbered_seat_base_price))
 
         if prices:
             return min(prices)
         
-        return float(self.effective_seatless_ticket_price or 0.0)
+        return float(self.effective_seatless_ticket_price or self.numbered_seat_base_price or 0.0)
 
     @property
     def end_date(self):
@@ -687,6 +765,7 @@ class SiteSettings(models.Model):
         help_text="Texto del badge de próximo evento en la landing page cuando no hay eventos programados."
     )
 
+<<<<<<< HEAD
     # Configuración de Biografía de la Artista
     bio_badge = models.CharField(max_length=255, default="La Cantautora", help_text="Insignia / Distintivo del encabezado de la biografía.")
     bio_title = models.CharField(max_length=255, default="Ms. Ambar", help_text="Título / Nombre artístico principal.")
@@ -698,6 +777,20 @@ class SiteSettings(models.Model):
     bio_location = models.CharField(max_length=255, default="Hermosillo • México", help_text="Ubicación u origen de la artista.")
     bio_cta_text = models.CharField(max_length=255, default="Ver Próximos Eventos", help_text="Texto del botón de acción (CTA).")
     bio_cta_url = models.CharField(max_length=255, default="/tour", help_text="Enlace del botón de acción (CTA).")
+=======
+    # Configuración de Biografía (Index)
+    bio_badge = models.CharField(max_length=255, default="La Cantautora", help_text="Badge superior de la sección de biografía.")
+    bio_title = models.CharField(max_length=255, default="Ms. Ambar", help_text="Título principal de la biografía.")
+    bio_image = models.ImageField(upload_to='site_settings/', null=True, blank=True, help_text="Imagen oficial de la biografía en el index.")
+    bio_location = models.CharField(max_length=255, default="Hermosillo • México", help_text="Ubicación o pie de biografía.")
+    bio_content = models.TextField(
+        blank=True, null=True,
+        default='Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora, es una figura destacada en la música latina por su fusión de géneros como R&B, soul, regional mexicano y bachata. Su carrera profesional comenzó en 2017 con la banda "Moonset", pero consolidó su relevancia al unirse a la gira del rapero mexicano Charles Ans en 2022, actuando como telonera en grandes escenarios como el Auditorio Nacional.\n\nSu primer álbum formal, "14•28", fue lanzado en octubre de 2024; el título hace referencia a la numerología y a fechas significativas. A través de su música, busca conectar emocionalmente con el público compartiendo historias autobiográficas y reflexiones sobre la vida, la muerte y las memorias.\n\nUn hito reciente en su trayectoria fue su selección para representar a México en la categoría folclórica del Festival de Viña del Mar 2025, con la canción "No te voy a llorar", consolidándose como una de las artistas más prometedoras de la nueva generación musical mexicana.',
+        help_text="Texto completo de la biografía. Separa párrafos con salto de línea."
+    )
+    bio_cta_text = models.CharField(max_length=255, default="Ver Próximos Eventos", help_text="Texto del botón CTA de biografía.")
+    bio_cta_url = models.CharField(max_length=255, default="/tour", help_text="URL o enlace del botón CTA de biografía.")
+>>>>>>> d4403a82186205fa8bbcf4e650c09669e93e3883
 
     # Configuración Global de Tema Visual (Valores por defecto para todo el sitio)
     primary_color = models.CharField(max_length=50, default='#E5A93B', help_text="Color primario de acentos, botones y luces (ej. #E5A93B)")
@@ -712,6 +805,7 @@ class SiteSettings(models.Model):
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
     theme_mode = models.CharField(max_length=20, default='global', help_text="Modo de aplicación de tema: 'global' o 'section'")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, default='cormorant', help_text="Preset de fuentes tipográficas")
+    allow_canvas_zoom = models.BooleanField(default=True, help_text="Permite o bloquea el zoom interactivo en el canvas de selección de asientos")
     custom_css = models.TextField(blank=True, null=True, default='', help_text="CSS personalizado global para todo el sitio")
     section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección del sitio (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 

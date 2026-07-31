@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api from '../lib/api';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Calendar, CalendarX,
@@ -143,6 +143,7 @@ const TourPage = () => {
   const [wantsMG, setWantsMG] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [elements, setElements] = useState<any[]>([]);
+  const [allowCanvasZoom, setAllowCanvasZoom] = useState<boolean>(true);
   const [pageSubtitle, setPageSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
 
   const { fetchThemeForEvent } = useEventTheme();
@@ -178,8 +179,7 @@ const TourPage = () => {
     setIsValidatingCoupon(true);
     setCouponError('');
     try {
-      const apiUrl = getApiUrl();
-      const res = await axios.post(`${apiUrl}/tickets/coupons/validate/`, {
+      const res = await api.post('/tickets/coupons/validate/', {
         code: codeToUse,
         event_id: currentEvent?.id,
         email: emailToUse || undefined
@@ -221,15 +221,14 @@ const TourPage = () => {
 
     if (success === 'true' && session_id) {
       setIsLoading(true);
-      const apiUrl = getApiUrl();
       let attempts = 0;
       const maxAttempts = 5;
 
       const checkTicketsStatus = async () => {
         try {
-          const res = await fetch(`${apiUrl}/tickets/tickets/by_session/?session_id=${session_id}`);
+          const res = await api.get(`/tickets/tickets/by_session/?session_id=${session_id}`).catch(err => err.response);
 
-          if (res.status === 204 || res.status === 404) {
+          if (!res || res.status === 204 || res.status === 404) {
             if (attempts < maxAttempts) {
               attempts++;
               setTimeout(checkTicketsStatus, 1500);
@@ -239,9 +238,7 @@ const TourPage = () => {
             }
           }
 
-          if (!res.ok) throw new Error('No se pudieron recuperar los boletos.');
-
-          const tickets = await res.json();
+          const tickets = res.data;
           if (tickets && tickets.length > 0) {
             setCreatedTickets(tickets);
             setEmail(tickets[0].user_email || '');
@@ -268,12 +265,14 @@ const TourPage = () => {
   useEffect(() => {
     setIsMounted(true);
     document.documentElement.setAttribute('data-theme', theme);
-    const apiUrl = getApiUrl();
 
     Promise.all([
-      fetch(`${apiUrl}/tickets/events/`).then(r => r.json()),
-      fetch(`${apiUrl}/tickets/settings/`).then(r => r.json()).catch(() => null),
+      api.get('/tickets/events/').then(r => r.data).catch(() => []),
+      api.get('/tickets/settings/').then(r => r.data).catch(() => null),
     ]).then(([eventsData, settingsData]) => {
+      if (settingsData && typeof settingsData.allow_canvas_zoom === 'boolean') {
+        setAllowCanvasZoom(settingsData.allow_canvas_zoom);
+      }
       if (eventsData && Array.isArray(eventsData) && eventsData.length > 0) {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -303,6 +302,18 @@ const TourPage = () => {
     });
   }, []);
 
+  useEffect(() => {
+    if (currentEvent) {
+      const hasNumbered = currentEvent.allow_numbered_tickets !== false;
+      const hasSeatless = currentEvent.allow_seatless_tickets !== false;
+      if (!hasNumbered && hasSeatless) {
+        setTicketMode('seatless');
+      } else if (hasNumbered && !hasSeatless) {
+        setTicketMode('seat');
+      }
+    }
+  }, [currentEvent]);
+
   /**
    * [Nectar Dynamic Pricing - Ticket Checkout Mirror Engine]
    * Garantiza la tarifa mínima establecida (baseAmount) y aplica aumentos progresivos
@@ -330,10 +341,9 @@ const TourPage = () => {
 
   const fetchSeats = () => {
     if (!currentEvent) return;
-    const apiUrl = getApiUrl();
-    fetch(`${apiUrl}/tickets/events/${currentEvent.id}/seats/`)
-      .then(res => res.json())
-      .then(data => {
+    api.get(`/tickets/events/${currentEvent.id}/seats/`)
+      .then(res => {
+        const data = res.data;
         if (data.seats) {
           setSeats(data.seats);
           setElements(data.elements || []);
@@ -492,7 +502,7 @@ const TourPage = () => {
         payload.is_seatless = false;
       }
 
-      const res = await axios.post(`${apiUrl}/tickets/tickets/checkout/`, payload);
+      const res = await api.post('/tickets/tickets/checkout/', payload);
 
       if (res.data.session_url) {
         window.location.href = res.data.session_url;
@@ -631,35 +641,49 @@ const TourPage = () => {
             {/* Ticket Mode Selector & Canvas / Seatless Card Container */}
             {!isMeetGreet && (
               <div className="space-y-4">
-                <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2 bg-nature-night/5 dark:bg-white/5 p-1.5 rounded-2xl border border-nature-night/10 dark:border-white/10">
-                  <button
-                    onClick={() => setTicketMode('seat')}
-                    className={cn(
-                      "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
-                      ticketMode === 'seat'
-                        ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
-                        : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
+                {(currentEvent?.allow_numbered_tickets === false && currentEvent?.allow_seatless_tickets === false) ? (
+                  <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-amber-honey/10 text-center space-y-3 shadow-2xl">
+                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey block">Aviso de Taquilla</span>
+                    <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight text-nature-night dark:text-white">
+                      Venta Inhabilitada Temporálmente
+                    </h3>
+                    <p className="text-xs text-nature-night/70 dark:text-white/70 max-w-md mx-auto leading-relaxed">
+                      La venta de boletos numerados y generales para este evento no está disponible por el momento.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {(currentEvent?.allow_numbered_tickets !== false && currentEvent?.allow_seatless_tickets !== false) && (
+                      <div className="flex flex-col xs:flex-row items-stretch xs:items-center justify-between gap-2 bg-nature-night/5 dark:bg-white/5 p-1.5 rounded-2xl border border-nature-night/10 dark:border-white/10">
+                        <button
+                          onClick={() => setTicketMode('seat')}
+                          className={cn(
+                            "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
+                            ticketMode === 'seat'
+                              ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
+                              : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
+                          )}
+                        >
+                          <Ticket size={13} className="shrink-0" />
+                          <span>Numerados (${getSeatBasePrice().toLocaleString('es-MX')} MXN)</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setTicketMode('seatless');
+                            setSelectedSeats([]);
+                          }}
+                          className={cn(
+                            "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
+                            ticketMode === 'seatless'
+                              ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
+                              : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
+                          )}
+                        >
+                          <Users size={13} className="shrink-0" />
+                          <span>Boleto General (${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN)</span>
+                        </button>
+                      </div>
                     )}
-                  >
-                    <Ticket size={13} className="shrink-0" />
-                    <span>Numerados (${getSeatBasePrice().toLocaleString('es-MX')} MXN)</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTicketMode('seatless');
-                      setSelectedSeats([]);
-                    }}
-                    className={cn(
-                      "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
-                      ticketMode === 'seatless'
-                        ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
-                        : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
-                    )}
-                  >
-                    <Users size={13} className="shrink-0" />
-                    <span>Boleto General (${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN)</span>
-                  </button>
-                </div>
 
                 {ticketMode === 'seat' ? (
                   <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
@@ -707,6 +731,7 @@ const TourPage = () => {
                           selectedIds={selectedSeats.map(s => String(s.id))}
                           theme={theme}
                           elements={elements}
+                          allowZoom={allowCanvasZoom}
                         />
                       </div>
                     )}
@@ -745,6 +770,8 @@ const TourPage = () => {
                       <span className="text-xl font-black text-amber-honey">${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN</span>
                     </div>
                   </div>
+                )}
+                  </>
                 )}
               </div>
             )}

@@ -14,6 +14,7 @@ import {
   X, Info, Circle as CircleIcon, Triangle, Hexagon, Octagon,
   Shield, Lock
 } from 'lucide-react';
+import api from '../lib/api';
 import { cn, getApiUrl } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { showConfirm } from '../lib/notifications';
@@ -174,13 +175,9 @@ export default function DesignerPage() {
 
   const fetchTheaters = async () => {
     try {
-      const res = await fetch(`${apiUrl}/tickets/theaters/`, {
-        headers: { ...getAuthHeaders() }
-      });
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
-      setTheaters(data);
-      return data;
+      const res = await api.get('/tickets/theaters/');
+      setTheaters(res.data);
+      return res.data;
     } catch (error) {
       console.error("Failed to fetch theaters:", error);
       return [];
@@ -189,7 +186,7 @@ export default function DesignerPage() {
 
   useEffect(() => {
     fetchTheaters().then((data) => {
-      if (data.length > 0) {
+      if (data && data.length > 0) {
         setSelectedTheaterId(data[0].id);
         loadTheater(data[0]);
       }
@@ -219,22 +216,14 @@ export default function DesignerPage() {
     setTheaterModalLoading(true);
     setTheaterModalError(null);
     try {
-      let response: Response;
+      let saved: any;
       if (theaterModal.mode === 'create') {
-        response = await fetch(`${apiUrl}/tickets/theaters/`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({ name: theaterForm.name, location: finalLocation, layout: { seats: [], map_elements: [] } }),
-        });
+        const res = await api.post('/tickets/theaters/', { name: theaterForm.name, location: finalLocation, layout: { seats: [], map_elements: [] } });
+        saved = res.data;
       } else {
-        response = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({ name: theaterForm.name, location: finalLocation }),
-        });
+        const res = await api.patch(`/tickets/theaters/${selectedTheaterId}/`, { name: theaterForm.name, location: finalLocation });
+        saved = res.data;
       }
-      if (!response.ok) throw new Error(`Error ${response.status}`);
-      const saved = await response.json();
       const updatedList = await fetchTheaters();
       setSelectedTheaterId(saved.id);
       const fresh = updatedList.find((t: any) => t.id === saved.id) || saved;
@@ -256,10 +245,7 @@ export default function DesignerPage() {
     );
     if (!isConfirmed) return;
     try {
-      await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
-        method: 'DELETE',
-        headers: { ...getAuthHeaders() }
-      });
+      await api.delete(`/tickets/theaters/${selectedTheaterId}/`);
       const updatedList = await fetchTheaters();
       if (updatedList.length > 0) { setSelectedTheaterId(updatedList[0].id); loadTheater(updatedList[0]); }
       else { setSelectedTheaterId(''); setSeats([]); setElements([]); }
@@ -272,19 +258,10 @@ export default function DesignerPage() {
     setGenerateSeatsStatus('loading');
     try {
       // 1. Guardar primero el layout actual (elementos y asientos del lienzo) en el servidor
-      const saveRes = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ layout: { map_elements: elements, seats: seats } })
-      });
-      if (!saveRes.ok) throw new Error(`Save layout failed HTTP ${saveRes.status}`);
+      await api.patch(`/tickets/theaters/${selectedTheaterId}/`, { layout: { map_elements: elements, seats: seats } });
 
       // 2. Ejecutar la sincronización de asientos en la base de datos PostgreSQL
-      const res = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/generate_seats/`, {
-        method: 'POST',
-        headers: { ...getAuthHeaders() }
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await api.post(`/tickets/theaters/${selectedTheaterId}/generate_seats/`);
       setGenerateSeatsStatus('success');
       setTimeout(() => setGenerateSeatsStatus('idle'), 3500);
     } catch (err: any) {
@@ -663,19 +640,11 @@ export default function DesignerPage() {
     if (!selectedTheaterId) return;
     setIsSaving(true);
     try {
-      const response = await fetch(`${apiUrl}/tickets/theaters/${selectedTheaterId}/`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ layout: { map_elements: elements, seats: seats } })
+      await api.patch(`/tickets/theaters/${selectedTheaterId}/`, {
+        layout: { map_elements: elements, seats: seats }
       });
-      if (response.ok) {
-        setSaveStatus('success');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      } else {
-        console.error('[Save Layout Error] HTTP status:', response.status);
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      }
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error: any) {
       console.error('[Save Layout Error] Exception in saveToDB:', error);
       setSaveStatus('error');

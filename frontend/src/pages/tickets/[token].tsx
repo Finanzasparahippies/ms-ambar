@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Calendar, MapPin, Armchair, Mail, ChevronLeft, ShieldCheck, AlertCircle } from 'lucide-react';
+import api from '../../lib/api';
 import { getApiUrl } from '../../lib/utils';
 import ThemedSection from '../../components/ThemedSection';
 
@@ -57,14 +58,9 @@ export default function TicketPage() {
     setError(null);
 
     // Paso 1: Recuperar el boleto digital por Token UUID
-    fetch(`${apiUrl}/tickets/tickets/${token}/`)
+    api.get(`/tickets/tickets/${token}/`)
       .then(res => {
-        if (!res.ok) {
-          throw new Error('El boleto digital especificado no existe o es inválido.');
-        }
-        return res.json();
-      })
-      .then(ticketData => {
+        const ticketData = res.data;
         setTicket(ticketData);
 
         // Paso 2: Usar el ID del evento que viene en el boleto para traer el recinto seguro
@@ -73,20 +69,14 @@ export default function TicketPage() {
           throw new Error('No se pudo asociar el evento vinculado a este acceso.');
         }
 
-        return fetch(`${apiUrl}/tickets/events/${eventId}/`);
+        return api.get(`/tickets/events/${eventId}/`);
       })
       .then(res => {
-        if (!res.ok) {
-          throw new Error('El concierto asociado a este boleto no está disponible.');
-        }
-        return res.json();
-      })
-      .then(eventData => {
-        setEvent(eventData);
+        setEvent(res.data);
       })
       .catch(err => {
         console.error("Falla en el pipeline de accesos:", err);
-        setError(err.message || 'Error de conexión al validar tus accesos oficiales.');
+        setError(err.response?.data?.error || err.message || 'Error de conexión al validar tus accesos oficiales.');
       })
       .finally(() => {
         setLoading(false);
@@ -96,21 +86,11 @@ export default function TicketPage() {
   const handleValidateTicket = async () => {
     if (!token || isValidating) return;
     setIsValidating(true);
-    const apiUrl = getApiUrl();
-    const jwtToken = localStorage.getItem('token');
 
     try {
-      const res = await fetch(`${apiUrl}/tickets/tickets/validate/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': jwtToken ? `Bearer ${jwtToken}` : ''
-        },
-        body: JSON.stringify({ token })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.status === 'success') {
+      const res = await api.post('/tickets/tickets/validate/', { token });
+      const data = res.data;
+      if (res.status === 200 && data.status === 'success') {
         try {
           const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-84.wav');
           audio.volume = 0.5;

@@ -153,7 +153,8 @@ class EventViewSet(viewsets.ModelViewSet):
         
         return Response({
             "seats": data,
-            "elements": theater.layout.get('map_elements', []) if isinstance(theater.layout, dict) else []
+            "elements": theater.layout.get('map_elements', []) if isinstance(theater.layout, dict) else [],
+            "bounds": theater.get_layout_bounds()
         })
 
 class TheaterViewSet(viewsets.ModelViewSet):
@@ -216,28 +217,35 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     def get_object(self):
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
-        lookup_value = self.kwargs[lookup_url_kwarg]
-        
+        lookup_value = str(self.kwargs[lookup_url_kwarg]).strip()
+        from django.http import Http404
+        from django.core.exceptions import ValidationError
+        import uuid
+
+        # 1. Primary Token Lookup: Only query token if lookup_value is a valid UUID
         try:
-            import uuid
-            # Try parsing as UUID to lookup by token across all tickets (since UUID token is secure/unguessable)
-            uuid.UUID(str(lookup_value))
-            return Ticket.objects.get(token=lookup_value)
-        except (ValueError, Ticket.DoesNotExist, TypeError):
-            # Fallback to default primary key lookup, but restrict to permitted queryset
-            from django.http import Http404
-            user = self.request.user
-            if user and user.is_authenticated and (user.is_staff or user.is_superuser):
-                queryset = Ticket.objects.all()
-            elif user and user.is_authenticated:
-                queryset = Ticket.objects.filter(user_email=user.email)
-            else:
-                queryset = Ticket.objects.none()
-            
-            try:
-                return queryset.get(**{self.lookup_field: lookup_value})
-            except (Ticket.DoesNotExist, ValueError):
-                raise Http404("No ticket matches the given query.")
+            uuid_val = uuid.UUID(lookup_value)
+            ticket = Ticket.objects.filter(token=uuid_val).first()
+            if ticket:
+                return ticket
+        except (ValueError, TypeError, ValidationError):
+            pass
+
+        # 2. Fallback to Primary Key (ID) or filter lookup
+        user = self.request.user
+        if user and user.is_authenticated and (user.is_staff or user.is_superuser):
+            queryset = Ticket.objects.all()
+        elif user and user.is_authenticated:
+            queryset = Ticket.objects.filter(user_email=user.email)
+        else:
+            queryset = Ticket.objects.all()
+
+        try:
+            if lookup_value.isdigit():
+                return queryset.get(pk=int(lookup_value))
+            return queryset.get(**{self.lookup_field: lookup_value})
+        except (Ticket.DoesNotExist, ValueError, ValidationError):
+            raise Http404("No ticket matches the given query.")
 
     @action(detail=False, methods=['post'], url_path='validate')
     def validate(self, request):
@@ -325,6 +333,8 @@ class TicketViewSet(viewsets.ModelViewSet):
             if is_seatless and event.event_type != 'meet_greet' and not event.allow_seatless_tickets:
                 return Response({'error': 'Este evento no permite la venta de boletos generales sin asiento.'}, status=status.HTTP_400_BAD_REQUEST)
         else:
+            if event.event_type != 'meet_greet' and not event.allow_numbered_tickets:
+                return Response({'error': 'Este evento no permite la venta de boletos numerados reservables.'}, status=status.HTTP_400_BAD_REQUEST)
             if not seat_ids:
                 return Response({'error': 'Debes seleccionar al menos un asiento o elegir la opción de boleto general sin asiento.'}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -465,7 +475,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     quantity=quantity,
                     has_mg=has_mg,
                     phone=phone,
-                    is_seatless=is_seatless
+                    is_seatless=is_seatless,
+                    coupon=coupon_obj
                 )
                 session_id = session.id
                 session_url = session.url
@@ -677,6 +688,7 @@ class SiteSettingsView(APIView):
 
     def post(self, request):
         settings_obj = SiteSettings.get()
+<<<<<<< HEAD
         for field in [
             'tickets_page_subtitle', 'homepage_cta_text',
             'bio_badge', 'bio_title', 'bio_content', 'bio_image', 'bio_location', 'bio_cta_text', 'bio_cta_url',
@@ -689,6 +701,13 @@ class SiteSettingsView(APIView):
         settings_obj.save()
         serializer = SiteSettingsSerializer(settings_obj, context={'request': request})
         return Response(serializer.data)
+=======
+        serializer = SiteSettingsSerializer(settings_obj, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+>>>>>>> d4403a82186205fa8bbcf4e650c09669e93e3883
 
 
 class ActiveThemeView(APIView):

@@ -4,9 +4,9 @@ from apps.tickets.models import Ticket
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
-def create_ticket_checkout_session(event, seats, user_email, success_url, cancel_url, quantity=1, has_mg=False, phone='', is_seatless=False):
+def create_ticket_checkout_session(event, seats, user_email, success_url, cancel_url, quantity=1, has_mg=False, phone='', is_seatless=False, coupon=None):
     """
-    Creates a Stripe Checkout Session for buying tickets.
+    Creates a Stripe Checkout Session for buying tickets with optional coupon discounts.
     """
     line_items = []
     
@@ -115,6 +115,29 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
                 'price_data': price_data,
                 'quantity': len(seats), # One upgrade per seat purchased
             })
+
+    # --- Aplicar descuento de Cupón a los line_items si existe ---
+    if coupon:
+        raw_total = sum((item['price_data']['unit_amount'] / 100.0) * item['quantity'] for item in line_items)
+        disc_multiplier = 1.0
+        if coupon.discount_type == 'percentage':
+            pct = float(coupon.discount_value or 0)
+            disc_multiplier = max(0.0, (100.0 - pct) / 100.0)
+        elif coupon.discount_type == 'fixed':
+            fixed_val = float(coupon.discount_value or 0)
+            if raw_total > 0:
+                disc_multiplier = max(0.0, raw_total - fixed_val) / raw_total
+            else:
+                disc_multiplier = 0.0
+        elif coupon.discount_type == 'free_vip':
+            disc_multiplier = 0.0
+
+        for item in line_items:
+            orig_cents = item['price_data']['unit_amount']
+            new_cents = max(0, int(round(orig_cents * disc_multiplier)))
+            item['price_data']['unit_amount'] = new_cents
+            if 'product_data' in item['price_data']:
+                item['price_data']['product_data']['name'] += f" (Cupón {coupon.code})"
 
     # Calculate subtotal of base ticket items and add Stripe platform service fee line item
     total_base_amount = 0.0
