@@ -3153,9 +3153,10 @@ export default function AdminDashboard() {
                         </div>
                       ) : (
                         /* Line, Area, or Bar Visualization */
-                        <div className="relative w-full h-[220px]">
+                        <div className="relative w-full h-[320px] sm:h-[360px]">
                           <svg
                             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                            preserveAspectRatio="none"
                             className="w-full h-full overflow-visible select-none cursor-crosshair touch-none"
                             onMouseLeave={() => setHoveredPoint(null)}
                             onTouchEnd={() => setHoveredPoint(null)}
@@ -8624,6 +8625,7 @@ export default function AdminDashboard() {
               <div className="relative w-full h-full">
                 <svg
                   viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                  preserveAspectRatio="none"
                   className="w-full h-full overflow-visible select-none cursor-crosshair touch-none"
                   onMouseLeave={() => setHoveredPoint(null)}
                   onTouchEnd={() => setHoveredPoint(null)}
