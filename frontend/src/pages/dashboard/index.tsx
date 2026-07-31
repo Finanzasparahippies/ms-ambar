@@ -2426,6 +2426,32 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleTouchMove = (e: React.TouchEvent<SVGSVGElement>) => {
+    if (points.length === 0 || !e.touches || e.touches.length === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const touchX = e.touches[0].clientX - rect.left;
+    const viewBoxX = (touchX / rect.width) * chartWidth;
+
+    let closestPoint = points[0];
+    let minDiff = Math.abs(points[0].x - viewBoxX);
+
+    for (let i = 1; i < points.length; i++) {
+      const diff = Math.abs(points[i].x - viewBoxX);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestPoint = points[i];
+      }
+    }
+
+    if (viewBoxX >= paddingLeft - 25 && viewBoxX <= chartWidth - paddingRight + 25) {
+      setHoveredPoint({
+        ...closestPoint.data,
+        x: closestPoint.x,
+        y: closestPoint.y
+      });
+    }
+  };
+
   const pendingOrdersCount = orders.filter(o => o.status === 'paid').length;
 
   const activePoint = hoveredPoint || (points.length > 0 ? {
@@ -3130,9 +3156,12 @@ export default function AdminDashboard() {
                         <div className="relative w-full h-[220px]">
                           <svg
                             viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-                            className="w-full h-full overflow-visible select-none cursor-crosshair"
+                            className="w-full h-full overflow-visible select-none cursor-crosshair touch-none"
                             onMouseMove={handleMouseMove}
                             onMouseLeave={() => setHoveredPoint(null)}
+                            onTouchStart={handleTouchMove}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={() => setHoveredPoint(null)}
                           >
                             <defs>
                               <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
@@ -3249,8 +3278,8 @@ export default function AdminDashboard() {
                                 transition={{ duration: 0.12, ease: 'easeOut' }}
                                 style={{
                                   position: 'absolute',
-                                  left: `${Math.min(90, Math.max(10, (activePoint.x / chartWidth) * 100))}%`,
-                                  top: `${Math.max(8, (activePoint.y / chartHeight) * 100 - 15)}%`,
+                                  left: `${Math.min(88, Math.max(12, (activePoint.x / chartWidth) * 100))}%`,
+                                  top: `${Math.max(4, Math.min(75, (activePoint.y / chartHeight) * 100 - 10))}%`,
                                   transform: 'translate(-50%, -100%)',
                                 }}
                                 className="pointer-events-none z-[100] bg-[#0B0F0D]/95 border border-amber-honey/40 px-3.5 py-2.5 rounded-2xl flex flex-col gap-1 shadow-2xl shadow-black/60 min-w-[140px] text-center backdrop-blur-md"
