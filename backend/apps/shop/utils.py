@@ -146,7 +146,18 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
         qty = item['quantity']
         total_base_amount += unit_price * qty
 
-    if total_base_amount > 0:
+    pass_fees_to_buyer = True
+    try:
+        from apps.tickets.models import SiteSettings
+        site_settings = SiteSettings.get()
+        pass_fees_to_buyer = getattr(site_settings, 'pass_fees_to_buyer', True)
+    except Exception:
+        pass
+
+    service_fee_amount = 0.0
+    fee_info = {'service_fee': 0.0, 'total': total_base_amount}
+
+    if pass_fees_to_buyer and total_base_amount > 0:
         from apps.tickets.fees import calculate_total_with_fee
         fee_info = calculate_total_with_fee(total_base_amount)
         service_fee_amount = fee_info['service_fee']

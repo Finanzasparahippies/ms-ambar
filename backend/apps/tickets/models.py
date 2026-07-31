@@ -806,6 +806,7 @@ class SiteSettings(models.Model):
     theme_mode = models.CharField(max_length=20, default='global', help_text="Modo de aplicación de tema: 'global' o 'section'")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, default='cormorant', help_text="Preset de fuentes tipográficas")
     allow_canvas_zoom = models.BooleanField(default=True, help_text="Permite o bloquea el zoom interactivo en el canvas de selección de asientos")
+    pass_fees_to_buyer = models.BooleanField(default=True, help_text="Si está activo, transfiere el recargo (Gross-Up) del 3.6% + $3.00 MXN al comprador en Checkout para recibir el 100% íntegro de la venta en banco.")
     custom_css = models.TextField(blank=True, null=True, default='', help_text="CSS personalizado global para todo el sitio")
     section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección del sitio (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
 
@@ -852,6 +853,7 @@ class SiteSettings(models.Model):
             'bio_location': self.bio_location,
             'bio_cta_text': self.bio_cta_text,
             'bio_cta_url': self.bio_cta_url,
+            'pass_fees_to_buyer': self.pass_fees_to_buyer,
             'section_themes': sec_themes,
         }
 
