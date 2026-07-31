@@ -164,7 +164,7 @@ show_help() {
     echo "  shell-prod              - Open backend python shell in prod"
     echo "  collectstatic           - Compile static assets in prod"
     echo "  certbot                 - Request Let's Encrypt SSL certificate"
-    echo "  clean                   - Safe Docker and VPS cleanup"
+    echo "  clean [--all|-a]        - Comprehensive Docker and VPS cleanup (use --all for deep prune)"
     echo "  help                    - Show this help screen"
 }
 
@@ -354,41 +354,49 @@ case $COMMAND in
         $COMPOSE_BIN -f docker-compose.prod.yml run --rm certbot certonly --webroot --webroot-path=/var/www/certbot -d $DOMAIN -d www.$DOMAIN
         ;;
     clean)
-        echo "Starting comprehensive and safe VPS/Container cleanup..."
+        echo "Starting comprehensive VPS & Docker system cleanup..."
         echo ""
-        echo "1. Removing stopped containers..."
-        $DOCKER_BIN container prune -f
+        DEEP_PRUNING=false
+        if [ "$1" = "--all" ] || [ "$1" = "-a" ]; then
+            DEEP_PRUNING=true
+        fi
+
+        echo "1. Cleaning Docker containers, networks, volumes, images and build cache..."
+        if [ "$DEEP_PRUNING" = true ]; then
+            echo "   Executing deep system prune (docker system prune -a --volumes -f)..."
+            $DOCKER_BIN system prune -a --volumes -f
+        else
+            echo "   Executing standard system prune (docker system prune -f)..."
+            $DOCKER_BIN system prune -f
+            $DOCKER_BIN volume prune -f
+            $DOCKER_BIN builder prune -f 2>/dev/null || true
+        fi
         
-        echo "2. Removing dangling networks..."
-        $DOCKER_BIN network prune -f
-        
-        echo "3. Removing dangling volumes (only unused/anonymous volumes)..."
-        $DOCKER_BIN volume prune -f
-        
-        echo "4. Removing dangling/untagged images..."
-        $DOCKER_BIN image prune -f
-        
-        echo "5. Removing build cache..."
-        $DOCKER_BIN builder prune -f 2>/dev/null || true
-        
-        echo "6. Checking for legacy/conflicting Compose project 'ms-ambar'..."
+        echo "2. Checking for legacy/conflicting Compose project 'ms-ambar'..."
         if $COMPOSE_BIN -p ms-ambar ps -q &>/dev/null || [ -n "$($DOCKER_BIN ps -a --filter 'label=com.docker.compose.project=ms-ambar' -q 2>/dev/null)" ]; then
             echo "   Stopping and removing legacy 'ms-ambar' project containers and networks..."
             $COMPOSE_BIN -p ms-ambar down
         else
             echo "   No legacy 'ms-ambar' project containers found."
         fi
-        
+
         if command -v journalctl &> /dev/null; then
-            echo "7. Vacuuming system logs (journald) to 100MB..."
-            sudo journalctl --vacuum-size=100M 2>/dev/null || echo "   (Skip: sudo privileges required to vacuum logs)"
+            echo "3. Vacuuming system logs (journald) to 50MB..."
+            sudo journalctl --vacuum-size=50M 2>/dev/null || echo "   (Skip: sudo privileges required to vacuum logs)"
         fi
-        
+
+        echo "4. Truncating large authentication log files (/var/log/btmp)..."
+        sudo truncate -s 0 /var/log/btmp /var/log/btmp.1 2>/dev/null || echo "   (Skip: sudo privileges required to truncate /var/log/btmp)"
+
         if command -v apt-get &> /dev/null; then
-            echo "8. Cleaning APT package cache..."
-            sudo apt-get autoclean -y 2>/dev/null || echo "   (Skip: sudo privileges required to clean APT cache)"
+            echo "5. Cleaning APT package cache and removing unused packages..."
+            sudo apt-get clean -y 2>/dev/null || echo "   (Skip: sudo privileges required for apt-get clean)"
+            sudo apt-get autoremove -y 2>/dev/null || echo "   (Skip: sudo privileges required for apt-get autoremove)"
         fi
-        
+
+        echo ""
+        echo "Docker system status after cleanup:"
+        $DOCKER_BIN system df 2>/dev/null || true
         echo ""
         echo "System cleanup complete! Disk space reclaimed successfully."
         ;;

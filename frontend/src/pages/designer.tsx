@@ -849,6 +849,14 @@ export default function DesignerPage() {
       return;
     }
 
+    if (key === 'label' && selectedElement && ((selectedElement as any).type === 'table' || (selectedElement as any).tableShape || (selectedElement as any).table_shape)) {
+      const updatedSeats = seats.map(s => (String(s.tableId) === String(selectedElement.id) || String(s.table_id) === String(selectedElement.id)) ? { ...s, row: value } : s);
+      const updatedEls = elements.map(el => el.id === selectedElement.id ? { ...el, label: value } : el);
+      setSeats(updatedSeats);
+      setElements(updatedEls);
+      return;
+    }
+
     if (key === 'angle' && selectedElement && ((selectedElement as any).type === 'table' || (selectedElement as any).tableShape || seats.some(s => s.tableId === selectedElement.id))) {
       recalculateTableSeats(selectedElement, (selectedElement as any).tableShape || 'circle', (selectedElement as any).capacity || 4, undefined, undefined, elements, (selectedElement as any).seatArrangement || '4_sides', value as number);
       return;

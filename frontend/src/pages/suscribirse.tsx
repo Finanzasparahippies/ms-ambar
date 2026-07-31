@@ -1,9 +1,9 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { AlertCircle, Check, Sparkles, X } from 'lucide-react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Check, AlertCircle, X, Mail } from 'lucide-react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import api from '../lib/api';
 
 interface Toast {
@@ -125,7 +125,7 @@ export default function Suscribirse() {
               <button
                 type="submit"
                 disabled={newsletterSubmitting}
-                className="w-full bg-gradient-to-r from-amber-honey via-amber-gold to-amber-500 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02] mt-2"
+                className="w-full bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#1E2B22] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02] mt-2"
               >
                 {newsletterSubmitting ? (
                   <span className="flex items-center gap-2">

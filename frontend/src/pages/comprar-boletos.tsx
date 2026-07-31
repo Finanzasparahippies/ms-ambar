@@ -405,6 +405,33 @@ const TourPage = () => {
     return resolvedPrice;
   };
 
+  const getSeatDisplayText = (seat: any) => {
+    if (!seat) return '';
+    const tableId = seat.tableId || seat.table_id;
+    let tableEl: any;
+    if (tableId && Array.isArray(elements)) {
+      tableEl = elements.find((el: any) => String(el.id) === String(tableId));
+    }
+    if (!tableEl && seat.row && Array.isArray(elements)) {
+      const rowLower = String(seat.row).toLowerCase();
+      tableEl = elements.find((el: any) => el.type === 'table' && el.label && String(el.label).toLowerCase() === rowLower);
+    }
+    const rawTableName = tableEl?.label || seat.row;
+    const isTable = !!tableEl || !!tableId || String(seat.row || '').toLowerCase().includes('mesa') || String(seat.row || '').toLowerCase().includes('table');
+
+    if (isTable) {
+      const nameStr = String(rawTableName || 'Mesa').trim();
+      const formattedName = (nameStr.toLowerCase().startsWith('mesa') || nameStr.toLowerCase().startsWith('table'))
+        ? nameStr
+        : `Mesa ${nameStr}`;
+      return `${formattedName} • Asiento ${seat.number}`;
+    }
+
+    const rowStr = String(seat.row || '').trim();
+    const formattedRow = rowStr.toLowerCase().startsWith('fila') ? rowStr : `Fila ${rowStr}`;
+    return `${formattedRow} • Asiento ${seat.number}`;
+  };
+
   const getEffectiveSeatlessPrice = () => {
     let resolvedPrice = 0;
     let source = '';
@@ -963,7 +990,7 @@ const TourPage = () => {
                                     {seat.category || 'Reservado'}
                                   </span>
                                   <p className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                                    Fila {seat.row} • Asiento {seat.number}
+                                    {getSeatDisplayText(seat)}
                                   </p>
                                 </div>
                               </div>
