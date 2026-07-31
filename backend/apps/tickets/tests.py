@@ -638,25 +638,20 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(res.data.get('theme_config', {}).get('particle_shape'), 'star')
         self.assertEqual(res.data.get('theme_config', {}).get('custom_css'), 'body { font-weight: bold; }')
     def test_calculate_total_with_fee_gross_up(self):
-        """Verify Gross-Up fee calculation guarantees 100% net base payout after Stripe 3.6% + $3.00 deduction."""
+        """Verify Gross-Up fee calculation guarantees 100% net base payout after Stripe fee + 16% IVA deduction."""
         from apps.tickets.fees import calculate_total_with_fee
         
-        # Case A: Base price $1,000.00 MXN
+        # Case A: Base price $1,000.00 MXN -> Total $1,047.21 MXN (Fee $47.21)
         res = calculate_total_with_fee(1000.00)
         self.assertEqual(res['base_price'], 1000.00)
-        self.assertEqual(res['total'], 1040.46)
-        self.assertEqual(res['service_fee'], 40.46)
-        
-        # Verify Stripe deduction formula: total - (total * 0.036 + 3.00) == net base_price
-        stripe_deduction = round(1040.46 * 0.036 + 3.00, 2)
-        self.assertEqual(stripe_deduction, 40.46)
-        self.assertEqual(round(1040.46 - stripe_deduction, 2), 1000.00)
+        self.assertEqual(res['total'], 1047.21)
+        self.assertEqual(res['service_fee'], 47.21)
 
-        # Case B: Base price $500.00 MXN
+        # Case B: Base price $500.00 MXN -> Total $525.42 MXN (Fee $25.42)
         res_500 = calculate_total_with_fee(500.00)
         self.assertEqual(res_500['base_price'], 500.00)
-        self.assertEqual(res_500['total'], 521.78)
-        self.assertEqual(res_500['service_fee'], 21.78)
+        self.assertEqual(res_500['total'], 525.42)
+        self.assertEqual(res_500['service_fee'], 25.42)
 
     @patch('stripe.checkout.Session.create')
     def test_create_ticket_checkout_session_fee_line_item(self, mock_session_create):
@@ -736,7 +731,7 @@ class TicketsAppTests(APITestCase):
         kwargs = mock_session_create.call_args[1]
         line_items = kwargs.get('line_items', [])
 
-        # Total base = 2 * 500 = 1000 MXN. Gross-Up fee = 40.46 MXN
+        # Total base = 2 * 500 = 1000 MXN. Gross-Up fee = 47.21 MXN
         fee_item = next((item for item in line_items if 'Cargo de servicio' in item.get('price_data', {}).get('product_data', {}).get('name', '')), None)
         self.assertIsNotNone(fee_item)
-        self.assertEqual(fee_item['price_data']['unit_amount'], 4046) # $40.46 MXN
+        self.assertEqual(fee_item['price_data']['unit_amount'], 4721) # $47.21 MXN
