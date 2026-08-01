@@ -29,7 +29,7 @@ api?.interceptors?.request?.use(
 );
 
 // Interceptor de Respuestas: manejo centralizado de errores de autenticación y red
-api.interceptors.response.use(
+api?.interceptors?.response?.use(
   (response: AxiosResponse) => response,
   async (error) => {
     const originalRequest = error.config;
