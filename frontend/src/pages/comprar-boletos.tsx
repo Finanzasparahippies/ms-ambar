@@ -47,8 +47,8 @@ const calculateTotalWithFee = (baseAmount: number): { base_price: number; servic
   const rawTotal = (base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE);
   const total = Number(rawTotal.toFixed(2));
 
-  // 2. La tarifa de servicio es EXACTAMENTE la diferencia entre Total y Base
-  const service_fee = Number((total - base_price).toFixed(2));
+  // 2. La tarifa de servicio es EXACTAMENTE la diferencia entre Total Bruto y Base
+  const service_fee = Number((rawTotal - base_price).toFixed(2));
 
   return {
     base_price,
