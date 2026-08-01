@@ -8,8 +8,9 @@ const EFFECTIVE_FLAT_FEE = 3.48;     // $3.00 base + 16% IVA
 const calculateTotalWithFee = (baseAmount: number): { base_price: number; service_fee: number; total: number } => {
   if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
   const base_price = Math.round(baseAmount * 100) / 100;
-  const total = Math.round(((base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE)) * 100) / 100;
-  const service_fee = Math.round((total - base_price) * 100) / 100;
+  const rawTotal = (base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE);
+  const total = Math.round(rawTotal * 100) / 100;
+  const service_fee = Math.round((rawTotal - base_price) * 100) / 100;
   return {
     base_price,
     service_fee,
