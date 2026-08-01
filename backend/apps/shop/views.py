@@ -75,8 +75,27 @@ def stripe_webhook(request):
     if event['type'] in ['checkout.session.completed', 'payment_intent.succeeded']:
         session = event['data']['object']
         handle_successful_payment(session)
+    elif event['type'] in ['payment_intent.payment_failed', 'checkout.session.expired']:
+        session = event['data']['object']
+        handle_failed_payment(session)
 
     return HttpResponse(status=200)
+
+
+def handle_failed_payment(session):
+    session_id = session.get('id')
+    payment_intent_id = session.get('payment_intent')
+    logger.info(f"[Webhook] Registro de pago fallido/rechazado para session={session_id}, payment_intent={payment_intent_id}")
+
+    from apps.tickets.models import Ticket
+    from apps.shop.models import Order
+
+    if session_id:
+        Ticket.objects.filter(stripe_session_id=session_id, status='reserved').update(status='cancelled')
+        Order.objects.filter(stripe_session_id=session_id, status='pending').update(status='cancelled')
+    if payment_intent_id:
+        Ticket.objects.filter(stripe_session_id=payment_intent_id, status='reserved').update(status='cancelled')
+        Order.objects.filter(stripe_session_id=payment_intent_id, status='pending').update(status='cancelled')
 
 from apps.tickets.utils import send_ticket_email, send_ticket_whatsapp, send_ticket_telegram
 
@@ -139,8 +158,12 @@ def handle_successful_payment(session):
                     ticket.user_email = user_email
                     ticket.user_phone = phone
                     ticket.has_mg = has_mg
+                    if not ticket.amount_paid:
+                        from apps.dashboard.views import get_ticket_actual_price
+                        ticket.amount_paid = get_ticket_actual_price(ticket)
                     ticket.save()
                 else:
+                    from apps.dashboard.views import get_ticket_actual_price
                     ticket = Ticket.objects.create(
                         event=event,
                         seat=seat,
@@ -150,6 +173,8 @@ def handle_successful_payment(session):
                         has_mg=has_mg,
                         stripe_session_id=session_id
                     )
+                    ticket.amount_paid = get_ticket_actual_price(ticket)
+                    ticket.save()
                 
                 # Trigger delivery only if it wasn't already paid
                 if not ticket_already_paid:
@@ -178,6 +203,7 @@ def handle_successful_payment(session):
                     except Exception as e:
                         logger.error(f"Error reenviando correo/whatsapp en bloque general: {e}")
             
+            from apps.dashboard.views import get_ticket_actual_price
             for _ in range(max(0, to_create)):
                 ticket = Ticket.objects.create(
                     event=event,
@@ -188,6 +214,8 @@ def handle_successful_payment(session):
                     has_mg=has_mg,
                     stripe_session_id=session_id
                 )
+                ticket.amount_paid = get_ticket_actual_price(ticket)
+                ticket.save()
                 logger.info(f"[Webhook] Boleto General #{ticket.id} creado con éxito.")
                 
                 try:

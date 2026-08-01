@@ -238,6 +238,33 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     return seats.find(s => String(s.id) === hoveredId) || null;
   }, [seats, hoveredId]);
 
+  const getSeatTooltipLabel = useCallback((seat: Seat) => {
+    const tableId = (seat as any).tableId || (seat as any).table_id;
+    let tableEl: MapElement | undefined;
+    if (tableId) {
+      tableEl = elements.find(el => String(el.id) === String(tableId));
+    }
+    if (!tableEl && seat.row) {
+      const rowLower = String(seat.row).toLowerCase();
+      tableEl = elements.find(el => el.type === 'table' && el.label && String(el.label).toLowerCase() === rowLower);
+    }
+
+    const rawTableName = tableEl?.label || seat.row;
+    const isTable = !!tableEl || !!tableId || String(seat.row || '').toLowerCase().includes('mesa') || String(seat.row || '').toLowerCase().includes('table');
+
+    if (isTable) {
+      const nameStr = String(rawTableName || 'Mesa').trim();
+      const formattedName = (nameStr.toLowerCase().startsWith('mesa') || nameStr.toLowerCase().startsWith('table'))
+        ? nameStr
+        : `Mesa ${nameStr}`;
+      return `${formattedName} • Asiento ${seat.number}`;
+    }
+
+    const rowStr = String(seat.row || '').trim();
+    const formattedRow = rowStr.toLowerCase().startsWith('fila') ? rowStr : `Fila ${rowStr}`;
+    return `${formattedRow} • Asiento ${seat.number}`;
+  }, [elements]);
+
   // --- Premium Rendering Engine ---
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -821,7 +848,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
                 ? "bg-amber-400 shadow-[0_0_8px_#f59e0b]"
                 : "bg-[#22a6b3] shadow-[0_0_8px_#22a6b3]"
           )} />
-          <span>Fila {hoveredSeat.row} • Asiento {hoveredSeat.number}</span>
+          <span>{getSeatTooltipLabel(hoveredSeat)}</span>
           <span className="text-white/30">|</span>
           <span className="text-amber-400 font-extrabold">
             {hoveredSeat.status === 'occupied' || hoveredSeat.status === 'reserved'

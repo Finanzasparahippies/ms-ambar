@@ -728,8 +728,9 @@ class Ticket(models.Model):
     # Meet & Greet Upgrade
     has_mg = models.BooleanField(default=False)
     
-    # Stripe Session ID
+    # Stripe Session ID & Financial Record
     stripe_session_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID de la sesión de checkout de Stripe")
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Monto real cobrado por el boleto al momento de la compra")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

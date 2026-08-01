@@ -35,13 +35,14 @@ import { showAlert } from '../lib/notifications';
 import { cn, getApiUrl } from '../lib/utils';
 
 // ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
-const STRIPE_PCT_FEE = 0.036;   // 3.6%
-const STRIPE_FLAT_FEE = 3.00;   // $3.00 MXN
+// Incluye el 16% de IVA trasladado por Stripe sobre su propia comisión bancaria (3.6% * 1.16 = 4.176%, $3.00 * 1.16 = $3.48 MXN)
+const EFFECTIVE_PCT_FEE = 0.04176;   // 3.6% base + 16% IVA
+const EFFECTIVE_FLAT_FEE = 3.48;     // $3.00 base + 16% IVA
 
 const calculateTotalWithFee = (baseAmount: number): { base_price: number; service_fee: number; total: number } => {
   if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
   const base_price = Math.round(baseAmount * 100) / 100;
-  const total = Math.round(((base_price + STRIPE_FLAT_FEE) / (1 - STRIPE_PCT_FEE)) * 100) / 100;
+  const total = Math.round(((base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE)) * 100) / 100;
   const service_fee = Math.round((total - base_price) * 100) / 100;
   return {
     base_price,
@@ -402,6 +403,33 @@ const TourPage = () => {
 
     console.log(`[TicketPricing Debug] getSeatBasePrice resolved: $${resolvedPrice} MXN | Source: ${source} | Seat ID: ${seat?.id || 'N/A'}`);
     return resolvedPrice;
+  };
+
+  const getSeatDisplayText = (seat: any) => {
+    if (!seat) return '';
+    const tableId = seat.tableId || seat.table_id;
+    let tableEl: any;
+    if (tableId && Array.isArray(elements)) {
+      tableEl = elements.find((el: any) => String(el.id) === String(tableId));
+    }
+    if (!tableEl && seat.row && Array.isArray(elements)) {
+      const rowLower = String(seat.row).toLowerCase();
+      tableEl = elements.find((el: any) => el.type === 'table' && el.label && String(el.label).toLowerCase() === rowLower);
+    }
+    const rawTableName = tableEl?.label || seat.row;
+    const isTable = !!tableEl || !!tableId || String(seat.row || '').toLowerCase().includes('mesa') || String(seat.row || '').toLowerCase().includes('table');
+
+    if (isTable) {
+      const nameStr = String(rawTableName || 'Mesa').trim();
+      const formattedName = (nameStr.toLowerCase().startsWith('mesa') || nameStr.toLowerCase().startsWith('table'))
+        ? nameStr
+        : `Mesa ${nameStr}`;
+      return `${formattedName} • Asiento ${seat.number}`;
+    }
+
+    const rowStr = String(seat.row || '').trim();
+    const formattedRow = rowStr.toLowerCase().startsWith('fila') ? rowStr : `Fila ${rowStr}`;
+    return `${formattedRow} • Asiento ${seat.number}`;
   };
 
   const getEffectiveSeatlessPrice = () => {
@@ -962,7 +990,7 @@ const TourPage = () => {
                                     {seat.category || 'Reservado'}
                                   </span>
                                   <p className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                                    Fila {seat.row} • Asiento {seat.number}
+                                    {getSeatDisplayText(seat)}
                                   </p>
                                 </div>
                               </div>
