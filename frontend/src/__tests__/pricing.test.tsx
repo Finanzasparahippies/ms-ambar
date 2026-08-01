@@ -15,7 +15,7 @@ const calculateTotalWithFee = (baseAmount: number): { base_price: number; servic
   const total = Number(rawTotal.toFixed(2));
 
   // 2. Comisión exacta (Diferencia entre Total final y Precio Base)
-  const service_fee = Number((total - base_price).toFixed(2));
+  const service_fee = Number((rawTotal - base_price).toFixed(2));
 
   return {
     base_price,
