@@ -261,7 +261,7 @@ case $COMMAND in
         ;;
     test-frontend|test-frontend-dev)
         echo "Running Jest unit tests in Dev Frontend..."
-        run_npm_cmd_dev test -- "$@"
+        run_npm_cmd_dev test -- --no-cache "$@"
         ;;
     install-frontend|install-frontend-dev)
         echo "Installing npm packages in Dev Frontend..."
@@ -343,7 +343,7 @@ case $COMMAND in
         ;;
     test-frontend-staging)
         echo "Running Jest unit tests in Staging Frontend..."
-        run_npm_cmd_staging test -- "$@"
+        run_npm_cmd_staging test -- --no-cache "$@"
         ;;
     install-frontend-staging)
         echo "Installing npm packages in Staging Frontend..."
@@ -359,7 +359,7 @@ case $COMMAND in
         ;;
     test-frontend-prod)
         echo "Running Jest unit tests in Production Frontend..."
-        run_npm_cmd_prod test -- "$@"
+        run_npm_cmd_prod test -- --no-cache "$@"
         ;;
     install-frontend-prod)
         echo "Installing npm packages in Production Frontend..."
