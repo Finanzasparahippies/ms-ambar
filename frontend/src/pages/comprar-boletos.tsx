@@ -340,13 +340,13 @@ const TourPage = () => {
     const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
     const monthsDiff = eventMonthIdx - currMonthIdx;
 
-    if (monthsDiff > 3) {
+    if (monthsDiff >= 2) {
       return baseAmount;
     }
 
-    const monthsInLast3 = 3 - Math.max(0, monthsDiff);
+    const increments = 2 - Math.max(0, monthsDiff);
     const increment = Number(currentEvent.monthly_price_increment ?? 50);
-    const increase = monthsInLast3 * increment;
+    const increase = increments * increment;
 
     return Math.max(baseAmount, baseAmount + increase);
   };

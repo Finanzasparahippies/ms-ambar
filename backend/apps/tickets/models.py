@@ -550,14 +550,14 @@ class Event(models.Model):
         curr_month_idx = p_date.year * 12 + p_date.month
         months_diff = event_month_idx - curr_month_idx
 
-        # A más de 3 meses de anticipación: tarifa en su precio mínimo establecido (sin aumento)
-        if months_diff > 3:
+        # A 2 o más meses de anticipación (ej. agosto o antes para evento en octubre): tarifa base (0 aumentos)
+        if months_diff >= 2:
             return round(amount, 2)
 
-        # En los últimos 3 meses (o mes del evento): la tarifa aumenta de forma progresiva
-        months_in_last_3 = 3 - max(0, months_diff)
+        # En los últimos meses antes/del evento: máximo 2 incrementos (1 al pasar de ago a sep, 2 al pasar de sep a oct)
+        increments = 2 - max(0, months_diff)
         increment = float(self.monthly_price_increment or 50.00)
-        increase = months_in_last_3 * increment
+        increase = increments * increment
 
         # Garantizar que nunca sea menor a la tarifa mínima establecida (base_amount)
         final_price = max(amount, amount + increase)

@@ -17,22 +17,21 @@ El módulo de taquilla digital de **MS AMBAR** implementa un motor de cálculo d
 
 ## 🧮 Arquitectura del Motor de Precios Dinámicos (`Dynamic Pricing Engine`)
 
-El sistema incluye un algoritmo de **Descuentos Preventivos / Venta Anticipada (Early-Bird)** regulado por la regla de seguridad de **Precio Piso (Floor Price Cap)** de Nectar Labs.
+El sistema incluye un algoritmo de **Aumento Progresivo de Precios** previo al evento regulado por la regla de máximo 2 incrementos.
 
 ### 1. Fórmulas de Cálculo Backend (`apps/tickets/models.py`)
 
 Para cualquier tipo de entrada (Boleto General Sin Asiento o Asiento Numerado), el precio final se calcula mediante la función `Event.get_dynamic_price(base_amount)`:
 
-$$\text{meses\_diff} = \max(0, \text{mes\_evento} - \text{mes\_compra})$$
-$$\text{descuento\_bruto} = \text{meses\_diff} \times \text{incremento\_mensual}$$
-$$\text{descuento\_máximo} = \text{precio\_base} \times 0.30$$
-$$\text{descuento\_efectivo} = \min(\text{descuento\_bruto}, \text{descuento\_máximo})$$
-$$\text{precio\_final} = \max(\text{precio\_base} \times 0.70, \text{precio\_base} - \text{descuento\_efectivo})$$
+$$\text{meses\_diff} = \text{mes\_evento} - \text{mes\_compra}$$
 
-#### 🛡️ Reglas de Seguridad Anti-Cero (Price Floor Safety):
-- **Tope de Descuento (30%)**: El descuento total por venta anticipada jamás puede superar el 30% del valor base nominal del boleto.
-- **Precio Piso Mínimo (70%)**: La entrada garantiza un precio mínimo cobrable equivalente al 70% de su valor base (evitando que compras con varios meses de anticipación caigan a $0.00 MXN o precios negativos).
-- **Fallback Automático**: Si el evento no tiene precio asignado o `base_amount <= 0`, se aplica un valor por defecto ($300.00 MXN para General y $400.00 MXN para Asientos).
+- **$\text{meses\_diff} \ge 2$ (ej. Agosto o antes para evento en Octubre)**: $\text{precio\_final} = \text{precio\_base}$ (0 incrementos).
+- **$\text{meses\_diff} = 1$ (Septiembre - Transición Agosto $\rightarrow$ Septiembre)**: $\text{precio\_final} = \text{precio\_base} + (1 \times \text{incremento})$.
+- **$\text{meses\_diff} \le 0$ (Octubre - Transición Septiembre $\rightarrow$ Octubre / Mes del evento)**: $\text{precio\_final} = \text{precio\_base} + (2 \times \text{incremento})$.
+
+#### 🛡️ Reglas de Seguridad:
+- **Garantía de Tarifa Base Mínima**: El precio final nunca será menor al `base_amount` configurado para el evento o asiento.
+- **Límite de Incrementos**: Se restringe a un máximo de 2 incrementos durante el ciclo previo al evento.
 
 ---
 

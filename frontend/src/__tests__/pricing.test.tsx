@@ -17,22 +17,22 @@ const calculateTotalWithFee = (baseAmount: number): { base_price: number; servic
   };
 };
 
-const getDynamicPrice = (event: any, baseAmount: number) => {
+const getDynamicPrice = (event: any, baseAmount: number, nowOverride?: Date) => {
   if (!event || !baseAmount || baseAmount <= 0) return baseAmount || 0;
   if (event.enable_dynamic_pricing === false || !event.date) return baseAmount;
   const eventDate = new Date(event.date);
-  const now = new Date();
+  const now = nowOverride || new Date();
   const eventMonthIdx = eventDate.getFullYear() * 12 + eventDate.getMonth();
   const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
   const monthsDiff = eventMonthIdx - currMonthIdx;
 
-  if (monthsDiff > 3) {
+  if (monthsDiff >= 2) {
     return baseAmount;
   }
 
-  const monthsInLast3 = 3 - Math.max(0, monthsDiff);
+  const increments = 2 - Math.max(0, monthsDiff);
   const increment = Number(event.monthly_price_increment ?? 50);
-  const increase = monthsInLast3 * increment;
+  const increase = increments * increment;
 
   return Math.max(baseAmount, baseAmount + increase);
 };
@@ -72,5 +72,29 @@ describe('Pricing and Stripe Fee Mirror Unit Tests (Frontend)', () => {
     expect(res.base_price).toBe(1500);
     expect(res.service_fee).toBe(59.13);
     expect(res.total).toBe(1559.13);
+  });
+
+  test('debe aplicar exactamente máximo 2 incrementos dinámicos en los meses previa y durante el evento (Evento en Octubre)', () => {
+    const event = {
+      date: '2026-10-15T20:00:00Z',
+      enable_dynamic_pricing: true,
+      monthly_price_increment: 50,
+    };
+    const basePrice = 400;
+
+    // Mayo (5 meses antes): 0 aumentos -> 400
+    expect(getDynamicPrice(event, basePrice, new Date('2026-05-10T12:00:00Z'))).toBe(400);
+
+    // Julio (3 meses antes): 0 aumentos -> 400
+    expect(getDynamicPrice(event, basePrice, new Date('2026-07-10T12:00:00Z'))).toBe(400);
+
+    // Agosto (2 meses antes): 0 aumentos -> 400 (se mantiene base)
+    expect(getDynamicPrice(event, basePrice, new Date('2026-08-10T12:00:00Z'))).toBe(400);
+
+    // Septiembre (1 mes antes - Transición Ago->Sep): 1er incremento (+$50) -> 450
+    expect(getDynamicPrice(event, basePrice, new Date('2026-09-10T12:00:00Z'))).toBe(450);
+
+    // Octubre (Mes del evento - Transición Sep->Oct): 2do incremento (+$100) -> 500
+    expect(getDynamicPrice(event, basePrice, new Date('2026-10-05T12:00:00Z'))).toBe(500);
   });
 });
