@@ -41,14 +41,15 @@ const EFFECTIVE_FLAT_FEE = 3.48;     // $3.00 base + 16% IVA
 
 const calculateTotalWithFee = (baseAmount: number): { base_price: number; service_fee: number; total: number } => {
   if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
+
   const base_price = Number(baseAmount.toFixed(2));
 
-  // 1. Calculamos el Total Bruto (Gross-Up)
+  // 1. Total bruto con recargo Gross-Up de Stripe
   const rawTotal = (base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE);
   const total = Number(rawTotal.toFixed(2));
 
-  // 2. La tarifa de servicio es EXACTAMENTE la diferencia entre Total Bruto y Base
-  const service_fee = Number((rawTotal - base_price).toFixed(2));
+  // 2. Comisión exacta (Diferencia entre Total final y Precio Base)
+  const service_fee = Number((total - base_price).toFixed(2));
 
   return {
     base_price,
