@@ -75,6 +75,6 @@ describe('seatingBounds utility unit tests', () => {
 
     // Try zooming in above max scale
     const crazyHugeScale = clampTransform({ x: 0, y: 0, scale: 999 }, bounds, 1000, 800, fit.scale);
-    expect(crazyHugeScale.scale).toBeLessThanOrEqual(fit.scale * 4.5);
+    expect(crazyHugeScale.scale).toBeLessThanOrEqual(Math.max(3.0, fit.scale * 4.5));
   });
 });

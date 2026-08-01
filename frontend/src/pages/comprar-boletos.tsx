@@ -43,7 +43,7 @@ const calculateTotalWithFee = (baseAmount: number): { base_price: number; servic
   if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
   const base_price = Math.round(baseAmount * 100) / 100;
   const total = Math.round(((base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE)) * 100) / 100;
-  const service_fee = Math.round((total - base_price) * 100) / 100;
+  const service_fee = Number((total - base_price).toFixed(2));
   return {
     base_price,
     service_fee,

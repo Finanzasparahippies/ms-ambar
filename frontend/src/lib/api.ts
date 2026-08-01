@@ -11,7 +11,7 @@ const api: AxiosInstance = axios.create({
 });
 
 // Interceptor de Peticiones: inyecta token Bearer automáticamente si existe
-api.interceptors.request.use(
+api?.interceptors?.request?.use(
   (config) => {
     if (typeof window !== 'undefined') {
       // Dinámicamente asegura la URL base actualizada
