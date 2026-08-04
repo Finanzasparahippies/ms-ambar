@@ -51,9 +51,22 @@ def get_ticket_actual_price(t):
         if event_type == 'meet_greet':
             price = float(getattr(event, 'mg_price', 0.0) or 0.0)
         elif seat:
-            base = float(getattr(seat, 'base_price', 0.0) or 0.0)
+            event_num_price = float(getattr(event, 'numbered_ticket_price', 0) or 0)
+            seat_db_price = float(getattr(seat, 'base_price', 0.0) or 0.0)
+
+            if event_num_price > 0:
+                if seat_db_price > 0 and seat_db_price not in [500.0, 1000.0]:
+                    seat_base = event_num_price * (seat_db_price / 1000.0)
+                else:
+                    seat_base = event_num_price
+            elif seat_db_price > 0:
+                seat_base = seat_db_price
+            else:
+                seat_base = 1000.0
+
             multiplier = float(getattr(event, 'price_multiplier', 1.0) or 1.0)
-            price = base * multiplier
+            raw_seat_price = seat_base * multiplier
+            price = event.get_dynamic_price(raw_seat_price, purchase_date=created_at) if hasattr(event, 'get_dynamic_price') else raw_seat_price
             if getattr(t, 'has_mg', False):
                 price += float(getattr(event, 'mg_price', 0.0) or 0.0)
         elif ga_zone:
