@@ -8102,7 +8102,7 @@ export default function AdminDashboard() {
                             textAlign: 'center',
                             fontStyle: 'italic',
                             marginBottom: '25px',
-                            fontFamily: resolveFontStack(previewCampaign.title_font_family),
+                            fontFamily: resolveFontStack(previewCampaign.title_font_family || ''),
                             boxSizing: 'border-box'
                           }}>
                             {previewCampaign.email_title ? (
@@ -8128,7 +8128,7 @@ export default function AdminDashboard() {
                             textAlign: activeBodyAlignment as any,
                             fontStyle: 'italic',
                             opacity: 0.95,
-                            fontFamily: resolveFontStack(previewCampaign.font_family),
+                            fontFamily: resolveFontStack(previewCampaign.font_family || ''),
                             boxSizing: 'border-box',
                             marginBottom: '30px'
                           }}>
@@ -8222,7 +8222,7 @@ export default function AdminDashboard() {
                             borderRadius: activeFooterRadius || '0px',
                             fontSize: '9px',
                             lineHeight: '1.4',
-                            fontFamily: resolveFontStack(previewCampaign.footer_font_family),
+                            fontFamily: resolveFontStack(previewCampaign.footer_font_family || ''),
                             boxSizing: 'border-box'
                           }}>
                             {previewCampaign.footer_text ? (
@@ -8822,7 +8822,7 @@ export default function AdminDashboard() {
               🔍 Desglose de Periodo (Drill-Down)
             </span>
             <h3 className="text-2xl font-black uppercase italic tracking-tight text-[#F4F6F0] mb-6">
-              {drillDownData.event_title || drillDownData.date || drillDownData.category}
+              {String(drillDownData.event_title || drillDownData.date || drillDownData.category || '')}
             </h3>
 
             <div className="space-y-3 text-left bg-white/5 border border-white/10 p-5 rounded-2xl mb-6">
