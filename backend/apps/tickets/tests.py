@@ -735,3 +735,20 @@ class TicketsAppTests(APITestCase):
         fee_item = next((item for item in line_items if 'Cargo de servicio' in item.get('price_data', {}).get('product_data', {}).get('name', '')), None)
         self.assertIsNotNone(fee_item)
         self.assertEqual(fee_item['price_data']['unit_amount'], 4721) # $47.21 MXN
+
+    def test_get_ticket_actual_price_respects_numbered_price(self):
+        """Verify get_ticket_actual_price respects event numbered_ticket_price (e.g. 400.00) instead of falling back to 500."""
+        from apps.dashboard.views import get_ticket_actual_price
+        self.event.numbered_ticket_price = 400.00
+        self.event.price_multiplier = 1.00
+        self.event.enable_dynamic_pricing = False
+        self.event.save()
+
+        ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_std,
+            user_email="test_price@example.com",
+            status="paid"
+        )
+        actual_price = get_ticket_actual_price(ticket)
+        self.assertEqual(actual_price, 400.00)
