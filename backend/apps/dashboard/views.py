@@ -36,7 +36,7 @@ def get_ticket_actual_price(t):
        garantizando que la variación dinámica futura no infle los ingresos del pasado.
     """
     try:
-        if getattr(t, 'amount_paid', None) is not None and float(t.amount_paid) > 0:
+        if getattr(t, 'amount_paid', None) is not None:
             return round(float(t.amount_paid), 2)
 
         event = getattr(t, 'event', None)

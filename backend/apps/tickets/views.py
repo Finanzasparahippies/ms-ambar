@@ -398,7 +398,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                             user_phone=phone,
                             status='paid',
                             has_mg=True if event.event_type == 'meet_greet' else has_mg,
-                            stripe_session_id=vip_session_id
+                            stripe_session_id=vip_session_id,
+                            amount_paid=0.00
                         )
                         created_vip_tickets.append(ticket)
                 else:
@@ -412,7 +413,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                             user_phone=phone,
                             status='paid',
                             has_mg=has_mg,
-                            stripe_session_id=vip_session_id
+                            stripe_session_id=vip_session_id,
+                            amount_paid=0.00
                         )
                         created_vip_tickets.append(ticket)
 
@@ -512,6 +514,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             created_mock_tickets = []
 
             if event.event_type == 'meet_greet' or is_seatless:
+                from apps.dashboard.views import get_ticket_actual_price
                 for _ in range(int(quantity)):
                     ticket = Ticket.objects.create(
                         event=event,
@@ -524,8 +527,11 @@ class TicketViewSet(viewsets.ModelViewSet):
                         has_mg=True if event.event_type == 'meet_greet' else has_mg,
                         stripe_session_id=mock_session_id
                     )
+                    ticket.amount_paid = get_ticket_actual_price(ticket)
+                    ticket.save()
                     created_mock_tickets.append(ticket)
             else:
+                from apps.dashboard.views import get_ticket_actual_price
                 for seat in seats:
                     ticket = Ticket.objects.create(
                         event=event,
@@ -538,6 +544,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                         has_mg=has_mg,
                         stripe_session_id=mock_session_id
                     )
+                    ticket.amount_paid = get_ticket_actual_price(ticket)
+                    ticket.save()
                     created_mock_tickets.append(ticket)
 
             # Registrar al comprador en la lista de marketing del evento

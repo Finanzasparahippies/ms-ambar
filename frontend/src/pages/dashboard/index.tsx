@@ -6,11 +6,11 @@ import { cn } from '../../lib/utils';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { motion, AnimatePresence } from 'framer-motion';
-import CouponManager, { Coupon } from '../../components/CouponManager';
+import CouponManager from '../../components/CouponManager';
 import ThemeManager from '../../components/ThemeManager';
 import {
   DollarSign,
-  Ticket,
+  Ticket as TicketIcon,
   ShoppingBag,
   Users,
   Activity,
@@ -32,7 +32,7 @@ import {
   Check,
   MapPin,
   Mail,
-  User,
+  User as UserIcon,
   Plus,
   Trash2,
   Calendar,
@@ -73,6 +73,26 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { getApiUrl } from '../../lib/utils';
+
+import {
+  DashboardStats,
+  SystemMetrics,
+  Order,
+  Expense,
+  Coupon,
+  Campaign,
+  MarketingList,
+  Subscriber,
+  Product,
+  Category,
+  Event,
+  Theater,
+  User,
+  UserProfile,
+  BookingContract,
+  BookingInquiry,
+  CampaignTemplateImage
+} from '../../types';
 
 const API_URL = typeof window !== 'undefined' ? getApiUrl() : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
 
@@ -215,25 +235,25 @@ export default function AdminDashboard() {
   };
 
   const router = useRouter();
-  const [stats, setStats] = useState<any>(null);
-  const [sysMetrics, setSysMetrics] = useState<any>(null);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [expenses, setExpenses] = useState<any[]>([]);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [sysMetrics, setSysMetrics] = useState<SystemMetrics | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<Record<string, unknown> | null>(null);
   const [chartPeriod, setChartPeriod] = useState<'daily' | 'weekly' | 'monthly' | 'event'>('daily');
   const [chartType, setChartType] = useState<'line' | 'bar' | 'area' | 'donut'>('area');
   const [isFullscreenChartOpen, setIsFullscreenChartOpen] = useState(false);
 
   // Drill-down Modal State
-  const [drillDownData, setDrillDownData] = useState<any | null>(null);
+  const [drillDownData, setDrillDownData] = useState<Record<string, unknown> | null>(null);
 
   // Unit Data Visualizer Modal State
   const [unitModalType, setUnitModalType] = useState<'tickets' | 'orders' | 'expenses' | 'mg_upgrades' | null>(null);
   const [unitModalTitle, setUnitModalTitle] = useState('');
-  const [unitDataList, setUnitDataList] = useState<any[]>([]);
+  const [unitDataList, setUnitDataList] = useState<Record<string, any>[]>([]);
   const [unitDataLoading, setUnitDataLoading] = useState(false);
   const [unitSearchQuery, setUnitSearchQuery] = useState('');
 
@@ -245,7 +265,7 @@ export default function AdminDashboard() {
     try {
       const res = await api.get(`/dashboard/analytics/unit-data/?type=${type}`);
       setUnitDataList(Array.isArray(res.data?.data) ? res.data.data : []);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading unit data:', err);
       showToast.error('Error al cargar registros unitarios.');
       setUnitDataList([]);
@@ -260,7 +280,7 @@ export default function AdminDashboard() {
     try {
       const res = await api.get(`/dashboard/analytics/unit-data/?type=${unitModalType}&search=${encodeURIComponent(query)}`);
       setUnitDataList(Array.isArray(res.data?.data) ? res.data.data : []);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error searching unit data:', err);
     }
   };
@@ -272,7 +292,7 @@ export default function AdminDashboard() {
     }
     const keys = Object.keys(unitDataList[0]);
     const headers = keys.join(',');
-    const rows = unitDataList.map(item =>
+    const rows = unitDataList.map((item: Record<string, any>) =>
       keys.map(k => `"${String(item[k] ?? '').replace(/"/g, '""')}"`).join(',')
     );
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
@@ -295,12 +315,12 @@ export default function AdminDashboard() {
   // Dashboard Navigation State
   const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme'>('summary');
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [contracts, setContracts] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<BookingContract[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
 
   // Campaigns & Subscribers State
-  const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [marketingLists, setMarketingLists] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [marketingLists, setMarketingLists] = useState<MarketingList[]>([]);
   const [campMarketingList, setCampMarketingList] = useState<string>('');
   const [isListModalOpen, setIsListModalOpen] = useState(false);
   const [listName, setListName] = useState('');
@@ -308,10 +328,10 @@ export default function AdminDashboard() {
   const [listLoading, setListLoading] = useState(false);
   const [listErrorMsg, setListErrorMsg] = useState<string | null>(null);
   const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers' | 'lists'>('campaigns');
-  const [subscribers, setSubscribers] = useState<any[]>([]);
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'content' | 'theme' | 'cover' | 'sections' | 'ctas' | 'library'>('content');
-  const [editingCampaign, setEditingCampaign] = useState<any | null>(null);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [campId, setCampId] = useState<number | null>(null);
   const [campSubject, setCampSubject] = useState('');
   const [campSenderName, setCampSenderName] = useState('Ms Ambar');
@@ -320,7 +340,7 @@ export default function AdminDashboard() {
   const [editorActiveTab, setEditorActiveTab] = useState<'title' | 'body' | 'footer'>('body');
   const [campEmailTitle, setCampEmailTitle] = useState('');
   const [campFooterText, setCampFooterText] = useState('');
-  const [templateImages, setTemplateImages] = useState<any[]>([]);
+  const [templateImages, setTemplateImages] = useState<CampaignTemplateImage[]>([]);
   const [libraryUploadLoading, setLibraryUploadLoading] = useState(false);
   const [isLibrarySectionOpen, setIsLibrarySectionOpen] = useState(false);
   const [campTemplateType, setCampTemplateType] = useState('minimalist');
@@ -406,7 +426,7 @@ export default function AdminDashboard() {
   const [campLoading, setCampLoading] = useState(false);
   const [campSuccessMsg, setCampSuccessMsg] = useState<string | null>(null);
   const [campErrorMsg, setCampErrorMsg] = useState<string | null>(null);
-  const [previewCampaign, setPreviewCampaign] = useState<any | null>(null);
+  const [previewCampaign, setPreviewCampaign] = useState<Campaign | null>(null);
   const [sendingCampaignId, setSendingCampaignId] = useState<number | null>(null);
 
   // Campaign Image/CTA Customization
@@ -485,9 +505,9 @@ export default function AdminDashboard() {
 
   // Client Dashboard & Profile states
   const [isStaff, setIsStaff] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [clientTickets, setClientTickets] = useState<any[]>([]);
-  const [clientProfile, setClientProfile] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [clientTickets, setClientTickets] = useState<any[]>([]); // Need Ticket type
+  const [clientProfile, setClientProfile] = useState<UserProfile | null>(null);
   const [clientActiveTab, setClientActiveTab] = useState<'tickets' | 'profile'>('tickets');
   const isSuperuser = currentUser?.is_superuser || clientProfile?.is_superuser || false;
 
@@ -599,7 +619,7 @@ export default function AdminDashboard() {
       setTimeout(() => {
         setIsProfileModalOpen(false);
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       showToast.error('Error al actualizar el perfil.');
     } finally {
@@ -643,8 +663,8 @@ export default function AdminDashboard() {
   const [expenseSuccess, setExpenseSuccess] = useState(false);
 
   // Merchandise Catalog Administration State
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [catalogSubTab, setCatalogSubTab] = useState<'products' | 'categories'>('products');
 
   // Modals & Active Edit Forms
@@ -680,9 +700,9 @@ export default function AdminDashboard() {
   const [hoveredModalSingleCta, setHoveredModalSingleCta] = useState(false);
 
   // ─── Events State ───
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<any | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [eventTitle, setEventTitle] = useState('');
   const [eventArtist, setEventArtist] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -707,9 +727,9 @@ export default function AdminDashboard() {
   const [eventErrorMsg, setEventErrorMsg] = useState<string | null>(null);
 
   // ─── Theaters State (Nectar Pro) ───
-  const [theaters, setTheaters] = useState<any[]>([]);
+  const [theaters, setTheaters] = useState<Theater[]>([]);
   const [isTheaterModalOpen, setIsTheaterModalOpen] = useState(false);
-  const [editingTheater, setEditingTheater] = useState<any | null>(null);
+  const [editingTheater, setEditingTheater] = useState<Theater | null>(null);
   const [theaterName, setTheaterName] = useState('');
   const [theaterLocation, setTheaterLocation] = useState('');
   const [theaterLoading, setTheaterLoading] = useState(false);
@@ -766,7 +786,7 @@ export default function AdminDashboard() {
         // Essential Initial Staff Data Fetching via singleton api client
         const [analyticsRes, systemRes, ordersRes, profileRes] = await Promise.all([
           api.get('/dashboard/analytics/').catch(() => ({ data: null })),
-          api.get('/dashboard/system/').catch(err => {
+          api.get('/dashboard/system/').catch((err: unknown) => {
             console.error("System metrics fetch failed, using fallback", err);
             return { data: null };
           }),
@@ -807,9 +827,11 @@ export default function AdminDashboard() {
         setClientProfile(profileRes.data);
         setClientTickets(Array.isArray(ticketsRes.data) ? ticketsRes.data : []);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error fetching dashboard data", err);
-      if (err.response?.status === 401 || err.response?.status === 403) {
+      // Need a way to check status code without any, using unknown or casting
+      const status = (err as any)?.response?.status;
+      if (status === 401 || status === 403) {
         setError("Sesión expirada o acceso denegado. Redirigiendo...");
         setTimeout(() => {
           router.push('/login?redirect=/dashboard');
@@ -1762,7 +1784,7 @@ export default function AdminDashboard() {
         setEditorActiveTab('body');
         
         // 3. Añadir la imagen al final del estado del cuerpo
-        setCampPoemText(prev => {
+        setCampPoemText((prev: string) => {
           const base = prev || '';
           return base + imgHtml;
         });
@@ -1856,14 +1878,14 @@ export default function AdminDashboard() {
   };
 
   const handleTheaterSync = async (id: number) => {
-    setTheaterSyncStatus(prev => ({ ...prev, [id]: 'loading' }));
+    setTheaterSyncStatus((prev: Record<number, 'idle' | 'loading' | 'success' | 'error'>) => ({ ...prev, [id]: 'loading' }));
     try {
       await axios.post(`${API_URL}/tickets/theaters/${id}/generate_seats/`);
-      setTheaterSyncStatus(prev => ({ ...prev, [id]: 'success' }));
-      setTimeout(() => setTheaterSyncStatus(prev => ({ ...prev, [id]: 'idle' })), 3500);
+      setTheaterSyncStatus((prev: Record<number, 'idle' | 'loading' | 'success' | 'error'>) => ({ ...prev, [id]: 'success' }));
+      setTimeout(() => setTheaterSyncStatus((prev: Record<number, 'idle' | 'loading' | 'success' | 'error'>) => ({ ...prev, [id]: 'idle' })), 3500);
     } catch {
-      setTheaterSyncStatus(prev => ({ ...prev, [id]: 'error' }));
-      setTimeout(() => setTheaterSyncStatus(prev => ({ ...prev, [id]: 'idle' })), 3500);
+      setTheaterSyncStatus((prev: Record<number, 'idle' | 'loading' | 'success' | 'error'>) => ({ ...prev, [id]: 'error' }));
+      setTimeout(() => setTheaterSyncStatus((prev: Record<number, 'idle' | 'loading' | 'success' | 'error'>) => ({ ...prev, [id]: 'idle' })), 3500);
     }
   };
 
@@ -2452,7 +2474,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const pendingOrdersCount = orders.filter(o => o.status === 'paid').length;
+  const pendingOrdersCount = orders.filter((o: Order) => o.status === 'paid').length;
 
   const activePoint = hoveredPoint || (points.length > 0 ? {
     ...points[points.length - 1].data,
@@ -2512,7 +2534,7 @@ export default function AdminDashboard() {
                 onClick={openProfileModal}
                 className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-3 rounded-xl shadow-lg transition-all text-xs font-bold uppercase tracking-widest text-[#F4F6F0]"
               >
-                <User size={14} className="text-amber-honey" /> Ver Perfil
+                <UserIcon size={14} className="text-amber-honey" /> Ver Perfil
               </button>
               <button
                 onClick={handleLogout}
@@ -8842,8 +8864,8 @@ export default function AdminDashboard() {
 }
 
 // Stat Card Component
-const StatCard = ({ icon, title, value, detail, color, onClick }: any) => {
-  const glowColors: any = {
+const StatCard = ({ icon, title, value, detail, color, onClick }: { icon: React.ReactNode, title: string, value: string | number, detail?: string, color: string, onClick?: () => void }) => {
+  const glowColors: Record<string, string> = {
     amber: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
     gold: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
     honey: 'shadow-lg shadow-black/20 border-amber-honey/20 hover:border-amber-honey/40',
@@ -8854,7 +8876,7 @@ const StatCard = ({ icon, title, value, detail, color, onClick }: any) => {
     <motion.div
       whileHover={{ y: -4 }}
       onClick={onClick}
-      className={`amber-glass border rounded-[2rem] p-6 transition-all duration-300 relative group overflow-hidden ${glowColors[color]} ${onClick ? 'cursor-pointer hover:border-amber-honey/60' : ''}`}
+      className={`amber-glass border rounded-[2rem] p-6 transition-all duration-300 relative group overflow-hidden ${glowColors[color] || glowColors.amber} ${onClick ? 'cursor-pointer hover:border-amber-honey/60' : ''}`}
     >
       <div className="flex items-center justify-between mb-4">
         <span className="text-[10px] text-[#F4F6F0]/60 uppercase tracking-widest font-black">{title}</span>
@@ -8872,7 +8894,7 @@ const StatCard = ({ icon, title, value, detail, color, onClick }: any) => {
 };
 
 // Quick Action Button Component
-const QuickActionBtn = ({ href, title, desc, icon, external }: any) => {
+const QuickActionBtn = ({ href, title, desc, icon, external }: { href: string, title: string, desc: string, icon: React.ReactNode, external?: boolean }) => {
   const BtnContent = (
     <div className="p-4 bg-white/5 border border-white/10 hover:border-amber-honey/30 hover:bg-amber-honey/[0.02] rounded-2xl shadow-md transition-all group flex items-center justify-between cursor-pointer">
       <div className="flex items-center gap-4">
