@@ -91,13 +91,15 @@ export interface Coupon {
   id: number;
   code: string;
   discount_type: 'free_vip' | 'percentage' | 'fixed';
-  discount_value: number;
+  discount_value: number | string;
   max_uses: number;
   times_used: number;
   is_active: boolean;
-  event?: number;
-  assigned_email?: string;
-  expiration_date?: string;
+  event: number | null;
+  event_title?: string | null;
+  assigned_email?: string | null;
+  expiration_date?: string | null;
+  created_at?: string;
 }
 
 export interface Campaign {
@@ -180,6 +182,7 @@ export interface Product {
   price: string | number;
   stock: number;
   category: number | string;
+  category_name?: string;
   is_active: boolean;
   image?: string;
 }

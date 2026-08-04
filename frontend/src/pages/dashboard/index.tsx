@@ -3562,7 +3562,7 @@ export default function AdminDashboard() {
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white/5 border border-white/10 p-4 rounded-xl">
                                 <div className="space-y-1.5">
                                   <span className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-black block">Información del Cliente</span>
-                                  <div className="text-xs font-black flex items-center gap-1.5 text-[#F4F6F0]"><User size={12} className="text-[#F4F6F0]/50" /> {order.full_name}</div>
+                                  <div className="text-xs font-black flex items-center gap-1.5 text-[#F4F6F0]"><UserIcon size={12} className="text-[#F4F6F0]/50" /> {order.full_name}</div>
                                   <div className="text-[10px] text-[#F4F6F0]/60 flex items-center gap-1.5"><Mail size={12} className="text-[#F4F6F0]/50" /> {order.user_email}</div>
                                 </div>
                                 <div className="space-y-1.5">
