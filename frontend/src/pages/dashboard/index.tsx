@@ -10,7 +10,7 @@ import CouponManager from '../../components/CouponManager';
 import ThemeManager from '../../components/ThemeManager';
 import {
   DollarSign,
-const Ticket = TicketIcon;
+  TicketIcon,
   ShoppingBag,
   Users,
   Activity,
