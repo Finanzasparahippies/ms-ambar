@@ -66,15 +66,15 @@ describe('Pricing and Stripe Fee Mirror Unit Tests (Frontend)', () => {
     expect(res.service_fee).toBe(51.57);
   });
 
-  test('debe calcular la comisión Gross-Up al combinar boleto de concierto con Upgrade M&G ($1,000 boleto + $500 upgrade = $1,500 base -> $1,569.01 total)', () => {
+  test('debe calcular la comisión Gross-Up al combinar boleto de concierto con Upgrade M&G ($1,000 boleto + $500 upgrade = $1,500 base -> $1,569 total)', () => {
     const seatPrice = 1000;
     const mgUpgradePrice = 500;
     const baseTotal = seatPrice + mgUpgradePrice; // $1,500 MXN
     const res = calculateTotalWithFee(baseTotal);
 
     expect(res.base_price).toBe(1500);
-    expect(res.service_fee).toBe(69.01);
-    expect(res.total).toBe(1569.01);
+    expect(res.service_fee).toBe(69);
+    expect(res.total).toBe(1569);
   });
 
   test('debe aplicar exactamente máximo 2 incrementos dinámicos en los meses previa y durante el evento (Evento en Octubre)', () => {

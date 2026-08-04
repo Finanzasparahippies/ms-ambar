@@ -50,7 +50,9 @@ export default function Suscribirse() {
       setNewsletterName('');
       showToast('Te has suscrito con éxito al Newsletter de Ms Ambar.', 'success');
     } catch (err: any) {
-      console.error(err);
+      if (process.env.NODE_ENV !== 'test') {
+        console.error(err);
+      }
       const isAlreadySubbed = err.response?.data?.email?.[0]?.includes('exists') ||
         err.response?.data?.email?.[0]?.includes('ya existe') ||
         err.response?.status === 400;
