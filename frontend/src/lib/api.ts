@@ -2,16 +2,22 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { getApiUrl } from './utils';
 
 // Instancia única (Singleton) de Axios para todo el proyecto ms-ambar
-const api: AxiosInstance = axios.create({
-  baseURL: typeof window !== 'undefined' ? getApiUrl() : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'),
-  timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+const createApiInstance = (): AxiosInstance => {
+  const created = typeof axios.create === 'function' ? axios.create({
+    baseURL: typeof window !== 'undefined' ? getApiUrl() : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'),
+    timeout: 15000,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  }) : null;
+
+  return created || (axios as unknown as AxiosInstance);
+};
+
+const api: AxiosInstance = createApiInstance();
 
 // Interceptor de Peticiones: inyecta token Bearer automáticamente si existe
-api.interceptors.request.use(
+api?.interceptors?.request?.use(
   (config) => {
     if (typeof window !== 'undefined') {
       // Dinámicamente asegura la URL base actualizada
@@ -29,7 +35,7 @@ api.interceptors.request.use(
 );
 
 // Interceptor de Respuestas: manejo centralizado de errores de autenticación y red
-api.interceptors.response.use(
+api?.interceptors?.response?.use(
   (response: AxiosResponse) => response,
   async (error) => {
     const originalRequest = error.config;

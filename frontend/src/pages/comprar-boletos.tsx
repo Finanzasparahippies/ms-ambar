@@ -41,9 +41,16 @@ const EFFECTIVE_FLAT_FEE = 3.48;     // $3.00 base + 16% IVA
 
 const calculateTotalWithFee = (baseAmount: number): { base_price: number; service_fee: number; total: number } => {
   if (baseAmount <= 0) return { base_price: 0, service_fee: 0, total: 0 };
-  const base_price = Math.round(baseAmount * 100) / 100;
-  const total = Math.round(((base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE)) * 100) / 100;
-  const service_fee = Math.round((total - base_price) * 100) / 100;
+
+  const base_price = Number(baseAmount.toFixed(2));
+
+  // 1. Total bruto con recargo Gross-Up de Stripe
+  const rawTotal = (base_price + EFFECTIVE_FLAT_FEE) / (1 - EFFECTIVE_PCT_FEE);
+  const total = Number(rawTotal.toFixed(2));
+
+  // 2. Comisión exacta (Diferencia entre Total final y Precio Base)
+  const service_fee = Number((total - base_price).toFixed(2));
+
   return {
     base_price,
     service_fee,
@@ -341,13 +348,13 @@ const TourPage = () => {
     const currMonthIdx = now.getFullYear() * 12 + now.getMonth();
     const monthsDiff = eventMonthIdx - currMonthIdx;
 
-    if (monthsDiff > 3) {
+    if (monthsDiff >= 2) {
       return baseAmount;
     }
 
-    const monthsInLast3 = 3 - Math.max(0, monthsDiff);
+    const increments = 2 - Math.max(0, monthsDiff);
     const increment = Number(currentEvent.monthly_price_increment ?? 50);
-    const increase = monthsInLast3 * increment;
+    const increase = increments * increment;
 
     return Math.max(baseAmount, baseAmount + increase);
   };
@@ -725,86 +732,86 @@ const TourPage = () => {
                       </div>
                     )}
 
-                {ticketMode === 'seat' ? (
-                  <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                    <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-[9px] xs:text-[10px] font-black uppercase tracking-wider text-white/70">
-                      <div className="flex flex-wrap items-center gap-4">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
-                        </span>
-                      </div>
-                      <span className="text-[9px] tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
-                        Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
-                      </span>
-                    </div>
+                    {ticketMode === 'seat' ? (
+                      <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
+                        <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-[9px] xs:text-[10px] font-black uppercase tracking-wider text-white/70">
+                          <div className="flex flex-wrap items-center gap-4">
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
+                            </span>
+                          </div>
+                          <span className="text-[9px] tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
+                            Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
+                          </span>
+                        </div>
 
-                    {isLoading ? (
-                      <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
-                        <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-                        <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        "h-[400px] xs:h-[480px] lg:h-[580px] relative w-full overflow-hidden",
-                        isCurrentEventPast && "pointer-events-none opacity-85"
-                      )}>
-                        {isCurrentEventPast && (
-                          <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
-                            <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
-                              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
-                              <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
-                            </div>
+                        {isLoading ? (
+                          <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
+                            <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+                            <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
+                          </div>
+                        ) : (
+                          <div className={cn(
+                            "h-[400px] xs:h-[480px] lg:h-[580px] relative w-full overflow-hidden",
+                            isCurrentEventPast && "pointer-events-none opacity-85"
+                          )}>
+                            {isCurrentEventPast && (
+                              <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
+                                <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
+                                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
+                                  <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
+                                </div>
+                              </div>
+                            )}
+                            <SeatingChart
+                              seats={seats}
+                              onSelect={handleSelectionChange}
+                              selectedIds={selectedSeats.map(s => String(s.id))}
+                              theme={theme}
+                              elements={elements}
+                              allowZoom={allowCanvasZoom}
+                            />
                           </div>
                         )}
-                        <SeatingChart
-                          seats={seats}
-                          onSelect={handleSelectionChange}
-                          selectedIds={selectedSeats.map(s => String(s.id))}
-                          theme={theme}
-                          elements={elements}
-                          allowZoom={allowCanvasZoom}
-                        />
+                      </div>
+                    ) : (
+                      <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">
+                        <div className="w-16 h-16 rounded-2xl bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg shadow-amber-honey/10">
+                          <Users size={32} />
+                        </div>
+                        <div className="space-y-2">
+                          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Entrada Libre Sin Límite</span>
+                          <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-nature-night dark:text-white">
+                            Boleto General (Sin Asiento Reservado)
+                          </h3>
+                          <p className="text-xs text-nature-night/70 dark:text-white/70 max-w-md mx-auto leading-relaxed">
+                            Acceso directo de pie a la zona general del recinto con excelente visibilidad y flexibilidad total.
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-center gap-6 py-4">
+                          <button
+                            onClick={() => setSeatlessQuantity(Math.max(1, seatlessQuantity - 1))}
+                            className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
+                          >
+                            <Minus size={16} />
+                          </button>
+                          <span className="text-4xl font-black text-nature-night dark:text-white min-w-[3rem] text-center">{seatlessQuantity}</span>
+                          <button
+                            onClick={() => setSeatlessQuantity(seatlessQuantity + 1)}
+                            className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
+                          >
+                            <Plus size={16} />
+                          </button>
+                        </div>
+                        <div className="pt-4 border-t border-nature-night/10 dark:border-white/10 flex justify-between items-center px-4 max-w-md mx-auto">
+                          <span className="text-xs font-bold uppercase tracking-wider text-nature-night/60 dark:text-white/60">Precio Unitario General</span>
+                          <span className="text-xl font-black text-amber-honey">${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN</span>
+                        </div>
                       </div>
                     )}
-                  </div>
-                ) : (
-                  <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center mx-auto text-amber-honey shadow-lg shadow-amber-honey/10">
-                      <Users size={32} />
-                    </div>
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Entrada Libre Sin Límite</span>
-                      <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-nature-night dark:text-white">
-                        Boleto General (Sin Asiento Reservado)
-                      </h3>
-                      <p className="text-xs text-nature-night/70 dark:text-white/70 max-w-md mx-auto leading-relaxed">
-                        Acceso directo de pie a la zona general del recinto con excelente visibilidad y flexibilidad total.
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-center gap-6 py-4">
-                      <button
-                        onClick={() => setSeatlessQuantity(Math.max(1, seatlessQuantity - 1))}
-                        className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
-                      >
-                        <Minus size={16} />
-                      </button>
-                      <span className="text-4xl font-black text-nature-night dark:text-white min-w-[3rem] text-center">{seatlessQuantity}</span>
-                      <button
-                        onClick={() => setSeatlessQuantity(seatlessQuantity + 1)}
-                        className="w-12 h-12 rounded-full bg-nature-night/10 dark:bg-white/10 hover:bg-amber-honey/20 border border-nature-night/20 dark:border-white/20 flex items-center justify-center font-bold text-nature-night dark:text-white transition-colors"
-                      >
-                        <Plus size={16} />
-                      </button>
-                    </div>
-                    <div className="pt-4 border-t border-nature-night/10 dark:border-white/10 flex justify-between items-center px-4 max-w-md mx-auto">
-                      <span className="text-xs font-bold uppercase tracking-wider text-nature-night/60 dark:text-white/60">Precio Unitario General</span>
-                      <span className="text-xl font-black text-amber-honey">${getEffectiveSeatlessPrice().toLocaleString('es-MX')} MXN</span>
-                    </div>
-                  </div>
-                )}
                   </>
                 )}
               </div>

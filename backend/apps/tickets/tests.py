@@ -137,25 +137,25 @@ class TicketsAppTests(APITestCase):
         sep_date = datetime(2026, 9, 10, 12, 0, tzinfo=tz.utc)
         oct_purchase_date = datetime(2026, 10, 5, 12, 0, tzinfo=tz.utc)
         
-        # May (5 months prior > 3 months): Tarifa mínima establecida (General $400, Numerado $500)
+        # May (5 months prior): Tarifa base sin aumentos (General $400, Numerado $500)
         self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=may_date), 400.00)
         self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=may_date), 500.00)
 
-        # July (3 months prior - Inicio ventana 3 meses): Tarifa mínima (0 incrementos)
+        # July (3 months prior): Tarifa base sin aumentos (0 incrementos)
         self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=jul_date), 400.00)
         self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=jul_date), 500.00)
         
-        # August (2 months prior): 1 incremento (+$50) -> General $450, Numerado $550
-        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=aug_date), 450.00)
-        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=aug_date), 550.00)
+        # August (2 months prior): Tarifa base sin aumentos (0 incrementos)
+        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=aug_date), 400.00)
+        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=aug_date), 500.00)
         
-        # September (1 month prior): 2 incrementos (+$100) -> General $500, Numerado $600
-        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=sep_date), 500.00)
-        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=sep_date), 600.00)
+        # September (1 month prior - Transición Ago->Sep): 1er incremento (+$50) -> General $450, Numerado $550
+        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=sep_date), 450.00)
+        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=sep_date), 550.00)
         
-        # October (Event month): 3 incrementos (+$150) -> General $550, Numerado $650
-        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=oct_purchase_date), 550.00)
-        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=oct_purchase_date), 650.00)
+        # October (Event month - Transición Sep->Oct): 2do incremento (+$100) -> General $500, Numerado $600
+        self.assertEqual(evt.get_dynamic_price(400.00, purchase_date=oct_purchase_date), 500.00)
+        self.assertEqual(evt.get_dynamic_price(500.00, purchase_date=oct_purchase_date), 600.00)
 
     def test_42_tables_generate_168_seats(self):
         """Verify 42 tables of 4 seats produce exactly 168 seats."""

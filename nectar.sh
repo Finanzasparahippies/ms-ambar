@@ -100,6 +100,53 @@ run_django_cmd_prod() {
     fi
 }
 
+# Helper function to run npm/frontend commands in dev
+run_npm_cmd_dev() {
+    local tty_flag=""
+    if [ -t 0 ]; then
+        tty_flag="-it"
+    fi
+    if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_frontend"; then
+        $DOCKER_BIN exec $tty_flag ambar_dev_frontend npm "$@"
+    elif $COMPOSE_BIN ps 2>/dev/null | grep -q "frontend"; then
+        $COMPOSE_BIN exec $tty_flag frontend npm "$@"
+    elif [ -d "frontend" ] && command -v npm &> /dev/null; then
+        (cd frontend && npm "$@")
+    else
+        $COMPOSE_BIN run --rm $tty_flag -w /app frontend npm "$@"
+    fi
+}
+
+# Helper function to run npm/frontend commands in staging
+run_npm_cmd_staging() {
+    local tty_flag=""
+    if [ -t 0 ]; then
+        tty_flag="-it"
+    fi
+    if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_staging_frontend"; then
+        $DOCKER_BIN exec $tty_flag ambar_staging_frontend npm "$@"
+    elif $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps 2>/dev/null | grep -q "frontend-staging"; then
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml exec $tty_flag frontend-staging npm "$@"
+    else
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm $tty_flag -w /app frontend-staging npm "$@"
+    fi
+}
+
+# Helper function to run npm/frontend commands in prod
+run_npm_cmd_prod() {
+    local tty_flag=""
+    if [ -t 0 ]; then
+        tty_flag="-it"
+    fi
+    if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_frontend"; then
+        $DOCKER_BIN exec $tty_flag ambar_frontend npm "$@"
+    elif $COMPOSE_BIN -f docker-compose.prod.yml ps 2>/dev/null | grep -q "frontend"; then
+        $COMPOSE_BIN -f docker-compose.prod.yml exec $tty_flag frontend npm "$@"
+    else
+        $COMPOSE_BIN -f docker-compose.prod.yml run --rm $tty_flag -w /app frontend npm "$@"
+    fi
+}
+
 # Helper function to find and remove conflicting containers from other project namespaces
 remove_conflicting_containers() {
     local container_names=("$@")
@@ -119,7 +166,7 @@ show_help() {
     echo ""
     echo "Usage: ./nectar.sh [command]"
     echo ""
-    echo "Commands:"
+    echo "=== DEVELOPMENT ENV (Local / Dev) ==="
     echo "  dev                     - Start development environment"
     echo "  stop                    - Stop development environment"
     echo "  restart                 - Restart development containers"
@@ -129,11 +176,13 @@ show_help() {
     echo "  createsuperuser         - Create a Django admin superuser in dev"
     echo "  shell                   - Open backend python shell in dev"
     echo "  test                    - Run backend tests (Dev)"
+    echo "  test-frontend           - Run Jest unit tests in Frontend (Dev)"
     echo "  typecheck               - Run TypeScript type-check in Dev frontend"
     echo "  buildcheck              - Run Next.js build check in Dev frontend"
+    echo "  install-frontend        - Install npm packages in Dev frontend"
     echo "  frontend                - Run Next.js frontend locally (npm run dev)"
     echo ""
-    echo "Staging Commands:"
+    echo "=== STAGING ENV ==="
     echo "  build-staging           - Build staging Docker images"
     echo "  up-staging              - Start staging environment"
     echo "  deploy-staging          - Build and start staging environment"
@@ -147,10 +196,12 @@ show_help() {
     echo "  shell-staging           - Open backend python shell in staging"
     echo "  collectstatic-staging   - Compile static assets in staging"
     echo "  test-staging            - Run backend tests (Staging)"
+    echo "  test-frontend-staging   - Run Jest unit tests in Staging frontend"
     echo "  typecheck-staging       - Run TypeScript type-check in Staging frontend"
     echo "  buildcheck-staging      - Run Next.js build check in Staging frontend"
+    echo "  install-frontend-staging - Install npm packages in Staging container"
     echo ""
-    echo "Production Commands:"
+    echo "=== PRODUCTION ENV (Prod) ==="
     echo "  build                   - Build production Docker images"
     echo "  up-prod                 - Start production environment"
     echo "  deploy-prod             - Build and start production environment"
@@ -163,7 +214,11 @@ show_help() {
     echo "  migrate-prod            - Run database migrations in prod"
     echo "  shell-prod              - Open backend python shell in prod"
     echo "  collectstatic           - Compile static assets in prod"
+    echo "  test-frontend-prod      - Run Jest unit tests in Production frontend"
+    echo "  install-frontend-prod   - Install npm packages in Production container"
     echo "  certbot                 - Request Let's Encrypt SSL certificate"
+    echo ""
+    echo "=== UTILITIES ==="
     echo "  clean [--all|-a]        - Comprehensive Docker and VPS cleanup (use --all for deep prune)"
     echo "  help                    - Show this help screen"
 }
@@ -203,6 +258,14 @@ case $COMMAND in
         ;;
     test|test-dev)
         run_django_cmd_dev test "$@"
+        ;;
+    test-frontend|test-frontend-dev)
+        echo "Running Jest unit tests in Dev Frontend..."
+        run_npm_cmd_dev test -- --no-cache "$@"
+        ;;
+    install-frontend|install-frontend-dev)
+        echo "Installing npm packages in Dev Frontend..."
+        run_npm_cmd_dev install "$@"
         ;;
     typecheck)
         echo "Running TypeScript type-check in Dev frontend..."
@@ -278,6 +341,14 @@ case $COMMAND in
     test-staging)
         run_django_cmd_staging test "$@"
         ;;
+    test-frontend-staging)
+        echo "Running Jest unit tests in Staging Frontend..."
+        run_npm_cmd_staging test -- --no-cache "$@"
+        ;;
+    install-frontend-staging)
+        echo "Installing npm packages in Staging Frontend..."
+        run_npm_cmd_staging install "$@"
+        ;;
     typecheck-staging)
         echo "Running TypeScript type-check for Staging frontend..."
         $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npx tsc --noEmit "$@"
@@ -285,6 +356,14 @@ case $COMMAND in
     buildcheck-staging)
         echo "Running Next.js build-check for Staging frontend..."
         $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npm run build "$@"
+        ;;
+    test-frontend-prod)
+        echo "Running Jest unit tests in Production Frontend..."
+        run_npm_cmd_prod test -- --no-cache "$@"
+        ;;
+    install-frontend-prod)
+        echo "Installing npm packages in Production Frontend..."
+        run_npm_cmd_prod install "$@"
         ;;
     build)
         echo "Building MS AMBAR Production Images..."

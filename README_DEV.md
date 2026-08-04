@@ -257,19 +257,34 @@ def generate_ticket_invoice(ticket, tax_data):
 
 ## 🧮 Motor de Precios Dinámicos (`Dynamic Pricing Engine`)
 
-El sistema incluye un algoritmo de **Descuentos Preventivos / Venta Anticipada (Early-Bird)** regulado por la regla de seguridad de **Precio Piso (Floor Price Cap)** de Nectar Labs.
+El sistema incluye un algoritmo de **Aumento Progresivo de Precios** previo al evento regulado por la regla de máximo 2 incrementos.
 
 ### Fórmulas de Cálculo Backend (`apps/tickets/models.py`)
 
-$$\text{meses\_diff} = \max(0, \text{mes\_evento} - \text{mes\_compra})$$
-$$\text{descuento\_bruto} = \text{meses\_diff} \times \text{incremento\_mensual}$$
-$$\text{descuento\_máximo} = \text{precio\_base} \times 0.30$$
-$$\text{descuento\_efectivo} = \min(\text{descuento\_bruto}, \text{descuento\_máximo})$$
-$$\text{precio\_final} = \max(\text{precio\_base} \times 0.70, \text{precio\_base} - \text{descuento\_efectivo})$$
+$$\text{meses\_diff} = \text{mes\_evento} - \text{mes\_compra}$$
 
+<<<<<<< HEAD
+- **$\text{meses\_diff} \ge 2$ (ej. Agosto o antes para evento en Octubre)**: $\text{precio\_final} = \text{precio\_base}$ (0 incrementos).
+- **$\text{meses\_diff} = 1$ (Septiembre - Transición Agosto $\rightarrow$ Septiembre)**: $\text{precio\_final} = \text{precio\_base} + (1 \times \text{incremento})$.
+- **$\text{meses\_diff} \le 0$ (Octubre - Transición Septiembre $\rightarrow$ Octubre / Mes del evento)**: $\text{precio\_final} = \text{precio\_base} + (2 \times \text{incremento})$.
+
+#### 🛡️ Reglas de Seguridad:
+- **Garantía de Tarifa Base Mínima**: El precio final nunca será menor al `base_amount` configurado para el evento o asiento.
+- **Límite de Incrementos**: Se restringe a un máximo de 2 incrementos durante el ciclo previo al evento.
+
+---
+
+## 💳 Espejo de Tarifas e Impuestos Stripe (`Stripe Fee Mirror`)
+
+Tanto el backend ([fees.py](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/backend/apps/tickets/fees.py)) como el frontend ([comprar-boletos.tsx](file:///c:/Users/Agent/OneDrive/Documents/proyects/ms-ambar/frontend/src/pages/comprar-boletos.tsx)) aplican la misma fórmula de comisión transparente:
+
+$$\text{cargo\_servicio} = (\text{subtotal\_base} \times 0.036) + 3.00\text{ MXN}$$
+$$\text{precio\_neto\_boleto} = \text{total} - \text{cargo\_servicio}$$
+=======
 #### 🛡️ Reglas de Seguridad Anti-Cero (Price Floor Safety):
 - **Tope de Descuento (30%)**: El descuento total por venta anticipada jamás puede superar el 30% del valor base nominal del boleto.
 - **Precio Piso Mínimo (70%)**: La entrada garantiza un precio mínimo cobrable equivalente al 70% de su valor base.
+>>>>>>> 5139cbf5adc6b8de2bb2b8d4170c67c7140f12f2
 
 ---
 
