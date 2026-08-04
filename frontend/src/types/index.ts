@@ -135,6 +135,7 @@ export interface Subscriber {
   email: string;
   name?: string;
   is_active: boolean;
+  is_premium: boolean;
 }
 
 export interface CampaignTemplateImage {

@@ -10,7 +10,7 @@ import CouponManager from '../../components/CouponManager';
 import ThemeManager from '../../components/ThemeManager';
 import {
   DollarSign,
-  Ticket as TicketIcon,
+const Ticket = TicketIcon;
   ShoppingBag,
   Users,
   Activity,
@@ -33,6 +33,7 @@ import {
   MapPin,
   Mail,
   User as UserIcon,
+  Ticket,
   Plus,
   Trash2,
   Calendar,
@@ -2129,7 +2130,7 @@ export default function AdminDashboard() {
     setProdDesc('');
     setProdPrice('');
     setProdStock('');
-    setProdCategory(categories[0]?.id || '');
+    setProdCategory(categories[0]?.id.toString() || '');
     setProdIsActive(true);
     setProdImageFile(null);
     setProdImagePreview(null);
@@ -2756,7 +2757,7 @@ export default function AdminDashboard() {
                 onClick={openProfileModal}
                 className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-3 rounded-xl shadow-lg transition-all text-xs font-bold uppercase tracking-widest text-[#F4F6F0]"
               >
-                <User size={14} className="text-amber-honey" /> Ver Perfil
+                <UserIcon size={14} className="text-amber-honey" /> Ver Perfil
               </button>
               <button
                 onClick={handleLogout}
@@ -2954,7 +2955,7 @@ export default function AdminDashboard() {
                     <StatCard
                       title="Ventas del Período (Tickets)"
                       value={`$${financials?.ticket_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                      icon={<Ticket className="text-amber-300" />}
+                      icon={<TicketIcon className="text-amber-300" />}
                       color="gold"
                       detail={`Boletos: ${tickets?.total_sold} vendidos en el período 🔍`}
                       onClick={() => fetchUnitData('tickets', 'Ventas del Período (Tickets Unitarios)')}
@@ -2985,7 +2986,7 @@ export default function AdminDashboard() {
                     />
                     <StatCard
                       title="Upgrades M&G"
-                      value={tickets?.mg_upgrades}
+                      value={tickets?.mg_upgrades ?? 0}
                       icon={<Users className="text-yellow-400" />}
                       color="yellow"
                       detail={`Ingreso M&G: $${financials?.mg_revenue.toLocaleString()} 🔍`}
@@ -3410,7 +3411,7 @@ export default function AdminDashboard() {
                         <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-2 text-[#F4F6F0]">
                           <ShoppingBag size={18} className="text-amber-honey" /> Inteligencia de Ventas (Top Merch)
                         </h3>
-                        {shop?.low_stock_count > 0 && (
+                        {shop?.low_stock_count !== undefined && shop.low_stock_count > 0 && (
                           <span className="flex items-center gap-1 bg-amber-950/20 border border-amber-honey/30 text-amber-honey text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full animate-pulse">
                             <AlertTriangle size={10} /> {shop?.low_stock_count} Stock Bajo
                           </span>
