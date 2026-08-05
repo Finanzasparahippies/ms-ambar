@@ -9,8 +9,7 @@ import axios from 'axios';
 import { useEventTheme, ThemeConfig, SectionThemeSpec } from '../context/EventThemeContext';
 import { 
   Palette, Sparkles, Check, RefreshCw, Eye, Sliders, Layers, Type, 
-  Paintbrush, Layout, Settings, Monitor, Smartphone, MousePointer2, 
-  AlertTriangle, RotateCcw, Sparkle
+  Paintbrush, Layout, Settings, Compass
 } from 'lucide-react';
 import { showToast } from '../lib/notifications';
 import { getApiUrl } from '../lib/utils';

@@ -47,11 +47,11 @@ class ThemeCustomizationSchemaAndScaleTest(TestCase):
 
     def test_theme_mode_default_fallback_values(self):
         """Verify that get_theme_config returns safe default fallback values to avoid blank screen crashes."""
-        # Limpiar campos para probar fallbacks
+        # Limpiar campos a cadenas vacías para probar fallbacks
         self.settings.primary_color = ''
-        self.settings.secondary_color = None
+        self.settings.secondary_color = ''
         self.settings.background_start = ''
-        self.settings.background_end = None
+        self.settings.background_end = ''
         self.settings.save()
 
         config = self.settings.get_theme_config()
