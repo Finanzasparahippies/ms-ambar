@@ -194,6 +194,13 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
       document.head.appendChild(customStyleTag);
     }
     customStyleTag.textContent = cfg.customCss || '';
+
+    // Synchronize legacy theme session storage key
+    try {
+      localStorage.setItem('theme', 'dark');
+    } catch {
+      // Ignore storage access errors in restricted contexts
+    }
   };
 
   const getSavedLocalTheme = (): Partial<ThemeConfig> | null => {

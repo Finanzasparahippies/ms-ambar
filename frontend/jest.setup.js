@@ -5,23 +5,34 @@ jest.mock('framer-motion', () => {
   const React = require('react');
   
   const dummyComponent = (tagName) => {
-    return React.forwardRef(({ children, ...props }, ref) => {
+    const Component = React.forwardRef(({ children, ...props }, ref) => {
       // Remove framer-motion specific props that should not be in final HTML elements
       const cleanProps = { ...props };
       delete cleanProps.initial;
       delete cleanProps.animate;
       delete cleanProps.exit;
       delete cleanProps.transition;
-      return React.createElement(tagName, { ...cleanProps, ref }, children);
+      delete cleanProps.whileHover;
+      delete cleanProps.whileTap;
+      delete cleanProps.whileFocus;
+      delete cleanProps.whileInView;
+      delete cleanProps.viewport;
+      delete cleanProps.layout;
+      delete cleanProps.layoutId;
+      return React.createElement(typeof tagName === 'string' ? tagName : 'div', { ...cleanProps, ref }, children);
     });
+    Component.displayName = `MotionMock(${typeof tagName === 'string' ? tagName : 'Component'})`;
+    return Component;
   };
 
+  const motionTarget = (Comp) => dummyComponent(Comp);
+
+  const motion = new Proxy(motionTarget, {
+    get: (_target, prop) => dummyComponent(typeof prop === 'string' ? prop : 'div'),
+  });
+
   return {
-    motion: {
-      div: dummyComponent('div'),
-      span: dummyComponent('span'),
-      button: dummyComponent('button'),
-    },
+    motion,
     AnimatePresence: ({ children }) => React.createElement(React.Fragment, null, children),
   };
 });

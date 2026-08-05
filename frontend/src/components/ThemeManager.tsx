@@ -451,10 +451,11 @@ export const ThemeManager: React.FC = () => {
 
             {/* Route Dropdown */}
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
+              <label htmlFor="page-active-select" className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                 Página Activa a Editar:
               </label>
               <select
+                id="page-active-select"
                 value={selectedRoutePath}
                 onChange={(e) => {
                   const newPath = e.target.value;
