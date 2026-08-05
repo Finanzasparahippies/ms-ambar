@@ -203,7 +203,7 @@ const ContactPage = () => {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-amber-honey text-nature-night px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    className="w-full bg-amber-honey text-black px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                   >
                     {submitting ? 'Procesando Booking...' : 'Enviar Propuesta Formal'}
                     <Send size={14} />
@@ -244,7 +244,7 @@ const ContactPage = () => {
 
                   <Link
                     href={`/bookings/sign/${successData.contract_id}`}
-                    className="w-full bg-amber-honey text-nature-night px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                    className="w-full bg-amber-honey text-black px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                   >
                     Ir al Visor de Contrato <ArrowRight size={14} />
                   </Link>

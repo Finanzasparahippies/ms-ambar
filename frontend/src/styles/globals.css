@@ -59,6 +59,34 @@ h1, h2, h3, h4, h5, h6, .font-serif {
   color: var(--button-text, var(--background-start, #080c0a));
 }
 
+/* Accessibility & High Contrast Standards (WCAG AA Compliance) */
+select option {
+  background-color: #0d110e !important;
+  color: #F4F6F0 !important;
+  padding: 8px 12px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--primary-color, #E5A93B) !important;
+  outline-offset: 2px !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(244, 246, 240, 0.5) !important;
+}
+
+/* Mobile OS Native Select Resilience (iOS Safari / Android Chrome) */
+@supports (-webkit-touch-callout: none) {
+  select {
+    color: #F4F6F0 !important;
+    background-color: #0d110e !important;
+  }
+}
+
 /* Dynamic Object Animation Presets */
 [data-theme-animation='float'],
 [data-section-animation='float'] {

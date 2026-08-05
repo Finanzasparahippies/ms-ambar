@@ -36,7 +36,7 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
     [`--sec-${sectionKey}-text`]: textColor,
     [`--sec-${sectionKey}-accent`]: accentColor,
     [`--sec-${sectionKey}-card-bg`]: cardBg,
-    [`--sec-${sectionKey}-border`]: borderColor,
+    [`--sec-${sectionKey}-border`]: borderColor || 'rgba(229, 169, 59, 0.25)',
     [`--sec-${sectionKey}-button-bg`]: buttonBg,
     [`--sec-${sectionKey}-button-text`]: buttonText,
     '--primary-color': accentColor,
@@ -46,7 +46,7 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
     '--heading-color': headingColor,
     '--button-bg': buttonBg,
     '--button-text': buttonText,
-    '--border-color': borderColor,
+    '--border-color': borderColor || 'rgba(229, 169, 59, 0.25)',
   };
 
   const rgbPrimary = hexToRgb(accentColor);
@@ -78,22 +78,22 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
       style={combinedStyle}
       className={`relative transition-colors duration-300 ${radiusClass} ${className}`}
     >
-      {sec.image_filter && sec.image_filter !== 'none' && (
+      {spec.image_filter && spec.image_filter !== 'none' && (
         <style
           dangerouslySetInnerHTML={{
             __html: `
               [data-section-key="${sectionKey}"] img {
-                ${sec.image_filter === 'grayscale' ? 'filter: grayscale(100%);' : ''}
-                ${sec.image_filter === 'sepia' ? 'filter: sepia(85%);' : ''}
-                ${sec.image_filter === 'glow-amber' ? 'filter: drop-shadow(0 0 30px rgba(229, 169, 59, 0.5));' : ''}
-                ${sec.image_filter === 'contrast' ? 'filter: contrast(125%) brightness(105%);' : ''}
+                ${spec.image_filter === 'grayscale' ? 'filter: grayscale(100%);' : ''}
+                ${spec.image_filter === 'sepia' ? 'filter: sepia(85%);' : ''}
+                ${spec.image_filter === 'glow-amber' ? 'filter: drop-shadow(0 0 30px rgba(229, 169, 59, 0.5));' : ''}
+                ${spec.image_filter === 'contrast' ? 'filter: contrast(125%) brightness(105%);' : ''}
               }
             `
           }}
         />
       )}
-      {sec.custom_css && (
-        <style dangerouslySetInnerHTML={{ __html: `[data-section-key="${sectionKey}"] { ${sec.custom_css} }` }} />
+      {spec.custom_css && (
+        <style dangerouslySetInnerHTML={{ __html: `[data-section-key="${sectionKey}"] { ${spec.custom_css} }` }} />
       )}
       {children}
     </section>

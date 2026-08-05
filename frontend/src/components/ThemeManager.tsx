@@ -12,7 +12,7 @@ import {
   Paintbrush, Layout, Settings, Compass
 } from 'lucide-react';
 import { showToast } from '../lib/notifications';
-import { getApiUrl } from '../lib/utils';
+import { getApiUrl, getAccessibleTextColor } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /** Presets de formas de partículas para el canvas místico */
@@ -451,7 +451,7 @@ export const ThemeManager: React.FC = () => {
 
             {/* Route Dropdown */}
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                 Página Activa a Editar:
               </label>
               <select
@@ -465,10 +465,10 @@ export const ThemeManager: React.FC = () => {
                     setSelectedSectionKey(r.sections[0].id);
                   }
                 }}
-                className="w-full bg-nature-night/80 border border-white/15 rounded-2xl px-4 py-3 text-xs font-bold text-white focus:border-amber-honey focus:outline-none"
+                className="w-full bg-[#0d110e] border border-white/20 rounded-2xl px-4 py-3 text-xs font-bold text-white focus:border-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey"
               >
                 {PAGE_ROUTES.map(route => (
-                  <option key={route.path} value={route.path}>
+                  <option key={route.path} value={route.path} className="bg-[#0d110e] text-white py-1">
                     {route.name} ({route.path})
                   </option>
                 ))}
@@ -477,15 +477,15 @@ export const ThemeManager: React.FC = () => {
 
             {/* Mode Selector Toggle */}
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                 Modo de Aplicación:
               </label>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-nature-night/60 border border-white/10 rounded-2xl">
+              <div className="grid grid-cols-2 gap-2 p-1 bg-[#0d110e] border border-white/20 rounded-2xl">
                 <button
                   type="button"
                   onClick={() => setThemeMode('global')}
                   className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    themeMode === 'global' ? 'bg-amber-honey text-nature-night shadow-glow' : 'text-white/50'
+                    themeMode === 'global' ? 'bg-amber-honey text-black font-black shadow-glow' : 'text-white/70 hover:text-white'
                   }`}
                 >
                   Paleta Global
@@ -494,7 +494,7 @@ export const ThemeManager: React.FC = () => {
                   type="button"
                   onClick={() => setThemeMode('section')}
                   className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    themeMode === 'section' ? 'bg-amber-honey text-nature-night shadow-glow' : 'text-white/50'
+                    themeMode === 'section' ? 'bg-amber-honey text-black font-black shadow-glow' : 'text-white/70 hover:text-white'
                   }`}
                 >
                   Por Sección
@@ -504,7 +504,7 @@ export const ThemeManager: React.FC = () => {
 
             {/* Contextual Sections Buttons List */}
             <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+              <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                 Secciones de esta página:
               </label>
               <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scroll pr-1">
@@ -525,10 +525,10 @@ export const ThemeManager: React.FC = () => {
                       onMouseLeave={() => setHoveredSectionKey(null)}
                       className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between text-xs ${
                         isSelected
-                          ? 'bg-amber-honey text-nature-night border-amber-honey font-black shadow-glow'
+                          ? 'bg-amber-honey text-black border-amber-honey font-black shadow-glow'
                           : isHovered
                           ? 'bg-white/10 text-white border-amber-honey/50'
-                          : 'bg-nature-night/50 text-white/70 border-white/5 hover:border-white/20'
+                          : 'bg-[#0d110e] text-white/90 border-white/10 hover:border-white/30'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -572,7 +572,7 @@ export const ThemeManager: React.FC = () => {
             <div className="space-y-4">
               {/* Primary / Section Bg */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                   {themeMode === 'section' ? 'Fondo de Sección (Solid BG)' : 'Color Primario'}
                 </label>
                 <div className="flex items-center gap-3">
@@ -587,19 +587,19 @@ export const ThemeManager: React.FC = () => {
                   />
                   <input
                     type="text"
-                    value={themeMode === 'section' ? (currentSectionSpec.bg_color || '') : primaryColor}
+                    value={themeMode === 'section' ? (currentSectionSpec.bg_color || backgroundStart) : primaryColor}
                     onChange={(e) => {
                       if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'bg_color', e.target.value);
                       else setPrimaryColor(e.target.value);
                     }}
-                    className="bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-white w-full"
+                    className="bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white w-full focus:border-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey"
                   />
                 </div>
               </div>
 
               {/* Text / Heading Color */}
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                   Color de Título / Encabezado
                 </label>
                 <div className="flex items-center gap-3">
@@ -614,12 +614,12 @@ export const ThemeManager: React.FC = () => {
                   />
                   <input
                     type="text"
-                    value={themeMode === 'section' ? (currentSectionSpec.heading_color || '') : headingColor}
+                    value={themeMode === 'section' ? (currentSectionSpec.heading_color || headingColor) : headingColor}
                     onChange={(e) => {
                       if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'heading_color', e.target.value);
                       else setHeadingColor(e.target.value);
                     }}
-                    className="bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-white w-full"
+                    className="bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white w-full focus:border-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey"
                   />
                 </div>
               </div>
@@ -627,31 +627,31 @@ export const ThemeManager: React.FC = () => {
               {/* Card Style and Typography */}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                     Bordes / Redondeo:
                   </label>
                   <select
                     value={cardStyle}
                     onChange={(e) => setCardStyle(e.target.value)}
-                    className="w-full bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                    className="w-full bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey"
                   >
                     {CARD_STYLE_OPTIONS.map(c => (
-                      <option key={c.id} value={c.id}>{c.label}</option>
+                      <option key={c.id} value={c.id} className="bg-[#0d110e] text-white py-1">{c.label}</option>
                     ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
                     Fuente Tipográfica:
                   </label>
                   <select
                     value={fontPreset}
                     onChange={(e) => setFontPreset(e.target.value)}
-                    className="w-full bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                    className="w-full bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-bold text-white focus:border-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey"
                   >
                     {FONT_PRESET_OPTIONS.map(f => (
-                      <option key={f.id} value={f.id}>{f.label}</option>
+                      <option key={f.id} value={f.id} className="bg-[#0d110e] text-white py-1">{f.label}</option>
                     ))}
                   </select>
                 </div>
@@ -743,26 +743,39 @@ export const ThemeManager: React.FC = () => {
                         ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
                         : hoveredSectionKey === 'hero'
                         ? 'border-amber-honey/60 bg-white/5'
-                        : 'border-white/10 bg-nature-night/30'
+                        : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
                     }`}
                   >
                     {(selectedSectionKey === 'hero' || hoveredSectionKey === 'hero') && (
-                      <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                      <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
                         Editar: Hero Principal
                       </div>
                     )}
                     <h1 
-                      style={{ color: sectionThemes['hero']?.heading_color || headingColor }}
-                      className="text-3xl font-black italic tracking-tighter uppercase mb-2"
+                      style={{ 
+                        color: getAccessibleTextColor(
+                          sectionThemes['hero']?.bg_color || backgroundStart, 
+                          sectionThemes['hero']?.heading_color || headingColor
+                        ) 
+                      }}
+                      className="text-3xl font-black italic tracking-tighter uppercase mb-2 font-serif"
                     >
                       Ms Ambar Live 2026
                     </h1>
-                    <p className="text-xs text-white/50 max-w-sm mx-auto mb-4">
+                    <p 
+                      style={{
+                        color: getAccessibleTextColor(
+                          sectionThemes['hero']?.bg_color || backgroundStart,
+                          textColor
+                        )
+                      }}
+                      className="text-xs max-w-sm mx-auto mb-4 opacity-80"
+                    >
                       Voz mística & Experiencia sonora sensorial
                     </p>
                     <button 
                       style={{ backgroundColor: buttonBg, color: buttonText }}
-                      className="px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest"
+                      className="px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-transform hover:scale-105"
                     >
                       Comprar Boletos
                     </button>
@@ -773,28 +786,41 @@ export const ThemeManager: React.FC = () => {
                     onClick={(e) => handleVisualInspectorSelect(e, 'events_grid')}
                     onMouseEnter={() => setHoveredSectionKey('events_grid')}
                     onMouseLeave={() => setHoveredSectionKey(null)}
+                    style={{
+                      backgroundColor: sectionThemes['events_grid']?.bg_color || 'transparent',
+                    }}
                     className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
                       selectedSectionKey === 'events_grid'
                         ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
                         : hoveredSectionKey === 'events_grid'
                         ? 'border-amber-honey/60 bg-white/5'
-                        : 'border-white/10 bg-nature-night/30'
+                        : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
                     }`}
                   >
                     {(selectedSectionKey === 'events_grid' || hoveredSectionKey === 'events_grid') && (
-                      <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                      <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
                         Editar: Próximos Conciertos
                       </div>
                     )}
-                    <h3 className="text-xs font-black uppercase text-amber-honey tracking-widest mb-3">Próximas Fechas</h3>
+                    <h3 
+                      style={{
+                        color: getAccessibleTextColor(
+                          sectionThemes['events_grid']?.bg_color || backgroundStart,
+                          headingColor
+                        )
+                      }}
+                      className="text-xs font-black uppercase tracking-widest mb-3 font-serif"
+                    >
+                      Próximas Fechas
+                    </h3>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                      <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
                         <div className="text-[10px] font-bold text-white">Auditorio Nacional</div>
-                        <div className="text-[9px] text-white/40">CDMX • 14 Octubre</div>
+                        <div className="text-[9px] text-white/50">CDMX • 14 Octubre</div>
                       </div>
-                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                      <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
                         <div className="text-[10px] font-bold text-white">Teatro Diana</div>
-                        <div className="text-[9px] text-white/40">Guadalajara • 28 Octubre</div>
+                        <div className="text-[9px] text-white/50">Guadalajara • 28 Octubre</div>
                       </div>
                     </div>
                   </div>
@@ -802,33 +828,43 @@ export const ThemeManager: React.FC = () => {
               )}
 
               {selectedRoutePath === '/galleria' && (
-                <>
-                  {/* Gallery Grid Simulation */}
-                  <div
-                    onClick={(e) => handleVisualInspectorSelect(e, 'gallery_grid')}
-                    onMouseEnter={() => setHoveredSectionKey('gallery_grid')}
-                    onMouseLeave={() => setHoveredSectionKey(null)}
-                    className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
-                      selectedSectionKey === 'gallery_grid'
-                        ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
-                        : hoveredSectionKey === 'gallery_grid'
-                        ? 'border-amber-honey/60 bg-white/5'
-                        : 'border-white/10 bg-nature-night/30'
-                    }`}
-                  >
-                    {(selectedSectionKey === 'gallery_grid' || hoveredSectionKey === 'gallery_grid') && (
-                      <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
-                        Editar: Grilla Masonry Galería
-                      </div>
-                    )}
-                    <h3 className="text-xs font-black uppercase text-amber-honey tracking-widest mb-3">Galería de Luz</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="h-20 bg-white/10 rounded-xl animate-pulse" />
-                      <div className="h-28 bg-white/10 rounded-xl animate-pulse" />
-                      <div className="h-20 bg-white/10 rounded-xl animate-pulse" />
+                <div
+                  onClick={(e) => handleVisualInspectorSelect(e, 'gallery_grid')}
+                  onMouseEnter={() => setHoveredSectionKey('gallery_grid')}
+                  onMouseLeave={() => setHoveredSectionKey(null)}
+                  style={{
+                    backgroundColor: sectionThemes['gallery_grid']?.bg_color || 'transparent',
+                  }}
+                  className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
+                    selectedSectionKey === 'gallery_grid'
+                      ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
+                      : hoveredSectionKey === 'gallery_grid'
+                      ? 'border-amber-honey/60 bg-white/5'
+                      : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
+                  }`}
+                >
+                  {(selectedSectionKey === 'gallery_grid' || hoveredSectionKey === 'gallery_grid') && (
+                    <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
+                      Editar: Grilla Masonry Galería
                     </div>
+                  )}
+                  <h3 
+                    style={{
+                      color: getAccessibleTextColor(
+                        sectionThemes['gallery_grid']?.bg_color || backgroundStart,
+                        headingColor
+                      )
+                    }}
+                    className="text-xs font-black uppercase tracking-widest mb-3 font-serif"
+                  >
+                    Galería de Luz Multimedia
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="h-20 bg-white/10 rounded-xl animate-pulse border border-white/10" />
+                    <div className="h-28 bg-white/10 rounded-xl animate-pulse border border-white/10" />
+                    <div className="h-20 bg-white/10 rounded-xl animate-pulse border border-white/10" />
                   </div>
-                </>
+                </div>
               )}
 
               {selectedRoutePath === '/biography' && (
@@ -836,21 +872,64 @@ export const ThemeManager: React.FC = () => {
                   onClick={(e) => handleVisualInspectorSelect(e, 'biography')}
                   onMouseEnter={() => setHoveredSectionKey('biography')}
                   onMouseLeave={() => setHoveredSectionKey(null)}
+                  style={{
+                    backgroundColor: sectionThemes['biography']?.bg_color || 'transparent',
+                  }}
                   className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
                     selectedSectionKey === 'biography'
                       ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
                       : hoveredSectionKey === 'biography'
                       ? 'border-amber-honey/60 bg-white/5'
-                      : 'border-white/10 bg-nature-night/30'
+                      : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
                   }`}
                 >
                   {(selectedSectionKey === 'biography' || hoveredSectionKey === 'biography') && (
-                    <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
-                      Editar: Biografía
+                    <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
+                      Editar: Biografía Editorial
                     </div>
                   )}
-                  <h2 className="text-xl font-black text-amber-honey mb-2">La Cantautora</h2>
-                  <p className="text-xs text-white/60">Fusión mística de R&B, soul y música latina.</p>
+                  <h2 
+                    style={{
+                      color: getAccessibleTextColor(
+                        sectionThemes['biography']?.bg_color || backgroundStart,
+                        headingColor
+                      )
+                    }}
+                    className="text-xl font-black mb-2 font-serif"
+                  >
+                    La Cantautora
+                  </h2>
+                  <p 
+                    style={{
+                      color: getAccessibleTextColor(
+                        sectionThemes['biography']?.bg_color || backgroundStart,
+                        textColor
+                      )
+                    }}
+                    className="text-xs opacity-80"
+                  >
+                    Fusión mística de R&B, soul y música latina de vanguardia.
+                  </p>
+                </div>
+              )}
+
+              {/* Generic/Fallback simulation view for all other routes */}
+              {['/ambar-te-escribe', '/blog', '/comprar-boletos', '/contacto', '/entretenimiento', '/musica', '/tienda', '/tour', '/suscribirse', '/auth'].includes(selectedRoutePath) && (
+                <div
+                  onClick={(e) => {
+                    if (currentRouteSpec.sections[0]) {
+                      handleVisualInspectorSelect(e, currentRouteSpec.sections[0].id);
+                    }
+                  }}
+                  className="p-6 rounded-3xl border border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md text-center space-y-3 cursor-pointer hover:border-amber-honey/50 transition-all"
+                >
+                  <div className="text-2xl">{currentRouteSpec.sections[0]?.icon || '✨'}</div>
+                  <h3 className="text-sm font-black text-amber-honey uppercase tracking-wider font-serif">
+                    {currentRouteSpec.name}
+                  </h3>
+                  <p className="text-xs text-white/60 max-w-xs mx-auto">
+                    Inspección activa para {currentRouteSpec.sections.length} secciones configurables en este módulo.
+                  </p>
                 </div>
               )}
             </div>
