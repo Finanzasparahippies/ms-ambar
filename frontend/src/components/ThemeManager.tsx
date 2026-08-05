@@ -1,10 +1,22 @@
-import React, { useEffect, useState } from 'react';
+/**
+ * @file ThemeManager.tsx
+ * @description Editor de Temas y Visual Inspector Ultra-Premium para Ms Ambar.
+ * Proporciona un panel de control contextual y un Live Preview Canvas interactivo con sincronización a 60 FPS.
+ */
+
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { useEventTheme, ThemeConfig, SectionThemeSpec } from '../context/EventThemeContext';
-import { Palette, Sparkles, Check, RefreshCw, Eye, Sliders, Layers, Type, Paintbrush, Layout, Settings } from 'lucide-react';
+import { 
+  Palette, Sparkles, Check, RefreshCw, Eye, Sliders, Layers, Type, 
+  Paintbrush, Layout, Settings, Monitor, Smartphone, MousePointer2, 
+  AlertTriangle, RotateCcw, Sparkle
+} from 'lucide-react';
 import { showToast } from '../lib/notifications';
 import { getApiUrl } from '../lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
+/** Presets de formas de partículas para el canvas místico */
 const SHAPE_OPTIONS = [
   { id: 'moon', label: 'Media Luna', icon: '🌙' },
   { id: 'circle', label: 'Círculo / Mundo', icon: '🌐' },
@@ -23,6 +35,7 @@ const SHAPE_OPTIONS = [
   { id: 'none', label: 'Partículas Libres', icon: '✨' },
 ];
 
+/** Presets de estilos de redondeo para tarjetas */
 const CARD_STYLE_OPTIONS = [
   { id: 'rounded-full', label: 'Ultra Suave (Píldoras y Cristal)', radius: '2.0rem' },
   { id: 'rounded-2xl', label: 'Moderno (Esquinas Medias Elegantes)', radius: '1.25rem' },
@@ -30,14 +43,7 @@ const CARD_STYLE_OPTIONS = [
   { id: 'rounded-none', label: 'Recto / Neobrutalismo', radius: '0rem' },
 ];
 
-const BACKGROUND_PATTERN_OPTIONS = [
-  { id: 'stars', label: 'Estrellas Doradas Flotantes' },
-  { id: 'grid', label: 'Malla Geométrica Futurista' },
-  { id: 'dots', label: 'Puntos Sutiles Minimalistas' },
-  { id: 'waves', label: 'Ondas Gradientes Suaves' },
-  { id: 'none', label: 'Limpio (Solo degradado)' },
-];
-
+/** Presets de fuentes tipográficas */
 const FONT_PRESET_OPTIONS = [
   { id: 'cormorant', label: 'Cormorant Garamond (Elegante & Místico)', sample: 'Ms Ambar Concert' },
   { id: 'outfit', label: 'Outfit / Inter (Moderno & Tecnológico)', sample: 'Ms Ambar Concert' },
@@ -45,44 +51,54 @@ const FONT_PRESET_OPTIONS = [
   { id: 'syne', label: 'Syne (Vanguardista & Artístico)', sample: 'Ms Ambar Concert' },
 ];
 
-const ANIMATION_OPTIONS = [
-  { id: 'none', label: 'Estático (Sin animación)', icon: '🛑' },
-  { id: 'float', label: 'Flotación Suave (Levitación)', icon: '🎈' },
-  { id: 'pulse', label: 'Latido Organic', icon: '💓' },
-  { id: 'glow', label: 'Resplandor Místico Radiante', icon: '✨' },
-  { id: 'shimmer', label: 'Brillo Irisado', icon: '💎' },
+/** Estructura contextual de Páginas y sus Secciones correspondientes */
+const PAGE_ROUTES = [
+  { 
+    path: '/', 
+    name: 'Landing Page (Inicio)', 
+    sections: [
+      { id: 'hero', label: 'Hero Principal (Portada)', icon: '🌟' },
+      { id: 'biography', label: 'Biografía & Cantautora', icon: '📜' },
+      { id: 'events_grid', label: 'Próximos Conciertos & Boletos', icon: '🎫' },
+      { id: 'tarot_experience', label: 'Experiencia Tarot & Mística', icon: '🔮' },
+      { id: 'tour_timeline', label: 'Línea de Tiempo de Gira', icon: '🗓️' },
+      { id: 'vip_experience', label: 'Experiencia VIP Meet & Greet', icon: '👑' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/galleria',
+    name: 'Galería de Luz Multimedia',
+    sections: [
+      { id: 'gallery_header', label: 'Encabezado de Galería', icon: '📷' },
+      { id: 'gallery_grid', label: 'Grilla Masonry Multimedia', icon: '🖼️' },
+      { id: 'gallery_lightbox', label: 'Visor Lightbox Polimórfico', icon: '🔍' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/biography',
+    name: 'Biografía Editorial',
+    sections: [
+      { id: 'biography', label: 'Sección Principal Biografía', icon: '📜' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/comprar-boletos',
+    name: 'Página de Compra & Taquilla',
+    sections: [
+      { id: 'tickets_page', label: 'Encabezado & Lista de Eventos', icon: '🎟️' },
+      { id: 'seating_map', label: 'Mapa Interactivo de Asientos', icon: '🗺️' },
+      { id: 'checkout_modal', label: 'Modal de Checkout & Pagos', icon: '💳' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  }
 ];
-
-const IMAGE_FILTER_OPTIONS = [
-  { id: 'none', label: 'Sin Filtro (Original)' },
-  { id: 'glow-amber', label: 'Resplandor Ámbar Místico' },
-  { id: 'grayscale', label: 'Blanco y Negro Editorial' },
-  { id: 'sepia', label: 'Sepia Cálido' },
-  { id: 'contrast', label: 'Alto Contraste' },
-];
-
-const PAGE_SECTIONS = [
-  { id: 'hero', label: 'Landing Page: Hero Principal (Portada)', icon: '🌟' },
-  { id: 'biography', label: 'Landing Page: Biografía & Historia Cantautora', icon: '📜' },
-  { id: 'events_grid', label: 'Landing Page: Próximos Conciertos y Boletos', icon: '🎫' },
-  { id: 'tarot_experience', label: 'Landing Page: Experiencia Tarot & Mística', icon: '🔮' },
-  { id: 'tour_timeline', label: 'Landing Page: Línea de Tiempo de Gira', icon: '🗓️' },
-  { id: 'vip_experience', label: 'Landing Page: Experiencia VIP Meet & Greet', icon: '👑' },
-  { id: 'tickets_page', label: 'Página de Compra: Encabezado y Accesos', icon: '🎟️' },
-  { id: 'seating_map', label: 'Página de Compra: Mapa Interactivo de Asientos', icon: '🗺️' },
-  { id: 'checkout_modal', label: 'Modal de Checkout y Resumen de Compra', icon: '💳' },
-  { id: 'ambar_te_escribe', label: 'Página: Ambar Te Escribe (Blog & Crónicas)', icon: '✍️' },
-  { id: 'entretenimiento', label: 'Página: Entretenimiento Interactivo & Canvas', icon: '🎨' },
-  { id: 'tienda', label: 'Página: Tienda Oficial & Merch', icon: '🛍️' },
-  { id: 'musica', label: 'Página: Música & Discografía', icon: '🎵' },
-  { id: 'contact_section', label: 'Página: Contacto & Solicitud de Booking', icon: '📬' },
-  { id: 'ticket_detail', label: 'Página: Detalle de Boleto & Código QR', icon: '🎟️' },
-  { id: 'dashboard', label: 'Panel: Dashboard & Administración', icon: '📊' },
-  { id: 'auth_pages', label: 'Páginas: Autenticación (Login, Registro)', icon: '🔐' },
-  { id: 'navbar', label: 'Barra de Navegación Global (Header)', icon: '🧭' },
-  { id: 'footer', label: 'Pie de Página y Redes Sociales (Footer)', icon: '⚓' },
-];
-
 
 const COLOR_PRESETS = [
   { id: 'amber-honey', name: 'Ámbar Místico', primary: '#E5A93B', secondary: '#22A6B7', start: '#080c0a', end: '#040605', card: '#0c0f0d', text: '#F4F6F0', heading: '#E5A93B' },
@@ -94,15 +110,15 @@ const COLOR_PRESETS = [
 ];
 
 export const ThemeManager: React.FC = () => {
-  const { theme, setThemeOverride, fetchThemeForEvent, resetThemeToDefaults, clearSectionOverrides } = useEventTheme();
+  const { theme, setThemeOverride, resetThemeToDefaults, clearSectionOverrides } = useEventTheme();
 
-  const [scope, setScope] = useState<'global' | 'event'>('global');
-  const [activeTabMode, setActiveTabMode] = useState<'general' | 'sections'>('general');
-  const [themeMode, setThemeMode] = useState<'global' | 'section'>(theme.themeMode || 'global');
-  const [events, setEvents] = useState<any[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  // Contextual Page & Section selection state
+  const [selectedRoutePath, setSelectedRoutePath] = useState<string>('/');
+  const [selectedSectionKey, setSelectedSectionKey] = useState<string>('hero');
+  const [hoveredSectionKey, setHoveredSectionKey] = useState<string | null>(null);
 
   // Global Theme States
+  const [themeMode, setThemeMode] = useState<'global' | 'section'>(theme.themeMode || 'global');
   const [primaryColor, setPrimaryColor] = useState('#E5A93B');
   const [secondaryColor, setSecondaryColor] = useState('#22A6B7');
   const [backgroundStart, setBackgroundStart] = useState('#080c0a');
@@ -121,135 +137,101 @@ export const ThemeManager: React.FC = () => {
   const [backgroundPattern, setBackgroundPattern] = useState('stars');
   const [fontPreset, setFontPreset] = useState('cormorant');
   const [allowCanvasZoom, setAllowCanvasZoom] = useState<boolean>(true);
-  const [animationPreset, setAnimationPreset] = useState('none');
-  const [imageFilter, setImageFilter] = useState('none');
   const [customCss, setCustomCss] = useState('');
 
   // Section-level Themes State
   const [sectionThemes, setSectionThemes] = useState<Record<string, SectionThemeSpec>>({});
-  const [selectedSectionKey, setSelectedSectionKey] = useState<string>('hero');
-
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Fetch Events for selection
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const apiUrl = getApiUrl();
-        const res = await axios.get(`${apiUrl}/tickets/events/`);
-        if (res.data && Array.isArray(res.data)) {
-          setEvents(res.data);
-          if (res.data.length > 0 && !selectedEventId) {
-            setSelectedEventId(res.data[0].id);
-          }
-        }
-      } catch (e) {
-        console.error('Error fetching events for theme manager:', e);
-      }
-    };
-    fetchEvents();
-  }, []);
+  // Debounce Timer Ref to achieve 60 FPS smooth updates without React re-render thrashing
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch theme configuration depending on scope
-  const loadThemeConfig = async () => {
-    setLoading(true);
-    try {
-      const apiUrl = getApiUrl();
-      if (scope === 'global') {
-        const res = await axios.get(`${apiUrl}/tickets/settings/`);
-        if (res.data) {
-          const cfg = res.data.theme_config || res.data;
-          setPrimaryColor(cfg.primary_color || '#E5A93B');
-          setSecondaryColor(cfg.secondary_color || '#22A6B7');
-          setBackgroundStart(cfg.background_start || '#080c0a');
-          setBackgroundEnd(cfg.background_end || '#040605');
-          setAccentColor(cfg.accent_color || '#9F2B00');
-          setCardBackground(cfg.card_background || '#0c0f0d');
-          setTextColor(cfg.text_color || '#F4F6F0');
-          setHeadingColor(cfg.heading_color || cfg.primary_color || '#E5A93B');
-          setSubtitleColor(cfg.subtitle_color || cfg.text_color || '#F4F6F0');
-          setButtonBg(cfg.button_bg || cfg.primary_color || '#E5A93B');
-          setButtonText(cfg.button_text || cfg.background_start || '#080c0a');
-          setBorderColor(cfg.border_color || '#E5A93B');
-          setParticleShape(cfg.particle_shape || 'moon');
-          setCardStyle(cfg.card_style || 'rounded-full');
-          setBackgroundPattern(cfg.background_pattern || 'stars');
-          setFontPreset(cfg.font_preset || 'cormorant');
-          setAllowCanvasZoom(res.data.allow_canvas_zoom ?? true);
-          setAnimationPreset(cfg.animation_preset || 'none');
-          setImageFilter(cfg.image_filter || 'none');
-          setCustomCss(cfg.custom_css || '');
-          setSectionThemes(cfg.section_themes || res.data.section_themes || {});
-        }
-      } else if (selectedEventId) {
-        const res = await axios.get(`${apiUrl}/tickets/events/${selectedEventId}/`);
-        if (res.data) {
-          const cfg = res.data.theme_config || res.data;
-          setPrimaryColor(res.data.primary_color || cfg.primary_color || '#E5A93B');
-          setSecondaryColor(res.data.secondary_color || cfg.secondary_color || '#22A6B7');
-          setBackgroundStart(res.data.background_start || cfg.background_start || '#080c0a');
-          setBackgroundEnd(res.data.background_end || cfg.background_end || '#040605');
-          setAccentColor(res.data.accent_color || cfg.accent_color || '#9F2B00');
-          setCardBackground(res.data.card_background || cfg.card_background || '#0c0f0d');
-          setTextColor(res.data.text_color || cfg.text_color || '#F4F6F0');
-          setHeadingColor(cfg.heading_color || cfg.primary_color || '#E5A93B');
-          setSubtitleColor(cfg.subtitle_color || cfg.text_color || '#F4F6F0');
-          setButtonBg(cfg.button_bg || cfg.primary_color || '#E5A93B');
-          setButtonText(cfg.button_text || cfg.background_start || '#080c0a');
-          setBorderColor(cfg.border_color || '#E5A93B');
-          setParticleShape(res.data.particle_shape || cfg.particle_shape || 'moon');
-          setCardStyle(res.data.card_style || cfg.card_style || 'rounded-full');
-          setBackgroundPattern(res.data.background_pattern || cfg.background_pattern || 'stars');
-          setFontPreset(res.data.font_preset || cfg.font_preset || 'cormorant');
-          setAnimationPreset(cfg.animation_preset || 'none');
-          setImageFilter(cfg.image_filter || 'none');
-          setCustomCss(res.data.custom_css || '');
-          setSectionThemes(res.data.section_themes || cfg.section_themes || {});
-        }
-      }
-    } catch (e) {
-      console.error('Error loading theme settings:', e);
-    } finally {
-      setLoading(false);
+  // Get active route specification with Fallback Resolution
+  const currentRouteSpec = PAGE_ROUTES.find(r => r.path === selectedRoutePath) || (() => {
+    console.warn(`[ThemeManager Warning] Ruta "${selectedRoutePath}" no registrada. Aplicando Layout Preset por defecto.`);
+    return PAGE_ROUTES[0]; // Fallback safe preset
+  })();
+
+  // Synchronize initial values from API context
+  useEffect(() => {
+    if (theme) {
+      setPrimaryColor(theme.primaryColor || '#E5A93B');
+      setSecondaryColor(theme.secondaryColor || '#22A6B7');
+      setBackgroundStart(theme.backgroundStart || '#080c0a');
+      setBackgroundEnd(theme.backgroundEnd || '#040605');
+      setAccentColor(theme.accentColor || '#9F2B00');
+      setCardBackground(theme.cardBackground || '#0c0f0d');
+      setTextColor(theme.textColor || '#F4F6F0');
+      setHeadingColor(theme.headingColor || theme.primaryColor || '#E5A93B');
+      setSubtitleColor(theme.subtitleColor || theme.textColor || '#F4F6F0');
+      setButtonBg(theme.buttonBg || theme.primaryColor || '#E5A93B');
+      setButtonText(theme.buttonText || theme.backgroundStart || '#080c0a');
+      setBorderColor(theme.borderColor || '#E5A93B');
+      setParticleShape(theme.particleShape || 'moon');
+      setCardStyle(theme.cardStyle || 'rounded-full');
+      setBackgroundPattern(theme.backgroundPattern || 'stars');
+      setFontPreset(theme.fontPreset || 'cormorant');
+      setCustomCss(theme.customCss || '');
+      setSectionThemes(theme.sectionThemes || {});
     }
-  };
+  }, [theme]);
 
-  useEffect(() => {
-    loadThemeConfig();
-  }, [scope, selectedEventId]);
+  /**
+   * Performs real-time debounced DOM injection of CSS variables to maintain 60 FPS performance.
+   * Directs updates into documentElement styles avoiding expensive React lifecycle loops.
+   */
+  const handleLivePreview = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
 
-  // Preview theme changes in real time as user edits form
-  const handleLivePreview = () => {
-    setThemeOverride({
-      themeMode,
-      primaryColor,
-      secondaryColor,
-      backgroundStart,
-      backgroundEnd,
-      accentColor,
-      cardBackground,
-      textColor,
-      headingColor,
-      subtitleColor,
-      buttonBg,
-      buttonText,
-      borderColor,
-      particleShape,
-      cardStyle,
-      backgroundPattern,
-      fontPreset,
-      animationPreset,
-      imageFilter,
-      customCss,
-      sectionThemes,
-    });
-  };
+    // Debounce at 16ms (~60 FPS)
+    debounceTimerRef.current = setTimeout(() => {
+      setThemeOverride({
+        themeMode,
+        primaryColor,
+        secondaryColor,
+        backgroundStart,
+        backgroundEnd,
+        accentColor,
+        cardBackground,
+        textColor,
+        headingColor,
+        subtitleColor,
+        buttonBg,
+        buttonText,
+        borderColor,
+        particleShape,
+        cardStyle,
+        backgroundPattern,
+        fontPreset,
+        customCss,
+        sectionThemes,
+      });
+    }, 16);
+  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
 
   useEffect(() => {
     handleLivePreview();
-  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, animationPreset, imageFilter, customCss, sectionThemes]);
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [handleLivePreview]);
 
+  /**
+   * Updates properties of a specific section in sectionThemes dictionary.
+   */
+  const updateSectionProp = (sectionKey: string, field: keyof SectionThemeSpec, val: any) => {
+    setSectionThemes(prev => {
+      const currentSec = prev[sectionKey] || {};
+      const updatedSec = { ...currentSec, [field]: val };
+      return { ...prev, [sectionKey]: updatedSec };
+    });
+  };
+
+  /**
+   * Applies one-click color palette preset.
+   */
   const applyPreset = (preset: typeof COLOR_PRESETS[0]) => {
     setPrimaryColor(preset.primary);
     setSecondaryColor(preset.secondary);
@@ -259,17 +241,12 @@ export const ThemeManager: React.FC = () => {
     setTextColor(preset.text);
     setHeadingColor(preset.heading);
     setThemeMode('global');
-    showToast.success(`Paleta "${preset.name}" aplicada correctamente en modo global.`);
+    showToast.success(`Paleta "${preset.name}" aplicada correctamente.`);
   };
 
-  const updateSectionProp = (key: string, field: keyof SectionThemeSpec, val: any) => {
-    setSectionThemes(prev => {
-      const currentSec = prev[key] || {};
-      const updatedSec = { ...currentSec, [field]: val };
-      return { ...prev, [key]: updatedSec };
-    });
-  };
-
+  /**
+   * Saves updated theme configuration to Django backend.
+   */
   const handleSave = async () => {
     setSaving(true);
     const token = localStorage.getItem('token');
@@ -294,22 +271,14 @@ export const ThemeManager: React.FC = () => {
       background_pattern: backgroundPattern,
       font_preset: fontPreset,
       allow_canvas_zoom: allowCanvasZoom,
-      animation_preset: animationPreset,
-      image_filter: imageFilter,
       custom_css: customCss,
       section_themes: sectionThemes,
     };
 
     try {
       const apiUrl = getApiUrl();
-      if (scope === 'global') {
-        await axios.post(`${apiUrl}/tickets/settings/`, payload, { headers });
-        showToast.success('¡Configuración de tema y secciones guardada en todo el sitio!');
-      } else if (selectedEventId) {
-        await axios.patch(`${apiUrl}/tickets/events/${selectedEventId}/`, payload, { headers });
-        showToast.success('¡Tema y secciones personalizadas del evento actualizados con éxito!');
-      }
-      fetchThemeForEvent(scope === 'event' ? selectedEventId || undefined : undefined);
+      await axios.post(`${apiUrl}/tickets/settings/`, payload, { headers });
+      showToast.success('¡Configuración de tema guardada en el servidor!');
     } catch (e: any) {
       console.error('Error saving theme settings:', e);
       showToast.error(e.response?.data?.error || 'Error al guardar la personalización visual.');
@@ -318,23 +287,34 @@ export const ThemeManager: React.FC = () => {
     }
   };
 
+  /**
+   * Handles Visual Inspector click on simulated Canvas sections, halting Event Bubbling.
+   */
+  const handleVisualInspectorSelect = (e: React.MouseEvent, sectionId: string) => {
+    e.stopPropagation(); // Prevenir selección múltiple encadenada por event bubbling
+    setSelectedSectionKey(sectionId);
+    setThemeMode('section');
+    showToast.success(`Sección "${sectionId}" seleccionada para edición.`);
+  };
+
   const currentSectionSpec = sectionThemes[selectedSectionKey] || {};
 
   return (
-    <div className="space-y-8 max-w-6xl mx-auto">
-      {/* Header Banner */}
-      <div className="amber-glass p-8 rounded-3xl border border-white/10 relative overflow-hidden shadow-2xl">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+    <div className="space-y-8 max-w-[1600px] mx-auto text-nature-white selection:bg-amber-honey/30">
+      
+      {/* Top Banner Header */}
+      <div className="amber-glass p-8 rounded-3xl border border-white/10 relative overflow-hidden shadow-glow">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative z-10">
           <div>
             <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black flex items-center gap-2 mb-2">
               <Paintbrush size={14} className="text-amber-honey" />
-              Motor de Personalización Granular por Sección y Evento (Dynamic Page Builder)
+              Editor de Temas & Inspector Visual Granular (Canvas Live Inspector)
             </span>
-            <h2 className="text-3xl md:text-4xl font-black text-[#F4F6F0] uppercase italic tracking-tighter">
-              Control Visual del Sitio y Secciones
+            <h2 className="text-3xl lg:text-4xl font-black text-white uppercase italic tracking-tighter">
+              Personalización Visual <span className="text-amber-honey">Contextual</span>
             </h2>
-            <p className="text-[#F4F6F0]/60 text-xs font-medium max-w-2xl mt-1">
-              Configura colores, formas de partículas, estilos de tarjetas, tipografía y personalización específica para cada sección individual (`Hero`, `Mapa`, `Boletos`, `Contacto`, etc.).
+            <p className="text-white/60 text-xs font-medium max-w-2xl mt-1">
+              Selecciona la página y haz clic directamente sobre las secciones en el Canvas Interactivo para personalizar colores, bordes y tipografías en tiempo real.
             </p>
           </div>
 
@@ -343,9 +323,9 @@ export const ThemeManager: React.FC = () => {
               onClick={() => {
                 clearSectionOverrides();
                 setThemeMode('global');
-                showToast.success('🧹 Secciones limpiadas. Se ha activado la Paleta Global Unificada.');
+                showToast.success('Secciones reajustadas a la paleta global.');
               }}
-              className="bg-white/10 hover:bg-white/20 text-[#F4F6F0] font-black uppercase tracking-widest text-[10px] px-4 py-3 rounded-2xl transition-all border border-white/10 flex items-center gap-1.5"
+              className="bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest text-[10px] px-4 py-3 rounded-2xl transition-all border border-white/10"
             >
               🧹 Limpiar Secciones
             </button>
@@ -353,9 +333,9 @@ export const ThemeManager: React.FC = () => {
             <button
               onClick={() => {
                 resetThemeToDefaults();
-                showToast.success('🔄 Tema restablecido a los valores predeterminados del sistema.');
+                showToast.success('Valores restablecidos a los por defecto.');
               }}
-              className="bg-red-500/10 hover:bg-red-500/20 text-red-300 font-black uppercase tracking-widest text-[10px] px-4 py-3 rounded-2xl transition-all border border-red-500/20 flex items-center gap-1.5"
+              className="bg-red-500/10 hover:bg-red-500/20 text-red-300 font-black uppercase tracking-widest text-[10px] px-4 py-3 rounded-2xl transition-all border border-red-500/20"
             >
               🔄 Restablecer Todo
             </button>
@@ -363,7 +343,7 @@ export const ThemeManager: React.FC = () => {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-amber-honey hover:bg-amber-butterscotch text-[#1E2B22] font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-2xl transition-all shadow-xl shadow-amber-honey/20 flex items-center gap-2 disabled:opacity-50"
+              className="bg-amber-honey hover:bg-amber-honey/90 text-nature-night font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-2xl transition-all shadow-glow flex items-center gap-2 disabled:opacity-50"
             >
               {saving ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />}
               Guardar en Servidor
@@ -372,801 +352,454 @@ export const ThemeManager: React.FC = () => {
         </div>
       </div>
 
-      {/* Explicit Theme Mode Selector: Global Palette vs Section Override Mode */}
-      <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-black text-[#F4F6F0] uppercase tracking-wider flex items-center gap-2">
-              <Sliders size={16} className="text-amber-honey" /> Modo de Aplicación de Estilos
-            </h3>
-            <p className="text-xs text-[#F4F6F0]/60 mt-0.5">
-              Elige si deseas aplicar la paleta de colores uniformemente en todo el sitio o permitir personalizaciones por sección.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 bg-[#080c0a] p-1.5 rounded-2xl border border-white/15">
-            <button
-              onClick={() => setThemeMode('global')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${themeMode === 'global' ? 'bg-amber-honey text-black shadow-md' : 'text-white/60 hover:text-white'}`}
-            >
-              Paleta Global Unificada
-            </button>
-            <button
-              onClick={() => setThemeMode('section')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${themeMode === 'section' ? 'bg-amber-honey text-black shadow-md' : 'text-white/60 hover:text-white'}`}
-            >
-              Personalización por Sección
-            </button>
-          </div>
-        </div>
-
-        {/* 1-Click Preset Palettes */}
-        <div className="pt-4 border-t border-white/10 space-y-3">
-          <span className="text-[10px] font-black uppercase tracking-widest text-amber-honey block">
-            Paletas de Colores Rápidas (1-Clic):
-          </span>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {COLOR_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => applyPreset(preset)}
-                className="p-3 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all flex flex-col gap-2 text-left group"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: preset.primary }} />
-                  <span className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: preset.secondary }} />
-                  <span className="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: preset.card }} />
-                </div>
-                <span className="text-[10px] font-black uppercase tracking-tight text-white/90 group-hover:text-amber-honey line-clamp-1">
-                  {preset.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Mode Sub-navigation: General Palette vs Granular Section Customizer */}
-      <div className="flex gap-3 bg-white/5 border border-white/10 p-1.5 rounded-2xl w-fit">
-        <button
-          onClick={() => setActiveTabMode('general')}
-          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTabMode === 'general' ? 'bg-amber-honey text-[#1E2B22] shadow-lg' : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0]'}`}
-        >
-          <Palette size={14} /> Tema General & Paleta Global
-        </button>
-        <button
-          onClick={() => setActiveTabMode('sections')}
-          className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTabMode === 'sections' ? 'bg-amber-honey text-[#1E2B22] shadow-lg' : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0]'}`}
-        >
-          <Layout size={14} /> Personalización por Sección Individual
-        </button>
-      </div>
-
-      {/* Scope Selector: Global Site vs Event Override */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div
-          onClick={() => setScope('global')}
-          className={`amber-glass p-6 rounded-2xl border transition-all cursor-pointer ${scope === 'global' ? 'border-amber-honey bg-amber-honey/10 shadow-lg shadow-amber-honey/10' : 'border-white/10 hover:border-white/20'}`}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-amber-honey/20 rounded-xl text-amber-honey">
-              <Layers size={20} />
+      {/* Main Split View: Left Control Panel vs Right Visual Inspector Canvas */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Column: Contextual Control Panel (5 Cols) */}
+        <div className="lg:col-span-5 space-y-6">
+          
+          {/* Contextual Page & Mode Selection Card */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-honey flex items-center gap-2">
+                <Compass size={16} /> Selector Contextual de Página
+              </h3>
+              <span className="text-[9px] bg-white/5 text-white/50 px-2.5 py-1 rounded-full font-mono">
+                {selectedRoutePath}
+              </span>
             </div>
+
+            {/* Route Dropdown */}
             <div>
-              <h3 className="text-lg font-bold text-[#F4F6F0]">Tema Global del Sitio</h3>
-              <p className="text-xs text-[#F4F6F0]/50">Aplica la paleta de colores por defecto a todas las páginas de ms-ambar.</p>
-            </div>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setScope('event')}
-          className={`amber-glass p-6 rounded-2xl border transition-all cursor-pointer ${scope === 'event' ? 'border-amber-honey bg-amber-honey/10 shadow-lg shadow-amber-honey/10' : 'border-white/10 hover:border-white/20'}`}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-amber-honey/20 rounded-xl text-amber-honey">
-              <Sparkles size={20} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#F4F6F0]">Sobrescritura por Evento</h3>
-              <p className="text-xs text-[#F4F6F0]/50">Asigna colores y figuras exclusivas para un concierto o convivencia.</p>
-            </div>
-          </div>
-
-          {scope === 'event' && (
-            <div className="mt-4 pt-3 border-t border-white/10">
-              <label className="text-[10px] text-amber-honey font-bold uppercase tracking-widest block mb-2">Seleccionar Evento:</label>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                Página Activa a Editar:
+              </label>
               <select
-                value={selectedEventId || ''}
-                onChange={(e) => setSelectedEventId(Number(e.target.value))}
-                className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
+                value={selectedRoutePath}
+                onChange={(e) => {
+                  const newPath = e.target.value;
+                  setSelectedRoutePath(newPath);
+                  // Auto-select first section of new route
+                  const r = PAGE_ROUTES.find(p => p.path === newPath);
+                  if (r && r.sections.length > 0) {
+                    setSelectedSectionKey(r.sections[0].id);
+                  }
+                }}
+                className="w-full bg-nature-night/80 border border-white/15 rounded-2xl px-4 py-3 text-xs font-bold text-white focus:border-amber-honey focus:outline-none"
               >
-                {events.map((ev) => (
-                  <option key={ev.id} value={ev.id}>
-                    {ev.title} ({ev.artist})
+                {PAGE_ROUTES.map(route => (
+                  <option key={route.path} value={route.path}>
+                    {route.name} ({route.path})
                   </option>
                 ))}
               </select>
             </div>
-          )}
+
+            {/* Mode Selector Toggle */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                Modo de Aplicación:
+              </label>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-nature-night/60 border border-white/10 rounded-2xl">
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('global')}
+                  className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                    themeMode === 'global' ? 'bg-amber-honey text-nature-night shadow-glow' : 'text-white/50'
+                  }`}
+                >
+                  Paleta Global
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setThemeMode('section')}
+                  className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                    themeMode === 'section' ? 'bg-amber-honey text-nature-night shadow-glow' : 'text-white/50'
+                  }`}
+                >
+                  Por Sección
+                </button>
+              </div>
+            </div>
+
+            {/* Contextual Sections Buttons List */}
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                Secciones de esta página:
+              </label>
+              <div className="space-y-2 max-h-[220px] overflow-y-auto custom-scroll pr-1">
+                {currentRouteSpec.sections.map((sec) => {
+                  const isSelected = selectedSectionKey === sec.id;
+                  const isHovered = hoveredSectionKey === sec.id;
+                  const hasCustom = !!sectionThemes[sec.id];
+
+                  return (
+                    <button
+                      key={sec.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSectionKey(sec.id);
+                        setThemeMode('section');
+                      }}
+                      onMouseEnter={() => setHoveredSectionKey(sec.id)}
+                      onMouseLeave={() => setHoveredSectionKey(null)}
+                      className={`w-full p-3 rounded-2xl border text-left transition-all flex items-center justify-between text-xs ${
+                        isSelected
+                          ? 'bg-amber-honey text-nature-night border-amber-honey font-black shadow-glow'
+                          : isHovered
+                          ? 'bg-white/10 text-white border-amber-honey/50'
+                          : 'bg-nature-night/50 text-white/70 border-white/5 hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span>{sec.icon}</span>
+                        <span>{sec.label}</span>
+                      </div>
+                      {hasCustom && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" title="Personalizado" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Granular Controls for Selected Section / Global */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-honey flex items-center gap-2">
+                <Sliders size={16} /> Controles: {themeMode === 'section' ? selectedSectionKey : 'Global'}
+              </h3>
+              {themeMode === 'section' && (
+                <button
+                  onClick={() => {
+                    setSectionThemes(prev => {
+                      const copy = { ...prev };
+                      delete copy[selectedSectionKey];
+                      return copy;
+                    });
+                    showToast.success(`Ajustes de "${selectedSectionKey}" reajustados.`);
+                  }}
+                  className="text-[9px] text-red-400 hover:text-red-300 uppercase tracking-widest font-black"
+                >
+                  Restablecer Sección
+                </button>
+              )}
+            </div>
+
+            {/* Section Specific Color Pickers */}
+            <div className="space-y-4">
+              {/* Primary / Section Bg */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                  {themeMode === 'section' ? 'Fondo de Sección (Solid BG)' : 'Color Primario'}
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={themeMode === 'section' ? (currentSectionSpec.bg_color || backgroundStart) : primaryColor}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'bg_color', e.target.value);
+                      else setPrimaryColor(e.target.value);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={themeMode === 'section' ? (currentSectionSpec.bg_color || '') : primaryColor}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'bg_color', e.target.value);
+                      else setPrimaryColor(e.target.value);
+                    }}
+                    className="bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-white w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Text / Heading Color */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                  Color de Título / Encabezado
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={themeMode === 'section' ? (currentSectionSpec.heading_color || headingColor) : headingColor}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'heading_color', e.target.value);
+                      else setHeadingColor(e.target.value);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={themeMode === 'section' ? (currentSectionSpec.heading_color || '') : headingColor}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'heading_color', e.target.value);
+                      else setHeadingColor(e.target.value);
+                    }}
+                    className="bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-white w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Card Style and Typography */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                    Bordes / Redondeo:
+                  </label>
+                  <select
+                    value={cardStyle}
+                    onChange={(e) => setCardStyle(e.target.value)}
+                    className="w-full bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                  >
+                    {CARD_STYLE_OPTIONS.map(c => (
+                      <option key={c.id} value={c.id}>{c.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-white/50 mb-2">
+                    Fuente Tipográfica:
+                  </label>
+                  <select
+                    value={fontPreset}
+                    onChange={(e) => setFontPreset(e.target.value)}
+                    className="w-full bg-nature-night/80 border border-white/15 rounded-xl px-3 py-2 text-xs font-bold text-white"
+                  >
+                    {FONT_PRESET_OPTIONS.map(f => (
+                      <option key={f.id} value={f.id}>{f.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Preset Palettes Quick Row */}
+              <div className="pt-3 border-t border-white/10">
+                <span className="block text-[9px] font-black uppercase text-amber-honey tracking-widest mb-2">
+                  Paletas Rápidas (1-Click):
+                </span>
+                <div className="grid grid-cols-3 gap-2">
+                  {COLOR_PRESETS.map(p => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => applyPreset(p)}
+                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center gap-2 text-left"
+                    >
+                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: p.primary }} />
+                      <span className="text-[9px] font-bold truncate text-white/80">{p.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Visual Inspector Live Canvas Simulation (7 Cols) */}
+        <div className="lg:col-span-7 space-y-4 sticky top-24">
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-2">
+              <Eye className="text-amber-honey animate-pulse" size={18} />
+              <h3 className="text-xs font-black uppercase tracking-widest text-white">
+                Live Preview Canvas (Visual Inspector)
+              </h3>
+            </div>
+            <span className="text-[9px] text-white/40 font-mono">
+              Haz clic en cualquier sección para inspeccionar y editar
+            </span>
+          </div>
+
+          {/* Interactive Simulated Page Canvas Box */}
+          <div className="amber-glass rounded-[2.5rem] border border-white/15 overflow-hidden shadow-2xl p-6 relative bg-black/90 min-h-[550px] flex flex-col justify-between">
+            
+            {/* Header Simulation Bar */}
+            <div 
+              onClick={(e) => handleVisualInspectorSelect(e, 'navbar')}
+              onMouseEnter={() => setHoveredSectionKey('navbar')}
+              onMouseLeave={() => setHoveredSectionKey(null)}
+              className={`p-4 rounded-2xl border transition-all duration-300 relative cursor-pointer mb-6 ${
+                selectedSectionKey === 'navbar'
+                  ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
+                  : hoveredSectionKey === 'navbar'
+                  ? 'border-amber-honey/60 bg-white/5'
+                  : 'border-white/10 bg-nature-night/50'
+              }`}
+            >
+              {(selectedSectionKey === 'navbar' || hoveredSectionKey === 'navbar') && (
+                <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                  Editar: Navbar (Header Global)
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="font-black text-sm italic tracking-tighter text-amber-honey">MS AMBAR</span>
+                <div className="flex gap-4 text-[10px] uppercase font-bold text-white/60">
+                  <span>Inicio</span>
+                  <span>Galería</span>
+                  <span>Boletos</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Dynamic Body Sections depending on selected route */}
+            <div className="space-y-6 flex-1 flex flex-col justify-center">
+              
+              {selectedRoutePath === '/' && (
+                <>
+                  {/* Hero Simulation */}
+                  <div
+                    onClick={(e) => handleVisualInspectorSelect(e, 'hero')}
+                    onMouseEnter={() => setHoveredSectionKey('hero')}
+                    onMouseLeave={() => setHoveredSectionKey(null)}
+                    style={{
+                      backgroundColor: sectionThemes['hero']?.bg_color || 'transparent',
+                    }}
+                    className={`p-8 rounded-3xl border text-center transition-all duration-300 relative cursor-pointer ${
+                      selectedSectionKey === 'hero'
+                        ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
+                        : hoveredSectionKey === 'hero'
+                        ? 'border-amber-honey/60 bg-white/5'
+                        : 'border-white/10 bg-nature-night/30'
+                    }`}
+                  >
+                    {(selectedSectionKey === 'hero' || hoveredSectionKey === 'hero') && (
+                      <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                        Editar: Hero Principal
+                      </div>
+                    )}
+                    <h1 
+                      style={{ color: sectionThemes['hero']?.heading_color || headingColor }}
+                      className="text-3xl font-black italic tracking-tighter uppercase mb-2"
+                    >
+                      Ms Ambar Live 2026
+                    </h1>
+                    <p className="text-xs text-white/50 max-w-sm mx-auto mb-4">
+                      Voz mística & Experiencia sonora sensorial
+                    </p>
+                    <button 
+                      style={{ backgroundColor: buttonBg, color: buttonText }}
+                      className="px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest"
+                    >
+                      Comprar Boletos
+                    </button>
+                  </div>
+
+                  {/* Events Grid Simulation */}
+                  <div
+                    onClick={(e) => handleVisualInspectorSelect(e, 'events_grid')}
+                    onMouseEnter={() => setHoveredSectionKey('events_grid')}
+                    onMouseLeave={() => setHoveredSectionKey(null)}
+                    className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
+                      selectedSectionKey === 'events_grid'
+                        ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
+                        : hoveredSectionKey === 'events_grid'
+                        ? 'border-amber-honey/60 bg-white/5'
+                        : 'border-white/10 bg-nature-night/30'
+                    }`}
+                  >
+                    {(selectedSectionKey === 'events_grid' || hoveredSectionKey === 'events_grid') && (
+                      <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                        Editar: Próximos Conciertos
+                      </div>
+                    )}
+                    <h3 className="text-xs font-black uppercase text-amber-honey tracking-widest mb-3">Próximas Fechas</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="text-[10px] font-bold text-white">Auditorio Nacional</div>
+                        <div className="text-[9px] text-white/40">CDMX • 14 Octubre</div>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-2xl border border-white/5">
+                        <div className="text-[10px] font-bold text-white">Teatro Diana</div>
+                        <div className="text-[9px] text-white/40">Guadalajara • 28 Octubre</div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedRoutePath === '/galleria' && (
+                <>
+                  {/* Gallery Grid Simulation */}
+                  <div
+                    onClick={(e) => handleVisualInspectorSelect(e, 'gallery_grid')}
+                    onMouseEnter={() => setHoveredSectionKey('gallery_grid')}
+                    onMouseLeave={() => setHoveredSectionKey(null)}
+                    className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
+                      selectedSectionKey === 'gallery_grid'
+                        ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
+                        : hoveredSectionKey === 'gallery_grid'
+                        ? 'border-amber-honey/60 bg-white/5'
+                        : 'border-white/10 bg-nature-night/30'
+                    }`}
+                  >
+                    {(selectedSectionKey === 'gallery_grid' || hoveredSectionKey === 'gallery_grid') && (
+                      <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                        Editar: Grilla Masonry Galería
+                      </div>
+                    )}
+                    <h3 className="text-xs font-black uppercase text-amber-honey tracking-widest mb-3">Galería de Luz</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="h-20 bg-white/10 rounded-xl animate-pulse" />
+                      <div className="h-28 bg-white/10 rounded-xl animate-pulse" />
+                      <div className="h-20 bg-white/10 rounded-xl animate-pulse" />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {selectedRoutePath === '/biography' && (
+                <div
+                  onClick={(e) => handleVisualInspectorSelect(e, 'biography')}
+                  onMouseEnter={() => setHoveredSectionKey('biography')}
+                  onMouseLeave={() => setHoveredSectionKey(null)}
+                  className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
+                    selectedSectionKey === 'biography'
+                      ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
+                      : hoveredSectionKey === 'biography'
+                      ? 'border-amber-honey/60 bg-white/5'
+                      : 'border-white/10 bg-nature-night/30'
+                  }`}
+                >
+                  {(selectedSectionKey === 'biography' || hoveredSectionKey === 'biography') && (
+                    <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                      Editar: Biografía
+                    </div>
+                  )}
+                  <h2 className="text-xl font-black text-amber-honey mb-2">La Cantautora</h2>
+                  <p className="text-xs text-white/60">Fusión mística de R&B, soul y música latina.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Simulation Bar */}
+            <div 
+              onClick={(e) => handleVisualInspectorSelect(e, 'footer')}
+              onMouseEnter={() => setHoveredSectionKey('footer')}
+              onMouseLeave={() => setHoveredSectionKey(null)}
+              className={`p-4 rounded-2xl border transition-all duration-300 relative cursor-pointer mt-6 text-center ${
+                selectedSectionKey === 'footer'
+                  ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
+                  : hoveredSectionKey === 'footer'
+                  ? 'border-amber-honey/60 bg-white/5'
+                  : 'border-white/10 bg-nature-night/50'
+              }`}
+            >
+              {(selectedSectionKey === 'footer' || hoveredSectionKey === 'footer') && (
+                <div className="absolute -top-3 left-4 bg-amber-honey text-nature-night px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10">
+                  Editar: Footer (Pie de Página)
+                </div>
+              )}
+              <span className="text-[9px] uppercase tracking-widest text-white/40 font-bold">
+                © 2026 Ms Ambar • Todos los derechos reservados
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* MODE 1: General Theme Settings */}
-      {activeTabMode === 'general' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-          {/* Colors Section */}
-          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-              <Palette className="text-amber-honey" size={20} />
-              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Paleta de Colores & Degradados</h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Primario (Botones / Luces)</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Secundario (Acentos)</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={secondaryColor}
-                    onChange={(e) => setSecondaryColor(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Inicio (Gradient Start)</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={backgroundStart}
-                    onChange={(e) => setBackgroundStart(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={backgroundStart}
-                    onChange={(e) => setBackgroundStart(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Fin (Gradient End)</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={backgroundEnd}
-                    onChange={(e) => setBackgroundEnd(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={backgroundEnd}
-                    onChange={(e) => setBackgroundEnd(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color Resplandor / Brillo</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={accentColor}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={accentColor}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo Tarjetas de Cristal</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={cardBackground}
-                    onChange={(e) => setCardBackground(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={cardBackground}
-                    onChange={(e) => setCardBackground(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Títulos / Encabezados (h1, h2, h3)</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={headingColor}
-                    onChange={(e) => setHeadingColor(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={headingColor}
-                    onChange={(e) => setHeadingColor(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Texto Base y Subtítulos</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo de Botones CTA</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={buttonBg}
-                    onChange={(e) => setButtonBg(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={buttonBg}
-                    onChange={(e) => setButtonBg(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Texto de Botones CTA</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={buttonText}
-                    onChange={(e) => setButtonText(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={buttonText}
-                    onChange={(e) => setButtonText(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Bordes de Tarjetas</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={borderColor}
-                    onChange={(e) => setBorderColor(e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={borderColor}
-                    onChange={(e) => setBorderColor(e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Dynamic Animation Presets for Objects */}
-          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-              <Sparkles className="text-amber-honey" size={20} />
-              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Animaciones de Objetos y Elementos</h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {ANIMATION_OPTIONS.map((anim) => (
-                <button
-                  key={anim.id}
-                  type="button"
-                  onClick={() => setAnimationPreset(anim.id)}
-                  className={`p-3 rounded-2xl border text-left transition-all flex items-center gap-3 ${animationPreset === anim.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey shadow-lg font-bold' : 'bg-[#080c0a]/60 text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
-                >
-                  <span className="text-xl">{anim.icon}</span>
-                  <span className="text-xs">{anim.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Particle Canvas Shape Selection */}
-          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-              <Sparkles className="text-amber-honey" size={20} />
-              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Figura Geométrica del Canvas de Partículas</h3>
-            </div>
-
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 max-h-[320px] overflow-y-auto custom-scroll pr-1">
-              {SHAPE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setParticleShape(opt.id)}
-                  className={`p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 ${particleShape === opt.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey shadow-lg shadow-amber-honey/20 font-bold' : 'bg-[#080c0a]/60 text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
-                >
-                  <span className="text-2xl">{opt.icon}</span>
-                  <span className="text-[10px] font-black uppercase tracking-tight">{opt.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Card Styles & Typography */}
-          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-              <Type className="text-amber-honey" size={20} />
-              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">Estilos de Tarjeta & Fuentes</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Estilo de Bordes y Redondeo</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CARD_STYLE_OPTIONS.map((st) => (
-                    <button
-                      key={st.id}
-                      type="button"
-                      onClick={() => setCardStyle(st.id)}
-                      className={`p-3 rounded-xl border text-left text-xs font-bold transition-all ${cardStyle === st.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey' : 'bg-[#080c0a] text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
-                    >
-                      {st.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Preset de Fuentes Tipográficas</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {FONT_PRESET_OPTIONS.map((f) => (
-                    <button
-                      key={f.id}
-                      type="button"
-                      onClick={() => setFontPreset(f.id)}
-                      className={`p-3 rounded-xl border text-left transition-all ${fontPreset === f.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey' : 'bg-[#080c0a] text-[#F4F6F0]/70 border-white/10 hover:border-white/20'}`}
-                    >
-                      <div className="text-xs font-bold">{f.label}</div>
-                      <div className="text-[10px] opacity-70 italic mt-0.5">{f.sample}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Custom CSS Block */}
-          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-              <Sliders className="text-amber-honey" size={20} />
-              <h3 className="text-lg font-bold text-[#F4F6F0] uppercase tracking-wider">CSS Personalizado Avanzado</h3>
-            </div>
-
-            <div>
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Escribe reglas CSS adicionales (opcional):</label>
-              <textarea
-                rows={7}
-                value={customCss}
-                onChange={(e) => setCustomCss(e.target.value)}
-                placeholder="/* Ejemplo: body { filter: contrast(105%); } */"
-                className="w-full bg-[#080c0a] border border-white/15 rounded-2xl p-4 text-xs font-mono text-amber-honey focus:border-amber-honey focus:outline-none"
-              />
-            </div>
-
-            {/* Canvas & Seat Map Zoom Toggle */}
-            <div className="pt-4 border-t border-white/10">
-              <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Comportamiento del Canvas de Asientos</label>
-              <div className="p-4 rounded-2xl border border-white/10 bg-[#080c0a]/60 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-[#F4F6F0] uppercase tracking-wider">Permitir Zoom Interactivo</h4>
-                  <p className="text-[10px] text-[#F4F6F0]/60">Al desactivar, el mapa se fija en zoom estable centrado en pantalla.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAllowCanvasZoom(!allowCanvasZoom)}
-                  className={`w-14 h-7 rounded-full p-1 transition-colors relative flex items-center ${allowCanvasZoom ? 'bg-amber-honey' : 'bg-white/20'}`}
-                >
-                  <span className={`w-5 h-5 rounded-full bg-[#1E2B22] transition-transform ${allowCanvasZoom ? 'translate-x-7' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODE 2: Granular Section Customizer */}
-      {activeTabMode === 'sections' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-          {/* Section List Selector */}
-          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-3 lg:col-span-1">
-            <h3 className="text-sm font-bold text-amber-honey uppercase tracking-wider mb-2">Seleccionar Sección del Sitio:</h3>
-            {PAGE_SECTIONS.map((sec) => (
-              <button
-                key={sec.id}
-                onClick={() => setSelectedSectionKey(sec.id)}
-                className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between gap-3 ${selectedSectionKey === sec.id ? 'bg-amber-honey text-[#1E2B22] border-amber-honey shadow-lg font-bold' : 'bg-[#080c0a]/60 text-[#F4F6F0]/80 border-white/10 hover:border-white/20'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{sec.icon}</span>
-                  <span className="text-xs font-bold">{sec.label}</span>
-                </div>
-                {sectionThemes[sec.id] && Object.keys(sectionThemes[sec.id] || {}).length > 0 && (
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" title="Sección personalizada" />
-                )}
-              </button>
-            ))}
-          </div>
-
-          {/* Granular Section Properties Form */}
-          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-6 lg:col-span-2">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <div>
-                <span className="text-[10px] text-amber-honey uppercase tracking-widest font-black block">Configuración de Sección</span>
-                <h3 className="text-xl font-bold text-[#F4F6F0]">
-                  {PAGE_SECTIONS.find(s => s.id === selectedSectionKey)?.label}
-                </h3>
-              </div>
-
-              <button
-                onClick={() => {
-                  setSectionThemes(prev => {
-                    const copy = { ...prev };
-                    delete copy[selectedSectionKey];
-                    return copy;
-                  });
-                  showToast.success('Ajustes específicos de la sección restablecidos.');
-                }}
-                className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-red-500/20 bg-red-500/10"
-              >
-                Restablecer Sección
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Fondo de Sección (Solid Color)</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={currentSectionSpec.bg_color || '#080c0a'}
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'bg_color', e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={currentSectionSpec.bg_color || ''}
-                    placeholder="Ej. #080c0a"
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'bg_color', e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color del Texto Base de la Sección</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={currentSectionSpec.text_color || '#F4F6F0'}
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'text_color', e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={currentSectionSpec.text_color || ''}
-                    placeholder="Ej. #F4F6F0"
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'text_color', e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Títulos de Sección</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={currentSectionSpec.heading_color || '#E5A93B'}
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'heading_color', e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={currentSectionSpec.heading_color || ''}
-                    placeholder="Ej. #E5A93B"
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'heading_color', e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Color de Botones CTA de Sección</label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={currentSectionSpec.button_bg || '#E5A93B'}
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'button_bg', e.target.value)}
-                    className="w-12 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={currentSectionSpec.button_bg || ''}
-                    placeholder="Ej. #E5A93B"
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'button_bg', e.target.value)}
-                    className="bg-[#080c0a] border border-white/15 rounded-xl px-3 py-2 text-xs font-mono text-[#F4F6F0] w-full"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Filtro Visual para Imágenes</label>
-                <select
-                  value={currentSectionSpec.image_filter || 'none'}
-                  onChange={(e) => updateSectionProp(selectedSectionKey, 'image_filter', e.target.value)}
-                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                >
-                  {IMAGE_FILTER_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Animación de Objetos en Sección</label>
-                <select
-                  value={currentSectionSpec.animation_preset || 'none'}
-                  onChange={(e) => updateSectionProp(selectedSectionKey, 'animation_preset', e.target.value)}
-                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                >
-                  {ANIMATION_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.icon} {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Figura Canvas para esta Sección</label>
-                <select
-                  value={currentSectionSpec.particle_shape || 'moon'}
-                  onChange={(e) => updateSectionProp(selectedSectionKey, 'particle_shape', e.target.value)}
-                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                >
-                  {SHAPE_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.icon} {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-2">Redondeo de Tarjetas en esta Sección</label>
-                <select
-                  value={currentSectionSpec.card_style || 'rounded-full'}
-                  onChange={(e) => updateSectionProp(selectedSectionKey, 'card_style', e.target.value)}
-                  className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2.5 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                >
-                  {CARD_STYLE_OPTIONS.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* 📜 DEDICATED BIOGRAPHY CONFIGURATION PANEL */}
-            {(selectedSectionKey === 'biography' || selectedSectionKey === 'tarot_experience') && (
-              <div className="pt-6 border-t border-white/10 space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">📜</span>
-                  <h4 className="text-sm font-black uppercase tracking-wider text-amber-honey">
-                    Configuración de Contenido Autobiográfico de la Artista
-                  </h4>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
-                      Insignia / Distintivo (Ej. "La Cantautora")
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSectionSpec.bio_badge || ''}
-                      placeholder="La Cantautora"
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_badge', e.target.value)}
-                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
-                      Nombre de Artista / Título (Ej. "Ms. Ambar")
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSectionSpec.bio_title || ''}
-                      placeholder="Ms. Ambar"
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_title', e.target.value)}
-                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
-                      Ubicación / Origen (Ej. "Hermosillo • México")
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSectionSpec.bio_location || ''}
-                      placeholder="Hermosillo • México"
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_location', e.target.value)}
-                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
-                      URL de la Fotografía Oficial
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSectionSpec.bio_image || ''}
-                      placeholder="/Images/Inicio_Biografia.jpg"
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_image', e.target.value)}
-                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-mono text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
-                      Texto del Botón CTA (Ej. "Ver Próximos Eventos")
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSectionSpec.bio_cta_text || ''}
-                      placeholder="Ver Próximos Eventos"
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_cta_text', e.target.value)}
-                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-bold text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
-                      Enlace del Botón CTA (Ej. "/tour")
-                    </label>
-                    <input
-                      type="text"
-                      value={currentSectionSpec.bio_cta_url || ''}
-                      placeholder="/tour"
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_cta_url', e.target.value)}
-                      className="w-full bg-[#080c0a] border border-white/15 rounded-xl px-3.5 py-2 text-xs font-mono text-[#F4F6F0] focus:border-amber-honey focus:outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-[#F4F6F0]/60 font-bold uppercase tracking-widest block mb-1.5">
-                    Historia / Párrafos de la Biografía (Separa párrafos con saltos de línea):
-                  </label>
-                  <textarea
-                    rows={5}
-                    value={currentSectionSpec.bio_content || ''}
-                    placeholder="Ms. Ambar, nombre artístico de la cantautora originaria de Hermosillo, Sonora..."
-                    onChange={(e) => updateSectionProp(selectedSectionKey, 'bio_content', e.target.value)}
-                    className="w-full bg-[#080c0a] border border-white/15 rounded-2xl p-3.5 text-xs text-[#F4F6F0] leading-relaxed focus:border-amber-honey focus:outline-none"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Dedicated Tour Timeline Ultrapremium Controls */}
-            {selectedSectionKey === 'tour_timeline' && (
-              <div className="col-span-1 sm:col-span-2 p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="text-amber-400" size={16} />
-                  <h4 className="text-xs font-black text-amber-300 uppercase tracking-wider">
-                    Ajustes Ultrapremium de la Línea de Ruta de Eventos (Tour Timeline)
-                  </h4>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/70 font-bold uppercase tracking-widest block mb-2">
-                      Globo Emergente Flotante (Cover Image Tooltip)
-                    </label>
-                    <select
-                      value={currentSectionSpec.timeline_hover_balloon !== false ? 'true' : 'false'}
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'timeline_hover_balloon', e.target.value === 'true')}
-                      className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                    >
-                      <option value="true">✨ Habilitado (Muestra la portada oficial al pasar el puntero)</option>
-                      <option value="false">Deshabilitado</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] text-[#F4F6F0]/70 font-bold uppercase tracking-widest block mb-2">
-                      Resplandor y Neón de Tarjeta Focalizada
-                    </label>
-                    <select
-                      value={currentSectionSpec.timeline_glow || 'amber-neon'}
-                      onChange={(e) => updateSectionProp(selectedSectionKey, 'timeline_glow', e.target.value)}
-                      className="w-full bg-[#080c0a] border border-white/20 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] font-bold focus:border-amber-honey focus:outline-none"
-                    >
-                      <option value="amber-neon">🟡 Cristal Oscuro con Neón Ámbar (Recomendado)</option>
-                      <option value="cyan-neon">🌐 Cristal Oscuro con Neón Cian</option>
-                      <option value="gold-glass">✨ Cristal Dorado de Lujo</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

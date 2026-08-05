@@ -57,4 +57,40 @@ class GalleryItemSerializer(serializers.ModelSerializer):
             # Limpiar campos Cloudinary para externos
             attrs['public_id'] = None
             
+        # Validación y sanitización de embed_url para prevenir XSS y ataques de inyección
+        embed_url = attrs.get('embed_url')
+        if not embed_url and self.instance:
+            embed_url = self.instance.embed_url
+
+        if embed_url:
+            from urllib.parse import urlparse
+            parsed = urlparse(embed_url)
+            # Solo permitir protocolos seguros
+            if parsed.scheme not in ['http', 'https']:
+                raise serializers.ValidationError({'embed_url': 'La URL debe utilizar un protocolo seguro (http o https).'})
+            
+            # Whitelist de dominios permitidos para incrustación de iframes
+            allowed_domains = [
+                'youtube.com', 'www.youtube.com',
+                'youtube-nocookie.com', 'www.youtube-nocookie.com',
+                'youtu.be',
+                'instagram.com', 'www.instagram.com',
+                'vimeo.com', 'www.vimeo.com', 'player.vimeo.com',
+                'tiktok.com', 'www.tiktok.com',
+                'cloudinary.com', 'res.cloudinary.com'
+            ]
+            
+            # Extraer dominio base (quitando subdominios si es necesario, o validando contra whitelist completo)
+            domain = parsed.netloc.lower()
+            # Validar si coincide con el final del host de la whitelist
+            is_valid_domain = any(domain == d or domain.endswith('.' + d) for d in allowed_domains)
+            
+            if not is_valid_domain:
+                raise serializers.ValidationError({'embed_url': 'El dominio del iframe no está en la lista de proveedores autorizados.'})
+
+            # Prevenir inyecciones maliciosas de caracteres html o scripts
+            if any(char in embed_url for char in ['<', '>', '"', "'", '`', 'javascript:']):
+                raise serializers.ValidationError({'embed_url': 'La URL de incrustación contiene caracteres no autorizados o sospechosos de XSS.'})
+
         return attrs
+

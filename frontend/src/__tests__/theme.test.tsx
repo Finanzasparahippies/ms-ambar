@@ -166,4 +166,53 @@ describe('EventThemeContext Unit Tests', () => {
       expect(screen.getByTestId('sec-heading-empty')).toHaveTextContent('none');
     });
   });
+
+  test('debe aplicar fallback seguro si el backend retorna un tema corrupto o section_themes es null para evitar pantalla en blanco', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        theme_mode: null,
+        primary_color: null,
+        background_start: null,
+        section_themes: null
+      },
+    });
+
+    render(
+      <EventThemeContextProvider>
+        <TestComponent />
+      </EventThemeContextProvider>
+    );
+
+    await waitFor(() => {
+      // Debe resolver cargando y aplicar fallbacks definidos
+      expect(screen.getByTestId('primary-color')).toBeInTheDocument();
+    });
+
+    // Validar que no crashee y use el color por defecto (ej: #E5A93B)
+    expect(screen.getByTestId('primary-color')).not.toHaveTextContent('null');
+  });
+
+  test('debe sincronizar y persistir la configuración en localStorage', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        primary_color: '#E5A93B',
+        particle_shape: 'moon',
+        card_style: 'rounded-full'
+      },
+    });
+
+    render(
+      <EventThemeContextProvider>
+        <TestComponent />
+      </EventThemeContextProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('primary-color')).toHaveTextContent('#E5A93B');
+    });
+
+    // Verificar que se haya sincronizado a nivel de variables de sesión o configuración
+    expect(localStorage.getItem('theme')).toBe('dark'); // El Navbar u otros cargadores lo setean
+  });
 });
+
