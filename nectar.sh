@@ -304,10 +304,10 @@ case $COMMAND in
         ;;
     typecheck)
         echo "Running TypeScript type-check in Dev frontend..."
-        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_frontend"; then
-            $DOCKER_BIN exec ambar_dev_frontend npx tsc --noEmit "$@"
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "^ambar_dev_frontend$"; then
+            $DOCKER_BIN exec -e NODE_OPTIONS="--max-old-space-size=1024" ambar_dev_frontend npm run typecheck "$@"
         else
-            $COMPOSE_BIN exec frontend npx tsc --noEmit "$@"
+            $COMPOSE_BIN exec -e NODE_OPTIONS="--max-old-space-size=1024" frontend npm run typecheck "$@"
         fi
         ;;
     buildcheck)
@@ -386,7 +386,11 @@ case $COMMAND in
         ;;
     typecheck-staging)
         echo "Running TypeScript type-check for Staging frontend..."
-        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm frontend-staging npx tsc --noEmit "$@"
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "^ambar_staging_frontend$"; then
+            $DOCKER_BIN exec -e NODE_OPTIONS="--max-old-space-size=1024" ambar_staging_frontend npm run typecheck "$@"
+        else
+            $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm -e NODE_OPTIONS="--max-old-space-size=1024" frontend-staging npm run typecheck "$@"
+        fi
         ;;
     buildcheck-staging)
         echo "Running Next.js build-check for Staging frontend..."
