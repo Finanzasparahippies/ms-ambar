@@ -248,28 +248,28 @@ const PerformanceDashboard = () => {
         <MetricCard
           icon={<Clock className="text-amber-500" />}
           title="Tiempos de Respuesta (AVG)"
-          value={`${summary?.server?.avg_response_time?.toFixed(3)}s`}
+          value={summary?.server?.avg_response_time !== undefined && summary?.server?.avg_response_time !== null ? `${summary.server.avg_response_time.toFixed(3)}s` : '0.000s'}
           detail="Latencia promedio del servidor"
           theme="amber"
         />
         <MetricCard
           icon={<Database className="text-emerald-500" />}
           title="Consultas DB (AVG)"
-          value={summary?.server?.avg_queries?.toFixed(1)}
+          value={summary?.server?.avg_queries !== undefined && summary?.server?.avg_queries !== null ? summary.server.avg_queries.toFixed(1) : '0.0'}
           detail="Queries por solicitud SQL"
           theme="emerald"
         />
         <MetricCard
           icon={<Zap className="text-blue-500" />}
           title="Total Solicitudes"
-          value={summary?.server?.total_requests}
+          value={summary?.server?.total_requests ?? 0}
           detail="Peticiones en este periodo"
           theme="blue"
         />
         <MetricCard
           icon={<AlertTriangle className="text-red-500" />}
           title="Tiempo Máximo"
-          value={`${summary?.server?.max_response_time?.toFixed(2)}s`}
+          value={summary?.server?.max_response_time !== undefined && summary?.server?.max_response_time !== null ? `${summary.server.max_response_time.toFixed(2)}s` : '0.00s'}
           detail="Peor caso de latencia"
           theme="red"
         />
@@ -286,9 +286,11 @@ const PerformanceDashboard = () => {
               <div key={v.name} className="flex items-center justify-between p-3.5 bg-[#121815] border border-white/5 rounded-xl hover:border-white/10 transition-colors duration-200">
                 <div className="flex flex-col">
                   <span className="font-mono text-amber-500 font-bold text-sm tracking-wide">{v.name}</span>
-                  <span className="text-[10px] text-[#F4F6F0]/40 uppercase mt-0.5">{v.display}</span>
+                  <span className="text-[10px] text-[#F4F6F0]/40 uppercase mt-0.5">{v.display || 'Web Vital'}</span>
                 </div>
-                <span className="text-[#F4F6F0]/90 font-mono font-black text-base">{v.value.toFixed(2)} ms</span>
+                <span className="text-[#F4F6F0]/90 font-mono font-black text-base">
+                  {v.avg_value !== undefined && v.avg_value !== null ? `${v.avg_value.toFixed(2)} ms` : '0.00 ms'}
+                </span>
               </div>
             ))}
             {(!summary?.vitals || summary.vitals.length === 0) && (
@@ -306,7 +308,9 @@ const PerformanceDashboard = () => {
             {summary?.slowest_endpoints?.map((e: any, i: number) => (
               <div key={i} className="flex items-center justify-between p-3.5 bg-[#121815] border border-white/5 rounded-xl hover:border-white/10 transition-colors duration-200">
                 <span className="text-xs font-mono truncate max-w-[280px] text-[#F4F6F0]/70 font-semibold">{e.path}</span>
-                <span className="text-red-400 font-mono font-black text-sm bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20">{e.avg_time.toFixed(3)}s</span>
+                <span className="text-red-400 font-mono font-black text-sm bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20">
+                  {e.avg_time !== undefined && e.avg_time !== null ? `${e.avg_time.toFixed(3)}s` : '0.000s'}
+                </span>
               </div>
             ))}
             {(!summary?.slowest_endpoints || summary.slowest_endpoints.length === 0) && (
