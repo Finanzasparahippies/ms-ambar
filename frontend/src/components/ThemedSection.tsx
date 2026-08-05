@@ -1,5 +1,5 @@
 import React from 'react';
-import { useEventTheme } from '../context/EventThemeContext';
+import { useEventTheme, useSectionTheme } from '../context/EventThemeContext';
 
 interface ThemedSectionProps {
   sectionKey: string;
@@ -28,57 +28,55 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
   children,
   id,
 }) => {
-  const { getSectionTheme } = useEventTheme();
-  const sec = getSectionTheme(sectionKey);
+  const { style: hookStyle, bgColor, headingColor, textColor, accentColor, cardBg, borderColor, buttonBg, buttonText, spec } = useSectionTheme(sectionKey);
 
-  const style: React.CSSProperties = {};
-  const customVars: Record<string, string> = {};
+  const customVars: Record<string, string> = {
+    [`--sec-${sectionKey}-bg`]: bgColor,
+    [`--sec-${sectionKey}-heading`]: headingColor,
+    [`--sec-${sectionKey}-text`]: textColor,
+    [`--sec-${sectionKey}-accent`]: accentColor,
+    [`--sec-${sectionKey}-card-bg`]: cardBg,
+    [`--sec-${sectionKey}-border`]: borderColor,
+    [`--sec-${sectionKey}-button-bg`]: buttonBg,
+    [`--sec-${sectionKey}-button-text`]: buttonText,
+    '--primary-color': accentColor,
+    '--accent-color': accentColor,
+    '--card-bg': cardBg,
+    '--text-color': textColor,
+    '--heading-color': headingColor,
+    '--button-bg': buttonBg,
+    '--button-text': buttonText,
+    '--border-color': borderColor,
+  };
 
-  if (sec.accent_color) {
-    customVars['--primary-color'] = sec.accent_color;
-    customVars['--accent-color'] = sec.accent_color;
-    const rgb = hexToRgb(sec.accent_color);
-    if (rgb) customVars['--amber-primary'] = rgb;
-  }
-  if (sec.card_bg) customVars['--card-bg'] = sec.card_bg;
-  if (sec.text_color) {
-    customVars['--text-color'] = sec.text_color;
-    style.color = sec.text_color;
-    const rgb = hexToRgb(sec.text_color);
-    if (rgb) customVars['--foreground-rgb'] = rgb;
-  }
-  if (sec.heading_color) customVars['--heading-color'] = sec.heading_color;
-  if (sec.subtitle_color) customVars['--subtitle-color'] = sec.subtitle_color;
-  if (sec.button_bg) customVars['--button-bg'] = sec.button_bg;
-  if (sec.button_text) customVars['--button-text'] = sec.button_text;
-  if (sec.border_color) customVars['--border-color'] = sec.border_color;
-  if (sec.bg_gradient_start) customVars['--background-start'] = sec.bg_gradient_start;
-  if (sec.bg_gradient_end) customVars['--background-end'] = sec.bg_gradient_end;
-  if (sec.bg_color) style.backgroundColor = sec.bg_color;
+  const rgbPrimary = hexToRgb(accentColor);
+  if (rgbPrimary) customVars['--amber-primary'] = rgbPrimary;
 
-  if (sec.bg_gradient_start && sec.bg_gradient_end) {
-    style.background = `linear-gradient(135deg, ${sec.bg_gradient_start}, ${sec.bg_gradient_end})`;
-  } else if (sec.bg_gradient_start) {
-    style.backgroundColor = sec.bg_gradient_start;
-  }
+  const rgbText = hexToRgb(textColor);
+  if (rgbText) customVars['--foreground-rgb'] = rgbText;
 
   let radiusClass = '';
-  if (sec.card_style === 'rounded-full') radiusClass = 'rounded-3xl';
-  else if (sec.card_style === 'rounded-2xl') radiusClass = 'rounded-2xl';
-  else if (sec.card_style === 'rounded-lg') radiusClass = 'rounded-lg';
-  else if (sec.card_style === 'rounded-none') radiusClass = 'rounded-none';
+  if (spec.card_style === 'rounded-full') radiusClass = 'rounded-3xl';
+  else if (spec.card_style === 'rounded-2xl') radiusClass = 'rounded-2xl';
+  else if (spec.card_style === 'rounded-lg') radiusClass = 'rounded-lg';
+  else if (spec.card_style === 'rounded-none') radiusClass = 'rounded-none';
 
-  const combinedStyle: React.CSSProperties = { ...style, ...customVars as any };
+  const combinedStyle: React.CSSProperties = {
+    backgroundColor: bgColor,
+    color: textColor,
+    borderColor: borderColor,
+    ...customVars as any
+  };
 
   return (
     <section
       id={id}
       data-section-key={sectionKey}
-      data-section-shape={sec.particle_shape}
-      data-section-animation={sec.animation_preset || 'none'}
-      data-section-image-filter={sec.image_filter || 'none'}
+      data-section-shape={spec.particle_shape}
+      data-section-animation={spec.animation_preset || 'none'}
+      data-section-image-filter={spec.image_filter || 'none'}
       style={combinedStyle}
-      className={`relative transition-all duration-500 ${radiusClass} ${className}`}
+      className={`relative transition-colors duration-300 ${radiusClass} ${className}`}
     >
       {sec.image_filter && sec.image_filter !== 'none' && (
         <style

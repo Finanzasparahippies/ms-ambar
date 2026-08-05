@@ -8,6 +8,7 @@ import {
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import toast, { Toaster } from 'react-hot-toast';
+import { useSectionTheme } from '../context/EventThemeContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -390,9 +391,10 @@ export default function GalleryPage() {
   };
 
   const filteredItems = getFilteredItems();
+  const gallerySection = useSectionTheme('gallery_grid');
 
   return (
-    <div className="min-h-screen bg-nature-night text-nature-white selection:bg-amber-honey/30 pb-20">
+    <div style={gallerySection.style} className="min-h-screen bg-nature-night text-nature-white selection:bg-amber-honey/30 pb-20 transition-colors duration-300">
       <Head>
         <title>Ms Ambar | Galería de Luz</title>
         <meta name="description" content="Visuales oficiales de conciertos, grabaciones y backstage exclusivo del club Ms Ambar." />

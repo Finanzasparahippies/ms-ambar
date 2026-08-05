@@ -335,3 +335,59 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     </EventThemeContext.Provider>
   );
 };
+
+/**
+ * Hook personalizado para inyección declarativa y aislada de temas por sección (CSS Scope Prefixing & Zero-Flicker Strategy).
+ * @param sectionKey Identificador único de la sección (ej. 'gallery_grid', 'hero', 'biography')
+ */
+export const useSectionTheme = (sectionKey: string) => {
+  const { theme, loading } = useEventTheme();
+
+  return React.useMemo(() => {
+    const sec = theme.themeMode === 'section' ? (theme.sectionThemes?.[sectionKey] || {}) : {};
+
+    // Resolución de Fallbacks Normalizados
+    const bgColor = sec.bg_color || sec.card_bg || theme.backgroundStart;
+    const headingColor = sec.heading_color || theme.headingColor || theme.primaryColor;
+    const textColor = sec.text_color || theme.textColor;
+    const subtitleColor = sec.subtitle_color || theme.subtitleColor || theme.textColor;
+    const accentColor = sec.accent_color || theme.accentColor || theme.primaryColor;
+    const cardBg = sec.card_bg || theme.cardBackground;
+    const borderColor = sec.border_color || theme.borderColor;
+    const buttonBg = sec.button_bg || theme.buttonBg || theme.primaryColor;
+    const buttonText = sec.button_text || theme.buttonText || theme.backgroundStart;
+
+    // Scope Prefixed CSS Variables
+    const style = {
+      backgroundColor: bgColor,
+      color: textColor,
+      borderColor: borderColor,
+      [`--sec-${sectionKey}-bg`]: bgColor,
+      [`--sec-${sectionKey}-heading`]: headingColor,
+      [`--sec-${sectionKey}-text`]: textColor,
+      [`--sec-${sectionKey}-subtitle`]: subtitleColor,
+      [`--sec-${sectionKey}-accent`]: accentColor,
+      [`--sec-${sectionKey}-card-bg`]: cardBg,
+      [`--sec-${sectionKey}-border`]: borderColor,
+      [`--sec-${sectionKey}-button-bg`]: buttonBg,
+      [`--sec-${sectionKey}-button-text`]: buttonText,
+    } as React.CSSProperties;
+
+    return {
+      style,
+      bgColor,
+      headingColor,
+      textColor,
+      subtitleColor,
+      accentColor,
+      cardBg,
+      borderColor,
+      buttonBg,
+      buttonText,
+      spec: sec,
+      rawTheme: theme,
+      loading
+    };
+  }, [theme, sectionKey, loading]);
+};
+

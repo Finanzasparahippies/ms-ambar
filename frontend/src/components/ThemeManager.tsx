@@ -50,7 +50,7 @@ const FONT_PRESET_OPTIONS = [
   { id: 'syne', label: 'Syne (Vanguardista & Artístico)', sample: 'Ms Ambar Concert' },
 ];
 
-/** Estructura contextual de Páginas y sus Secciones correspondientes */
+/** Estructura contextual de las 13 Páginas del proyecto y sus Secciones correspondientes */
 const PAGE_ROUTES = [
   { 
     path: '/', 
@@ -87,12 +87,93 @@ const PAGE_ROUTES = [
     ]
   },
   {
+    path: '/ambar-te-escribe',
+    name: 'Ambar te Escribe (Cartas & Crónicas)',
+    sections: [
+      { id: 'ambar_te_escribe', label: 'Contenido Cartas & Escritos', icon: '✍️' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/blog',
+    name: 'Blog & Novedades',
+    sections: [
+      { id: 'blog_section', label: 'Grilla de Artículos & Posts', icon: '📰' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
     path: '/comprar-boletos',
     name: 'Página de Compra & Taquilla',
     sections: [
       { id: 'tickets_page', label: 'Encabezado & Lista de Eventos', icon: '🎟️' },
       { id: 'seating_map', label: 'Mapa Interactivo de Asientos', icon: '🗺️' },
       { id: 'checkout_modal', label: 'Modal de Checkout & Pagos', icon: '💳' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/contacto',
+    name: 'Contacto & Prensa',
+    sections: [
+      { id: 'contacto', label: 'Formulario de Contacto & Redes', icon: '✉️' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/entretenimiento',
+    name: 'Entretenimiento Interactivo',
+    sections: [
+      { id: 'entretenimiento', label: 'Sección Mística & Juegos', icon: '🎮' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/musica',
+    name: 'Música & Discografía',
+    sections: [
+      { id: 'musica', label: 'Reproductor & Álbumes', icon: '🎧' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/tienda',
+    name: 'Tienda Oficial & Merch',
+    sections: [
+      { id: 'tienda', label: 'Catálogo de Productos & Merchandising', icon: '🛍️' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/tour',
+    name: 'Gira & Fechas de Conciertos',
+    sections: [
+      { id: 'tour_section', label: 'Calendario de Gira', icon: '🎤' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/suscribirse',
+    name: 'Club de Fans & Newsletter',
+    sections: [
+      { id: 'suscribirse', label: 'Formulario VIP & Suscripción', icon: '💌' },
+      { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
+      { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
+    ]
+  },
+  {
+    path: '/auth',
+    name: 'Autenticación & Acceso',
+    sections: [
+      { id: 'auth_card', label: 'Tarjeta Login / Registro', icon: '🔐' },
       { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
       { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
     ]
