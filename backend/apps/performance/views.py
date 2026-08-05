@@ -62,7 +62,7 @@ class PerformanceViewSet(viewsets.ViewSet):
         if not os.path.exists(logs_dir):
             os.makedirs(logs_dir, exist_ok=True)
 
-        allowed_bases = ('tickets.log', 'blog.log', 'dashboard.log')
+        allowed_bases = ('tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log')
         log_files = []
 
         # Obtener los archivos físicos en el directorio de logs que inicien con nuestras bases permitidas
@@ -109,7 +109,7 @@ class PerformanceViewSet(viewsets.ViewSet):
         import os
 
         file_name = request.query_params.get('file', '').strip()
-        allowed_bases = ('tickets.log', 'blog.log', 'dashboard.log')
+        allowed_bases = ('tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log')
 
         # Validación estricta del nombre del archivo solicitado
         if not file_name or not file_name.startswith(allowed_bases):
