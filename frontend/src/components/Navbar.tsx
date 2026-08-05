@@ -1,10 +1,8 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Camera, Layers, LogOut, Menu, Shield, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import ThemeToggle from './ThemeToggle';
-import { LogOut, Shield, Layers, Menu, X, Camera } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
 /** Decodes a JWT payload client-side (no signature verification). */
 function decodeJwt(token: string): Record<string, any> | null {
@@ -99,7 +97,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Inicio', href: '/' },
     { name: 'Accesos', href: '/comprar-boletos' },
-    // { name: 'Galería', href: '/galleria' }, // TODO: Habilitar cuando esté completado
+    { name: 'Galería', href: '/galleria' },
     // { name: 'Música', href: '/musica' }, // TODO: Habilitar cuando esté completado
     // { name: 'Tienda', href: '/tienda' }, // TODO: Habilitar cuando esté completado
     { name: 'Ambar te escribe', href: '/ambar-te-escribe' },
@@ -110,8 +108,8 @@ const Navbar = () => {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 w-full z-[100] transition-all duration-500 ease-in-out ${isScrolled || isMobileMenuOpen
-          ? 'border-b border-white/10 backdrop-blur-md shadow-lg shadow-black/30'
-          : 'border-b border-transparent bg-transparent'
+        ? 'border-b border-white/10 backdrop-blur-md shadow-lg shadow-black/30'
+        : 'border-b border-transparent bg-transparent'
         }`}
       style={{
         backgroundColor: (isScrolled || isMobileMenuOpen) ? 'var(--card-bg, rgba(8, 12, 10, 0.9))' : 'transparent',
@@ -152,8 +150,8 @@ const Navbar = () => {
                   <Link
                     href="/designer"
                     className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/designer'
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      ? 'bg-amber-honey text-nature-night border-amber-honey'
+                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                       }`}
                     title="Nectar Studio Designer — Solo Admins"
                   >
@@ -163,8 +161,8 @@ const Navbar = () => {
                   <Link
                     href="/dashboard/scan-tickets"
                     className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/dashboard/scan-tickets'
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      ? 'bg-amber-honey text-nature-night border-amber-honey'
+                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                       }`}
                     title="Escáner de Boletos"
                   >
@@ -174,8 +172,8 @@ const Navbar = () => {
                   <Link
                     href="/dashboard"
                     className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      ? 'bg-amber-honey text-nature-night border-amber-honey'
+                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                       }`}
                   >
                     <Shield size={10} /> Admin
@@ -244,8 +242,8 @@ const Navbar = () => {
                       <Link
                         href="/designer"
                         className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname === '/designer'
-                            ? 'bg-amber-honey text-nature-night border-amber-honey'
-                            : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                          ? 'bg-amber-honey text-nature-night border-amber-honey'
+                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                           }`}
                       >
                         <Layers size={12} /> Studio
@@ -253,8 +251,8 @@ const Navbar = () => {
                       <Link
                         href="/dashboard"
                         className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
-                            ? 'bg-amber-honey text-nature-night border-amber-honey'
-                            : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                          ? 'bg-amber-honey text-nature-night border-amber-honey'
+                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                           }`}
                       >
                         <Shield size={12} /> Admin
@@ -263,8 +261,8 @@ const Navbar = () => {
                     <Link
                       href="/dashboard/scan-tickets"
                       className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all w-full ${router.pathname === '/dashboard/scan-tickets'
-                          ? 'bg-amber-honey text-nature-night border-amber-honey'
-                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                        ? 'bg-amber-honey text-nature-night border-amber-honey'
+                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
                         }`}
                     >
                       <Camera size={12} /> Escáner de Boletos
