@@ -83,8 +83,16 @@ const PerformanceDashboard = () => {
     }
   };
 
-  const formatBytes = (bytes: number, decimals = 2) => {
-    if (bytes === 0) return '0 Bytes';
+  const safeToFixed = (val: any, decimals = 2, fallback = '0.00') => {
+    if (val === null || val === undefined) return fallback;
+    const num = Number(val);
+    if (isNaN(num)) return fallback;
+    return num.toFixed(decimals);
+  };
+
+  const formatBytes = (val: any, decimals = 2) => {
+    const bytes = val !== undefined && val !== null ? Number(val) : 0;
+    if (isNaN(bytes) || bytes === 0) return '0 Bytes';
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -92,8 +100,10 @@ const PerformanceDashboard = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   };
 
-  const formatDate = (epoch: number | null) => {
-    if (!epoch) return 'Sin registros';
+  const formatDate = (val: any) => {
+    if (!val) return 'Sin registros';
+    const epoch = Number(val);
+    if (isNaN(epoch) || epoch === 0) return 'Sin registros';
     return new Date(epoch * 1000).toLocaleString('es-MX', {
       dateStyle: 'medium',
       timeStyle: 'medium'
@@ -152,12 +162,23 @@ const PerformanceDashboard = () => {
     );
   }
 
-  // Lógica de agrupación de logs con namespaces profesionales
+  // Lógica de agrupación de logs con namespaces profesionales y normalización blindada
   const appBases = ['tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log'];
+
+  const normalizeLog = (logObj: any, defaultName: string) => {
+    if (!logObj) return { name: defaultName, size: 0, modified: null };
+    const name = logObj.name || defaultName;
+    const size = logObj.size !== undefined ? logObj.size : (logObj.size_bytes !== undefined ? logObj.size_bytes : 0);
+    const modified = logObj.modified !== undefined ? logObj.modified : (logObj.last_modified !== undefined ? logObj.last_modified : null);
+    return { name, size, modified };
+  };
   
   const groupedLogs = appBases.map(base => {
-    const activeLog = logs.find(l => l.name === base) || { name: base, size: 0, modified: null };
-    const history = logs.filter(l => l.name !== base && l.name.startsWith(base));
+    const rawActive = logs.find(l => l.name === base);
+    const activeLog = normalizeLog(rawActive, base);
+    
+    const rawHistory = logs.filter(l => l.name !== base && l.name.startsWith(base));
+    const history = rawHistory.map(l => normalizeLog(l, l.name));
     
     let appLabel = '';
     let appDescription = '';
@@ -248,14 +269,14 @@ const PerformanceDashboard = () => {
         <MetricCard
           icon={<Clock className="text-amber-500" />}
           title="Tiempos de Respuesta (AVG)"
-          value={summary?.server?.avg_response_time !== undefined && summary?.server?.avg_response_time !== null ? `${summary.server.avg_response_time.toFixed(3)}s` : '0.000s'}
+          value={`${safeToFixed(summary?.server?.avg_response_time, 3, '0.000')}s`}
           detail="Latencia promedio del servidor"
           theme="amber"
         />
         <MetricCard
           icon={<Database className="text-emerald-500" />}
           title="Consultas DB (AVG)"
-          value={summary?.server?.avg_queries !== undefined && summary?.server?.avg_queries !== null ? summary.server.avg_queries.toFixed(1) : '0.0'}
+          value={safeToFixed(summary?.server?.avg_queries, 1, '0.0')}
           detail="Queries por solicitud SQL"
           theme="emerald"
         />
@@ -269,7 +290,7 @@ const PerformanceDashboard = () => {
         <MetricCard
           icon={<AlertTriangle className="text-red-500" />}
           title="Tiempo Máximo"
-          value={summary?.server?.max_response_time !== undefined && summary?.server?.max_response_time !== null ? `${summary.server.max_response_time.toFixed(2)}s` : '0.00s'}
+          value={`${safeToFixed(summary?.server?.max_response_time, 2, '0.00')}s`}
           detail="Peor caso de latencia"
           theme="red"
         />
@@ -289,7 +310,7 @@ const PerformanceDashboard = () => {
                   <span className="text-[10px] text-[#F4F6F0]/40 uppercase mt-0.5">{v.display || 'Web Vital'}</span>
                 </div>
                 <span className="text-[#F4F6F0]/90 font-mono font-black text-base">
-                  {v.avg_value !== undefined && v.avg_value !== null ? `${v.avg_value.toFixed(2)} ms` : '0.00 ms'}
+                  {safeToFixed(v.avg_value, 2, '0.00')} ms
                 </span>
               </div>
             ))}
@@ -309,7 +330,7 @@ const PerformanceDashboard = () => {
               <div key={i} className="flex items-center justify-between p-3.5 bg-[#121815] border border-white/5 rounded-xl hover:border-white/10 transition-colors duration-200">
                 <span className="text-xs font-mono truncate max-w-[280px] text-[#F4F6F0]/70 font-semibold">{e.path}</span>
                 <span className="text-red-400 font-mono font-black text-sm bg-red-500/10 px-2.5 py-1 rounded-md border border-red-500/20">
-                  {e.avg_time !== undefined && e.avg_time !== null ? `${e.avg_time.toFixed(3)}s` : '0.000s'}
+                  {safeToFixed(e.avg_time, 3, '0.000')}s
                 </span>
               </div>
             ))}
