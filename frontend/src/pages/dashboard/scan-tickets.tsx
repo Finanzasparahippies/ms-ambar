@@ -269,7 +269,7 @@ export default function ScanTicketsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#07080a] text-[#F4F6F0] flex flex-col p-6 font-sans relative overflow-x-hidden select-none selection:bg-amber-honey/20">
+    <div className="min-h-screen bg-[#07080a] text-[#F4F6F0] flex flex-col p-6 font-sans relative overflow-x-hidden selection:bg-amber-honey/20">
       <Head>
         <title>Escáner de Boletos | Ms Ambar</title>
         <style dangerouslySetInnerHTML={{
