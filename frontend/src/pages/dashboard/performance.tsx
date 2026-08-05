@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
-import { BarChart3, Clock, Database, Zap, AlertTriangle } from 'lucide-react';
+import { BarChart3, Clock, Database, Zap, AlertTriangle, FileText, Download, RefreshCw } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -11,6 +11,76 @@ const PerformanceDashboard = () => {
   const [summary, setSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Estados para la sección de logs del sistema
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [downloadingLog, setDownloadingLog] = useState<string | null>(null);
+
+  const fetchLogs = async () => {
+    setLoadingLogs(true);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const response = await axios.get(`${API_URL}/performance/logs/`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setLogs(response.data);
+    } catch (err) {
+      console.error("Error fetching logs list", err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  const downloadLogFile = async (fileName: string) => {
+    setDownloadingLog(fileName);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      const response = await axios.get(`${API_URL}/performance/logs/download/`, {
+        params: { file: fileName },
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        responseType: 'blob' // Obligatorio para manejar descargas de archivos con Axios correctamente
+      });
+
+      // Crear URL temporal para simular clic de descarga nativo
+      const blob = new Blob([response.data], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error downloading log file", err);
+    } finally {
+      setDownloadingLog(null);
+    }
+  };
+
+  const formatBytes = (bytes: number, decimals = 2) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  const formatDate = (epoch: number | null) => {
+    if (!epoch) return 'Sin registros';
+    return new Date(epoch * 1000).toLocaleString('es-MX', {
+      dateStyle: 'medium',
+      timeStyle: 'medium'
+    });
+  };
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -43,6 +113,7 @@ const PerformanceDashboard = () => {
     };
 
     fetchSummary();
+    fetchLogs();
   }, []);
 
   if (loading) {
@@ -127,6 +198,65 @@ const PerformanceDashboard = () => {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Sección Profesional de Logs del Sistema */}
+      <div className="mt-8 amber-glass border border-white/10 rounded-2xl p-6 shadow-lg shadow-black/20">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-[#F4F6F0] flex items-center gap-2">
+            <FileText size={20} className="text-amber-honey" /> Logs del Sistema
+          </h2>
+          <button
+            onClick={fetchLogs}
+            disabled={loadingLogs}
+            className="p-2 hover:bg-white/5 border border-white/10 rounded-lg text-[#F4F6F0]/60 hover:text-amber-honey disabled:opacity-50 transition-all duration-200"
+            title="Refrescar lista de logs"
+          >
+            <RefreshCw size={16} className={loadingLogs ? "animate-spin" : ""} />
+          </button>
+        </div>
+
+        {loadingLogs && logs.length === 0 ? (
+          <div className="flex justify-center p-8">
+            <div className="w-6 h-6 border-2 border-amber-honey/20 border-t-amber-honey rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {logs.map((log: any) => (
+              <div
+                key={log.name}
+                className="p-4 bg-white/5 border border-white/5 rounded-xl hover:border-amber-honey/30 transition-all duration-300 flex flex-col justify-between"
+              >
+                <div>
+                  <h3 className="font-mono text-amber-honey font-bold text-sm truncate mb-2">{log.name}</h3>
+                  <div className="text-xs text-[#F4F6F0]/65 space-y-1 mb-4">
+                    <p>Tamaño: <span className="font-mono text-[#F4F6F0] font-bold">{formatBytes(log.size)}</span></p>
+                    <p>Modificado: <span className="text-[#F4F6F0] font-bold">{formatDate(log.modified)}</span></p>
+                  </div>
+                </div>
+
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => downloadLogFile(log.name)}
+                  disabled={downloadingLog === log.name}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 bg-amber-honey hover:bg-amber-honey/95 text-black font-black uppercase text-xs tracking-wider rounded-lg disabled:bg-amber-honey/40 transition-all duration-200"
+                >
+                  {downloadingLog === log.name ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                      <span>Descargando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download size={14} />
+                      <span>Descargar</span>
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
