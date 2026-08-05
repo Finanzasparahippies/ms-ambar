@@ -486,7 +486,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                             amount_paid=0.00
                         )
                         created_vip_tickets.append(ticket)
-                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: VIP")  created_vip_tickets.append(ticket)
+                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: VIP")
 
                 try:
                     from apps.blog.utils import add_buyer_to_event_marketing_list
