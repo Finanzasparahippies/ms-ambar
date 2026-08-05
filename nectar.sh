@@ -176,6 +176,7 @@ show_help() {
     echo "  createsuperuser         - Create a Django admin superuser in dev"
     echo "  shell                   - Open backend python shell in dev"
     echo "  test                    - Run backend tests (Dev)"
+    echo "  pycheck                 - Run Python syntax check (py_compile)"
     echo "  test-frontend           - Run Jest unit tests in Frontend (Dev)"
     echo "  typecheck               - Run TypeScript type-check in Dev frontend"
     echo "  buildcheck              - Run Next.js build check in Dev frontend"
@@ -266,6 +267,18 @@ case $COMMAND in
     install-frontend|install-frontend-dev)
         echo "Installing npm packages in Dev Frontend..."
         run_npm_cmd_dev install "$@"
+        ;;
+    pycheck)
+        echo "Running Python syntax check (py_compile)..."
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_dev_backend"; then
+            $DOCKER_BIN exec ambar_dev_backend python -m py_compile config/settings.py apps/tickets/views.py
+        elif $COMPOSE_BIN ps 2>/dev/null | grep -q "backend"; then
+            $COMPOSE_BIN exec backend python -m py_compile config/settings.py apps/tickets/views.py
+        elif command -v python &> /dev/null; then
+            (cd backend && python -m py_compile config/settings.py apps/tickets/views.py)
+        else
+            $COMPOSE_BIN run --rm -w /app backend python -m py_compile config/settings.py apps/tickets/views.py
+        fi
         ;;
     typecheck)
         echo "Running TypeScript type-check in Dev frontend..."

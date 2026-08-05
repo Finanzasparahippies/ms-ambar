@@ -9,6 +9,10 @@ from .models import Event, Theater, Ticket, Seat, SiteSettings, Coupon
 from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer, SiteSettingsSerializer, CouponSerializer
 import logging
 
+# Instanciación estándar del logger utilizando el nombre del módulo actual.
+# Al usar __name__, resuelve automáticamente a 'apps.tickets.views', lo que hereda las
+# reglas y handlers configurados en settings para 'apps.tickets'.
+logger = logging.getLogger(__name__)
 delivery_logger = logging.getLogger("apps.tickets.delivery")
 
 

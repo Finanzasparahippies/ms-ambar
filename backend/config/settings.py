@@ -247,7 +247,11 @@ SES_EMAIL_HOST_USER = env("SES_EMAIL_HOST_USER", default="")
 SES_EMAIL_HOST_PASSWORD = env("SES_EMAIL_HOST_PASSWORD", default="")
 SES_DEFAULT_FROM_EMAIL = env("SES_DEFAULT_FROM_EMAIL", default="Ms Ambar <hola@msambar.com>")
 
-# Logging configuration to display logs in console with Nectar Labs styling
+# Asegurar la creación dinámica del directorio de logs para evitar errores de E/S
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Logging configuration to display logs in console and log files with Nectar Labs styling
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -256,11 +260,47 @@ LOGGING = {
             'format': '[%(asctime)s] %(levelname)s [%(name)s] %(message)s',
             'datefmt': '%H:%M:%S'
         },
+        'clean': {
+            'format': '[%(asctime)s] %(levelname)s [%(name)s]: %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        },
     },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
+        },
+        'tickets_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'tickets.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
+        },
+        'shop_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'shop.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
+        },
+        'blog_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'blog.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
+        },
+        'dashboard_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'dashboard.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
         },
     },
     'loggers': {
@@ -269,9 +309,24 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
+        'apps.tickets': {
+            'handlers': ['console', 'tickets_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'apps.tickets.delivery': {
-            'handlers': ['console'],
+            'handlers': ['console', 'tickets_file'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps.blog': {
+            'handlers': ['console', 'blog_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.dashboard': {
+            'handlers': ['console', 'dashboard_file'],
+            'level': 'INFO',
             'propagate': False,
         },
         'config': {
