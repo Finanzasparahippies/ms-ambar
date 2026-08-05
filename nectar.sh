@@ -197,6 +197,7 @@ show_help() {
     echo "  shell-staging           - Open backend python shell in staging"
     echo "  collectstatic-staging   - Compile static assets in staging"
     echo "  test-staging            - Run backend tests (Staging)"
+    echo "  pycheck-staging         - Run Python syntax check (Staging)"
     echo "  test-frontend-staging   - Run Jest unit tests in Staging frontend"
     echo "  typecheck-staging       - Run TypeScript type-check in Staging frontend"
     echo "  buildcheck-staging      - Run Next.js build check in Staging frontend"
@@ -215,6 +216,7 @@ show_help() {
     echo "  migrate-prod            - Run database migrations in prod"
     echo "  shell-prod              - Open backend python shell in prod"
     echo "  collectstatic           - Compile static assets in prod"
+    echo "  pycheck-prod            - Run Python syntax check (Prod)"
     echo "  test-frontend-prod      - Run Jest unit tests in Production frontend"
     echo "  install-frontend-prod   - Install npm packages in Production container"
     echo "  certbot                 - Request Let's Encrypt SSL certificate"
@@ -278,6 +280,26 @@ case $COMMAND in
             (cd backend && python -m py_compile config/settings.py apps/tickets/views.py)
         else
             $COMPOSE_BIN run --rm -w /app backend python -m py_compile config/settings.py apps/tickets/views.py
+        fi
+        ;;
+    pycheck-staging)
+        echo "Running Python syntax check (py_compile) in Staging..."
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_staging_backend"; then
+            $DOCKER_BIN exec ambar_staging_backend python -m py_compile config/settings.py apps/tickets/views.py
+        elif $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml ps 2>/dev/null | grep -q "backend-staging"; then
+            $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml exec backend-staging python -m py_compile config/settings.py apps/tickets/views.py
+        else
+            $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml run --rm -w /app backend-staging python -m py_compile config/settings.py apps/tickets/views.py
+        fi
+        ;;
+    pycheck-prod)
+        echo "Running Python syntax check (py_compile) in Production..."
+        if $DOCKER_BIN ps --format '{{.Names}}' 2>/dev/null | grep -q "ambar_backend"; then
+            $DOCKER_BIN exec ambar_backend python -m py_compile config/settings.py apps/tickets/views.py
+        elif $COMPOSE_BIN -f docker-compose.prod.yml ps 2>/dev/null | grep -q "backend"; then
+            $COMPOSE_BIN -f docker-compose.prod.yml exec backend python -m py_compile config/settings.py apps/tickets/views.py
+        else
+            $COMPOSE_BIN -f docker-compose.prod.yml run --rm -w /app backend python -m py_compile config/settings.py apps/tickets/views.py
         fi
         ;;
     typecheck)
