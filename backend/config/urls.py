@@ -10,5 +10,6 @@ urlpatterns = [
     path('api/dashboard/', include('apps.dashboard.urls')),
     path('api/blog/', include('apps.blog.urls')),
     path('api/bookings/', include('apps.bookings.urls')),
+    path('api/gallery/', include('apps.gallery.urls')),
 ]
 

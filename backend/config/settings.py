@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.bookings",
     "apps.performance",
     "apps.dashboard",
+    "apps.gallery",
 ]
 
 MIDDLEWARE = [
@@ -376,3 +377,18 @@ LOGGING = {
 # Override email backend during tests to prevent standard mail functions from accessing real SMTP
 if TESTING:
     EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
+# Cloudinary Configuration
+import cloudinary
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
+    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+}
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key=CLOUDINARY_STORAGE['API_KEY'],
+    api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+    secure=True
+)
+
