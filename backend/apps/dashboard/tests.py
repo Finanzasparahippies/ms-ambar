@@ -80,7 +80,8 @@ class DashboardAppTests(APITestCase):
             seat=self.seat,
             user_email='ticketbuyer@example.com',
             status='paid',
-            has_mg=True
+            has_mg=True,
+            amount_paid=700.00
         )
 
         # Create expense

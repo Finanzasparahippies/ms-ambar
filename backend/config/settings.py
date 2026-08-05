@@ -302,6 +302,22 @@ LOGGING = {
             'backupCount': 5,
             'formatter': 'clean',
         },
+        'events_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'events.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
+        },
+        'users_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'users.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
+        },
     },
     'loggers': {
         'apps': {
@@ -317,6 +333,21 @@ LOGGING = {
         'apps.tickets.delivery': {
             'handlers': ['console', 'tickets_file'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'apps.shop': {
+            'handlers': ['console', 'shop_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.events': {
+            'handlers': ['console', 'events_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.users': {
+            'handlers': ['console', 'users_file'],
+            'level': 'INFO',
             'propagate': False,
         },
         'apps.blog': {

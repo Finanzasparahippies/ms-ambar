@@ -133,7 +133,7 @@ class EventViewSet(viewsets.ModelViewSet):
         logger = logging.getLogger('apps.tickets')
         multiplier = float(event.price_multiplier or 1.0)
         event_numbered_price = float(getattr(event, 'numbered_ticket_price', 0) or 0)
-        logger.info(f"[SeatsView Debug] Event ID={event.id} ({event.title}): event_numbered_price={event_numbered_price}, multiplier={multiplier}, enable_dynamic={event.enable_dynamic_pricing}")
+        logger.debug(f"[SeatsView Debug] Event ID={event.id} ({event.title}): event_numbered_price={event_numbered_price}, multiplier={multiplier}, enable_dynamic={event.enable_dynamic_pricing}")
 
         for seat_data in data:
             if seat_data['id'] in occupied_seat_ids:
@@ -159,7 +159,7 @@ class EventViewSet(viewsets.ModelViewSet):
             seat_data['base_price'] = final_dyn_price
 
         if data:
-            logger.info(f"[SeatsView Debug] Sample Seat #1 resolved price: raw_base={raw_seat_price}, raw_price_with_mult={raw_price}, final_dyn_price={data[0]['base_price']}")
+            logger.debug(f"[SeatsView Debug] Sample Seat #1 resolved price: raw_base={raw_seat_price}, raw_price_with_mult={raw_price}, final_dyn_price={data[0]['base_price']}")
         
         return Response({
             "seats": data,
@@ -345,6 +345,70 @@ class TicketViewSet(viewsets.ModelViewSet):
             except Coupon.DoesNotExist:
                 return Response({'error': 'El código de cupón ingresado no existe.'}, status=status.HTTP_404_NOT_FOUND)
 
+        # [CHECKOUT/INIT] Logger trace calculations
+        total_base_amount = 0.0
+        if event.event_type == 'meet_greet' or is_seatless:
+            qty = int(quantity)
+            if event.event_type == 'meet_greet':
+                total_base_amount = float(event.mg_price) * qty
+            else:
+                seatless_price = getattr(event, 'seatless_ticket_price', 500)
+                multiplier = getattr(event, 'price_multiplier', 1.0)
+                raw_price = float(seatless_price) * float(multiplier)
+                dynamic_price = event.get_dynamic_price(raw_price) if hasattr(event, 'get_dynamic_price') else raw_price
+                total_base_amount = dynamic_price * qty
+                if has_mg and float(event.mg_price) > 0:
+                    total_base_amount += float(event.mg_price) * qty
+        else:
+            for s_id in seat_ids:
+                try:
+                    seat = Seat.objects.get(id=s_id)
+                    event_num_price = float(getattr(event, 'numbered_ticket_price', 0) or 0)
+                    seat_db_price = float(seat.base_price or 0) if seat else 0
+
+                    if event_num_price > 0:
+                        if seat_db_price > 0 and seat_db_price not in [500.0, 1000.0]:
+                            seat_base = event_num_price * (seat_db_price / 1000.0)
+                        else:
+                            seat_base = event_num_price
+                    elif seat_db_price > 0:
+                         seat_base = seat_db_price
+                    else:
+                         seat_base = 1000.0
+                    raw_seat_price = seat_base * float(getattr(event, 'price_multiplier', 1.0) or 1.0)
+                    dynamic_price = event.get_dynamic_price(raw_seat_price) if hasattr(event, 'get_dynamic_price') else raw_seat_price
+                    total_base_amount += dynamic_price
+                except Seat.DoesNotExist:
+                    pass
+            if has_mg and float(event.mg_price) > 0:
+                total_base_amount += float(event.mg_price) * len(seat_ids)
+
+        if coupon_obj:
+            if coupon_obj.discount_type == 'percentage':
+                pct = float(coupon_obj.discount_value or 0)
+                disc_multiplier = max(0.0, (100.0 - pct) / 100.0)
+                total_base_amount *= disc_multiplier
+            elif coupon_obj.discount_type == 'fixed':
+                fixed_val = float(coupon_obj.discount_value or 0)
+                total_base_amount = max(0.0, total_base_amount - fixed_val)
+            elif coupon_obj.discount_type == 'free_vip':
+                total_base_amount = 0.0
+
+        pass_fees_to_buyer = True
+        try:
+            site_settings = SiteSettings.get()
+            pass_fees_to_buyer = getattr(site_settings, 'pass_fees_to_buyer', True)
+        except Exception:
+            pass
+
+        total_with_fees = total_base_amount
+        if pass_fees_to_buyer and total_base_amount > 0:
+            from apps.tickets.fees import calculate_total_with_fee
+            fee_info = calculate_total_with_fee(total_base_amount)
+            total_with_fees = fee_info['total']
+
+        logger.info(f"[CHECKOUT/INIT] [Email: {email} | EventID: {event.id} | TicketUUID: - | StripeID: -] Iniciando proceso de compra. Asientos: {seat_ids}. Total estimado (base + cargos): ${total_with_fees:.2f} MXN")
+
         seats = []
         if event.event_type == 'meet_greet' or is_seatless:
             qty = int(quantity)
@@ -406,6 +470,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                             amount_paid=0.00
                         )
                         created_vip_tickets.append(ticket)
+                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: Sin asiento, Tipo: VIP")
                 else:
                     for seat in seats:
                         ticket = Ticket.objects.create(
@@ -421,6 +486,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                             amount_paid=0.00
                         )
                         created_vip_tickets.append(ticket)
+                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: VIP")  created_vip_tickets.append(ticket)
 
                 try:
                     from apps.blog.utils import add_buyer_to_event_marketing_list
@@ -534,6 +600,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     ticket.amount_paid = get_ticket_actual_price(ticket)
                     ticket.save()
                     created_mock_tickets.append(ticket)
+                    tipo_boleto = "VIP" if ticket.has_mg else "Seatless"
+                    logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: Sin asiento, Tipo: {tipo_boleto}")
             else:
                 from apps.dashboard.views import get_ticket_actual_price
                 for seat in seats:
@@ -551,6 +619,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     ticket.amount_paid = get_ticket_actual_price(ticket)
                     ticket.save()
                     created_mock_tickets.append(ticket)
+                    tipo_boleto = "VIP" if ticket.has_mg else "General"
+                    logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: {tipo_boleto}")
 
             # Registrar al comprador en la lista de marketing del evento
             try:

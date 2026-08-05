@@ -85,7 +85,7 @@ def stripe_webhook(request):
 def handle_failed_payment(session):
     session_id = session.get('id')
     payment_intent_id = session.get('payment_intent')
-    logger.info(f"[Webhook] Registro de pago fallido/rechazado para session={session_id}, payment_intent={payment_intent_id}")
+    logger.info(f"[CHECKOUT/STRIPE_WEBHOOK] [Email: - | EventID: - | TicketUUID: - | StripeID: {session_id}] Pago fallido/expirado/cancelado. Payment Intent: {payment_intent_id}, Estado: failed")
 
     from apps.tickets.models import Ticket
     from apps.shop.models import Order
@@ -140,6 +140,8 @@ def handle_successful_payment(session):
         event = Event.objects.get(id=event_id)
         seat_ids = [s for s in seat_ids_raw.split(',') if s.strip()] if seat_ids_raw else []
 
+        logger.info(f"[CHECKOUT/STRIPE_WEBHOOK] [Email: {user_email} | EventID: {event_id} | TicketUUID: - | StripeID: {session_id}] Pago exitoso procesado. Payment Intent: {session.get('payment_intent')}, Estado: paid")
+
         if seat_ids:
             for seat_id in seat_ids:
                 seat = Seat.objects.get(id=seat_id)
@@ -175,6 +177,9 @@ def handle_successful_payment(session):
                     )
                     ticket.amount_paid = get_ticket_actual_price(ticket)
                     ticket.save()
+                
+                tipo_boleto = "VIP" if ticket.has_mg else "General"
+                logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto confirmado y generado. Tipo: {tipo_boleto}, Asiento: {ticket.seat.row}{ticket.seat.number}")
                 
                 # Trigger delivery only if it wasn't already paid
                 if not ticket_already_paid:
@@ -216,7 +221,9 @@ def handle_successful_payment(session):
                 )
                 ticket.amount_paid = get_ticket_actual_price(ticket)
                 ticket.save()
-                logger.info(f"[Webhook] Boleto General #{ticket.id} creado con éxito.")
+                
+                tipo_boleto = "VIP" if ticket.has_mg else "Seatless"
+                logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto confirmado y generado. Tipo: {tipo_boleto}, Asiento: Sin asiento")
                 
                 try:
                     send_ticket_email(ticket)

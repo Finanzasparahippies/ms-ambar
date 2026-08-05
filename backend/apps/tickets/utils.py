@@ -95,7 +95,7 @@ def send_ticket_email(ticket):
         f"Atentamente, el equipo de Ms Ambar."
     )
 
-    logger.info(f"[Tickets/Delivery] Inicializando mensaje unificado para {ticket.user_email}")
+    logger.info(f"[DELIVERY/SMTP] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id or '-'}] Iniciando pipeline de correo para destinatario: {ticket.user_email}")
 
     # 5. Inicializar el objeto base de Django Mail
     msg = EmailMultiAlternatives(
@@ -115,12 +115,16 @@ def send_ticket_email(ticket):
     msg.attach(qr_image)
 
     # 7. Despachar. Al no definir una 'connection' local, Django usará automáticamente tu FailoverEmailBackend
-    msg.send(fail_silently=False)
-    logger.info(f"[Tickets/Delivery] ✅ Mensaje inyectado exitosamente al pipeline global para {ticket.user_email}")
+    try:
+        msg.send(fail_silently=False)
+        logger.info(f"[DELIVERY/SMTP] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id or '-'}] Status: exitoso. Correo enviado.")
+    except Exception as e:
+        logger.error(f"[DELIVERY/SMTP] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id or '-'}] Status: fallido. Error: {str(e)}")
+        raise e
 
 
 def send_ticket_whatsapp(ticket):
-    logger.info(f"[Ticket] WhatsApp delivery stub: {ticket.token} → {ticket.user_phone}")
+    logger.info(f"[DELIVERY/WHATSAPP] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id or '-'}] Intento de envío por WhatsApp al número: {ticket.user_phone}")
 
 def send_ticket_telegram(ticket):
     logger.info(f"[Ticket] Telegram delivery stub: {ticket.token}")
@@ -131,6 +135,7 @@ def send_coupon_email(coupon, recipient_email, custom_note=''):
     Despacha un correo electrónico elegante con la información del cupón y link de auto-aplicación.
     Si el cupón no tenía correo asignado, lo asigna automáticamente al correo del destinatario para blindar el beneficio.
     """
+    logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email.strip()} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Iniciando pipeline de correo de cupón {coupon.code} para destinatario: {recipient_email.strip()}")
     recipient_email = recipient_email.strip()
     if not coupon.assigned_email:
         coupon.assigned_email = recipient_email
@@ -200,8 +205,8 @@ def send_coupon_email(coupon, recipient_email, custom_note=''):
         )
         msg.attach_alternative(html_content, "text/html")
         msg.send(fail_silently=False)
-        logger.info(f"[Coupons/Delivery] ✅ Cupón {coupon.code} enviado a {recipient_email}")
+        logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Status: exitoso. Correo de cupón enviado a {recipient_email}")
         return True, "Email enviado correctamente."
     except Exception as e:
-        logger.error(f"[Coupons/Delivery] Error enviando correo de cupón: {e}")
+        logger.error(f"[DELIVERY/SMTP] [Email: {recipient_email} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Status: fallido. Error: {str(e)}")
         return False, str(e)
