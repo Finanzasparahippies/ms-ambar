@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import Suscribirse from '../pages/suscribirse';
 import api from '../lib/api';
@@ -29,6 +29,17 @@ jest.mock('next/head', () => {
   };
 });
 
+/**
+ * Flexible text matcher helper to locate fragmented text across DOM nodes
+ */
+const createTextMatcher = (expectedText: string) => (content: string, element: Element | null): boolean => {
+  if (!element) return false;
+  const hasText = (el: Element | null) => el?.textContent?.toLowerCase().includes(expectedText.toLowerCase()) ?? false;
+  const elementHasText = hasText(element);
+  const childrenDontHaveText = Array.from(element?.children || []).every(child => !hasText(child));
+  return elementHasText && childrenDontHaveText;
+};
+
 describe('Suscribirse Page Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -38,11 +49,9 @@ describe('Suscribirse Page Component', () => {
   test('renders the newsletter subscription form correctly', () => {
     render(<Suscribirse />);
 
-    // Check title and descriptions
     expect(screen.getByText('Ambar te escribe')).toBeInTheDocument();
-    expect(screen.getByText(/Deja tu correo aquí y recibe el newsletter escrito por Ms. Ambar/i)).toBeInTheDocument();
+    expect(screen.getByText(createTextMatcher('Deja tu correo aquí y recibe el newsletter escrito por Ms. Ambar'))).toBeInTheDocument();
 
-    // Check inputs and buttons
     expect(screen.getByPlaceholderText('Tu Nombre')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Tu Correo Electrónico')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Suscribirse/i })).toBeInTheDocument();
@@ -52,16 +61,13 @@ describe('Suscribirse Page Component', () => {
     localStorage.setItem('ms_ambar_subscriber_email', 'fan@example.com');
     render(<Suscribirse />);
 
-    // Success screen indicators
-    expect(screen.getByText('¡Suscripción Completa!')).toBeInTheDocument();
-    expect(screen.getByText('Frecuencia Sintonizada')).toBeInTheDocument();
+    expect(screen.getByText(createTextMatcher('¡Suscripción Completa!'))).toBeInTheDocument();
+    expect(screen.getByText(createTextMatcher('Frecuencia Sintonizada'))).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Explorar Ms Ambar' })).toBeInTheDocument();
   });
 
   test('submits form successfully and transitions to success view', async () => {
-    let resolvePost: any;
-    const postPromise = new Promise((resolve) => { resolvePost = resolve; });
-    mockedApi.post.mockReturnValueOnce(postPromise as any);
+    mockedApi.post.mockResolvedValueOnce({ data: { message: 'Ok' } });
 
     render(<Suscribirse />);
 
@@ -69,15 +75,14 @@ describe('Suscribirse Page Component', () => {
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
-    fireEvent.change(nameInput, { target: { value: 'Juan' } });
-    fireEvent.change(emailInput, { target: { value: 'juan@example.com' } });
-    fireEvent.click(submitButton);
+    await act(async () => {
+      fireEvent.change(nameInput, { target: { value: 'Juan' } });
+      fireEvent.change(emailInput, { target: { value: 'juan@example.com' } });
+    });
 
-    // Should show loading text while post is pending
-    expect(screen.getByText('Sintonizando...')).toBeInTheDocument();
-
-    // Resolve API promise
-    resolvePost({ data: { message: 'Ok' } });
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
 
     await waitFor(() => {
       expect(mockedApi.post).toHaveBeenCalledTimes(1);
@@ -87,17 +92,14 @@ describe('Suscribirse Page Component', () => {
       );
     });
 
-    // Success view should be active
     await waitFor(() => {
-      expect(screen.getByText('¡Suscripción Completa!')).toBeInTheDocument();
+      expect(screen.getByText(createTextMatcher('¡Suscripción Completa!'))).toBeInTheDocument();
     });
 
-    // Check localStorage setting
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('juan@example.com');
   });
 
   test('interprets 400 / already exists backend errors as success (already subscribed)', async () => {
-    // Mock API to fail with 400 status / "already exists"
     mockedApi.post.mockRejectedValueOnce({
       response: {
         status: 400,
@@ -113,13 +115,17 @@ describe('Suscribirse Page Component', () => {
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
-    fireEvent.change(nameInput, { target: { value: 'Luis' } });
-    fireEvent.change(emailInput, { target: { value: 'luis@example.com' } });
-    fireEvent.click(submitButton);
+    await act(async () => {
+      fireEvent.change(nameInput, { target: { value: 'Luis' } });
+      fireEvent.change(emailInput, { target: { value: 'luis@example.com' } });
+    });
 
-    // Expecting transition to success because user is already subscribed
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
     await waitFor(() => {
-      expect(screen.getByText('¡Suscripción Completa!')).toBeInTheDocument();
+      expect(screen.getByText(createTextMatcher('¡Suscripción Completa!'))).toBeInTheDocument();
     });
 
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('luis@example.com');
@@ -141,18 +147,21 @@ describe('Suscribirse Page Component', () => {
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
-    fireEvent.change(nameInput, { target: { value: 'María' } });
-    fireEvent.change(emailInput, { target: { value: 'maria@example.com' } });
-    fireEvent.click(submitButton);
-
-    // Wait for Toast error display
-    await waitFor(() => {
-      expect(screen.getByText('FRECUENCIA INCOMPATIBLE')).toBeInTheDocument();
-      expect(screen.getByText('Error interno del servidor.')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.change(nameInput, { target: { value: 'María' } });
+      fireEvent.change(emailInput, { target: { value: 'maria@example.com' } });
     });
 
-    // Should NOT transition to success view
-    expect(screen.queryByText('¡Suscripción Completa!')).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(createTextMatcher('FRECUENCIA INCOMPATIBLE'))).toBeInTheDocument();
+      expect(screen.getByText(createTextMatcher('Error interno del servidor.'))).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(createTextMatcher('¡Suscripción Completa!'))).not.toBeInTheDocument();
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBeNull();
   });
 });

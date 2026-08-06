@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import Swal from 'sweetalert2';
@@ -55,6 +55,21 @@ describe('GalleryPage Frontend Tests', () => {
   let originalPause: typeof HTMLMediaElement.prototype.pause;
 
   beforeAll(() => {
+    // Mock window.matchMedia for react-hot-toast in JSDOM environment
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: jest.fn().mockImplementation(query => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: jest.fn(),
+        removeListener: jest.fn(),
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+      })),
+    });
+
     // Mock HTML5 video elements APIs
     originalPlay = HTMLMediaElement.prototype.play;
     originalPause = HTMLMediaElement.prototype.pause;
@@ -139,13 +154,14 @@ describe('GalleryPage Frontend Tests', () => {
     fireEvent.click(screen.getByText('Concierto 1'));
 
     // Debe mostrar lightbox centrado
-    const dialogImg = screen.getAllByAltText('Concierto 1')[1]; // Uno en tarjeta, otro en modal
-    expect(dialogImg).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByAltText('Concierto 1').length).toBe(2);
+    });
 
     // Navegar al siguiente (Video Cloudinary) usando teclado
     fireEvent.keyDown(window, { key: 'ArrowRight' });
     await waitFor(() => {
-      expect(screen.getByText('Video Detrás de Escena')).toBeInTheDocument();
+      expect(screen.getAllByText('Video Detrás de Escena').length).toBeGreaterThanOrEqual(1);
     });
 
     // Debe renderizar el reproductor de video HTML5 en el lightbox
@@ -157,8 +173,8 @@ describe('GalleryPage Frontend Tests', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
 
     await waitFor(() => {
-      // El modal no debe estar visible
-      expect(screen.queryByRole('dialogImg')).toBeNull();
+      // El modal no debe estar visible (solo la tarjeta en el grid)
+      expect(screen.getAllByAltText('Concierto 1').length).toBe(1);
     });
   });
 
@@ -190,15 +206,21 @@ describe('GalleryPage Frontend Tests', () => {
     });
 
     // Abrir Modal de Carga
-    fireEvent.click(screen.getByText('Añadir Multimedia'));
-    expect(screen.getByText('Guardar Elemento')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByText('Añadir Multimedia'));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('Guardar Elemento')).toBeInTheDocument();
+    });
 
     // Cambiar a origen externo
-    fireEvent.click(screen.getByText('Vincular Enlace (YT/IG/Vimeo)'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Vincular Enlace (YT/IG/Vimeo)'));
+    });
 
     // Simular entrada de enlace externo de YouTube
-    const urlInput = screen.getByPlaceholderText('https://...');
-    fireEvent.change(urlInput, { target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } });
+    const urlInput = await screen.findByPlaceholderText('https://...');
 
     // Mockear endpoint de parseo
     mockedAxios.post.mockResolvedValueOnce({
@@ -214,8 +236,18 @@ describe('GalleryPage Frontend Tests', () => {
       }
     });
 
+    await act(async () => {
+      fireEvent.change(urlInput, { target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } });
+    });
+
+    await waitFor(() => {
+      expect(urlInput).toHaveValue('https://www.youtube.com/watch?v=dQw4w9WgXcQ');
+    });
+
     // Simular blur en el input de URL
-    fireEvent.blur(urlInput);
+    await act(async () => {
+      fireEvent.blur(urlInput, { target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } });
+    });
 
     await waitFor(() => {
       expect(mockedAxios.post).toHaveBeenCalledWith(
@@ -235,7 +267,11 @@ describe('GalleryPage Frontend Tests', () => {
 
     render(<GalleryPage />);
     await waitFor(() => {
-      fireEvent.click(screen.getByText('Añadir Multimedia'));
+      expect(screen.getByText('Añadir Multimedia')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText('Añadir Multimedia'));
+    await waitFor(() => {
+      expect(screen.getByText('Guardar Elemento')).toBeInTheDocument();
     });
 
     // Seleccionar título
@@ -265,6 +301,10 @@ describe('GalleryPage Frontend Tests', () => {
     // Busquemos el input file y simulemos el cambio
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText('photo.png')).toBeInTheDocument();
+    });
 
     fireEvent.click(screen.getByText('Guardar Elemento'));
 

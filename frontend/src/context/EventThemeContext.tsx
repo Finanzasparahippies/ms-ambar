@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { getApiUrl } from '../lib/utils';
 
@@ -213,15 +213,25 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     }
   };
 
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchThemeForEvent = async (eventId?: number | string) => {
     try {
-      setLoading(true);
+      if (isMountedRef.current) setLoading(true);
       const apiUrl = getApiUrl();
       const url = eventId 
         ? `${apiUrl}/tickets/theme/active/?event_id=${eventId}`
         : `${apiUrl}/tickets/theme/active/`;
       
       const res = await axios.get(url);
+      if (!isMountedRef.current) return;
       let baseThemeData: ThemeConfig = DEFAULT_THEME;
 
       if (res.data) {
@@ -257,16 +267,19 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
       const localDraft = getSavedLocalTheme();
       const finalTheme = localDraft ? { ...baseThemeData, ...localDraft } : baseThemeData;
 
-      setTheme(finalTheme);
-      applyThemeToDOM(finalTheme);
+      if (isMountedRef.current) {
+        setTheme(finalTheme);
+        applyThemeToDOM(finalTheme);
+      }
     } catch (err) {
+      if (!isMountedRef.current) return;
       console.warn('[EventThemeContext] Failed to load theme from backend, applying defaults:', err);
       const localDraft = getSavedLocalTheme();
       const finalTheme = localDraft ? { ...DEFAULT_THEME, ...localDraft } : DEFAULT_THEME;
       setTheme(finalTheme);
       applyThemeToDOM(finalTheme);
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   };
 

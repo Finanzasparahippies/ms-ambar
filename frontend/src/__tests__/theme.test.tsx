@@ -22,6 +22,21 @@ const TestComponent = () => {
 describe('EventThemeContext Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    if (!window.matchMedia) {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: jest.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: jest.fn(),
+          removeListener: jest.fn(),
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+          dispatchEvent: jest.fn(),
+        })),
+      });
+    }
   });
 
   test('debe cargar y aplicar los colores y configuración del tema por defecto', async () => {

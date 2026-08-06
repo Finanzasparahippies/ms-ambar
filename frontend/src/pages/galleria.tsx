@@ -226,13 +226,14 @@ export default function GalleryPage() {
   };
 
   // Parse link handler when external link is pasted
-  const handleUrlBlur = async () => {
-    if (!externalUrl) return;
+  const handleUrlBlur = async (e?: React.FocusEvent<HTMLInputElement> | string) => {
+    const targetUrl = typeof e === 'string' ? e : (e?.target?.value || externalUrl);
+    if (!targetUrl) return;
     setParsingLoading(true);
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
     try {
-      const res = await axios.post(`${API_URL}/gallery/items/parse_external_url/`, { url: externalUrl }, { headers });
+      const res = await axios.post(`${API_URL}/gallery/items/parse_external_url/`, { url: targetUrl }, { headers });
       const data = res.data;
       setParsedData(data);
       if (data.title && !title) setTitle(data.title);

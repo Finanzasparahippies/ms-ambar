@@ -23,6 +23,21 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.clear();
+    if (!window.matchMedia) {
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        value: jest.fn().mockImplementation(query => ({
+          matches: false,
+          media: query,
+          onchange: null,
+          addListener: jest.fn(),
+          removeListener: jest.fn(),
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+          dispatchEvent: jest.fn(),
+        })),
+      });
+    }
     mockedAxios.get.mockResolvedValue({ data: {} });
     mockedAxios.post.mockResolvedValue({ data: { status: 'success' } });
   });
