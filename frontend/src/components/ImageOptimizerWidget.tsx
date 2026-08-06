@@ -196,17 +196,6 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
     setUploadProgress(0);
     setMetrics(null);
 
-    const formData = new FormData();
-    selectedFiles.forEach(file => {
-      formData.append('files', file);
-    });
-
-    formData.append('quality', quality.toString());
-    formData.append('max_size', maxSize.toString());
-    formData.append('to_webp', toWebP ? 'true' : 'false');
-    formData.append('save_to_gallery', saveToGallery ? 'true' : 'false');
-    formData.append('category', category);
-
     const token = localStorage.getItem('token');
     const headers: Record<string, string> = {
       'Content-Type': 'multipart/form-data',
@@ -215,25 +204,79 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Configuración de Chunks/Batches (5 archivos por paquete para prevenir HTTP 413 y picos de memoria)
+    const BATCH_SIZE = 5;
+    const totalFiles = selectedFiles.length;
+    const fileBatches: File[][] = [];
+
+    for (let i = 0; i < totalFiles; i += BATCH_SIZE) {
+      fileBatches.push(selectedFiles.slice(i, i + BATCH_SIZE));
+    }
+
+    let combinedProcessedCount = 0;
+    let combinedTotalOriginal = 0;
+    let combinedTotalOptimized = 0;
+    let combinedTotalSaved = 0;
+    const combinedResults: ImageOptimizerResult[] = [];
+
     try {
-      const response = await axios.post<OptimizationMetrics>(
-        `${API_URL}/gallery/items/optimize_images/`,
-        formData,
-        {
-          headers,
-          onUploadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const pct = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-              setUploadProgress(pct);
+      for (let bIndex = 0; bIndex < fileBatches.length; bIndex++) {
+        const batch = fileBatches[bIndex];
+        const formData = new FormData();
+        batch.forEach(file => {
+          formData.append('files', file);
+        });
+
+        formData.append('quality', quality.toString());
+        formData.append('max_size', maxSize.toString());
+        formData.append('to_webp', toWebP ? 'true' : 'false');
+        formData.append('save_to_gallery', saveToGallery ? 'true' : 'false');
+        formData.append('category', category);
+
+        const response = await axios.post<OptimizationMetrics>(
+          `${API_URL}/gallery/items/optimize_images/`,
+          formData,
+          {
+            headers,
+            onUploadProgress: (progressEvent) => {
+              if (progressEvent.total) {
+                const batchPct = progressEvent.loaded / progressEvent.total;
+                const overallPct = Math.round(((bIndex + batchPct) / fileBatches.length) * 100);
+                setUploadProgress(overallPct);
+              }
             }
           }
-        }
-      );
+        );
 
-      setMetrics(response.data);
-      toast.success(`Optimización completada! ${response.data.processed_count} de ${response.data.total_files} procesadas.`);
+        const data = response.data;
+        combinedProcessedCount += data.processed_count;
+        combinedTotalOriginal += data.total_original_bytes;
+        combinedTotalOptimized += data.total_optimized_bytes;
+        combinedTotalSaved += data.total_saved_bytes;
+        if (data.results) {
+          combinedResults.push(...data.results);
+        }
+      }
+
+      const overallReduction = combinedTotalOriginal > 0
+        ? parseFloat(((combinedTotalSaved / combinedTotalOriginal) * 100).toFixed(1))
+        : 0;
+
+      const finalMetrics: OptimizationMetrics = {
+        processed_count: combinedProcessedCount,
+        total_files: totalFiles,
+        total_original_bytes: combinedTotalOriginal,
+        total_optimized_bytes: combinedTotalOptimized,
+        total_saved_bytes: combinedTotalSaved,
+        reduction_percent: overallReduction,
+        results: combinedResults,
+      };
+
+      setMetrics(finalMetrics);
+      setUploadProgress(100);
+      toast.success(`Optimización completada! ${combinedProcessedCount} de ${totalFiles} procesadas.`);
       if (onSuccess) {
-        onSuccess(response.data);
+        onSuccess(finalMetrics);
       }
     } catch (err: any) {
       console.error('Error optimizando imágenes:', err);

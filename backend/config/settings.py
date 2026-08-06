@@ -392,3 +392,9 @@ cloudinary.config(
     secure=True
 )
 
+# File and Payload Upload Limits (100MB for batch image optimization)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
+
+
