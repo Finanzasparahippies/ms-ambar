@@ -410,7 +410,7 @@ export default function GalleryPage() {
   return (
     <div style={gallerySection.style} className="min-h-screen bg-nature-night text-nature-white selection:bg-amber-honey/30 pb-20 transition-colors duration-300">
       <Head>
-        <title>Ms Ambar | Galería de Luz</title>
+        <title>Ms Ambar | Galería</title>
         <meta name="description" content="Visuales oficiales de conciertos, grabaciones y backstage exclusivo del club Ms Ambar." />
       </Head>
       <Toaster position="bottom-right" />
