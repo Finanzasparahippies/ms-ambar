@@ -1,8 +1,8 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axios from 'axios';
-import MusicPage from '../pages/musica';
+import React from 'react';
 import { EventThemeContextProvider } from '../context/EventThemeContext';
+import MusicPage from '../pages/musica';
 
 // Mock axios
 jest.mock('axios');
@@ -16,7 +16,7 @@ describe('MusicPage Component', () => {
   const mockAlbumsData = [
     {
       id: 1,
-      title: 'Eclipse',
+      title: 'Sinfonías de Ámbar',
       release_year: '2026',
       cover_url: 'https://example.com/cover.jpg',
       description: 'Álbum oficial de prueba',
@@ -25,12 +25,20 @@ describe('MusicPage Component', () => {
         {
           id: 101,
           track_number: 1,
-          title: 'Sinfonía del Ámbar I',
+          title: 'Track Uno',
           duration_seconds: 215,
           duration_display: '3:35',
           preview_url: 'https://example.com/preview.mp3'
         }
       ]
+    },
+    {
+      id: 2,
+      title: 'Placeholder Vacío',
+      release_year: '2026',
+      cover_url: '',
+      description: 'Sin tracks',
+      tracks: []
     }
   ];
 
@@ -61,14 +69,15 @@ describe('MusicPage Component', () => {
     expect(screen.getAllByText(/YouTube Music/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  test('renders albums and track items from API data', async () => {
+  test('renames Sinfonías de Ámbar to Ms Ambar Aleatorio and filters out empty placeholder containers', async () => {
     renderWithContext(<MusicPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Eclipse/i)).toBeInTheDocument();
+      expect(screen.getByText(/Ms Ambar Aleatorio/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Sinfonía del Ámbar I/i)).toBeInTheDocument();
+    expect(screen.getByText(/Track Uno/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Placeholder Vacío/i)).not.toBeInTheDocument();
   });
 
   test('displays "Esperando información nueva" when API returns no albums', async () => {
@@ -85,14 +94,14 @@ describe('MusicPage Component', () => {
     renderWithContext(<MusicPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Sinfonía del Ámbar I/i)).toBeInTheDocument();
+      expect(screen.getByText(/Track Uno/i)).toBeInTheDocument();
     });
 
-    const trackRow = screen.getByText(/Sinfonía del Ámbar I/i);
+    const trackRow = screen.getByText(/Track Uno/i);
     fireEvent.click(trackRow);
 
     await waitFor(() => {
-      expect(screen.getAllByText(/Sinfonía del Ámbar I/i).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText(/Track Uno/i).length).toBeGreaterThanOrEqual(1);
     });
   });
 });

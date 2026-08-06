@@ -172,8 +172,9 @@ class MusicIngestionService:
         album_obj, _ = Album.objects.update_or_create(
             itunes_id=f"itunes_album_{query.replace(' ', '_').lower()}",
             defaults={
-                "title": "Sinfonías de Ámbar",
+                "title": "Ms Ambar Aleatorio",
                 "release_year": "2026",
+
                 "cover_url": "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80",
                 "description": "Recopilación oficial de sencillos y colecciones acústicas de Ms. Ambar.",
                 "spotify_url": "https://open.spotify.com",

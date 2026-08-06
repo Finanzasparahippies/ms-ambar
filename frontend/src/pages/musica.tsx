@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, Share2, Disc, Youtube, Music, RefreshCw, Volume2, Sparkles } from 'lucide-react';
@@ -37,6 +37,26 @@ interface AlbumItem {
   tracks: TrackItem[];
 }
 
+const DEFAULT_COVER = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80';
+
+const AlbumCoverImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
+  const [imgSrc, setImgSrc] = useState<string>(src || DEFAULT_COVER);
+
+  useEffect(() => {
+    setImgSrc(src || DEFAULT_COVER);
+  }, [src]);
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      loading="lazy"
+      onError={() => setImgSrc(DEFAULT_COVER)}
+      className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
+    />
+  );
+};
+
 const MusicPage: React.FC = () => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -61,7 +81,12 @@ const MusicPage: React.FC = () => {
       const apiUrl = getApiUrl();
       const res = await axios.get(`${apiUrl}/music/albums/`);
       if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        setAlbums(res.data);
+        // Normalize title: rename "Sinfonías de Ámbar" or "Sinfonías de Ambar" to "Ms Ambar Aleatorio"
+        const normalized = res.data.map((item: AlbumItem) => ({
+          ...item,
+          title: item.title?.includes('Sinfonías') ? 'Ms Ambar Aleatorio' : item.title
+        }));
+        setAlbums(normalized);
       } else {
         setAlbums([]);
       }
@@ -89,7 +114,7 @@ const MusicPage: React.FC = () => {
     }
   };
 
-  const toggleTrackPlayback = (track: TrackItem) => {
+  const toggleTrackPlayback = useCallback((track: TrackItem) => {
     if (!track.preview_url) {
       showToast.error('Vista previa no disponible para este tema.');
       return;
@@ -123,7 +148,10 @@ const MusicPage: React.FC = () => {
     newAudio.onended = () => {
       setIsPlaying(false);
     };
-  };
+  }, [activeTrack, isPlaying]);
+
+  // Filter valid albums that contain tracks to hide secondary placeholders
+  const activeAlbums = albums.filter((alb) => alb.tracks && alb.tracks.length > 0);
 
   return (
     <ThemedSection sectionKey="musica" className="selection:bg-amber-honey/30 min-h-screen relative overflow-hidden">
@@ -207,8 +235,8 @@ const MusicPage: React.FC = () => {
           </a>
         </div>
 
-        {/* Albums or Empty State Section */}
-        {!loading && albums.length === 0 ? (
+        {/* Albums Section or Empty State */}
+        {!loading && activeAlbums.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -234,46 +262,44 @@ const MusicPage: React.FC = () => {
           </motion.div>
         ) : (
           <div className="space-y-24 md:space-y-36">
-            {albums.map((album) => (
-              <motion.section
-                key={album.id}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="flex flex-col lg:flex-row items-stretch gap-10 lg:gap-16 amber-glass p-8 md:p-12 rounded-[3rem] border border-white/10"
-              >
-                {/* Album Cover & Glow Container */}
-                <div className="w-full lg:w-5/12 relative group max-w-md mx-auto lg:max-w-none flex flex-col justify-between">
-                  <div className="relative z-10 aspect-square rounded-[2.5rem] overflow-hidden border border-amber-honey/20 shadow-2xl">
-                    <img
-                      src={album.cover_url || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80'}
-                      alt={album.title}
-                      className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
-                    <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
-                      <span className="text-amber-honey text-xs font-mono font-bold uppercase tracking-widest bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-amber-honey/30">
-                        {album.release_year}
-                      </span>
+            {activeAlbums.map((album) => {
+              const displayTitle = album.title?.includes('Sinfonías') ? 'Ms Ambar Aleatorio' : album.title;
+
+              return (
+                <motion.section
+                  key={album.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="flex flex-col lg:flex-row items-stretch gap-10 lg:gap-16 amber-glass p-8 md:p-12 rounded-[3rem] border border-white/10"
+                >
+                  {/* Album Cover Container */}
+                  <div className="w-full lg:w-5/12 relative group max-w-md mx-auto lg:max-w-none flex flex-col justify-between">
+                    <div className="relative z-10 aspect-square rounded-[2.5rem] overflow-hidden border border-amber-honey/20 shadow-2xl">
+                      <AlbumCoverImage src={album.cover_url} alt={displayTitle} />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 pointer-events-none" />
+                      <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
+                        <span className="text-amber-honey text-xs font-mono font-bold uppercase tracking-widest bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-amber-honey/30">
+                          {album.release_year}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Album Details & Tracks List */}
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <span className="text-amber-honey text-xs font-black tracking-[0.4em] mb-2 block uppercase opacity-70">
-                      Álbum Oficial • {album.tracks?.length || 0} Pistas
-                    </span>
-                    <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter mb-4 text-white">
-                      {album.title}
-                    </h2>
-                    <p className="opacity-60 mb-8 text-sm md:text-base leading-relaxed">
-                      {album.description}
-                    </p>
+                  {/* Album Details & Tracks List */}
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <span className="text-amber-honey text-xs font-black tracking-[0.4em] mb-2 block uppercase opacity-70">
+                        Álbum Oficial • {album.tracks?.length || 0} Pistas
+                      </span>
+                      <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter mb-4 text-white">
+                        {displayTitle}
+                      </h2>
+                      <p className="opacity-60 mb-8 text-sm md:text-base leading-relaxed">
+                        {album.description}
+                      </p>
 
-                    {/* Tracklist Container */}
-                    {album.tracks && album.tracks.length > 0 && (
+                      {/* Tracklist Container */}
                       <div className="space-y-2 mb-8 max-h-[380px] overflow-y-auto custom-scroll pr-2">
                         {album.tracks.map((track) => {
                           const isCurrent = activeTrack?.id === track.id;
@@ -309,33 +335,33 @@ const MusicPage: React.FC = () => {
                           );
                         })}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Direct Platform Links Footer */}
-                  <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-widest font-black text-amber-honey">
-                    <span>Escuchar álbum completo en:</span>
-                    <div className="flex items-center gap-3">
-                      {album.spotify_url && (
-                        <a href={album.spotify_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                          Spotify
-                        </a>
-                      )}
-                      {album.apple_music_url && (
-                        <a href={album.apple_music_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                          Apple Music
-                        </a>
-                      )}
-                      {album.youtube_url && (
-                        <a href={album.youtube_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                          YouTube
-                        </a>
-                      )}
+                    {/* Direct Platform Links Footer */}
+                    <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-widest font-black text-amber-honey">
+                      <span>Escuchar álbum completo en:</span>
+                      <div className="flex items-center gap-3">
+                        {album.spotify_url && (
+                          <a href={album.spotify_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                            Spotify
+                          </a>
+                        )}
+                        {album.apple_music_url && (
+                          <a href={album.apple_music_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                            Apple Music
+                          </a>
+                        )}
+                        {album.youtube_url && (
+                          <a href={album.youtube_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                            YouTube
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.section>
-            ))}
+                </motion.section>
+              );
+            })}
           </div>
         )}
       </div>
