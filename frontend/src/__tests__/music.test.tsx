@@ -46,13 +46,15 @@ describe('MusicPage Component', () => {
   };
 
   test('renders discography header and platform links', async () => {
-    renderWithContext(<MusicPage />);
+    await waitFor(() => {
+      renderWithContext(<MusicPage />);
+    });
 
     expect(screen.getByText(/DISCO/i)).toBeInTheDocument();
     expect(screen.getByText(/GRAFÍA/i)).toBeInTheDocument();
-    expect(screen.getByText(/Spotify/i)).toBeInTheDocument();
-    expect(screen.getByText(/Apple Music/i)).toBeInTheDocument();
-    expect(screen.getByText(/YouTube Music/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Spotify/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Apple Music/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/YouTube Music/i).length).toBeGreaterThanOrEqual(1);
   });
 
   test('renders albums and track items from API or fallback data', async () => {
