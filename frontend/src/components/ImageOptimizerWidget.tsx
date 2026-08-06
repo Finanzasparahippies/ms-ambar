@@ -204,8 +204,8 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    // Configuración de Chunks/Batches (5 archivos por paquete para prevenir HTTP 413 y picos de memoria)
-    const BATCH_SIZE = 5;
+    // Configuración de Chunks/Batches (máximo 3 archivos concurrentes por lote para controlar RAM y workers)
+    const BATCH_SIZE = 3;
     const totalFiles = selectedFiles.length;
     const fileBatches: File[][] = [];
 
@@ -233,28 +233,44 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
         formData.append('save_to_gallery', saveToGallery ? 'true' : 'false');
         formData.append('category', category);
 
-        const response = await axios.post<OptimizationMetrics>(
-          `${API_URL}/gallery/items/optimize_images/`,
-          formData,
-          {
-            headers,
-            onUploadProgress: (progressEvent) => {
-              if (progressEvent.total) {
-                const batchPct = progressEvent.loaded / progressEvent.total;
-                const overallPct = Math.round(((bIndex + batchPct) / fileBatches.length) * 100);
-                setUploadProgress(overallPct);
+        try {
+          const response = await axios.post<OptimizationMetrics>(
+            `${API_URL}/gallery/items/optimize_images/`,
+            formData,
+            {
+              headers,
+              onUploadProgress: (progressEvent) => {
+                if (progressEvent.total) {
+                  const batchPct = progressEvent.loaded / progressEvent.total;
+                  const overallPct = Math.round(((bIndex + batchPct) / fileBatches.length) * 100);
+                  setUploadProgress(overallPct);
+                }
               }
             }
-          }
-        );
+          );
 
-        const data = response.data;
-        combinedProcessedCount += data.processed_count;
-        combinedTotalOriginal += data.total_original_bytes;
-        combinedTotalOptimized += data.total_optimized_bytes;
-        combinedTotalSaved += data.total_saved_bytes;
-        if (data.results) {
-          combinedResults.push(...data.results);
+          const data = response.data;
+          combinedProcessedCount += data.processed_count;
+          combinedTotalOriginal += data.total_original_bytes;
+          combinedTotalOptimized += data.total_optimized_bytes;
+          combinedTotalSaved += data.total_saved_bytes;
+          if (data.results) {
+            combinedResults.push(...data.results);
+          }
+        } catch (batchErr: any) {
+          console.error(`Error procesando lote ${bIndex + 1}:`, batchErr);
+          const errMsg = batchErr.response?.data?.error || batchErr.response?.data?.files || 'Error en transmisión de lote.';
+          batch.forEach(file => {
+            combinedResults.push({
+              filename: file.name,
+              status: 'error',
+              error: typeof errMsg === 'string' ? errMsg : 'Error de transmisión',
+              original_size: file.size,
+              optimized_size: file.size,
+              saved_bytes: 0,
+              reduction_percent: 0.0
+            });
+          });
         }
       }
 
@@ -274,14 +290,13 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
 
       setMetrics(finalMetrics);
       setUploadProgress(100);
-      toast.success(`Optimización completada! ${combinedProcessedCount} de ${totalFiles} procesadas.`);
+      toast.success(`Proceso completado: ${combinedProcessedCount} de ${totalFiles} procesadas.`);
       if (onSuccess) {
         onSuccess(finalMetrics);
       }
     } catch (err: any) {
-      console.error('Error optimizando imágenes:', err);
-      const errMsg = err.response?.data?.error || err.response?.data?.files || 'Error al procesar las imágenes en el servidor.';
-      toast.error(typeof errMsg === 'string' ? errMsg : 'Ocurrió un error en la optimización.');
+      console.error('Error global optimizando imágenes:', err);
+      toast.error('Ocurrió un error en el flujo de optimización.');
     } finally {
       setIsProcessing(false);
     }

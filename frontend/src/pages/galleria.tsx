@@ -9,6 +9,7 @@ import {
   Maximize,
   Play,
   Plus,
+  Pencil,
   Sparkles,
   Trash2,
   Upload,
@@ -86,6 +87,54 @@ export default function GalleryPage() {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [parsingLoading, setParsingLoading] = useState(false);
+
+  // Edit Metadata Modal State
+  const [editingItem, setEditingItem] = useState<GalleryItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editOrder, setEditOrder] = useState(0);
+  const [editSaving, setEditSaving] = useState(false);
+
+  const handleOpenEdit = (item: GalleryItem) => {
+    setEditingItem(item);
+    setEditTitle(item.title || '');
+    setEditDescription(item.description || '');
+    setEditCategory(item.category || '');
+    setEditOrder(item.order || 0);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingItem) return;
+
+    if (!editTitle.trim()) {
+      return toast.error('El título es requerido.');
+    }
+
+    setEditSaving(true);
+    const token = localStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+
+    try {
+      const response = await axios.patch(`${API_URL}/gallery/items/${editingItem.id}/`, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        category: editCategory.trim(),
+        order: editOrder
+      }, { headers });
+
+      const updated = response.data;
+      setItems(prev => prev.map(it => it.id === editingItem.id ? updated : it));
+      toast.success('Metadatos actualizados correctamente.');
+      setEditingItem(null);
+    } catch (err: any) {
+      console.error('Error actualizando metadatos:', err);
+      toast.error('No se pudieron guardar las modificaciones.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   // Form Fields
   const [title, setTitle] = useState('');
@@ -603,15 +652,25 @@ export default function GalleryPage() {
                     </div>
                   </div>
 
-                  {/* Admin Delete Action */}
+                  {/* Admin Actions Bar (Edit & Delete) */}
                   {isAdmin && (
-                    <div className="absolute bottom-6 right-6 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <div className="absolute bottom-6 right-6 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEdit(item);
+                        }}
+                        className="p-3 bg-amber-400/20 text-amber-400 border border-amber-400/40 hover:bg-amber-400 hover:text-slate-950 rounded-full transition-all duration-300 shadow-md"
+                        title="Editar Metadatos"
+                      >
+                        <Pencil size={16} />
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteItem(item.id, item.title);
                         }}
-                        className="p-3 bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white rounded-full transition-all duration-300"
+                        className="p-3 bg-red-600/20 text-red-500 border border-red-500/30 hover:bg-red-600 hover:text-white rounded-full transition-all duration-300 shadow-md"
                         title="Borrar de Galería"
                       >
                         <Trash2 size={16} />
@@ -1019,6 +1078,127 @@ export default function GalleryPage() {
                   fetchItems();
                 }}
               />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Admin Metadata Edit Modal */}
+      <AnimatePresence>
+        {editingItem && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 30 }}
+              className="bg-[#121218] border border-slate-700/80 rounded-[3rem] w-full max-w-xl p-8 relative shadow-2xl text-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setEditingItem(null)}
+                className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/50 hover:bg-slate-800 transition-colors"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-2 text-amber-400 font-bold uppercase tracking-widest text-xs mb-1">
+                <Pencil size={15} />
+                <span>Edición de Metadatos</span>
+              </div>
+              <h2 className="text-3xl font-black mb-6 uppercase tracking-tight text-white italic">
+                Editar <span className="text-amber-400">Elemento</span>
+              </h2>
+
+              <form onSubmit={handleSaveEdit} className="space-y-5">
+                {/* Title */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                    Título
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors font-medium"
+                    placeholder="Título del elemento"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                    Descripción
+                  </label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors resize-none font-medium"
+                    placeholder="Detalles sobre el medio..."
+                  />
+                </div>
+
+                {/* Category & Order */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                      Categoría
+                    </label>
+                    <input
+                      type="text"
+                      value={editCategory}
+                      onChange={(e) => setEditCategory(e.target.value)}
+                      className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors font-medium"
+                      placeholder="Ej: Tour, Concierto..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
+                      Orden
+                    </label>
+                    <input
+                      type="number"
+                      value={editOrder}
+                      onChange={(e) => setEditOrder(parseInt(e.target.value) || 0)}
+                      className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors font-medium"
+                    />
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem(null)}
+                    className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition-colors text-xs"
+                  >
+                    Cancelar
+                  </button>
+
+                  <motion.button
+                    type="submit"
+                    disabled={editSaving}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg disabled:opacity-50 transition-colors text-xs flex items-center justify-center gap-2"
+                  >
+                    {editSaving ? (
+                      <>
+                        <Loader2 className="animate-spin" size={15} />
+                        Guardando...
+                      </>
+                    ) : (
+                      'Guardar Cambios'
+                    )}
+                  </motion.button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
