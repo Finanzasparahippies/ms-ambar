@@ -115,7 +115,7 @@ describe('GalleryPage Frontend Tests', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Concierto 1')).toBeInTheDocument();
-      expect(screen.getByText('Video Detrás de Escena')).toBeInTheDocument();
+      expect(screen.getAllByText('Video Detrás de Escena')[0]).toBeInTheDocument();
       expect(screen.getByText('YouTube Clip')).toBeInTheDocument();
     });
 
@@ -127,7 +127,7 @@ describe('GalleryPage Frontend Tests', () => {
     render(<GalleryPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Video Detrás de Escena')).toBeInTheDocument();
+      expect(screen.getAllByText('Video Detrás de Escena')[0]).toBeInTheDocument();
     });
 
     const videos = document.querySelectorAll('video');

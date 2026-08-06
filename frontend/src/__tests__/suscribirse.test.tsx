@@ -36,8 +36,10 @@ describe('Suscribirse Page Component', () => {
     localStorage.clear();
   });
 
-  test('renders the newsletter subscription form correctly', () => {
-    render(<Suscribirse />);
+  test('renders the newsletter subscription form correctly', async () => {
+    await act(async () => {
+      render(<Suscribirse />);
+    });
 
     expect(screen.getByText('Ambar te escribe')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Tu Nombre')).toBeInTheDocument();
@@ -45,9 +47,12 @@ describe('Suscribirse Page Component', () => {
     expect(screen.getByRole('button', { name: /Suscribirse/i })).toBeInTheDocument();
   });
 
-  test('renders the success screen immediately if email exists in localStorage on mount', () => {
+  test('renders the success screen immediately if email exists in localStorage on mount', async () => {
     localStorage.setItem('ms_ambar_subscriber_email', 'fan@example.com');
-    render(<Suscribirse />);
+    
+    await act(async () => {
+      render(<Suscribirse />);
+    });
 
     expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
     expect(screen.getByText(/Frecuencia Sintonizada/i)).toBeInTheDocument();
@@ -56,7 +61,9 @@ describe('Suscribirse Page Component', () => {
 
   test('submits form successfully and transitions to success view', async () => {
     const user = userEvent.setup();
-    mockedApi.post.mockResolvedValueOnce({ data: { message: 'Ok' } });
+    let resolvePost: any;
+    const postPromise = new Promise((resolve) => { resolvePost = resolve; });
+    mockedApi.post.mockImplementationOnce(() => postPromise as any);
 
     render(<Suscribirse />);
 
@@ -64,10 +71,17 @@ describe('Suscribirse Page Component', () => {
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
+    await user.type(nameInput, 'Juan');
+    await user.type(emailInput, 'juan@example.com');
+
     await act(async () => {
-      await user.type(nameInput, 'Juan');
-      await user.type(emailInput, 'juan@example.com');
       await user.click(submitButton);
+    });
+
+    expect(screen.getByText(/Sintonizando.../i)).toBeInTheDocument();
+
+    await act(async () => {
+      resolvePost({ data: { message: 'Ok' } });
     });
 
     await waitFor(() => {
@@ -76,10 +90,10 @@ describe('Suscribirse Page Component', () => {
         '/blog/subscribers/',
         { email: 'juan@example.com', name: 'Juan' }
       );
-    });
-
-    await waitFor(() => {
       expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
+      expect(screen.getByText(/Frecuencia Sintonizada/i)).toBeInTheDocument();
+      expect(screen.getByText(/SINTONIZACIÓN/i)).toBeInTheDocument();
+      expect(screen.getByText(/Te has suscrito con éxito al Newsletter de Ms Ambar./i)).toBeInTheDocument();
     });
 
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('juan@example.com');
@@ -102,14 +116,16 @@ describe('Suscribirse Page Component', () => {
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
+    await user.type(nameInput, 'Luis');
+    await user.type(emailInput, 'luis@example.com');
+
     await act(async () => {
-      await user.type(nameInput, 'Luis');
-      await user.type(emailInput, 'luis@example.com');
       await user.click(submitButton);
     });
 
     await waitFor(() => {
       expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
+      expect(screen.getByText(/Suscripción confirmada. Acceso concedido./i)).toBeInTheDocument();
     });
 
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('luis@example.com');
@@ -132,9 +148,10 @@ describe('Suscribirse Page Component', () => {
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
+    await user.type(nameInput, 'María');
+    await user.type(emailInput, 'maria@example.com');
+
     await act(async () => {
-      await user.type(nameInput, 'María');
-      await user.type(emailInput, 'maria@example.com');
       await user.click(submitButton);
     });
 
