@@ -183,7 +183,7 @@ const MusicPage: React.FC = () => {
         audioRef.current.pause();
         setIsPlaying(false);
       } else if (audioRef.current) {
-        audioRef.current.play().catch(() => {});
+        audioRef.current.play().catch(() => { });
         setIsPlaying(true);
       }
       return;
@@ -243,7 +243,7 @@ const MusicPage: React.FC = () => {
             >
               DISCO<span className="text-amber-honey text-glow">GRAFÍA</span>
             </motion.h1>
-            
+
             {/* Configurable Discography Description with Emojis */}
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -410,11 +410,10 @@ const MusicPage: React.FC = () => {
                             <div
                               key={track.id}
                               onClick={() => toggleTrackPlayback(track)}
-                              className={`flex items-center justify-between py-3.5 px-5 rounded-2xl transition-all cursor-pointer border ${
-                                isCurrent
-                                  ? 'bg-amber-honey/20 border-amber-honey text-amber-honey font-bold shadow-lg shadow-amber-honey/10'
-                                  : 'bg-white/5 border-transparent hover:border-white/15 hover:bg-white/10 text-white/90'
-                              }`}
+                              className={`flex items-center justify-between py-3.5 px-5 rounded-2xl transition-all cursor-pointer border ${isCurrent
+                                ? 'bg-amber-honey/20 border-amber-honey text-amber-honey font-bold shadow-lg shadow-amber-honey/10'
+                                : 'bg-white/5 border-transparent hover:border-white/15 hover:bg-white/10 text-white/90'
+                                }`}
                             >
                               <div className="flex items-center gap-4">
                                 <button className="w-8 h-8 rounded-full bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center text-amber-honey focus:outline-none">
@@ -462,42 +461,134 @@ const MusicPage: React.FC = () => {
                         </a>
                       </div>
                     </div>
+                    </div>
+                  </motion.section>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Official Embedded Playlists & Video Widgets Section */}
+              <motion.section
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="mt-20 md:mt-28"
+              >
+                <div className="flex items-center gap-3 text-amber-honey text-xs font-black uppercase tracking-[0.4em] mb-3">
+                  <Sparkles size={16} /> DESCUBRE A MS AMBAR
+                </div>
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-white mb-8">
+                  PLAYLISTS & <span className="text-amber-honey text-glow">VIDEOS</span>
+                </h2>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 w-full">
+                  {/* Spotify Official Playlist Widget */}
+                  <div className="amber-glass border border-amber-honey/20 hover:border-amber-honey/40 transition-all p-4 sm:p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-3 mb-4 px-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-[#1DB954]/20 border border-[#1DB954]/40 flex items-center justify-center text-[#1DB954]">
+                          <Play size={14} fill="currentColor" className="ml-0.5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-black uppercase text-white tracking-tight">Spotify Playlist</h3>
+                          <p className="text-[10px] font-mono text-amber-honey/70 uppercase">Ms. Ambar • Selección Oficial</p>
+                        </div>
+                      </div>
+                      <a
+                        href={OFFICIAL_LINKS.spotify}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors focus:outline-none"
+                      >
+                        Abrir en App ↗
+                      </a>
+                    </div>
+
+                    <div className="w-full rounded-2xl overflow-hidden shadow-inner border border-white/10 bg-black/40">
+                      <iframe
+                        src="https://open.spotify.com/embed/playlist/4SIS3MJKl1MVuumtycPU22?utm_source=generator&si=917272ce4bf54736"
+                        width="100%"
+                        height="352"
+                        frameBorder="0"
+                        allowFullScreen
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                        title="Spotify Playlist Oficial Ms Ambar"
+                        className="w-full rounded-2xl min-h-[320px] sm:min-h-[352px]"
+                      />
+                    </div>
                   </div>
-                </motion.section>
-              );
-            })}
-          </div>
-        )}
+
+                  {/* YouTube Official Video Series Widget */}
+                  <div className="amber-glass border border-amber-honey/20 hover:border-amber-honey/40 transition-all p-4 sm:p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between">
+                    <div className="flex items-center justify-between gap-3 mb-4 px-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500">
+                          <Youtube size={16} />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-black uppercase text-white tracking-tight">YouTube Videografía</h3>
+                          <p className="text-[10px] font-mono text-amber-honey/70 uppercase">Canal Oficial • Videos & Lives</p>
+                        </div>
+                      </div>
+                      <a
+                        href={OFFICIAL_LINKS.youtube}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors focus:outline-none"
+                      >
+                        Ver en YouTube ↗
+                      </a>
+                    </div>
+
+                    <div className="w-full rounded-2xl overflow-hidden shadow-inner border border-white/10 bg-black/40 aspect-video lg:h-[352px]">
+                      <iframe
+                        src="https://www.youtube.com/embed/videoseries?si=gPM5tQHCXG-Pcxpi&list=PL1imJPq1V79Q72PCZk8bIBwQWW30a0fIP"
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        allowFullScreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        loading="lazy"
+                        title="YouTube Videografía Oficial Ms Ambar"
+                        className="w-full h-full rounded-2xl min-h-[220px] sm:min-h-[280px] lg:min-h-[352px]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </motion.section>
       </div>
 
-      {/* Floating Sticky Audio Player Control Bar */}
-      <AnimatePresence>
-        {activeTrack && (
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-6 left-6 right-6 md:left-auto md:right-10 md:w-96 z-[120] amber-glass p-4 rounded-3xl border border-amber-honey/40 shadow-2xl flex items-center justify-between gap-4"
-          >
-            <div className="flex items-center gap-3 truncate">
-              <div className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center font-bold">
-                <Volume2 size={20} className={isPlaying ? 'animate-bounce' : ''} />
-              </div>
-              <div className="truncate">
-                <p className="text-xs font-black uppercase text-white truncate">{activeTrack.title}</p>
-                <p className="text-[9px] font-mono text-amber-honey uppercase tracking-wider">Ms Ambar • Vista Previa</p>
-              </div>
-            </div>
 
-            <button
-              onClick={() => toggleTrackPlayback(activeTrack)}
-              className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform focus:outline-none"
+      {/* Floating Sticky Audio Player Control Bar */}
+        <AnimatePresence>
+          {activeTrack && (
+            <motion.div
+              initial={{ y: 100, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 100, opacity: 0 }}
+              className="fixed bottom-6 left-6 right-6 md:left-auto md:right-10 md:w-96 z-[120] amber-glass p-4 rounded-3xl border border-amber-honey/40 shadow-2xl flex items-center justify-between gap-4"
             >
-              {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div className="flex items-center gap-3 truncate">
+                <div className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center font-bold">
+                  <Volume2 size={20} className={isPlaying ? 'animate-bounce' : ''} />
+                </div>
+                <div className="truncate">
+                  <p className="text-xs font-black uppercase text-white truncate">{activeTrack.title}</p>
+                  <p className="text-[9px] font-mono text-amber-honey uppercase tracking-wider">Ms Ambar • Vista Previa</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => toggleTrackPlayback(activeTrack)}
+                className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform focus:outline-none"
+              >
+                {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
     </ThemedSection>
   );
 };

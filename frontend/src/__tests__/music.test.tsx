@@ -81,7 +81,7 @@ describe('MusicPage Component', () => {
       expect(screen.getByText(/DISCO/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/GRAFÍA/i)).toBeInTheDocument();
+    expect(screen.getByText('GRAFÍA')).toBeInTheDocument();
 
     const spotifyLinks = screen.getAllByText(/Spotify/i);
     expect(spotifyLinks.length).toBeGreaterThanOrEqual(1);
@@ -130,18 +130,21 @@ describe('MusicPage Component', () => {
     });
   });
 
-  test('handles audio preview playback toggle on track click', async () => {
+  test('renders embedded Spotify and YouTube playlist widgets with lazy loading', async () => {
     renderWithContext(<MusicPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Track Uno/i)).toBeInTheDocument();
+      expect(screen.getByTitle(/Spotify Playlist Oficial Ms Ambar/i)).toBeInTheDocument();
+      expect(screen.getByTitle(/YouTube Videografía Oficial Ms Ambar/i)).toBeInTheDocument();
     });
 
-    const trackRow = screen.getByText(/Track Uno/i);
-    fireEvent.click(trackRow);
+    const spotifyIframe = screen.getByTitle(/Spotify Playlist Oficial Ms Ambar/i);
+    expect(spotifyIframe).toHaveAttribute('src', expect.stringContaining('4SIS3MJKl1MVuumtycPU22'));
+    expect(spotifyIframe).toHaveAttribute('loading', 'lazy');
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/Track Uno/i).length).toBeGreaterThanOrEqual(1);
-    });
+    const youtubeIframe = screen.getByTitle(/YouTube Videografía Oficial Ms Ambar/i);
+    expect(youtubeIframe).toHaveAttribute('src', expect.stringContaining('PL1imJPq1V79Q72PCZk8bIBwQWW30a0fIP'));
+    expect(youtubeIframe).toHaveAttribute('loading', 'lazy');
   });
 });
+
