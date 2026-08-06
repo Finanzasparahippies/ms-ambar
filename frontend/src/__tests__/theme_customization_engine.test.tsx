@@ -103,4 +103,18 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
       expect(screen.getByText('Controles: hero')).toBeInTheDocument();
     });
   });
+
+  test('debe inyectar variables CSS para estados Hover y Focus en la raíz del DOM', async () => {
+    render(
+      <EventThemeContextProvider>
+        <DummySectionConsumer sectionKey="hero" />
+      </EventThemeContextProvider>
+    );
+
+    const rootStyle = document.documentElement.style;
+    expect(rootStyle.getPropertyValue('--button-hover-bg')).toBeTruthy();
+    expect(rootStyle.getPropertyValue('--button-focus-ring')).toBeTruthy();
+    expect(rootStyle.getPropertyValue('--card-hover-border')).toBeTruthy();
+    expect(rootStyle.getPropertyValue('--element-hover-color')).toBeTruthy();
+  });
 });

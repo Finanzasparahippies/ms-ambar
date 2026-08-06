@@ -98,11 +98,9 @@ const Navbar = () => {
     { name: 'Inicio', href: '/' },
     { name: 'Accesos', href: '/comprar-boletos' },
     { name: 'Galería', href: '/galeria' },
-    // { name: 'Música', href: '/musica' }, // TODO: Habilitar cuando esté completado
-    // { name: 'Tienda', href: '/tienda' }, // TODO: Habilitar cuando esté completado
+    { name: 'Música', href: '/musica' },
     { name: 'Ambar te escribe', href: '/ambar-te-escribe' },
     { name: 'Contacto', href: '/contacto' },
-    // { name: 'Entretenimiento', href: '/entretenimiento' }, // TODO: Habilitar cuando esté completado
   ];
 
   return (

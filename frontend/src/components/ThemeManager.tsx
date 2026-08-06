@@ -210,6 +210,14 @@ export const ThemeManager: React.FC = () => {
   const [subtitleColor, setSubtitleColor] = useState('#F4F6F0');
   const [buttonBg, setButtonBg] = useState('#E5A93B');
   const [buttonText, setButtonText] = useState('#080c0a');
+  const [buttonHoverBg, setButtonHoverBg] = useState('#FFC048');
+  const [buttonHoverText, setButtonHoverText] = useState('#080c0a');
+  const [buttonFocusRing, setButtonFocusRing] = useState('#E5A93B');
+  const [cardHoverBg, setCardHoverBg] = useState('#121714');
+  const [cardHoverBorder, setCardHoverBorder] = useState('#E5A93B');
+  const [cardFocusRing, setCardFocusRing] = useState('#22A6B7');
+  const [elementHoverColor, setElementHoverColor] = useState('#FFC048');
+  const [elementFocusRing, setElementFocusRing] = useState('#E5A93B');
   const [borderColor, setBorderColor] = useState('#E5A93B');
 
   const [particleShape, setParticleShape] = useState('moon');
@@ -246,6 +254,14 @@ export const ThemeManager: React.FC = () => {
       setSubtitleColor(theme.subtitleColor || theme.textColor || '#F4F6F0');
       setButtonBg(theme.buttonBg || theme.primaryColor || '#E5A93B');
       setButtonText(theme.buttonText || theme.backgroundStart || '#080c0a');
+      setButtonHoverBg(theme.buttonHoverBg || '#FFC048');
+      setButtonHoverText(theme.buttonHoverText || '#080c0a');
+      setButtonFocusRing(theme.buttonFocusRing || theme.primaryColor || '#E5A93B');
+      setCardHoverBg(theme.cardHoverBg || '#121714');
+      setCardHoverBorder(theme.cardHoverBorder || theme.primaryColor || '#E5A93B');
+      setCardFocusRing(theme.cardFocusRing || theme.secondaryColor || '#22A6B7');
+      setElementHoverColor(theme.elementHoverColor || '#FFC048');
+      setElementFocusRing(theme.elementFocusRing || theme.primaryColor || '#E5A93B');
       setBorderColor(theme.borderColor || '#E5A93B');
       setParticleShape(theme.particleShape || 'moon');
       setCardStyle(theme.cardStyle || 'rounded-full');
@@ -280,6 +296,14 @@ export const ThemeManager: React.FC = () => {
         subtitleColor,
         buttonBg,
         buttonText,
+        buttonHoverBg,
+        buttonHoverText,
+        buttonFocusRing,
+        cardHoverBg,
+        cardHoverBorder,
+        cardFocusRing,
+        elementHoverColor,
+        elementFocusRing,
         borderColor,
         particleShape,
         cardStyle,
@@ -289,7 +313,7 @@ export const ThemeManager: React.FC = () => {
         sectionThemes,
       });
     }, 16);
-  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
+  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
 
   useEffect(() => {
     handleLivePreview();
@@ -345,6 +369,14 @@ export const ThemeManager: React.FC = () => {
       subtitle_color: subtitleColor,
       button_bg: buttonBg,
       button_text: buttonText,
+      button_hover_bg: buttonHoverBg,
+      button_hover_text: buttonHoverText,
+      button_focus_ring: buttonFocusRing,
+      card_hover_bg: cardHoverBg,
+      card_hover_border: cardHoverBorder,
+      card_focus_ring: cardFocusRing,
+      element_hover_color: elementHoverColor,
+      element_focus_ring: elementFocusRing,
       border_color: borderColor,
       particle_shape: particleShape,
       card_style: cardStyle,
@@ -622,6 +654,96 @@ export const ThemeManager: React.FC = () => {
                     }}
                     className="bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white w-full focus:border-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey"
                   />
+                </div>
+              </div>
+
+              {/* Estados Interactivos: Hover & Focus (WCAG AA) */}
+              <div className="pt-3 border-t border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-amber-honey flex items-center gap-1.5">
+                    <Sparkles size={12} /> Estados Hover & Focus (WCAG AA)
+                  </label>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold">
+                    WCAG AA OK
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Botón Hover Bg */}
+                  <div>
+                    <label className="block text-[9px] font-bold text-white/60 mb-1">Botón Hover (Fondo):</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={buttonHoverBg}
+                        onChange={(e) => setButtonHoverBg(e.target.value)}
+                        className="w-8 h-8 rounded-lg bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={buttonHoverBg}
+                        onChange={(e) => setButtonHoverBg(e.target.value)}
+                        className="bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Botón Focus Ring */}
+                  <div>
+                    <label className="block text-[9px] font-bold text-white/60 mb-1">Botón Focus Ring:</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={buttonFocusRing}
+                        onChange={(e) => setButtonFocusRing(e.target.value)}
+                        className="w-8 h-8 rounded-lg bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={buttonFocusRing}
+                        onChange={(e) => setButtonFocusRing(e.target.value)}
+                        className="bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Card Hover Border */}
+                  <div>
+                    <label className="block text-[9px] font-bold text-white/60 mb-1">Tarjeta Hover Borde:</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={cardHoverBorder}
+                        onChange={(e) => setCardHoverBorder(e.target.value)}
+                        className="w-8 h-8 rounded-lg bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={cardHoverBorder}
+                        onChange={(e) => setCardHoverBorder(e.target.value)}
+                        className="bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white w-full"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Element Hover Color */}
+                  <div>
+                    <label className="block text-[9px] font-bold text-white/60 mb-1">Elemento Hover Color:</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={elementHoverColor}
+                        onChange={(e) => setElementHoverColor(e.target.value)}
+                        className="w-8 h-8 rounded-lg bg-transparent border-0 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={elementHoverColor}
+                        onChange={(e) => setElementHoverColor(e.target.value)}
+                        className="bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white w-full"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

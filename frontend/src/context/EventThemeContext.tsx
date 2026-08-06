@@ -13,6 +13,14 @@ export interface SectionThemeSpec {
   card_bg?: string;
   button_bg?: string;
   button_text?: string;
+  button_hover_bg?: string;
+  button_hover_text?: string;
+  button_focus_ring?: string;
+  card_hover_bg?: string;
+  card_hover_border?: string;
+  card_focus_ring?: string;
+  element_hover_color?: string;
+  element_focus_ring?: string;
   border_color?: string;
   particle_shape?: string;
   card_style?: string;
@@ -45,6 +53,14 @@ export interface ThemeConfig {
   subtitleColor?: string;
   buttonBg?: string;
   buttonText?: string;
+  buttonHoverBg?: string;
+  buttonHoverText?: string;
+  buttonFocusRing?: string;
+  cardHoverBg?: string;
+  cardHoverBorder?: string;
+  cardFocusRing?: string;
+  elementHoverColor?: string;
+  elementFocusRing?: string;
   borderColor?: string;
   particleShape: string;
   cardStyle: string;
@@ -80,6 +96,14 @@ const DEFAULT_THEME: ThemeConfig = {
   subtitleColor: '#F4F6F0',
   buttonBg: '#E5A93B',
   buttonText: '#080c0a',
+  buttonHoverBg: '#FFC048',
+  buttonHoverText: '#080c0a',
+  buttonFocusRing: '#E5A93B',
+  cardHoverBg: '#121714',
+  cardHoverBorder: '#E5A93B',
+  cardFocusRing: '#22A6B7',
+  elementHoverColor: '#FFC048',
+  elementFocusRing: '#E5A93B',
   borderColor: 'rgba(229, 169, 59, 0.25)',
   particleShape: 'moon',
   cardStyle: 'rounded-full',
@@ -162,6 +186,14 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.style.setProperty('--subtitle-color', cfg.subtitleColor || cfg.textColor);
     root.style.setProperty('--button-bg', cfg.buttonBg || cfg.primaryColor);
     root.style.setProperty('--button-text', cfg.buttonText || cfg.backgroundStart);
+    root.style.setProperty('--button-hover-bg', cfg.buttonHoverBg || '#FFC048');
+    root.style.setProperty('--button-hover-text', cfg.buttonHoverText || '#080c0a');
+    root.style.setProperty('--button-focus-ring', cfg.buttonFocusRing || cfg.primaryColor);
+    root.style.setProperty('--card-hover-bg', cfg.cardHoverBg || '#121714');
+    root.style.setProperty('--card-hover-border', cfg.cardHoverBorder || cfg.primaryColor);
+    root.style.setProperty('--card-focus-ring', cfg.cardFocusRing || cfg.secondaryColor);
+    root.style.setProperty('--element-hover-color', cfg.elementHoverColor || '#FFC048');
+    root.style.setProperty('--element-focus-ring', cfg.elementFocusRing || cfg.primaryColor);
     root.style.setProperty('--border-color', cfg.borderColor || `rgba(${hexToRgbTriplet(cfg.primaryColor)}, 0.25)`);
 
     // Card radius mapping
@@ -249,6 +281,14 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
           subtitleColor: d.subtitle_color || d.text_color || DEFAULT_THEME.subtitleColor,
           buttonBg: d.button_bg || d.primary_color || DEFAULT_THEME.buttonBg,
           buttonText: d.button_text || d.background_start || DEFAULT_THEME.buttonText,
+          buttonHoverBg: d.button_hover_bg || DEFAULT_THEME.buttonHoverBg,
+          buttonHoverText: d.button_hover_text || DEFAULT_THEME.buttonHoverText,
+          buttonFocusRing: d.button_focus_ring || DEFAULT_THEME.buttonFocusRing,
+          cardHoverBg: d.card_hover_bg || DEFAULT_THEME.cardHoverBg,
+          cardHoverBorder: d.card_hover_border || DEFAULT_THEME.cardHoverBorder,
+          cardFocusRing: d.card_focus_ring || DEFAULT_THEME.cardFocusRing,
+          elementHoverColor: d.element_hover_color || DEFAULT_THEME.elementHoverColor,
+          elementFocusRing: d.element_focus_ring || DEFAULT_THEME.elementFocusRing,
           borderColor: d.border_color || DEFAULT_THEME.borderColor,
           particleShape: d.particle_shape || DEFAULT_THEME.particleShape,
           cardStyle: d.card_style || DEFAULT_THEME.cardStyle,
@@ -329,6 +369,14 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
       border_color: sec.border_color || theme.borderColor,
       button_bg: sec.button_bg || theme.buttonBg || theme.primaryColor,
       button_text: sec.button_text || theme.buttonText,
+      button_hover_bg: sec.button_hover_bg || theme.buttonHoverBg || '#FFC048',
+      button_hover_text: sec.button_hover_text || theme.buttonHoverText || '#080c0a',
+      button_focus_ring: sec.button_focus_ring || theme.buttonFocusRing || theme.primaryColor,
+      card_hover_bg: sec.card_hover_bg || theme.cardHoverBg || '#121714',
+      card_hover_border: sec.card_hover_border || theme.cardHoverBorder || theme.primaryColor,
+      card_focus_ring: sec.card_focus_ring || theme.cardFocusRing || theme.secondaryColor,
+      element_hover_color: sec.element_hover_color || theme.elementHoverColor || '#FFC048',
+      element_focus_ring: sec.element_focus_ring || theme.elementFocusRing || theme.primaryColor,
       particle_shape: sec.particle_shape || theme.particleShape,
       card_style: sec.card_style || theme.cardStyle,
       animation_preset: sec.animation_preset || theme.animationPreset,

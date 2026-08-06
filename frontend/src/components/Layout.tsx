@@ -67,7 +67,7 @@ const Layout = ({ children }: LayoutProps) => {
             <ul className="space-y-4 text-xs font-bold opacity-60">
               <li><a href="/" className="hover:text-amber-honey">Inicio</a></li>
               <li><a href="/comprar-boletos" className="hover:text-amber-honey">Accesos</a></li>
-              {/* <li><a href="/tienda" className="hover:text-amber-honey">Tienda</a></li> */}
+              <li><a href="/musica" className="hover:text-amber-honey">Música</a></li>
               <li><a href="/galeria" className="hover:text-amber-honey">Galería</a></li>
               <li><a href="/ambar-te-escribe" className="hover:text-amber-honey">Ambar Te escribe</a></li>
               <li><a href="/contacto" className="hover:text-amber-honey">Contacto</a></li>
