@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import Album, Track
+from .models import Album, Track, MusicConfig
+
+
+class MusicConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MusicConfig
+        fields = ['id', 'discography_description', 'updated_at']
 
 
 class TrackSerializer(serializers.ModelSerializer):
@@ -33,6 +39,6 @@ class AlbumSerializer(serializers.ModelSerializer):
             'tracks', 'tracks_count', 'created_at', 'updated_at'
         ]
 
-
     def get_tracks_count(self, obj):
         return obj.tracks.count()
+

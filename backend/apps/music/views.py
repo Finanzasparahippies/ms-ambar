@@ -3,8 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Album, Track
-from .serializers import AlbumSerializer, TrackSerializer
+from .models import Album, Track, MusicConfig
+from .serializers import AlbumSerializer, TrackSerializer, MusicConfigSerializer
 from .services import MusicIngestionService
 
 
@@ -15,6 +15,28 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return bool(request.user and request.user.is_staff)
+
+
+class MusicConfigView(APIView):
+    """Endpoint para la lectura y actualización de la descripción configurable de discografía."""
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get(self, request):
+        config = MusicConfig.get_solo()
+        serializer = MusicConfigSerializer(config)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        config = MusicConfig.get_solo()
+        serializer = MusicConfigSerializer(config, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        return self.put(request)
+
 
 
 class AlbumViewSet(viewsets.ModelViewSet):

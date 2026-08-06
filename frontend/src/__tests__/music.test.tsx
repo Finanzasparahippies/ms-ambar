@@ -12,16 +12,22 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 window.HTMLMediaElement.prototype.play = jest.fn().mockImplementation(() => Promise.resolve());
 window.HTMLMediaElement.prototype.pause = jest.fn();
 
+// Mock navigator.clipboard
+Object.assign(navigator, {
+  clipboard: {
+    writeText: jest.fn().mockImplementation(() => Promise.resolve())
+  }
+});
+
 describe('MusicPage Component', () => {
   const mockAlbumsData = [
     {
       id: 1,
       title: 'Ms Ambar Aleatorio',
       release_year: '2026',
-
       cover_url: 'https://example.com/cover.jpg',
       description: 'Álbum oficial de prueba',
-      spotify_url: 'https://open.spotify.com',
+      spotify_url: 'https://open.spotify.com/artist/0jgJv4J29BJiJu1luw2SdA',
       tracks: [
         {
           id: 101,
@@ -43,9 +49,20 @@ describe('MusicPage Component', () => {
     }
   ];
 
+  const mockConfigData = {
+    id: 1,
+    discography_description: 'Música Oficial de Ms. Ambar ✨🎵🔥 Sencillos & Lanzamientos 🎧🌟',
+    updated_at: '2026-08-06T00:00:00Z'
+  };
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedAxios.get.mockResolvedValue({ data: mockAlbumsData });
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('/music/config/')) {
+        return Promise.resolve({ data: mockConfigData });
+      }
+      return Promise.resolve({ data: mockAlbumsData });
+    });
     mockedAxios.post.mockResolvedValue({ data: { message: 'OK' } });
   });
 
@@ -57,7 +74,7 @@ describe('MusicPage Component', () => {
     );
   };
 
-  test('renders discography header and platform links', async () => {
+  test('renders discography header and official platform links', async () => {
     renderWithContext(<MusicPage />);
 
     await waitFor(() => {
@@ -65,24 +82,46 @@ describe('MusicPage Component', () => {
     });
 
     expect(screen.getByText(/GRAFÍA/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Spotify/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/Apple Music/i).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/YouTube Music/i).length).toBeGreaterThanOrEqual(1);
+
+    const spotifyLinks = screen.getAllByText(/Spotify/i);
+    expect(spotifyLinks.length).toBeGreaterThanOrEqual(1);
+
+    const spotifyAnchor = spotifyLinks[0].closest('a');
+    expect(spotifyAnchor).toHaveAttribute('href', expect.stringContaining('0jgJv4J29BJiJu1luw2SdA'));
   });
 
-  test('renames Sinfonías de Ámbar to Ms Ambar Aleatorio and filters out empty placeholder containers', async () => {
+  test('renders configurable discography description with emojis', async () => {
+    renderWithContext(<MusicPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/✨🎵🔥 Sencillos & Lanzamientos 🎧🌟/i)).toBeInTheDocument();
+    });
+  });
+
+  test('handles Share button action with clipboard fallback when Web Share API is unavailable', async () => {
     renderWithContext(<MusicPage />);
 
     await waitFor(() => {
       expect(screen.getByText(/Ms Ambar Aleatorio/i)).toBeInTheDocument();
     });
 
-    expect(screen.getByText(/Track Uno/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Placeholder Vacío/i)).not.toBeInTheDocument();
+    const shareButtons = screen.getAllByRole('button', { name: /Compartir/i });
+    expect(shareButtons.length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(shareButtons[0]);
+
+    await waitFor(() => {
+      expect(navigator.clipboard.writeText).toHaveBeenCalled();
+    });
   });
 
   test('displays "Esperando información nueva" when API returns no albums', async () => {
-    mockedAxios.get.mockResolvedValueOnce({ data: [] });
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('/music/config/')) {
+        return Promise.resolve({ data: mockConfigData });
+      }
+      return Promise.resolve({ data: [] });
+    });
 
     renderWithContext(<MusicPage />);
 

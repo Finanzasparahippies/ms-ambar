@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Share2, Disc, Youtube, Music, RefreshCw, Volume2, Sparkles } from 'lucide-react';
+import { Play, Pause, Share2, Disc, Youtube, Music, RefreshCw, Volume2, Sparkles, Send } from 'lucide-react';
 import axios from 'axios';
 import ThemedSection from '../components/ThemedSection';
 import { getApiUrl } from '../lib/utils';
@@ -39,6 +39,14 @@ interface AlbumItem {
 
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80';
 
+const OFFICIAL_LINKS = {
+  youtube: 'https://www.youtube.com/c/ambarcarvajal',
+  spotify: 'https://open.spotify.com/artist/0jgJv4J29BJiJu1luw2SdA',
+  appleMusic: 'https://music.apple.com/us/artist/ms-ambar/1565253542',
+  youtubeMusic: 'https://music.youtube.com/@Ms.AmbarOficial',
+  amazonMusic: 'https://music.amazon.com/artists/B09S6TLQ5B/ms-ambar'
+};
+
 const AlbumCoverImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) => {
   const [imgSrc, setImgSrc] = useState<string>(src || DEFAULT_COVER);
 
@@ -59,6 +67,9 @@ const AlbumCoverImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) 
 
 const MusicPage: React.FC = () => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
+  const [discographyDescription, setDiscographyDescription] = useState<string>(
+    'Explora las resonancias místicas, producciones acústicas y sencillos oficiales de Ms. Ambar en todas las plataformas digitales ✨🎶'
+  );
   const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
   const [activeTrack, setActiveTrack] = useState<TrackItem | null>(null);
@@ -67,6 +78,7 @@ const MusicPage: React.FC = () => {
 
   useEffect(() => {
     fetchAlbums();
+    fetchMusicConfig();
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -75,13 +87,24 @@ const MusicPage: React.FC = () => {
     };
   }, []);
 
+  const fetchMusicConfig = async () => {
+    try {
+      const apiUrl = getApiUrl();
+      const res = await axios.get(`${apiUrl}/music/config/`);
+      if (res.data && res.data.discography_description) {
+        setDiscographyDescription(res.data.discography_description);
+      }
+    } catch (err) {
+      console.warn('[MusicPage] Usando descripción por defecto:', err);
+    }
+  };
+
   const fetchAlbums = async () => {
     try {
       setLoading(true);
       const apiUrl = getApiUrl();
       const res = await axios.get(`${apiUrl}/music/albums/`);
       if (res.data && Array.isArray(res.data) && res.data.length > 0) {
-        // Normalize title: rename "Sinfonías de Ámbar" or "Sinfonías de Ambar" to "Ms Ambar Aleatorio"
         const normalized = res.data.map((item: AlbumItem) => ({
           ...item,
           title: item.title?.includes('Sinfonías') ? 'Ms Ambar Aleatorio' : item.title
@@ -111,6 +134,41 @@ const MusicPage: React.FC = () => {
       showToast.error('Respuesta de respaldo aplicada tras reintento exponencial.');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleSharePage = async (title?: string) => {
+    const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://msambar.com/musica';
+    const shareTitle = title ? `Ms Ambar - ${title}` : 'Ms Ambar | Discografía & Música Oficial';
+    const shareText = discographyDescription || 'Escucha la música oficial de Ms Ambar ✨🎶';
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl
+        });
+        showToast.success('¡Gracias por compartir la música! 🎵');
+        return;
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          await copyToClipboard(shareUrl);
+        }
+        return;
+      }
+    }
+    await copyToClipboard(shareUrl);
+  };
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        showToast.success('¡Enlace copiado al portapapeles! 🎵');
+      }
+    } catch (err) {
+      showToast.error('No se pudo copiar el enlace.');
     }
   };
 
@@ -161,7 +219,6 @@ const MusicPage: React.FC = () => {
     return true;
   });
 
-
   return (
     <ThemedSection sectionKey="musica" className="selection:bg-amber-honey/30 min-h-screen relative overflow-hidden">
       <Head>
@@ -170,7 +227,7 @@ const MusicPage: React.FC = () => {
       </Head>
 
       <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-28 pt-10 relative z-10">
-        <header className="mb-16 md:mb-28 flex flex-col md:flex-row md:items-end justify-between gap-8">
+        <header className="mb-12 md:mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
           <div>
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -182,17 +239,35 @@ const MusicPage: React.FC = () => {
             <motion.h1
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-5xl sm:text-7xl md:text-[8vw] font-black tracking-tighter leading-[0.85] mb-8"
+              className="text-5xl sm:text-7xl md:text-[8vw] font-black tracking-tighter leading-[0.85] mb-6"
             >
               DISCO<span className="text-amber-honey text-glow">GRAFÍA</span>
             </motion.h1>
+            
+            {/* Configurable Discography Description with Emojis */}
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-base sm:text-lg md:text-xl font-medium leading-relaxed text-amber-honey/90 max-w-3xl mb-4 amber-glass p-5 rounded-2xl border border-amber-honey/20 shadow-lg"
+            >
+              {discographyDescription}
+            </motion.p>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             <button
+              onClick={() => handleSharePage()}
+              className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white hover:text-amber-honey"
+
+              title="Compartir Discografía"
+            >
+              <Share2 size={14} className="text-amber-honey" /> Compartir
+            </button>
+
+            <button
               onClick={handleSyncPlatform}
               disabled={syncing}
-              className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 disabled:opacity-50"
+              className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 disabled:opacity-50"
             >
               <RefreshCw size={14} className={syncing ? 'animate-spin text-amber-honey' : ''} />
               {syncing ? 'Sincronizando APIs...' : 'Sincronizar Plataformas'}
@@ -200,45 +275,50 @@ const MusicPage: React.FC = () => {
           </div>
         </header>
 
-        {/* Global External Streaming Platform Selector Row */}
-        <div className="flex flex-wrap gap-3 sm:gap-4 mb-20">
+        {/* Global External Streaming Platform Selector Row with Official Links */}
+        <div className="flex flex-wrap gap-3 sm:gap-4 mb-16">
           <a
-            href="https://open.spotify.com"
+            href={OFFICIAL_LINKS.spotify}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 transition-all hover:scale-105 shadow-lg shadow-amber-honey/10"
+            className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 shadow-lg shadow-amber-honey/10"
+
           >
             <Play size={14} fill="currentColor" /> Spotify
           </a>
           <a
-            href="https://music.apple.com"
+            href={OFFICIAL_LINKS.appleMusic}
             target="_blank"
             rel="noopener noreferrer"
-            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 transition-all hover:scale-105"
+            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
+
           >
             <Disc size={14} /> Apple Music
           </a>
           <a
-            href="https://youtube.com"
+            href={OFFICIAL_LINKS.youtube}
             target="_blank"
             rel="noopener noreferrer"
-            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 transition-all hover:scale-105"
+            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
+
           >
-            <Youtube size={14} /> YouTube
+            <Youtube size={14} className="text-red-500" /> YouTube
           </a>
           <a
-            href="https://music.youtube.com"
+            href={OFFICIAL_LINKS.youtubeMusic}
             target="_blank"
             rel="noopener noreferrer"
-            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 transition-all hover:scale-105"
+            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
+
           >
             <Youtube size={14} className="text-red-500" /> YouTube Music
           </a>
           <a
-            href="https://music.amazon.com"
+            href={OFFICIAL_LINKS.amazonMusic}
             target="_blank"
             rel="noopener noreferrer"
-            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 transition-all hover:scale-105"
+            className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
+
           >
             <Music size={14} className="text-cyan-400" /> Amazon Music
           </a>
@@ -263,7 +343,8 @@ const MusicPage: React.FC = () => {
             <button
               onClick={handleSyncPlatform}
               disabled={syncing}
-              className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-8 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2.5 transition-all hover:scale-105 shadow-xl shadow-amber-honey/20 disabled:opacity-50"
+              className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-8 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2.5 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 shadow-xl shadow-amber-honey/20 disabled:opacity-50"
+
             >
               <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
               {syncing ? 'Sincronizando Plataformas...' : 'Sincronizar Ahora'}
@@ -298,9 +379,20 @@ const MusicPage: React.FC = () => {
                   {/* Album Details & Tracks List */}
                   <div className="flex-1 flex flex-col justify-between">
                     <div>
-                      <span className="text-amber-honey text-xs font-black tracking-[0.4em] mb-2 block uppercase opacity-70">
-                        Álbum Oficial • {album.tracks?.length || 0} Pistas
-                      </span>
+                      <div className="flex items-center justify-between gap-4 mb-2">
+                        <span className="text-amber-honey text-xs font-black tracking-[0.4em] block uppercase opacity-70">
+                          Álbum Oficial • {album.tracks?.length || 0} Pistas
+                        </span>
+                        <button
+                          onClick={() => handleSharePage(displayTitle)}
+                          className="amber-glass border border-white/15 hover:border-amber-honey px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105 focus:outline-none text-white/80 hover:text-amber-honey"
+
+                          title="Compartir álbum"
+                        >
+                          <Share2 size={12} /> Compartir
+                        </button>
+                      </div>
+
                       <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter mb-4 text-white">
                         {displayTitle}
                       </h2>
@@ -325,7 +417,7 @@ const MusicPage: React.FC = () => {
                               }`}
                             >
                               <div className="flex items-center gap-4">
-                                <button className="w-8 h-8 rounded-full bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center text-amber-honey">
+                                <button className="w-8 h-8 rounded-full bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center text-amber-honey focus:outline-none">
                                   {isTrackPlaying ? <Pause size={14} /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
                                 </button>
                                 <span className="opacity-40 font-mono text-xs">
@@ -338,7 +430,16 @@ const MusicPage: React.FC = () => {
 
                               <div className="flex items-center gap-4 text-xs font-mono opacity-60">
                                 <span>{track.duration_display || '3:30'}</span>
-                                <Share2 size={14} className="hover:text-amber-honey transition-colors" />
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSharePage(track.title);
+                                  }}
+                                  className="hover:text-amber-honey transition-colors focus:outline-none"
+                                  title="Compartir pista"
+                                >
+                                  <Share2 size={14} />
+                                </button>
                               </div>
                             </div>
                           );
@@ -346,25 +447,19 @@ const MusicPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Direct Platform Links Footer */}
+                    {/* Direct Official Platform Links Footer */}
                     <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-widest font-black text-amber-honey">
-                      <span>Escuchar álbum completo en:</span>
+                      <span>Escuchar álbum completo en perfiles oficiales:</span>
                       <div className="flex items-center gap-3">
-                        {album.spotify_url && (
-                          <a href={album.spotify_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                            Spotify
-                          </a>
-                        )}
-                        {album.apple_music_url && (
-                          <a href={album.apple_music_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                            Apple Music
-                          </a>
-                        )}
-                        {album.youtube_url && (
-                          <a href={album.youtube_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                            YouTube
-                          </a>
-                        )}
+                        <a href={OFFICIAL_LINKS.spotify} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors focus:outline-none">
+                          Spotify
+                        </a>
+                        <a href={OFFICIAL_LINKS.appleMusic} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors focus:outline-none">
+                          Apple Music
+                        </a>
+                        <a href={OFFICIAL_LINKS.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors focus:outline-none">
+                          YouTube
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -396,7 +491,7 @@ const MusicPage: React.FC = () => {
 
             <button
               onClick={() => toggleTrackPlayback(activeTrack)}
-              className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform"
+              className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform focus:outline-none"
             >
               {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
             </button>

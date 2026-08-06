@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APIClient
-from .models import Album, Track
+from .models import Album, Track, MusicConfig
 from .services import MusicIngestionService
 
 
@@ -49,6 +49,20 @@ class MusicAppTestCase(TestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn("album", res.data)
 
+    def test_music_config_endpoint_and_emoji_persistence(self):
+        url = reverse('music-config')
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn("discography_description", res.data)
+
+        emoji_text = "Música Oficial de Ms. Ambar ✨🎵🔥 Sencillos & Lanzamientos 🎧🌟"
+        config = MusicConfig.get_solo()
+        config.discography_description = emoji_text
+        config.save()
+
+        config.refresh_from_db()
+        self.assertEqual(config.discography_description, emoji_text)
+
     def test_seed_initial_discography(self):
         Album.objects.all().delete()
         self.assertEqual(Album.objects.count(), 0)
@@ -56,7 +70,6 @@ class MusicAppTestCase(TestCase):
         self.assertGreater(Album.objects.count(), 0)
 
     def test_spotify_token_caching(self):
-        # Verify that mock credentials return None without exception
         token = MusicIngestionService.get_spotify_access_token()
         self.assertIsNone(token)
 

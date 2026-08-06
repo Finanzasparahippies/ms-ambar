@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Album, Track
+from .models import Album, Track, MusicConfig
 
 
 class TrackInline(admin.TabularInline):
@@ -20,4 +20,10 @@ class TrackAdmin(admin.ModelAdmin):
     list_display = ('title', 'album', 'track_number', 'duration_seconds', 'spotify_id', 'youtube_id', 'itunes_id', 'is_single')
     list_filter = ('album', 'is_single')
     search_fields = ('title', 'album__title', 'spotify_id', 'youtube_id', 'itunes_id')
+
+
+@admin.register(MusicConfig)
+class MusicConfigAdmin(admin.ModelAdmin):
+    list_display = ('__str__', 'discography_description', 'updated_at')
+
 

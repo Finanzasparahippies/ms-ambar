@@ -57,3 +57,24 @@ class Track(models.Model):
     def __str__(self):
         return f"{self.album.title} - {self.track_number:02d}. {self.title}"
 
+
+class MusicConfig(models.Model):
+    discography_description = models.TextField(
+        default="Explora las producciones acústicas y sencillos oficiales de Ms. Ambar en todas las plataformas digitales ✨🎶",
+        help_text="Descripción editable con emojis para el encabezado de la sección de discografía."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuración de Música"
+        verbose_name_plural = "Configuraciones de Música"
+
+    def __str__(self):
+        return "Configuración de Música & Discografía"
+
+    @classmethod
+    def get_solo(cls):
+        config, _ = cls.objects.get_or_create(id=1)
+        return config
+
+
