@@ -223,3 +223,66 @@ class GalleryItemViewSetIntegrationTest(APITestCase):
 
         # No deben haber interbloqueos ni excepciones
         self.assertEqual(len(errors), 0)
+
+    @patch('cloudinary.uploader.upload')
+    def test_optimize_images_action_success(self, mock_cloudinary_upload):
+        """Verify optimize_images action processes image with PIL, uploads to Cloudinary, and calculates metrics."""
+        self.client.force_authenticate(user=self.admin_user)
+
+        mock_cloudinary_upload.return_value = {
+            'secure_url': 'https://res.cloudinary.com/dyhgivsyh/image/upload/v1/gallery_opt_123.webp',
+            'public_id': 'ms-ambar/gallery/gallery_opt_123',
+            'width': 800,
+            'height': 600
+        }
+
+        # Generar imagen real en memoria
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        img = Image.new('RGB', (1000, 800), color='red')
+        buf = BytesIO()
+        img.save(buf, format='JPEG')
+        buf.seek(0)
+
+        uploaded_file = SimpleUploadedFile("test_photo.jpg", buf.read(), content_type="image/jpeg")
+
+        url = reverse('gallery-item-optimize-images')
+        res = self.client.post(
+            url,
+            {
+                'files': uploaded_file,
+                'quality': 75,
+                'max_size': 800,
+                'to_webp': 'true',
+                'save_to_gallery': 'true',
+                'category': 'TestCat'
+            },
+            format='multipart'
+        )
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['processed_count'], 1)
+        self.assertEqual(res.data['total_files'], 1)
+        self.assertEqual(len(res.data['results']), 1)
+        self.assertEqual(res.data['results'][0]['status'], 'success')
+        self.assertEqual(res.data['results'][0]['url'], 'https://res.cloudinary.com/dyhgivsyh/image/upload/v1/gallery_opt_123.webp')
+
+    def test_optimize_images_exceeds_35mb_returns_error(self):
+        """Verify optimize_images rejects individual files exceeding 35MB limit."""
+        self.client.force_authenticate(user=self.admin_user)
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        # Crear archivo simulado con tamaño > 35MB sin usar memoria RAM física
+        huge_file = SimpleUploadedFile("huge_image.jpg", b"0" * 1024, content_type="image/jpeg")
+        huge_file.size = 36 * 1024 * 1024  # 36MB
+
+        url = reverse('gallery-item-optimize-images')
+        res = self.client.post(url, {'files': huge_file}, format='multipart')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['processed_count'], 0)
+        self.assertEqual(res.data['results'][0]['status'], 'error')
+        self.assertIn('35MB', res.data['results'][0]['error'])
+
