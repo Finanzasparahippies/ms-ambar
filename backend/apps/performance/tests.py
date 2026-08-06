@@ -131,3 +131,21 @@ class PerformanceAppTests(APITestCase):
         self.assertEqual(response.data['server']['total_requests'], 1)
         self.assertEqual(len(response.data['vitals']), 1)
         self.assertEqual(response.data['vitals'][0]['name'], 'FID')
+
+    def test_list_logs_includes_music_log(self):
+        """Verify that music.log is included in the list of available log files."""
+        url = '/api/performance/logs/'
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        log_names = [f['name'] for f in response.data]
+        self.assertIn('music.log', log_names)
+
+    def test_download_music_log(self):
+        """Verify downloading music.log as admin with UTF-8 charset header."""
+        url = '/api/performance/logs/download/?file=music.log'
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('text/plain; charset=utf-8', response.headers.get('Content-Type', ''))
+

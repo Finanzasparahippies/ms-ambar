@@ -82,3 +82,18 @@ class MusicAppTestCase(TestCase):
 
         spotify = MusicIngestionService.fetch_spotify_catalog("Ms Ambar")
         self.assertIsInstance(spotify, list)
+
+    def test_sanitize_sensitive_info(self):
+        from .services import sanitize_sensitive_info
+        raw_log = "Error connecting with Bearer secret_token_12345 key=secret_key_abc"
+        clean_log = sanitize_sensitive_info(raw_log)
+        self.assertNotIn("secret_token_12345", clean_log)
+        self.assertNotIn("secret_key_abc", clean_log)
+        self.assertIn("[REDACTED_TOKEN]", clean_log)
+        self.assertIn("[REDACTED]", clean_log)
+
+    def test_music_logging_with_utf8(self):
+        import logging
+        logger = logging.getLogger('apps.music')
+        logger.info("Prueba de traza de música con caracteres especiales: Ámbar Canción ✨🎵")
+

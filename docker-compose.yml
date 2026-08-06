@@ -19,6 +19,7 @@ services:
       - ./backend:/app:Z
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+      - logs_volume:/app/logs
     environment:
       - STATIC_ROOT=/app/staticfiles
       - MEDIA_ROOT=/app/media
@@ -69,3 +70,5 @@ volumes:
     name: ambar_dev_static_volume
   media_volume:
     name: ambar_dev_media_volume
+  logs_volume:
+    name: ambar_dev_logs_volume

@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,6 +7,8 @@ from rest_framework.views import APIView
 from .models import Album, Track, MusicConfig
 from .serializers import AlbumSerializer, TrackSerializer, MusicConfigSerializer
 from .services import MusicIngestionService
+
+logger = logging.getLogger('apps.music')
 
 
 class IsAdminOrReadOnly(permissions.BasePermission):
@@ -31,7 +34,9 @@ class MusicConfigView(APIView):
         serializer = MusicConfigSerializer(config, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
+            logger.info(f"[MUSIC/CONFIG] Descripción de discografía actualizada por usuario staff ID={getattr(request.user, 'id', 'Anon')}.")
             return Response(serializer.data, status=status.HTTP_200_OK)
+        logger.warning(f"[MUSIC/CONFIG] Error de validación al actualizar la descripción: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request):
@@ -51,6 +56,7 @@ class AlbumViewSet(viewsets.ModelViewSet):
 
         queryset = Album.objects.exclude(title__in=["Eclipse", "Ambar Vision", "Desierto de Cristal", "Sinfonías de Ámbar"])
         if not queryset.exists():
+            logger.info("[MUSIC/ALBUMS] No se encontraron álbumes válidos en BD. Iniciando sincronización por defecto.")
             MusicIngestionService.sync_platform_metadata("Ms Ambar")
             queryset = Album.objects.exclude(title__in=["Eclipse", "Ambar Vision", "Desierto de Cristal", "Sinfonías de Ámbar"])
         return queryset
@@ -76,11 +82,14 @@ class SyncPlatformMusicView(APIView):
 
     def post(self, request):
         query = request.data.get('query', 'Ms Ambar')
+        logger.info(f"[MUSIC/SYNC] Petición recibida en /api/music/sync/ para la consulta: '{query}'")
         synced_album = MusicIngestionService.sync_platform_metadata(query)
         if synced_album:
             serializer = AlbumSerializer(synced_album)
+            logger.info(f"[MUSIC/SYNC] Sincronización exitosa. Álbum normalizado: {synced_album.title} (ID: {synced_album.id})")
             return Response({
                 "message": "Sincronización de plataformas completada con éxito.",
                 "album": serializer.data
             }, status=status.HTTP_200_OK)
+        logger.error(f"[MUSIC/SYNC] Falló la sincronización de metadatos de música para la consulta: '{query}'")
         return Response({"error": "No se pudieron obtener datos de las plataformas."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

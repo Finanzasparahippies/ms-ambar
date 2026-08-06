@@ -62,7 +62,7 @@ class PerformanceViewSet(viewsets.ViewSet):
         if not os.path.exists(logs_dir):
             os.makedirs(logs_dir, exist_ok=True)
 
-        allowed_bases = ('tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log', 'gallery.log')
+        allowed_bases = ('tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log', 'gallery.log', 'music.log')
         log_files = []
 
         # Obtener los archivos físicos en el directorio de logs que inicien con nuestras bases permitidas
@@ -109,7 +109,7 @@ class PerformanceViewSet(viewsets.ViewSet):
         import os
 
         file_name = request.query_params.get('file', '').strip()
-        allowed_bases = ('tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log', 'gallery.log')
+        allowed_bases = ('tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log', 'gallery.log', 'music.log')
 
         # Validación estricta del nombre del archivo solicitado
         if not file_name or not file_name.startswith(allowed_bases):
@@ -128,7 +128,7 @@ class PerformanceViewSet(viewsets.ViewSet):
             if file_name in allowed_bases:
                 try:
                     os.makedirs(logs_dir, exist_ok=True)
-                    with open(file_path, 'w') as f:
+                    with open(file_path, 'w', encoding='utf-8') as f:
                         pass
                 except Exception as e:
                     return Response({'error': f'No se pudo inicializar el archivo de log: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -136,8 +136,14 @@ class PerformanceViewSet(viewsets.ViewSet):
                 raise Http404("El archivo de log no existe.")
 
         try:
-            # FileResponse con as_attachment=True para forzar la descarga directa del navegador
-            response = FileResponse(open(file_path, 'rb'), as_attachment=True, filename=file_name)
+            # FileResponse con as_attachment=True para forzar la descarga directa del navegador con charset UTF-8
+            response = FileResponse(
+                open(file_path, 'rb'),
+                as_attachment=True,
+                filename=file_name,
+                content_type='text/plain; charset=utf-8'
+            )
             return response
         except Exception as e:
             return Response({'error': f'Error al descargar el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

@@ -24,7 +24,8 @@ else:
     environ.Env.read_env(BASE_DIR.parent / ".env")
 
 # Quick-start development settings - unsuitable for production
-ENVIRONMENT = env("ENVIRONMENT", default="local")
+ENVIRONMENT = env("DJANGO_ENV", default=env("ENVIRONMENT", default="local"))
+ENV_TAG = f"[{ENVIRONMENT.upper()}]"
 DEBUG = env.bool("DEBUG", default=True)
 SECRET_KEY = env("SECRET_KEY", default="django-insecure-key")
 
@@ -266,11 +267,11 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '[%(asctime)s] %(levelname)s [%(name)s] %(message)s',
+            'format': f'{ENV_TAG} [%(asctime)s] %(levelname)s [%(name)s] %(message)s',
             'datefmt': '%H:%M:%S'
         },
         'clean': {
-            'format': '[%(asctime)s] %(levelname)s [%(name)s]: %(message)s',
+            'format': f'{ENV_TAG} [%(asctime)s] %(levelname)s [%(name)s]: %(message)s',
             'datefmt': '%Y-%m-%d %H:%M:%S'
         },
     },
@@ -286,6 +287,7 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 5,
             'formatter': 'clean',
+            'encoding': 'utf-8',
         },
         'shop_file': {
             'level': 'INFO',
@@ -294,6 +296,7 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 5,
             'formatter': 'clean',
+            'encoding': 'utf-8',
         },
         'blog_file': {
             'level': 'INFO',
@@ -302,6 +305,7 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 5,
             'formatter': 'clean',
+            'encoding': 'utf-8',
         },
         'dashboard_file': {
             'level': 'INFO',
@@ -310,6 +314,7 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 5,
             'formatter': 'clean',
+            'encoding': 'utf-8',
         },
         'events_file': {
             'level': 'INFO',
@@ -318,6 +323,7 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 5,
             'formatter': 'clean',
+            'encoding': 'utf-8',
         },
         'users_file': {
             'level': 'INFO',
@@ -326,6 +332,7 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 5,
             'formatter': 'clean',
+            'encoding': 'utf-8',
         },
         'gallery_file': {
             'level': 'INFO',
@@ -334,6 +341,16 @@ LOGGING = {
             'maxBytes': 5 * 1024 * 1024,  # 5MB
             'backupCount': 5,
             'formatter': 'clean',
+            'encoding': 'utf-8',
+        },
+        'music_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'music.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
+            'encoding': 'utf-8',
         },
     },
     'loggers': {
@@ -379,6 +396,11 @@ LOGGING = {
         },
         'apps.gallery': {
             'handlers': ['console', 'gallery_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.music': {
+            'handlers': ['console', 'music_file'],
             'level': 'INFO',
             'propagate': False,
         },

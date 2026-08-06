@@ -10,6 +10,7 @@ services:
       - ./backend:/app:Z
       - static_volume_staging:/staticfiles
       - media_volume_staging:/media_files
+      - logs_volume_staging:/app/logs
     environment:
       - STATIC_ROOT=/staticfiles
       - MEDIA_ROOT=/media_files
@@ -80,6 +81,8 @@ volumes:
     name: ambar_staging_static_volume
   media_volume_staging:
     name: ambar_staging_media_volume
+  logs_volume_staging:
+    name: ambar_staging_logs_volume
 
 networks:
   prod_network:

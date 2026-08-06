@@ -8,6 +8,7 @@ services:
     volumes:
       - static_volume:/staticfiles
       - media_volume:/media_files
+      - logs_volume:/app/logs
     environment:
       - PYTHONUNBUFFERED=1
       - STATIC_ROOT=/staticfiles
@@ -38,6 +39,8 @@ volumes:
     name: ambar_static_volume
   media_volume:
     name: ambar_media_volume
+  logs_volume:
+    name: ambar_logs_volume
 
 networks:
   prod_network:
