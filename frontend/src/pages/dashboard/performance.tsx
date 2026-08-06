@@ -163,7 +163,7 @@ const PerformanceDashboard = () => {
   }
 
   // Lógica de agrupación de logs con namespaces profesionales y normalización blindada
-  const appBases = ['tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log'];
+  const appBases = ['tickets.log', 'shop.log', 'events.log', 'users.log', 'blog.log', 'dashboard.log', 'gallery.log'];
 
   const normalizeLog = (logObj: any, defaultName: string) => {
     if (!logObj) return { name: defaultName, size: 0, modified: null };
@@ -221,6 +221,12 @@ const PerformanceDashboard = () => {
         appDescription = 'Logs del panel de métricas administrativas';
         badgeColor = 'from-cyan-500/20 to-cyan-600/30 text-cyan-300 border-cyan-500/30';
         shadowColor = 'hover:shadow-cyan-500/5';
+        break;
+      case 'gallery.log':
+        appLabel = 'Gallery & Media Engine';
+        appDescription = 'Optimizaciones de imagen, Pillow, Cloudinary y descargas';
+        badgeColor = 'from-amber-400/20 to-orange-500/30 text-amber-300 border-amber-400/30';
+        shadowColor = 'hover:shadow-amber-400/5';
         break;
       default:
         appLabel = 'Logs Generales';

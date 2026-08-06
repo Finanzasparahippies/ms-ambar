@@ -319,6 +319,14 @@ LOGGING = {
             'backupCount': 5,
             'formatter': 'clean',
         },
+        'gallery_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'gallery.log'),
+            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'backupCount': 5,
+            'formatter': 'clean',
+        },
     },
     'loggers': {
         'apps': {
@@ -358,6 +366,11 @@ LOGGING = {
         },
         'apps.dashboard': {
             'handlers': ['console', 'dashboard_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps.gallery': {
+            'handlers': ['console', 'gallery_file'],
             'level': 'INFO',
             'propagate': False,
         },
