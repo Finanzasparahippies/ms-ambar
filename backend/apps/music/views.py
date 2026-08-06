@@ -23,12 +23,16 @@ class AlbumViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
-        queryset = Album.objects.all()
-        # Seed automatic discography if database is fresh
+        # Excluir álbumes obsoletos ficticios
+        Album.objects.filter(title__in=["Eclipse", "Ambar Vision", "Desierto de Cristal", "Sinfonías de Ámbar"]).delete()
+        Track.objects.filter(preview_url__icontains="soundhelix.com").delete()
+
+        queryset = Album.objects.exclude(title__in=["Eclipse", "Ambar Vision", "Desierto de Cristal", "Sinfonías de Ámbar"])
         if not queryset.exists():
-            MusicIngestionService.seed_initial_discography()
-            queryset = Album.objects.all()
+            MusicIngestionService.sync_platform_metadata("Ms Ambar")
+            queryset = Album.objects.exclude(title__in=["Eclipse", "Ambar Vision", "Desierto de Cristal", "Sinfonías de Ámbar"])
         return queryset
+
 
 
 class TrackViewSet(viewsets.ModelViewSet):

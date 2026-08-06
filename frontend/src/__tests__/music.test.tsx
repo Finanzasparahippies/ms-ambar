@@ -16,8 +16,9 @@ describe('MusicPage Component', () => {
   const mockAlbumsData = [
     {
       id: 1,
-      title: 'Sinfonías de Ámbar',
+      title: 'Ms Ambar Aleatorio',
       release_year: '2026',
+
       cover_url: 'https://example.com/cover.jpg',
       description: 'Álbum oficial de prueba',
       spotify_url: 'https://open.spotify.com',

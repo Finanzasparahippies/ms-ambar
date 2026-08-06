@@ -150,8 +150,17 @@ const MusicPage: React.FC = () => {
     };
   }, [activeTrack, isPlaying]);
 
-  // Filter valid albums that contain tracks to hide secondary placeholders
-  const activeAlbums = albums.filter((alb) => alb.tracks && alb.tracks.length > 0);
+  const FAKE_TITLES = ['Ambar Vision', 'Desierto de Cristal', 'Sinfonías de Ámbar', 'Placeholder Vacío'];
+
+  // Filter valid albums that contain real tracks to hide secondary placeholders
+  const activeAlbums = albums.filter((alb) => {
+    if (!alb.tracks || alb.tracks.length === 0) return false;
+    if (FAKE_TITLES.includes(alb.title)) return false;
+    const hasOnlyFakeTracks = alb.tracks.every((trk) => trk.preview_url?.includes('soundhelix.com'));
+    if (hasOnlyFakeTracks) return false;
+    return true;
+  });
+
 
   return (
     <ThemedSection sectionKey="musica" className="selection:bg-amber-honey/30 min-h-screen relative overflow-hidden">

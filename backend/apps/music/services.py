@@ -90,7 +90,7 @@ class MusicIngestionService:
     @staticmethod
     def fetch_itunes_tracks(artist_name="Ms Ambar"):
         """
-        Obtiene canciones y previsualizaciones desde iTunes Search API con caché de 24h.
+        Obtiene canciones y previsualizaciones reales desde iTunes Search API con caché de 24h.
         Evita bloqueos de cuota o rate limits externos con exponencial backoff ante fallos.
         """
         cache_key = f"itunes_tracks_{artist_name.replace(' ', '_').lower()}"
@@ -157,25 +157,45 @@ class MusicIngestionService:
     def sync_platform_metadata(query="Ms Ambar"):
         """
         Sincroniza y normaliza metadatos desde conectores externos (iTunes, Spotify, YouTube, Amazon)
-        poblando la base de datos local de manera idempotente con restricciones de unicidad.
+        poblando únicamente la música REAL de Ms Ambar e eliminando álbumes falsos de prueba.
         """
+        # Eliminar álbumes falsos de prueba obsoletos
+        Album.objects.filter(title__in=["Eclipse", "Ambar Vision", "Desierto de Cristal", "Sinfonías de Ámbar"]).delete()
+        Track.objects.filter(preview_url__icontains="soundhelix.com").delete()
+
         itunes_results = MusicIngestionService.fetch_itunes_tracks(query)
         _ = MusicIngestionService.fetch_spotify_catalog(query)
         _ = MusicIngestionService.fetch_youtube_tracks(query)
 
         if not itunes_results:
-            existing = Album.objects.first()
+            existing = Album.objects.filter(title="Ms Ambar Aleatorio").first()
             if existing:
                 return existing
-            return MusicIngestionService.seed_initial_discography()
+            # Si no hay resultados de iTunes, retornar o crear álbum sin pistas falsas
+            alb, _ = Album.objects.get_or_create(
+                itunes_id=f"itunes_album_{query.replace(' ', '_').lower()}",
+                defaults={
+                    "title": "Ms Ambar Aleatorio",
+                    "release_year": "2026",
+                    "cover_url": "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80",
+                    "description": "Catálogo oficial de sencillos y lanzamientos en vivo de Ms. Ambar.",
+                    "spotify_url": "https://open.spotify.com",
+                    "apple_music_url": "https://music.apple.com",
+                    "youtube_url": "https://youtube.com",
+                    "youtube_music_url": "https://music.youtube.com",
+                    "amazon_music_url": "https://music.amazon.com",
+                }
+            )
+            return alb
+
+        first_cover = next((item.get("artworkUrl100", "").replace("100x100bb", "600x600bb") for item in itunes_results if item.get("artworkUrl100")), "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80")
 
         album_obj, _ = Album.objects.update_or_create(
             itunes_id=f"itunes_album_{query.replace(' ', '_').lower()}",
             defaults={
                 "title": "Ms Ambar Aleatorio",
                 "release_year": "2026",
-
-                "cover_url": "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80",
+                "cover_url": first_cover,
                 "description": "Recopilación oficial de sencillos y colecciones acústicas de Ms. Ambar.",
                 "spotify_url": "https://open.spotify.com",
                 "apple_music_url": "https://music.apple.com",
@@ -214,99 +234,7 @@ class MusicIngestionService:
     @staticmethod
     def seed_initial_discography():
         """
-        Poblamiento inicial ultra-premium de discografía si la DB está vacía o sin conexión.
-        Garantiza que la experiencia visual y los selectores funcionen al 100% de inmediato.
+        Poblamiento inicial de música REAL de Ms Ambar consumiendo las APIs oficiales.
+        Elimina datos falsos o ficticios.
         """
-        albums_data = [
-            {
-                "title": "Eclipse",
-                "year": "2026",
-                "spotify_id": "sp_album_eclipse",
-                "youtube_id": "yt_album_eclipse",
-                "itunes_id": "itunes_album_eclipse",
-                "cover": "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80",
-                "desc": "Explorando texturas orgánicas y ritmos ancestrales, este álbum redefine el sonido contemporáneo de Ms Ambar.",
-                "spotify": "https://open.spotify.com/artist/ms_ambar",
-                "apple": "https://music.apple.com/artist/ms_ambar",
-                "yt": "https://youtube.com/@ms_ambar",
-                "yt_music": "https://music.youtube.com/channel/ms_ambar",
-                "amazon": "https://music.amazon.com/artists/ms_ambar",
-                "tracks": [
-                    {"no": 1, "title": "Sinfonía del Ámbar I (Eclipse Intro)", "dur": 215, "sp": "sp_tr_101", "yt": "yt_tr_101", "it": "it_tr_101", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"},
-                    {"no": 2, "title": "Luz de Luna en el Desierto", "dur": 240, "sp": "sp_tr_102", "yt": "yt_tr_102", "it": "it_tr_102", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"},
-                    {"no": 3, "title": "Fuego Inextinguible", "dur": 198, "sp": "sp_tr_103", "yt": "yt_tr_103", "it": "it_tr_103", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"},
-                    {"no": 4, "title": "Ecos del Silencio", "dur": 225, "sp": "sp_tr_104", "yt": "yt_tr_104", "it": "it_tr_104", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"}
-                ]
-            },
-            {
-                "title": "Ambar Vision",
-                "year": "2024",
-                "spotify_id": "sp_album_vision",
-                "youtube_id": "yt_album_vision",
-                "itunes_id": "itunes_album_vision",
-                "cover": "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&q=80",
-                "desc": "Una travesía audiovisual y conceptual que combina R&B alternativo con melodías envolventes.",
-                "spotify": "https://open.spotify.com/album/ambar_vision",
-                "apple": "https://music.apple.com/album/ambar_vision",
-                "yt": "https://youtube.com/watch?v=ambar_vision",
-                "yt_music": "https://music.youtube.com/watch?v=ambar_vision",
-                "amazon": "https://music.amazon.com/albums/ambar_vision",
-                "tracks": [
-                    {"no": 1, "title": "Visión de Cristal", "dur": 210, "sp": "sp_tr_201", "yt": "yt_tr_201", "it": "it_tr_201", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3"},
-                    {"no": 2, "title": "No Te Voy a Llorar (Viña 2025 Live)", "dur": 250, "sp": "sp_tr_202", "yt": "yt_tr_202", "it": "it_tr_202", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"},
-                    {"no": 3, "title": "14•28 (Título Numerológico)", "dur": 205, "sp": "sp_tr_203", "yt": "yt_tr_203", "it": "it_tr_203", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3"}
-                ]
-            },
-            {
-                "title": "Desierto de Cristal",
-                "year": "2023",
-                "spotify_id": "sp_album_desierto",
-                "youtube_id": "yt_album_desierto",
-                "itunes_id": "itunes_album_desierto",
-                "cover": "https://images.unsplash.com/photo-1514525253361-bee8a48790c3?w=800&q=80",
-                "desc": "Primeras resonancias acústicas de la cantautora originaria de Hermosillo, Sonora.",
-                "spotify": "https://open.spotify.com/album/desierto_cristal",
-                "apple": "https://music.apple.com/album/desierto_cristal",
-                "yt": "https://youtube.com/watch?v=desierto_cristal",
-                "yt_music": "https://music.youtube.com/watch?v=desierto_cristal",
-                "amazon": "https://music.amazon.com/albums/desierto_cristal",
-                "tracks": [
-                    {"no": 1, "title": "Cactus & Misticismo", "dur": 180, "sp": "sp_tr_301", "yt": "yt_tr_301", "it": "it_tr_301", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3"},
-                    {"no": 2, "title": "Bajo las Estrellas de Sonora", "dur": 235, "sp": "sp_tr_302", "yt": "yt_tr_302", "it": "it_tr_302", "preview": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3"}
-                ]
-            }
-        ]
-
-        created_albums = []
-        for a_data in albums_data:
-            alb, _ = Album.objects.update_or_create(
-                itunes_id=a_data["itunes_id"],
-                defaults={
-                    "title": a_data["title"],
-                    "release_year": a_data["year"],
-                    "spotify_id": a_data["spotify_id"],
-                    "youtube_id": a_data["youtube_id"],
-                    "cover_url": a_data["cover"],
-                    "description": a_data["desc"],
-                    "spotify_url": a_data["spotify"],
-                    "apple_music_url": a_data["apple"],
-                    "youtube_url": a_data["yt"],
-                    "youtube_music_url": a_data["yt_music"],
-                    "amazon_music_url": a_data["amazon"],
-                }
-            )
-            for trk in a_data["tracks"]:
-                Track.objects.update_or_create(
-                    itunes_id=trk["it"],
-                    defaults={
-                        "album": alb,
-                        "track_number": trk["no"],
-                        "title": trk["title"],
-                        "duration_seconds": trk["dur"],
-                        "preview_url": trk["preview"],
-                        "spotify_id": trk["sp"],
-                        "youtube_id": trk["yt"]
-                    }
-                )
-            created_albums.append(alb)
-        return created_albums[0] if created_albums else None
+        return MusicIngestionService.sync_platform_metadata("Ms Ambar")
