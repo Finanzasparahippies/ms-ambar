@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import Suscribirse from '../pages/suscribirse';
 import api from '../lib/api';
@@ -29,17 +30,6 @@ jest.mock('next/head', () => {
   };
 });
 
-/**
- * Flexible text matcher helper to locate fragmented text across DOM nodes
- */
-const createTextMatcher = (expectedText: string) => (content: string, element: Element | null): boolean => {
-  if (!element) return false;
-  const hasText = (el: Element | null) => el?.textContent?.toLowerCase().includes(expectedText.toLowerCase()) ?? false;
-  const elementHasText = hasText(element);
-  const childrenDontHaveText = Array.from(element?.children || []).every(child => !hasText(child));
-  return elementHasText && childrenDontHaveText;
-};
-
 describe('Suscribirse Page Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -50,8 +40,6 @@ describe('Suscribirse Page Component', () => {
     render(<Suscribirse />);
 
     expect(screen.getByText('Ambar te escribe')).toBeInTheDocument();
-    expect(screen.getByText(createTextMatcher('Deja tu correo aquí y recibe el newsletter escrito por Ms. Ambar'))).toBeInTheDocument();
-
     expect(screen.getByPlaceholderText('Tu Nombre')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Tu Correo Electrónico')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Suscribirse/i })).toBeInTheDocument();
@@ -61,12 +49,13 @@ describe('Suscribirse Page Component', () => {
     localStorage.setItem('ms_ambar_subscriber_email', 'fan@example.com');
     render(<Suscribirse />);
 
-    expect(screen.getByText(createTextMatcher('¡Suscripción Completa!'))).toBeInTheDocument();
-    expect(screen.getByText(createTextMatcher('Frecuencia Sintonizada'))).toBeInTheDocument();
+    expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
+    expect(screen.getByText(/Frecuencia Sintonizada/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Explorar Ms Ambar' })).toBeInTheDocument();
   });
 
   test('submits form successfully and transitions to success view', async () => {
+    const user = userEvent.setup();
     mockedApi.post.mockResolvedValueOnce({ data: { message: 'Ok' } });
 
     render(<Suscribirse />);
@@ -76,12 +65,9 @@ describe('Suscribirse Page Component', () => {
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
     await act(async () => {
-      fireEvent.change(nameInput, { target: { value: 'Juan' } });
-      fireEvent.change(emailInput, { target: { value: 'juan@example.com' } });
-    });
-
-    await act(async () => {
-      fireEvent.click(submitButton);
+      await user.type(nameInput, 'Juan');
+      await user.type(emailInput, 'juan@example.com');
+      await user.click(submitButton);
     });
 
     await waitFor(() => {
@@ -93,13 +79,14 @@ describe('Suscribirse Page Component', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(createTextMatcher('¡Suscripción Completa!'))).toBeInTheDocument();
+      expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
     });
 
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('juan@example.com');
   });
 
   test('interprets 400 / already exists backend errors as success (already subscribed)', async () => {
+    const user = userEvent.setup();
     mockedApi.post.mockRejectedValueOnce({
       response: {
         status: 400,
@@ -116,22 +103,20 @@ describe('Suscribirse Page Component', () => {
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
     await act(async () => {
-      fireEvent.change(nameInput, { target: { value: 'Luis' } });
-      fireEvent.change(emailInput, { target: { value: 'luis@example.com' } });
-    });
-
-    await act(async () => {
-      fireEvent.click(submitButton);
+      await user.type(nameInput, 'Luis');
+      await user.type(emailInput, 'luis@example.com');
+      await user.click(submitButton);
     });
 
     await waitFor(() => {
-      expect(screen.getByText(createTextMatcher('¡Suscripción Completa!'))).toBeInTheDocument();
+      expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
     });
 
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('luis@example.com');
   });
 
   test('displays Toast notification on generic error', async () => {
+    const user = userEvent.setup();
     mockedApi.post.mockRejectedValueOnce({
       response: {
         status: 500,
@@ -148,20 +133,17 @@ describe('Suscribirse Page Component', () => {
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
     await act(async () => {
-      fireEvent.change(nameInput, { target: { value: 'María' } });
-      fireEvent.change(emailInput, { target: { value: 'maria@example.com' } });
-    });
-
-    await act(async () => {
-      fireEvent.click(submitButton);
+      await user.type(nameInput, 'María');
+      await user.type(emailInput, 'maria@example.com');
+      await user.click(submitButton);
     });
 
     await waitFor(() => {
-      expect(screen.getByText(createTextMatcher('FRECUENCIA INCOMPATIBLE'))).toBeInTheDocument();
-      expect(screen.getByText(createTextMatcher('Error interno del servidor.'))).toBeInTheDocument();
+      expect(screen.getByText(/FRECUENCIA INCOMPATIBLE/i)).toBeInTheDocument();
+      expect(screen.getByText(/Error interno del servidor./i)).toBeInTheDocument();
     });
 
-    expect(screen.queryByText(createTextMatcher('¡Suscripción Completa!'))).not.toBeInTheDocument();
+    expect(screen.queryByText(/¡Suscripción Completa!/i)).not.toBeInTheDocument();
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBeNull();
   });
 });

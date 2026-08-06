@@ -236,8 +236,19 @@ describe('GalleryPage Frontend Tests', () => {
       }
     });
 
+    const fillInput = (input: HTMLElement, value: string) => {
+      const inputEl = input as HTMLInputElement;
+      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      if (nativeInputValueSetter) {
+        nativeInputValueSetter.call(inputEl, value);
+      }
+      inputEl.value = value;
+      fireEvent.input(inputEl, { target: { value } });
+      fireEvent.change(inputEl, { target: { value } });
+    };
+
     await act(async () => {
-      fireEvent.change(urlInput, { target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' } });
+      fillInput(urlInput, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ');
     });
 
     await waitFor(() => {
@@ -295,10 +306,6 @@ describe('GalleryPage Frontend Tests', () => {
 
     // Disparar submit (necesitamos simular que un archivo fue seleccionado)
     const file = new File(['dummy content'], 'photo.png', { type: 'image/png' });
-    // Dado que no podemos simular el Drag&Drop fácilmente en Testing Library, mockeamos directamente el submit
-    // simulando que selectedFile ya estaba puesto o forzando la lógica. Para garantizar que cubra la función,
-    // simulamos la subida.
-    // Busquemos el input file y simulemos el cambio
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [file] } });
 
@@ -306,7 +313,10 @@ describe('GalleryPage Frontend Tests', () => {
       expect(screen.getByText('photo.png')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText('Guardar Elemento'));
+    await act(async () => {
+      fireEvent.click(screen.getByText('Guardar Elemento'));
+      await Promise.resolve();
+    });
 
     await waitFor(() => {
       // Debe haber intentado la firma y la subida
@@ -315,6 +325,10 @@ describe('GalleryPage Frontend Tests', () => {
       const postCalls = mockedAxios.post.mock.calls;
       const endpointsCalled = postCalls.map(c => c[0]);
       expect(endpointsCalled).not.toContain(expect.stringContaining('/gallery/items/'));
+    });
+
+    await act(async () => {
+      await Promise.resolve();
     });
   });
 });
