@@ -67,7 +67,7 @@ const PAGE_ROUTES = [
     ]
   },
   {
-    path: '/galleria',
+    path: '/galeria',
     name: 'Galería de Luz Multimedia',
     sections: [
       { id: 'gallery_header', label: 'Encabezado de Galería', icon: '📷' },
@@ -828,7 +828,7 @@ export const ThemeManager: React.FC = () => {
                 </>
               )}
 
-              {selectedRoutePath === '/galleria' && (
+              {selectedRoutePath === '/galeria' && (
                 <div
                   onClick={(e) => handleVisualInspectorSelect(e, 'gallery_grid')}
                   onMouseEnter={() => setHoveredSectionKey('gallery_grid')}

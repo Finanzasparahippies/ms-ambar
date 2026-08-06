@@ -79,12 +79,12 @@ class ThemeCustomizationPageOverrideIntegrationTest(APITestCase):
         """Verify dynamic visual parameters override properly in section_themes without modifying global parameters."""
         self.client.force_authenticate(user=self.admin_user)
         
-        # Estructura de prueba con override para la página de 'galleria'
+        # Estructura de prueba con override para la página de 'galeria'
         data = {
             'theme_mode': 'section',
             'primary_color': '#E5A93B', # Global
             'section_themes': {
-                'galleria': {
+                'galeria': {
                     'primary_color': '#FF007F', # Sobrescribe color primario solo en la galería
                     'background_start': '#1A0033',
                     'background_end': '#000000',
@@ -105,9 +105,9 @@ class ThemeCustomizationPageOverrideIntegrationTest(APITestCase):
         
         # Validar la persistencia de las llaves en section_themes
         section_themes = res_active.data.get('section_themes', {})
-        self.assertIn('galleria', section_themes)
-        self.assertEqual(section_themes['galleria']['primary_color'], '#FF007F')
-        self.assertEqual(section_themes['galleria']['font_preset'], 'space-grotesk')
+        self.assertIn('galeria', section_themes)
+        self.assertEqual(section_themes['galeria']['primary_color'], '#FF007F')
+        self.assertEqual(section_themes['galeria']['font_preset'], 'space-grotesk')
 
         # Comprobar que el primario global en SiteSettings no se vio modificado por los valores del override
         self.assertEqual(res_active.data['primary_color'], '#E5A93B')

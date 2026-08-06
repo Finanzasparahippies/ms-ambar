@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import GalleryPage from '../pages/galleria';
+import GalleryPage from '../pages/galeria';
 
 jest.mock('axios');
 jest.mock('sweetalert2');

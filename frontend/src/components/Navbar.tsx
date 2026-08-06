@@ -97,7 +97,7 @@ const Navbar = () => {
   const navLinks = [
     { name: 'Inicio', href: '/' },
     { name: 'Accesos', href: '/comprar-boletos' },
-    { name: 'Galería', href: '/galleria' },
+    { name: 'Galería', href: '/galeria' },
     // { name: 'Música', href: '/musica' }, // TODO: Habilitar cuando esté completado
     // { name: 'Tienda', href: '/tienda' }, // TODO: Habilitar cuando esté completado
     { name: 'Ambar te escribe', href: '/ambar-te-escribe' },
