@@ -15,6 +15,11 @@ class Album(models.Model):
     youtube_music_url = models.URLField(blank=True, null=True, help_text="Enlace YouTube Music")
     amazon_music_url = models.URLField(blank=True, null=True, help_text="Enlace Amazon Music")
     
+    # Identificadores externos con restricciones de unicidad a nivel SQL
+    spotify_id = models.CharField(max_length=100, unique=True, blank=True, null=True, db_index=True, help_text="ID de álbum en Spotify")
+    youtube_id = models.CharField(max_length=100, unique=True, blank=True, null=True, db_index=True, help_text="ID de playlist/album en YouTube")
+    itunes_id = models.CharField(max_length=100, unique=True, blank=True, null=True, db_index=True, help_text="ID de colección en iTunes")
+    
     is_featured = models.BooleanField(default=True, help_text="Destacar en portada de discografía")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -35,9 +40,10 @@ class Track(models.Model):
     duration_seconds = models.IntegerField(default=210, help_text="Duración en segundos")
     preview_url = models.URLField(blank=True, null=True, help_text="URL de audio preview (mp3/stream)")
     
-    # Identificadores externos
-    spotify_id = models.CharField(max_length=100, blank=True, null=True, help_text="ID de canción en Spotify")
-    youtube_id = models.CharField(max_length=100, blank=True, null=True, help_text="ID de video en YouTube")
+    # Identificadores externos con restricciones de unicidad a nivel SQL
+    spotify_id = models.CharField(max_length=100, unique=True, blank=True, null=True, db_index=True, help_text="ID de canción en Spotify")
+    youtube_id = models.CharField(max_length=100, unique=True, blank=True, null=True, db_index=True, help_text="ID de video en YouTube")
+    itunes_id = models.CharField(max_length=100, unique=True, blank=True, null=True, db_index=True, help_text="ID de canción en iTunes")
     
     is_single = models.BooleanField(default=False, help_text="Marcar si fue lanzada como sencillo")
     play_count = models.PositiveIntegerField(default=0, help_text="Contador de reproducciones en plataforma")
@@ -50,3 +56,4 @@ class Track(models.Model):
 
     def __str__(self):
         return f"{self.album.title} - {self.track_number:02d}. {self.title}"
+

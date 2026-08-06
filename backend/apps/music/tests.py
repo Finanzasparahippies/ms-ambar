@@ -1,5 +1,6 @@
 from django.test import TestCase
 from django.urls import reverse
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APIClient
 from .models import Album, Track
@@ -8,19 +9,26 @@ from .services import MusicIngestionService
 
 class MusicAppTestCase(TestCase):
     def setUp(self):
+        cache.clear()
         self.client = APIClient()
         self.album = Album.objects.create(
             title="Eclipse Test",
             release_year="2026",
             cover_url="https://example.com/cover.jpg",
-            description="Álbum de prueba"
+            description="Álbum de prueba",
+            spotify_id="sp_test_album_001",
+            youtube_id="yt_test_album_001",
+            itunes_id="it_test_album_001"
         )
         self.track = Track.objects.create(
             album=self.album,
             track_number=1,
             title="Pista 1",
             duration_seconds=210,
-            preview_url="https://example.com/preview.mp3"
+            preview_url="https://example.com/preview.mp3",
+            spotify_id="sp_test_track_001",
+            youtube_id="yt_test_track_001",
+            itunes_id="it_test_track_001"
         )
 
     def test_list_albums(self):
@@ -46,3 +54,18 @@ class MusicAppTestCase(TestCase):
         self.assertEqual(Album.objects.count(), 0)
         MusicIngestionService.seed_initial_discography()
         self.assertGreater(Album.objects.count(), 0)
+
+    def test_spotify_token_caching(self):
+        # Verify that mock credentials return None without exception
+        token = MusicIngestionService.get_spotify_access_token()
+        self.assertIsNone(token)
+
+    def test_fetch_connectors_graceful_fallbacks(self):
+        itunes = MusicIngestionService.fetch_itunes_tracks("Ms Ambar")
+        self.assertIsInstance(itunes, list)
+        
+        youtube = MusicIngestionService.fetch_youtube_tracks("Ms Ambar")
+        self.assertIsInstance(youtube, list)
+
+        spotify = MusicIngestionService.fetch_spotify_catalog("Ms Ambar")
+        self.assertIsInstance(spotify, list)

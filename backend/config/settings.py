@@ -165,6 +165,13 @@ FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 # Backend/API URL (used for absolute media URLs in email campaigns)
 BACKEND_URL = env("BACKEND_URL", default="http://localhost:8000")
 
+# Music External Platform Credentials
+SPOTIFY_CLIENT_ID = env("SPOTIFY_CLIENT_ID", default="")
+SPOTIFY_CLIENT_SECRET = env("SPOTIFY_CLIENT_SECRET", default="")
+YOUTUBE_API_KEY = env("YOUTUBE_API_KEY", default="")
+ITUNES_SEARCH_URL = env("ITUNES_SEARCH_URL", default="https://itunes.apple.com/search")
+
+
 # REST Framework
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

@@ -10,7 +10,7 @@ class TrackSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'album', 'track_number', 'title', 'duration_seconds',
             'duration_display', 'preview_url', 'spotify_id', 'youtube_id',
-            'is_single', 'play_count', 'created_at'
+            'itunes_id', 'is_single', 'play_count', 'created_at'
         ]
 
     def get_duration_display(self, obj):
@@ -28,9 +28,11 @@ class AlbumSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'release_year', 'cover_url', 'release_date',
             'description', 'spotify_url', 'apple_music_url', 'youtube_url',
-            'youtube_music_url', 'amazon_music_url', 'is_featured',
+            'youtube_music_url', 'amazon_music_url', 'spotify_id',
+            'youtube_id', 'itunes_id', 'is_featured',
             'tracks', 'tracks_count', 'created_at', 'updated_at'
         ]
+
 
     def get_tracks_count(self, obj):
         return obj.tracks.count()
