@@ -11,5 +11,6 @@ urlpatterns = [
     path('api/blog/', include('apps.blog.urls')),
     path('api/bookings/', include('apps.bookings.urls')),
     path('api/gallery/', include('apps.gallery.urls')),
+    path('api/music/', include('apps.music.urls')),
 ]
 

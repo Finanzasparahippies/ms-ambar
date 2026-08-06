@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.performance",
     "apps.dashboard",
     "apps.gallery",
+    "apps.music",
 ]
 
 MIDDLEWARE = [

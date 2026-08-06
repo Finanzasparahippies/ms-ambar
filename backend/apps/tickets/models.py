@@ -784,6 +784,17 @@ class SiteSettings(models.Model):
     accent_color = models.CharField(max_length=50, default='#9F2B00', help_text="Color de resplandor / detalles (ej. #9F2B00)")
     card_background = models.CharField(max_length=50, default='#0c0f0d', help_text="Color de fondo de tarjetas de cristal (ej. #0c0f0d)")
     text_color = models.CharField(max_length=50, default='#F4F6F0', help_text="Color principal del texto (ej. #F4F6F0)")
+
+    # Estados Interactivos (Hover & Focus - Accesibilidad WCAG AA)
+    button_hover_bg = models.CharField(max_length=50, default='#FFC048', help_text="Color de fondo hover en botones")
+    button_hover_text = models.CharField(max_length=50, default='#080c0a', help_text="Color de texto hover en botones")
+    button_focus_ring = models.CharField(max_length=50, default='#E5A93B', help_text="Color de anillo focus en botones")
+    card_hover_bg = models.CharField(max_length=50, default='#121714', help_text="Color de fondo hover en tarjetas")
+    card_hover_border = models.CharField(max_length=50, default='#E5A93B', help_text="Color de borde hover en tarjetas")
+    card_focus_ring = models.CharField(max_length=50, default='#22A6B7', help_text="Color de anillo focus en tarjetas")
+    element_hover_color = models.CharField(max_length=50, default='#FFC048', help_text="Color hover para elementos interactivos")
+    element_focus_ring = models.CharField(max_length=50, default='#E5A93B', help_text="Color focus para elementos interactivos")
+
     particle_shape = models.CharField(max_length=50, choices=PARTICLE_SHAPE_CHOICES, default='moon', help_text="Figura geométrica del Canvas de partículas")
     card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, default='rounded-full', help_text="Estilo de bordes de tarjetas y botones")
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
@@ -825,6 +836,14 @@ class SiteSettings(models.Model):
             'accent_color': self.accent_color or '#9F2B00',
             'card_background': self.card_background or '#0c0f0d',
             'text_color': self.text_color or '#F4F6F0',
+            'button_hover_bg': getattr(self, 'button_hover_bg', '#FFC048') or '#FFC048',
+            'button_hover_text': getattr(self, 'button_hover_text', '#080c0a') or '#080c0a',
+            'button_focus_ring': getattr(self, 'button_focus_ring', '#E5A93B') or '#E5A93B',
+            'card_hover_bg': getattr(self, 'card_hover_bg', '#121714') or '#121714',
+            'card_hover_border': getattr(self, 'card_hover_border', '#E5A93B') or '#E5A93B',
+            'card_focus_ring': getattr(self, 'card_focus_ring', '#22A6B7') or '#22A6B7',
+            'element_hover_color': getattr(self, 'element_hover_color', '#FFC048') or '#FFC048',
+            'element_focus_ring': getattr(self, 'element_focus_ring', '#E5A93B') or '#E5A93B',
             'particle_shape': self.particle_shape or 'moon',
             'card_style': self.card_style or 'rounded-full',
             'background_pattern': self.background_pattern or 'stars',

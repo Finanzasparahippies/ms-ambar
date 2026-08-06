@@ -152,8 +152,11 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'tickets_page_subtitle', 'homepage_cta_text', 'fee_config', 'theme_config',
             'bio_badge', 'bio_title', 'bio_image', 'bio_image_url', 'bio_location', 'bio_content', 'bio_cta_text', 'bio_cta_url',
             'theme_mode', 'primary_color', 'secondary_color', 'background_start', 'background_end',
-            'accent_color', 'card_background', 'text_color', 'particle_shape',
-            'card_style', 'background_pattern', 'font_preset', 'allow_canvas_zoom', 'custom_css', 'section_themes'
+            'accent_color', 'card_background', 'text_color',
+            'button_hover_bg', 'button_hover_text', 'button_focus_ring',
+            'card_hover_bg', 'card_hover_border', 'card_focus_ring',
+            'element_hover_color', 'element_focus_ring',
+            'particle_shape', 'card_style', 'background_pattern', 'font_preset', 'allow_canvas_zoom', 'custom_css', 'section_themes'
         ]
 
     def get_bio_image_url(self, obj):
