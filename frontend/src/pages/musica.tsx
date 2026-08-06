@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, Share2, Disc, ExternalLink, Youtube, Music, RefreshCw, Volume2, Sparkles } from 'lucide-react';
+import { Play, Pause, Share2, Disc, Youtube, Music, RefreshCw, Volume2, Sparkles } from 'lucide-react';
 import axios from 'axios';
 import ThemedSection from '../components/ThemedSection';
 import { getApiUrl } from '../lib/utils';
@@ -16,6 +16,7 @@ interface TrackItem {
   preview_url?: string;
   spotify_id?: string;
   youtube_id?: string;
+  itunes_id?: string;
   is_single?: boolean;
 }
 
@@ -30,65 +31,14 @@ interface AlbumItem {
   youtube_url?: string;
   youtube_music_url?: string;
   amazon_music_url?: string;
+  spotify_id?: string;
+  youtube_id?: string;
+  itunes_id?: string;
   tracks: TrackItem[];
 }
 
-const FALLBACK_ALBUMS: AlbumItem[] = [
-  {
-    id: 1,
-    title: 'Eclipse',
-    release_year: '2026',
-    cover_url: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80',
-    description: 'Explorando texturas orgánicas y ritmos ancestrales, este álbum redefine el sonido contemporáneo de Ms Ambar.',
-    spotify_url: 'https://open.spotify.com',
-    apple_music_url: 'https://music.apple.com',
-    youtube_url: 'https://youtube.com',
-    youtube_music_url: 'https://music.youtube.com',
-    amazon_music_url: 'https://music.amazon.com',
-    tracks: [
-      { id: 101, track_number: 1, title: 'Sinfonía del Ámbar I (Eclipse Intro)', duration_seconds: 215, duration_display: '3:35', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-      { id: 102, track_number: 2, title: 'Luz de Luna en el Desierto', duration_seconds: 240, duration_display: '4:00', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-      { id: 103, track_number: 3, title: 'Fuego Inextinguible', duration_seconds: 198, duration_display: '3:18', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-      { id: 104, track_number: 4, title: 'Ecos del Silencio', duration_seconds: 225, duration_display: '3:45', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
-    ]
-  },
-  {
-    id: 2,
-    title: 'Ambar Vision',
-    release_year: '2024',
-    cover_url: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&q=80',
-    description: 'Una travesía audiovisual y conceptual que combina R&B alternativo con melodías envolventes.',
-    spotify_url: 'https://open.spotify.com',
-    apple_music_url: 'https://music.apple.com',
-    youtube_url: 'https://youtube.com',
-    youtube_music_url: 'https://music.youtube.com',
-    amazon_music_url: 'https://music.amazon.com',
-    tracks: [
-      { id: 201, track_number: 1, title: 'Visión de Cristal', duration_seconds: 210, duration_display: '3:30', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3' },
-      { id: 202, track_number: 2, title: 'No Te Voy a Llorar (Viña 2025 Live)', duration_seconds: 250, duration_display: '4:10', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3' },
-      { id: 203, track_number: 3, title: '14•28 (Título Numerológico)', duration_seconds: 205, duration_display: '3:25', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3' },
-    ]
-  },
-  {
-    id: 3,
-    title: 'Desierto de Cristal',
-    release_year: '2023',
-    cover_url: 'https://images.unsplash.com/photo-1514525253361-bee8a48790c3?w=800&q=80',
-    description: 'Primeras resonancias acústicas de la cantautora originaria de Hermosillo, Sonora.',
-    spotify_url: 'https://open.spotify.com',
-    apple_music_url: 'https://music.apple.com',
-    youtube_url: 'https://youtube.com',
-    youtube_music_url: 'https://music.youtube.com',
-    amazon_music_url: 'https://music.amazon.com',
-    tracks: [
-      { id: 301, track_number: 1, title: 'Cactus & Misticismo', duration_seconds: 180, duration_display: '3:00', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
-      { id: 302, track_number: 2, title: 'Bajo las Estrellas de Sonora', duration_seconds: 235, duration_display: '3:55', preview_url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3' },
-    ]
-  }
-];
-
 const MusicPage: React.FC = () => {
-  const [albums, setAlbums] = useState<AlbumItem[]>(FALLBACK_ALBUMS);
+  const [albums, setAlbums] = useState<AlbumItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
   const [activeTrack, setActiveTrack] = useState<TrackItem | null>(null);
@@ -112,9 +62,12 @@ const MusicPage: React.FC = () => {
       const res = await axios.get(`${apiUrl}/music/albums/`);
       if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         setAlbums(res.data);
+      } else {
+        setAlbums([]);
       }
     } catch (err) {
-      console.warn('[MusicPage] Usando discografía oficial por defecto:', err);
+      console.warn('[MusicPage] Error al obtener lanzamientos:', err);
+      setAlbums([]);
     } finally {
       setLoading(false);
     }
@@ -254,109 +207,137 @@ const MusicPage: React.FC = () => {
           </a>
         </div>
 
-        {/* Albums and Tracklist Section */}
-        <div className="space-y-24 md:space-y-36">
-          {albums.map((album) => (
-            <motion.section
-              key={album.id}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="flex flex-col lg:flex-row items-stretch gap-10 lg:gap-16 amber-glass p-8 md:p-12 rounded-[3rem] border border-white/10"
+        {/* Albums or Empty State Section */}
+        {!loading && albums.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="amber-glass border border-amber-honey/20 p-12 md:p-20 rounded-[3rem] text-center max-w-2xl mx-auto flex flex-col items-center justify-center my-16 shadow-2xl"
+          >
+            <div className="w-20 h-20 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mb-6 text-amber-honey">
+              <Disc size={40} className="animate-pulse" />
+            </div>
+            <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight mb-3 text-white">
+              Esperando información nueva
+            </h3>
+            <p className="opacity-60 text-sm max-w-md mb-8 leading-relaxed">
+              No hay lanzamientos cargados en este momento. Haz clic en sincronizar para buscar metadatos en las plataformas oficiales de streaming.
+            </p>
+            <button
+              onClick={handleSyncPlatform}
+              disabled={syncing}
+              className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-8 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2.5 transition-all hover:scale-105 shadow-xl shadow-amber-honey/20 disabled:opacity-50"
             >
-              {/* Album Cover & Glow Container */}
-              <div className="w-full lg:w-5/12 relative group max-w-md mx-auto lg:max-w-none flex flex-col justify-between">
-                <div className="relative z-10 aspect-square rounded-[2.5rem] overflow-hidden border border-amber-honey/20 shadow-2xl">
-                  <img
-                    src={album.cover_url || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80'}
-                    alt={album.title}
-                    className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
-                  <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
-                    <span className="text-amber-honey text-xs font-mono font-bold uppercase tracking-widest bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-amber-honey/30">
-                      {album.release_year}
+              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+              {syncing ? 'Sincronizando Plataformas...' : 'Sincronizar Ahora'}
+            </button>
+          </motion.div>
+        ) : (
+          <div className="space-y-24 md:space-y-36">
+            {albums.map((album) => (
+              <motion.section
+                key={album.id}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="flex flex-col lg:flex-row items-stretch gap-10 lg:gap-16 amber-glass p-8 md:p-12 rounded-[3rem] border border-white/10"
+              >
+                {/* Album Cover & Glow Container */}
+                <div className="w-full lg:w-5/12 relative group max-w-md mx-auto lg:max-w-none flex flex-col justify-between">
+                  <div className="relative z-10 aspect-square rounded-[2.5rem] overflow-hidden border border-amber-honey/20 shadow-2xl">
+                    <img
+                      src={album.cover_url || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80'}
+                      alt={album.title}
+                      className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80" />
+                    <div className="absolute bottom-6 left-6 right-6 flex justify-between items-end">
+                      <span className="text-amber-honey text-xs font-mono font-bold uppercase tracking-widest bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-amber-honey/30">
+                        {album.release_year}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Album Details & Tracks List */}
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    <span className="text-amber-honey text-xs font-black tracking-[0.4em] mb-2 block uppercase opacity-70">
+                      Álbum Oficial • {album.tracks?.length || 0} Pistas
                     </span>
-                  </div>
-                </div>
-              </div>
+                    <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter mb-4 text-white">
+                      {album.title}
+                    </h2>
+                    <p className="opacity-60 mb-8 text-sm md:text-base leading-relaxed">
+                      {album.description}
+                    </p>
 
-              {/* Album Details & Tracks List */}
-              <div className="flex-1 flex flex-col justify-between">
-                <div>
-                  <span className="text-amber-honey text-xs font-black tracking-[0.4em] mb-2 block uppercase opacity-70">
-                    Álbum Oficial • {album.tracks?.length || 0} Pistas
-                  </span>
-                  <h2 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tighter mb-4 text-white">
-                    {album.title}
-                  </h2>
-                  <p className="opacity-60 mb-8 text-sm md:text-base leading-relaxed">
-                    {album.description}
-                  </p>
+                    {/* Tracklist Container */}
+                    {album.tracks && album.tracks.length > 0 && (
+                      <div className="space-y-2 mb-8 max-h-[380px] overflow-y-auto custom-scroll pr-2">
+                        {album.tracks.map((track) => {
+                          const isCurrent = activeTrack?.id === track.id;
+                          const isTrackPlaying = isCurrent && isPlaying;
 
-                  {/* Tracklist Container */}
-                  <div className="space-y-2 mb-8 max-h-[380px] overflow-y-auto custom-scroll pr-2">
-                    {(album.tracks || []).map((track) => {
-                      const isCurrent = activeTrack?.id === track.id;
-                      const isTrackPlaying = isCurrent && isPlaying;
+                          return (
+                            <div
+                              key={track.id}
+                              onClick={() => toggleTrackPlayback(track)}
+                              className={`flex items-center justify-between py-3.5 px-5 rounded-2xl transition-all cursor-pointer border ${
+                                isCurrent
+                                  ? 'bg-amber-honey/20 border-amber-honey text-amber-honey font-bold shadow-lg shadow-amber-honey/10'
+                                  : 'bg-white/5 border-transparent hover:border-white/15 hover:bg-white/10 text-white/90'
+                              }`}
+                            >
+                              <div className="flex items-center gap-4">
+                                <button className="w-8 h-8 rounded-full bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center text-amber-honey">
+                                  {isTrackPlaying ? <Pause size={14} /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+                                </button>
+                                <span className="opacity-40 font-mono text-xs">
+                                  {track.track_number < 10 ? `0${track.track_number}` : track.track_number}
+                                </span>
+                                <span className="text-xs md:text-sm font-black tracking-tight uppercase">
+                                  {track.title}
+                                </span>
+                              </div>
 
-                      return (
-                        <div
-                          key={track.id}
-                          onClick={() => toggleTrackPlayback(track)}
-                          className={`flex items-center justify-between py-3.5 px-5 rounded-2xl transition-all cursor-pointer border ${
-                            isCurrent
-                              ? 'bg-amber-honey/20 border-amber-honey text-amber-honey font-bold shadow-lg shadow-amber-honey/10'
-                              : 'bg-white/5 border-transparent hover:border-white/15 hover:bg-white/10 text-white/90'
-                          }`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <button className="w-8 h-8 rounded-full bg-amber-honey/20 border border-amber-honey/40 flex items-center justify-center text-amber-honey">
-                              {isTrackPlaying ? <Pause size={14} /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
-                            </button>
-                            <span className="opacity-40 font-mono text-xs">
-                              {track.track_number < 10 ? `0${track.track_number}` : track.track_number}
-                            </span>
-                            <span className="text-xs md:text-sm font-black tracking-tight uppercase">
-                              {track.title}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-4 text-xs font-mono opacity-60">
-                            <span>{track.duration_display || '3:30'}</span>
-                            <Share2 size={14} className="hover:text-amber-honey transition-colors" />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Direct Platform Links Footer */}
-                <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-widest font-black text-amber-honey">
-                  <span>Escuchar álbum completo en:</span>
-                  <div className="flex items-center gap-3">
-                    {album.spotify_url && (
-                      <a href={album.spotify_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                        Spotify
-                      </a>
-                    )}
-                    {album.apple_music_url && (
-                      <a href={album.apple_music_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                        Apple Music
-                      </a>
-                    )}
-                    {album.youtube_url && (
-                      <a href={album.youtube_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
-                        YouTube
-                      </a>
+                              <div className="flex items-center gap-4 text-xs font-mono opacity-60">
+                                <span>{track.duration_display || '3:30'}</span>
+                                <Share2 size={14} className="hover:text-amber-honey transition-colors" />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
+
+                  {/* Direct Platform Links Footer */}
+                  <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-widest font-black text-amber-honey">
+                    <span>Escuchar álbum completo en:</span>
+                    <div className="flex items-center gap-3">
+                      {album.spotify_url && (
+                        <a href={album.spotify_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                          Spotify
+                        </a>
+                      )}
+                      {album.apple_music_url && (
+                        <a href={album.apple_music_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                          Apple Music
+                        </a>
+                      )}
+                      {album.youtube_url && (
+                        <a href={album.youtube_url} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+                          YouTube
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </motion.section>
-          ))}
-        </div>
+              </motion.section>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Floating Sticky Audio Player Control Bar */}
