@@ -1,8 +1,13 @@
+import os
 import re
+import gc
 import uuid
 import logging
+import tempfile
 import requests
 import cloudinary.utils
+import cloudinary.uploader
+from PIL import Image, ImageOps
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status
@@ -82,6 +87,193 @@ class GalleryItemViewSet(viewsets.ModelViewSet):
             'api_key': settings.CLOUDINARY_STORAGE['API_KEY'],
             'cloud_name': settings.CLOUDINARY_STORAGE['CLOUD_NAME'],
         })
+
+    @action(detail=False, methods=['POST'], permission_classes=[permissions.IsAdminUser])
+    def optimize_images(self, request):
+        """
+        Recibe 1 o varias imágenes (o estructura de carpetas), las optimiza localmente
+        con Pillow (respetando calidad, dimensiones máximas y conversión a WebP),
+        las sube a Cloudinary y opcionalmente las guarda en la base de datos de la Galería.
+        
+        Blindado contra consumo excesivo de RAM (VPS 2GB) mediante procesamiento en disco temporal.
+        Límite por archivo individual: 35MB.
+        """
+        files = request.FILES.getlist('files') or request.FILES.getlist('file')
+        if not files and request.FILES:
+            files = list(request.FILES.values())
+
+        if not files:
+            raise ValidationError({'files': 'No se enviaron archivos para optimizar.'})
+
+        try:
+            quality = max(10, min(100, int(request.data.get('quality', 80))))
+        except (ValueError, TypeError):
+            quality = 80
+
+        try:
+            max_size = int(request.data.get('max_size', 1920))
+        except (ValueError, TypeError):
+            max_size = 1920
+
+        to_webp_raw = str(request.data.get('to_webp', 'true')).lower()
+        to_webp = to_webp_raw in ['true', '1', 'yes']
+
+        save_to_gallery_raw = str(request.data.get('save_to_gallery', 'false')).lower()
+        save_to_gallery = save_to_gallery_raw in ['true', '1', 'yes']
+
+        category = str(request.data.get('category', '')).strip()
+
+        MAX_SINGLE_FILE_SIZE = 35 * 1024 * 1024  # 35MB
+        ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp']
+
+        results = []
+        total_original = 0
+        total_optimized = 0
+        success_count = 0
+
+        for uploaded_file in files:
+            filename = uploaded_file.name
+            original_size = uploaded_file.size
+            ext = os.path.splitext(filename)[1].lower()
+
+            if original_size > MAX_SINGLE_FILE_SIZE:
+                results.append({
+                    'filename': filename,
+                    'status': 'error',
+                    'error': 'El archivo excede el límite permitido de 35MB.',
+                    'original_size': original_size,
+                    'optimized_size': original_size,
+                    'saved_bytes': 0,
+                    'reduction_percent': 0.0
+                })
+                continue
+
+            if ext not in ALLOWED_EXTENSIONS and not (uploaded_file.content_type and uploaded_file.content_type.startswith('image/')):
+                results.append({
+                    'filename': filename,
+                    'status': 'error',
+                    'error': f'Formato "{ext}" no soportado. Se requieren imágenes JPG, PNG o WebP.',
+                    'original_size': original_size,
+                    'optimized_size': original_size,
+                    'saved_bytes': 0,
+                    'reduction_percent': 0.0
+                })
+                continue
+
+            temp_path = None
+            try:
+                img = Image.open(uploaded_file)
+                img = ImageOps.exif_transpose(img)
+                orig_mode = img.mode
+                
+                orig_w, orig_h = img.size
+                if max_size > 0 and max(orig_w, orig_h) > max_size:
+                    img.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+
+                save_format = "WEBP" if to_webp else (img.format or ("JPEG" if ext in ['.jpg', '.jpeg'] else "PNG"))
+                if save_format not in ["WEBP", "JPEG", "PNG"]:
+                    save_format = "WEBP" if to_webp else "JPEG"
+
+                if save_format == "JPEG" and orig_mode in ("RGBA", "P", "LA"):
+                    img = img.convert("RGB")
+
+                out_ext = ".webp" if save_format == "WEBP" else (".jpg" if save_format == "JPEG" else ".png")
+
+                with tempfile.NamedTemporaryFile(delete=False, suffix=out_ext) as tmp_file:
+                    temp_path = tmp_file.name
+
+                if save_format == "WEBP":
+                    img.save(temp_path, "WEBP", quality=quality, method=6)
+                elif save_format == "JPEG":
+                    img.save(temp_path, "JPEG", quality=quality, optimize=True)
+                else:
+                    img.save(temp_path, "PNG", optimize=True)
+
+                optimized_size = os.path.getsize(temp_path)
+                saved_bytes = max(0, original_size - optimized_size)
+                reduction_pct = round((saved_bytes / original_size * 100), 1) if original_size > 0 else 0.0
+
+                unique_id = uuid.uuid4().hex
+                public_id = f"gallery_opt_{unique_id}"
+                folder = "ms-ambar/gallery"
+
+                upload_res = cloudinary.uploader.upload(
+                    temp_path,
+                    folder=folder,
+                    public_id=public_id,
+                    resource_type="image"
+                )
+
+                secure_url = upload_res.get('secure_url') or upload_res.get('url')
+                final_public_id = upload_res.get('public_id', f"{folder}/{public_id}")
+                final_width = upload_res.get('width', img.width)
+                final_height = upload_res.get('height', img.height)
+
+                item_id = None
+                if save_to_gallery:
+                    clean_title = os.path.splitext(filename)[0].replace('-', ' ').replace('_', ' ').title()
+                    gallery_item = GalleryItem.objects.create(
+                        title=clean_title,
+                        description=f"Imagen optimizada (-{reduction_pct}%).",
+                        media_type="image",
+                        provider="cloudinary",
+                        url=secure_url,
+                        public_id=final_public_id,
+                        width=final_width,
+                        height=final_height,
+                        category=category or "Optimizadas"
+                    )
+                    item_id = gallery_item.id
+
+                total_original += original_size
+                total_optimized += optimized_size
+                success_count += 1
+
+                results.append({
+                    'filename': filename,
+                    'status': 'success',
+                    'original_size': original_size,
+                    'optimized_size': optimized_size,
+                    'saved_bytes': saved_bytes,
+                    'reduction_percent': reduction_pct,
+                    'url': secure_url,
+                    'public_id': final_public_id,
+                    'width': final_width,
+                    'height': final_height,
+                    'gallery_item_id': item_id
+                })
+
+            except Exception as e:
+                logger.error(f"Error procesando imagen {filename}: {str(e)}", exc_info=True)
+                results.append({
+                    'filename': filename,
+                    'status': 'error',
+                    'error': f'No se pudo optimizar la imagen: {str(e)}',
+                    'original_size': original_size,
+                    'optimized_size': original_size,
+                    'saved_bytes': 0,
+                    'reduction_percent': 0.0
+                })
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except Exception as clean_err:
+                        logger.warning(f"No se pudo eliminar archivo temporal {temp_path}: {clean_err}")
+                gc.collect()
+
+        total_saved = max(0, total_original - total_optimized)
+        overall_reduction = round((total_saved / total_original * 100), 1) if total_original > 0 else 0.0
+
+        return Response({
+            'processed_count': success_count,
+            'total_files': len(files),
+            'total_original_bytes': total_original,
+            'total_optimized_bytes': total_optimized,
+            'total_saved_bytes': total_saved,
+            'reduction_percent': overall_reduction,
+            'results': results
+        }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['POST'], permission_classes=[permissions.IsAdminUser])
     def parse_external_url(self, request):

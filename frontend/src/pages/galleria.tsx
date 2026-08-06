@@ -1,13 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
-import Head from 'next/head';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Camera, Play, Expand, X, Trash2, Plus, Upload, Link2, 
-  ChevronLeft, ChevronRight, Eye, Volume2, VolumeX, Maximize, Loader2
-} from 'lucide-react';
 import axios from 'axios';
-import Swal from 'sweetalert2';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Camera,
+  ChevronLeft, ChevronRight,
+  Expand,
+  Link2,
+  Loader2,
+  Maximize,
+  Play,
+  Plus,
+  Sparkles,
+  Trash2,
+  Upload,
+  Volume2, VolumeX,
+  X
+} from 'lucide-react';
+import Head from 'next/head';
+import React, { useEffect, useRef, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import Swal from 'sweetalert2';
+import ImageOptimizerWidget from '../components/ImageOptimizerWidget';
 import { useSectionTheme } from '../context/EventThemeContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -56,10 +68,10 @@ export default function GalleryPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeFilter, setActiveFilter] = useState('Todos');
-  
+
   // Lightbox State
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  
+
   // Custom HTML5 Video Player state inside Lightbox
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
@@ -69,6 +81,7 @@ export default function GalleryPage() {
 
   // Admin Modal State
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [isOptimizerModalOpen, setIsOptimizerModalOpen] = useState(false);
   const [uploadSource, setUploadSource] = useState<'cloudinary' | 'external'>('cloudinary');
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -413,14 +426,14 @@ export default function GalleryPage() {
           >
             <Camera className="text-amber-honey animate-pulse" size={28} />
           </motion.div>
-          
+
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
             className="text-5xl md:text-8xl font-black tracking-tighter mb-4 uppercase italic"
           >
-            Galería de <span className="text-glow text-amber-honey">Luz</span>
+            Galería de <span className="text-glow text-amber-honey">Ms Ambar</span>
           </motion.h1>
           <p className="opacity-50 uppercase tracking-[0.4em] text-[10px] md:text-xs font-black">
             Archivo oficial del club & bitácora visual
@@ -428,7 +441,17 @@ export default function GalleryPage() {
 
           {/* Admin Control Trigger */}
           {isAdmin && (
-            <div className="absolute right-0 top-0">
+            <div className="flex flex-wrap items-center justify-center md:justify-end gap-3 mt-6 md:mt-0 md:absolute md:right-0 md:top-0">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsOptimizerModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-3 rounded-full border border-amber-400/60 bg-amber-400/20 text-amber-400 font-black uppercase tracking-wider text-xs shadow-lg hover:bg-amber-400 hover:text-slate-950 transition-all duration-300"
+              >
+                <Sparkles size={16} />
+                Optimizar Imágenes
+              </motion.button>
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -449,11 +472,10 @@ export default function GalleryPage() {
               <motion.button
                 key={idx}
                 onClick={() => setActiveFilter(cat || 'Todos')}
-                className={`px-6 py-2.5 rounded-full text-xs font-black tracking-widest uppercase transition-all duration-300 ${
-                  activeFilter === (cat || 'Todos')
-                    ? 'bg-amber-honey text-nature-night shadow-glow'
-                    : 'bg-nature-night/60 border border-white/5 text-white/50 hover:text-white hover:border-white/20'
-                }`}
+                className={`px-6 py-2.5 rounded-full text-xs font-black tracking-widest uppercase transition-all duration-300 ${activeFilter === (cat || 'Todos')
+                  ? 'bg-amber-honey text-nature-night shadow-glow'
+                  : 'bg-nature-night/60 border border-white/5 text-white/50 hover:text-white hover:border-white/20'
+                  }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -467,8 +489,8 @@ export default function GalleryPage() {
         {loading ? (
           <div className="columns-1 md:columns-2 lg:columns-3 gap-6 w-full">
             {[...Array(6)].map((_, i) => (
-              <div 
-                key={i} 
+              <div
+                key={i}
                 className="break-inside-avoid mb-6 w-full rounded-[2.5rem] bg-nature-night/40 border border-white/5 animate-pulse flex flex-col justify-end p-8"
                 style={{ height: i % 2 === 0 ? '420px' : '300px' }}
               >
@@ -774,45 +796,43 @@ export default function GalleryPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
           >
             <motion.div
               initial={{ scale: 0.95, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 30 }}
-              className="bg-nature-night/95 border border-white/10 rounded-[3rem] w-full max-w-xl p-8 relative shadow-glow"
+              className="bg-[#121218] border border-slate-700/80 rounded-[3rem] w-full max-w-xl p-8 relative shadow-2xl text-slate-100"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close */}
               <button
                 onClick={() => setIsUploadModalOpen(false)}
-                className="absolute top-6 right-6 p-2 text-white/40 hover:text-white rounded-full hover:bg-white/5"
+                className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/50 hover:bg-slate-800 transition-colors"
               >
                 <X size={20} />
               </button>
 
               <h2 className="text-3xl font-black mb-6 uppercase tracking-tight text-white italic">
-                Añadir a la <span className="text-amber-honey">Galería</span>
+                Añadir a la <span className="text-amber-400">Galería</span>
               </h2>
 
               <form onSubmit={handleUploadSubmit} className="space-y-5">
                 {/* Source Selection */}
-                <div className="flex gap-2 p-1 bg-nature-night/40 border border-white/5 rounded-full">
+                <div className="flex gap-2 p-1.5 bg-[#181824] border border-slate-800 rounded-full">
                   <button
                     type="button"
                     onClick={() => { setUploadSource('cloudinary'); resetForm(); }}
-                    className={`flex-1 py-3 text-center rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-                      uploadSource === 'cloudinary' ? 'bg-amber-honey text-nature-night shadow-glow' : 'text-white/40'
-                    }`}
+                    className={`flex-1 py-3 text-center rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 ${uploadSource === 'cloudinary' ? 'bg-amber-400 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     Cargar Archivo (Cloudinary)
                   </button>
                   <button
                     type="button"
                     onClick={() => { setUploadSource('external'); resetForm(); }}
-                    className={`flex-1 py-3 text-center rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 ${
-                      uploadSource === 'external' ? 'bg-amber-honey text-nature-night shadow-glow' : 'text-white/40'
-                    }`}
+                    className={`flex-1 py-3 text-center rounded-full text-xs font-black uppercase tracking-wider transition-all duration-300 ${uploadSource === 'external' ? 'bg-amber-400 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'
+                      }`}
                   >
                     Vincular Enlace (YT/IG/Vimeo)
                   </button>
@@ -820,25 +840,25 @@ export default function GalleryPage() {
 
                 {/* Title */}
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider opacity-40 mb-2">Título</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Título</label>
                   <input
                     type="text"
                     required
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full bg-nature-night/50 border border-white/5 focus:border-amber-honey rounded-2xl px-5 py-3 text-sm focus:outline-none transition-colors"
+                    className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors font-medium"
                     placeholder="Título del elemento"
                   />
                 </div>
 
                 {/* Description */}
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wider opacity-40 mb-2">Descripción (Opcional)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Descripción (Opcional)</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
-                    className="w-full bg-nature-night/50 border border-white/5 focus:border-amber-honey rounded-2xl px-5 py-3 text-sm focus:outline-none transition-colors resize-none"
+                    className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors resize-none font-medium"
                     placeholder="Detalles sobre el medio..."
                   />
                 </div>
@@ -846,22 +866,22 @@ export default function GalleryPage() {
                 {/* Category & Order Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider opacity-40 mb-2">Categoría</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Categoría</label>
                     <input
                       type="text"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-nature-night/50 border border-white/5 focus:border-amber-honey rounded-2xl px-5 py-3 text-sm focus:outline-none transition-colors"
+                      className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors font-medium"
                       placeholder="Ej: Tour, Backstage..."
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider opacity-40 mb-2">Orden</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Orden</label>
                     <input
                       type="number"
                       value={order}
                       onChange={(e) => setOrder(parseInt(e.target.value) || 0)}
-                      className="w-full bg-nature-night/50 border border-white/5 focus:border-amber-honey rounded-2xl px-5 py-3 text-sm focus:outline-none transition-colors"
+                      className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors font-medium"
                     />
                   </div>
                 </div>
@@ -870,10 +890,10 @@ export default function GalleryPage() {
                 {uploadSource === 'cloudinary' ? (
                   /* Cloudinary File Upload Dropzone */
                   <div>
-                    <label className="block text-[10px] font-black uppercase tracking-wider opacity-40 mb-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
                       Seleccionar Archivo (Foto / Video)
                     </label>
-                    <div className="border border-dashed border-white/10 hover:border-amber-honey/40 rounded-2xl p-6 text-center cursor-pointer transition-colors relative bg-nature-night/30">
+                    <div className="border border-dashed border-slate-700 hover:border-amber-400/60 rounded-2xl p-6 text-center cursor-pointer transition-colors relative bg-[#181824]">
                       <input
                         type="file"
                         accept="image/*,video/*"
@@ -881,12 +901,12 @@ export default function GalleryPage() {
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       />
                       <div className="flex flex-col items-center">
-                        <Upload size={24} className="text-white/40 mb-2" />
-                        <p className="text-xs text-white/50">
+                        <Upload size={24} className="text-amber-400 mb-2" />
+                        <p className="text-xs text-slate-200 font-medium">
                           {selectedFile ? selectedFile.name : 'Arrastra o haz click para seleccionar'}
                         </p>
-                        <p className="text-[9px] text-white/30 mt-1">
-                          Límites: Imagen 10MB / Video 100MB
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Límites: Imagen 35MB / Video 100MB
                         </p>
                       </div>
                     </div>
@@ -895,7 +915,7 @@ export default function GalleryPage() {
                   /* Link parsing inputs */
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-[10px] font-black uppercase tracking-wider opacity-40 mb-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
                         Enlace de YouTube, Instagram, Vimeo o TikTok
                       </label>
                       <div className="flex gap-2">
@@ -905,14 +925,14 @@ export default function GalleryPage() {
                             value={externalUrl}
                             onChange={(e) => setExternalUrl(e.target.value)}
                             onBlur={handleUrlBlur}
-                            className="w-full bg-nature-night/50 border border-white/5 focus:border-amber-honey rounded-2xl pl-10 pr-5 py-3 text-sm focus:outline-none transition-colors"
+                            className="w-full bg-[#181824] border border-slate-700 text-white placeholder-slate-400 focus:border-amber-400 rounded-2xl pl-10 pr-5 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-amber-400 transition-colors font-medium"
                             placeholder="https://..."
                           />
-                          <Link2 className="absolute left-3.5 top-3.5 text-white/30" size={16} />
+                          <Link2 className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
                         </div>
                         {parsingLoading && (
-                          <div className="flex items-center justify-center px-4 bg-white/5 rounded-2xl">
-                            <Loader2 className="animate-spin text-amber-honey" size={18} />
+                          <div className="flex items-center justify-center px-4 bg-slate-800 rounded-2xl">
+                            <Loader2 className="animate-spin text-amber-400" size={18} />
                           </div>
                         )}
                       </div>
@@ -920,19 +940,19 @@ export default function GalleryPage() {
 
                     {/* Parser fields auto preview */}
                     {parsedData && (
-                      <div className="flex gap-4 p-4 border border-white/5 bg-nature-night/30 rounded-2xl">
+                      <div className="flex gap-4 p-4 border border-slate-700 bg-[#181824] rounded-2xl">
                         {parsedData.thumbnail_url && (
                           <img
                             src={parsedData.thumbnail_url}
                             alt="preview"
-                            className="w-24 h-16 rounded-lg object-cover border border-white/10"
+                            className="w-24 h-16 rounded-lg object-cover border border-slate-700"
                           />
                         )}
                         <div className="flex flex-col justify-center">
-                          <span className="text-[10px] font-black uppercase text-amber-honey tracking-widest">
+                          <span className="text-xs font-bold uppercase text-amber-400 tracking-widest">
                             {parsedData.provider} / {parsedData.media_type}
                           </span>
-                          <span className="text-xs text-white/70 truncate max-w-[250px] mt-1">
+                          <span className="text-xs text-slate-200 truncate max-w-[250px] mt-1 font-medium">
                             {title || 'Cargando título...'}
                           </span>
                         </div>
@@ -944,12 +964,12 @@ export default function GalleryPage() {
                 {/* Progress bar */}
                 {uploadLoading && uploadSource === 'cloudinary' && (
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[9px] font-black uppercase tracking-wider text-amber-honey">
+                    <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-amber-400">
                       <span>Subiendo a Cloudinary...</span>
                       <span>{uploadProgress}%</span>
                     </div>
-                    <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-amber-honey transition-all duration-100" style={{ width: `${uploadProgress}%` }} />
+                    <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-amber-400 transition-all duration-100" style={{ width: `${uploadProgress}%` }} />
                     </div>
                   </div>
                 )}
@@ -958,7 +978,7 @@ export default function GalleryPage() {
                 <motion.button
                   type="submit"
                   disabled={uploadLoading || parsingLoading}
-                  className="w-full bg-amber-honey text-nature-night font-bold uppercase tracking-wider py-4 rounded-2xl shadow-glow hover:bg-amber-honey/90 disabled:opacity-50 transition-all duration-300 text-xs flex items-center justify-center gap-2"
+                  className="w-full bg-amber-400 text-slate-950 font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg hover:bg-amber-300 disabled:opacity-50 transition-all duration-300 text-xs flex items-center justify-center gap-2"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -972,6 +992,33 @@ export default function GalleryPage() {
                   )}
                 </motion.button>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Admin Image Optimizer Modal */}
+      <AnimatePresence>
+        {isOptimizerModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 30 }}
+              className="w-full max-w-4xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ImageOptimizerWidget
+                onCancel={() => setIsOptimizerModalOpen(false)}
+                onSuccess={() => {
+                  fetchItems();
+                }}
+              />
             </motion.div>
           </motion.div>
         )}
