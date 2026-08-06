@@ -3,7 +3,7 @@ from django.urls import reverse
 from django.conf import settings
 from rest_framework import status
 from rest_framework.test import APITestCase
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 import requests
 from apps.users.models import User
 from .models import GalleryItem
@@ -254,17 +254,19 @@ class GalleryItemViewSetIntegrationTest(APITestCase):
     def test_optimize_images_exceeds_35mb_returns_error(self):
         """Verify optimize_images rejects individual files exceeding 35MB limit."""
         self.client.force_authenticate(user=self.admin_user)
-        from django.core.files.uploadedfile import SimpleUploadedFile, UploadedFile
+        from django.core.files.uploadedfile import SimpleUploadedFile, InMemoryUploadedFile
 
         huge_file = SimpleUploadedFile("huge_image.jpg", b"fake image bytes", content_type="image/jpeg")
 
         url = reverse('gallery-item-optimize-images')
-        with patch.object(UploadedFile, 'size', 36 * 1024 * 1024):
+        with patch.object(InMemoryUploadedFile, 'size', new_callable=PropertyMock) as mock_size:
+            mock_size.return_value = 36 * 1024 * 1024
             res = self.client.post(url, {'files': huge_file}, format='multipart')
 
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['processed_count'], 0)
         self.assertEqual(res.data['results'][0]['status'], 'error')
         self.assertIn('35MB', res.data['results'][0]['error'])
+
 
 
