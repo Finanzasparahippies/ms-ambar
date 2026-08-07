@@ -13,6 +13,8 @@ interface TrackItem {
   title: string;
   duration_seconds: number;
   duration_display: string;
+  full_audio_url?: string;
+  audio_file?: string;
   preview_url?: string;
   spotify_id?: string;
   youtube_id?: string;
@@ -125,6 +127,8 @@ const MusicPage: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [activeTrack, setActiveTrack] = useState<TrackItem | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -263,8 +267,16 @@ const MusicPage: React.FC = () => {
     }
   };
 
+  const formatTime = (seconds: number): string => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   const toggleTrackPlayback = useCallback((track: TrackItem) => {
-    if (!track.preview_url) {
+    const audioUrl = track.full_audio_url || track.audio_file || track.preview_url;
+    if (!audioUrl) {
       showToast.error('Vista previa no disponible para este tema.');
       return;
     }
@@ -284,19 +296,37 @@ const MusicPage: React.FC = () => {
       audioRef.current.pause();
     }
 
-    const newAudio = new Audio(track.preview_url);
+    const newAudio = new Audio(audioUrl);
     audioRef.current = newAudio;
     setActiveTrack(track);
     setIsPlaying(true);
+    setCurrentTime(0);
+    setDuration(track.duration_seconds || 0);
+
+    newAudio.ontimeupdate = () => {
+      if (audioRef.current) {
+        setCurrentTime(audioRef.current.currentTime || 0);
+        if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+          setDuration(audioRef.current.duration);
+        }
+      }
+    };
+
+    newAudio.onloadedmetadata = () => {
+      if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+        setDuration(audioRef.current.duration);
+      }
+    };
+
+    newAudio.onended = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+    };
 
     newAudio.play().catch((err) => {
       console.warn('Playback error:', err);
       setIsPlaying(false);
     });
-
-    newAudio.onended = () => {
-      setIsPlaying(false);
-    };
   }, [activeTrack, isPlaying]);
 
   const FAKE_TITLES = ['Ambar Vision', 'Desierto de Cristal', 'Sinfonías de Ámbar', 'Placeholder Vacío'];
@@ -305,7 +335,10 @@ const MusicPage: React.FC = () => {
   const activeAlbums = albums.filter((alb) => {
     if (!alb.tracks || alb.tracks.length === 0) return false;
     if (FAKE_TITLES.includes(alb.title)) return false;
-    const hasOnlyFakeTracks = alb.tracks.every((trk) => trk.preview_url?.includes('soundhelix.com'));
+    const hasOnlyFakeTracks = alb.tracks.every((trk) => {
+      const url = trk.full_audio_url || trk.audio_file || trk.preview_url;
+      return url?.includes('soundhelix.com');
+    });
     if (hasOnlyFakeTracks) return false;
     return true;
   });
@@ -747,24 +780,50 @@ const MusicPage: React.FC = () => {
               initial={{ y: 100, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
-              className="fixed bottom-6 left-6 right-6 md:left-auto md:right-10 md:w-96 z-[120] amber-glass p-4 rounded-3xl border border-amber-honey/40 shadow-2xl flex items-center justify-between gap-4"
+              className="fixed bottom-6 left-6 right-6 md:left-auto md:right-10 md:w-96 z-[120] amber-glass p-4 rounded-3xl border border-amber-honey/40 shadow-2xl flex flex-col gap-3"
             >
-              <div className="flex items-center gap-3 truncate">
-                <div className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center font-bold">
-                  <Volume2 size={20} className={isPlaying ? 'animate-bounce' : ''} />
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 truncate">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center font-bold shrink-0">
+                    <Volume2 size={20} className={isPlaying ? 'animate-bounce' : ''} />
+                  </div>
+                  <div className="truncate">
+                    <p className="text-xs font-black uppercase text-white truncate">{activeTrack.title}</p>
+                    <p className="text-[9px] font-mono text-amber-honey uppercase tracking-wider">Ms Ambar • Reproducción</p>
+                  </div>
                 </div>
-                <div className="truncate">
-                  <p className="text-xs font-black uppercase text-white truncate">{activeTrack.title}</p>
-                  <p className="text-[9px] font-mono text-amber-honey uppercase tracking-wider">Ms Ambar • Vista Previa</p>
-                </div>
+
+                <button
+                  onClick={() => toggleTrackPlayback(activeTrack)}
+                  className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform focus:outline-none shrink-0"
+                >
+                  {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
+                </button>
               </div>
 
-              <button
-                onClick={() => toggleTrackPlayback(activeTrack)}
-                className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform focus:outline-none"
-              >
-                {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
-              </button>
+              <div className="w-full space-y-1">
+                <div
+                  className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden cursor-pointer relative"
+                  onClick={(e) => {
+                    if (audioRef.current && duration > 0) {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const clickX = e.clientX - rect.left;
+                      const newTime = (clickX / rect.width) * duration;
+                      audioRef.current.currentTime = newTime;
+                      setCurrentTime(newTime);
+                    }
+                  }}
+                >
+                  <div
+                    className="bg-amber-honey h-full rounded-full transition-all duration-100"
+                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[9px] font-mono text-amber-honey/80">
+                  <span>{formatTime(currentTime)}</span>
+                  <span>{formatTime(duration || activeTrack.duration_seconds || 0)}</span>
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
