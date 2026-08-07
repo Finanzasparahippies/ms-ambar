@@ -342,18 +342,17 @@ export default function BlogPage() {
     : posts.filter(p => p.category_name === selectedCategory || (p.category && String(p.category) === selectedCategory));
 
   return (
-    <ThemedSection sectionKey="blog">
-      <div className="selection:bg-amber-honey/30 min-h-screen text-white relative">
-        <Head>
-          <title>Ms Ambar  | Journal</title>
-          <style>{`
+    <ThemedSection sectionKey="blog_section" className="selection:bg-amber-honey/30 min-h-screen text-white relative">
+      <Head>
+        <title>Ms Ambar | Journal</title>
+        <style>{`
           .rich-text-content h2 {
             font-size: 1.875rem;
             font-weight: 900;
             margin-top: 1.75rem;
             margin-bottom: 0.75rem;
             letter-spacing: -0.025em;
-            color: #ffffff;
+            color: var(--heading-color, #ffffff);
           }
           .rich-text-content h3 {
             font-size: 1.5rem;
@@ -361,39 +360,39 @@ export default function BlogPage() {
             margin-top: 1.5rem;
             margin-bottom: 0.5rem;
             letter-spacing: -0.025em;
-            color: #f3f4f6;
+            color: var(--subtitle-color, #f3f4f6);
           }
           .rich-text-content p {
             font-size: 0.95rem;
             line-height: 1.75;
             margin-bottom: 1.25rem;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--text-color, rgba(255, 255, 255, 0.75));
           }
           .rich-text-content ul {
             list-style-type: disc;
             list-style-position: inside;
             margin-bottom: 1.25rem;
             padding-left: 1rem;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--text-color, rgba(255, 255, 255, 0.75));
           }
           .rich-text-content ol {
             list-style-type: decimal;
             list-style-position: inside;
             margin-bottom: 1.25rem;
             padding-left: 1rem;
-            color: rgba(255, 255, 255, 0.75);
+            color: var(--text-color, rgba(255, 255, 255, 0.75));
           }
           .rich-text-content blockquote {
-            border-left: 4px solid #f59e0b;
+            border-left: 4px solid var(--primary-color, #f59e0b);
             background: rgba(255, 255, 255, 0.02);
             padding: 1rem 1.25rem;
             border-radius: 0 1rem 1rem 0;
             margin-bottom: 1.25rem;
             font-style: italic;
-            color: rgba(255, 255, 255, 0.85);
+            color: var(--text-color, rgba(255, 255, 255, 0.85));
           }
           .rich-text-content a {
-            color: #f59e0b;
+            color: var(--primary-color, #f59e0b);
             text-decoration: underline;
             transition: color 0.2s;
           }
@@ -430,10 +429,9 @@ export default function BlogPage() {
             display: block;
           }
         `}</style>
-        </Head>
+      </Head>
 
-        <ThemedSection sectionKey="blog_section" className="selection:bg-amber-honey/30 min-h-screen relative overflow-hidden">
-          <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20 pt-32">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20 pt-32">
 
             {/* Header section */}
             <header className="mb-20 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
@@ -1145,6 +1143,6 @@ export default function BlogPage() {
               ))}
             </AnimatePresence>
           </div>
-        </ThemedSection>
-        );
+    </ThemedSection>
+  );
 }
