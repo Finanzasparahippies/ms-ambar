@@ -138,3 +138,23 @@ class ThemeCustomizationPageOverrideIntegrationTest(APITestCase):
         # Comprobar que el primario global en SiteSettings no se vio modificado por los valores del override
         self.assertEqual(res_active.data['primary_color'], '#E5A93B')
         self.assertEqual(section_themes['contact']['primary_color'], '#00FFCC')
+
+    def test_theme_cache_invalidation_on_settings_update(self):
+        """Verify ActiveThemeView uses Django cache and purges cache automatically when SiteSettings updates."""
+        from django.core.cache import cache
+        cache.clear()
+
+        # Primer GET debe guardar en caché
+        res1 = self.client.get(self.active_theme_url)
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        self.assertEqual(res1.data['primary_color'], '#E5A93B')
+
+        # Modificar configuración vía API
+        self.client.force_authenticate(user=self.admin_user)
+        res_post = self.client.post(self.settings_url, {'primary_color': '#9900FF'}, format='json')
+        self.assertEqual(res_post.status_code, status.HTTP_200_OK)
+
+        # GET subsecuente debe retornar el nuevo valor (caché purgado)
+        res2 = self.client.get(self.active_theme_url)
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res2.data['primary_color'], '#9900FF')

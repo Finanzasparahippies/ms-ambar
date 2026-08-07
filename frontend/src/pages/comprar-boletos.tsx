@@ -1147,12 +1147,17 @@ const TourPage = () => {
       {/* ─── NECTAR GATEWAY CHECKOUT MODAL ─── */}
       <AnimatePresence>
         {isCheckoutOpen && (
-          <div className="fixed inset-0 z-[110] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div data-section-key="checkout_modal" className="fixed inset-0 z-[110] bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white dark:bg-[#0e101a] border border-slate-200 dark:border-white/15 p-6 md:p-8 rounded-[2.5rem] w-full max-w-lg space-y-6 relative text-slate-900 dark:text-white shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar"
+              style={{
+                backgroundColor: 'var(--sec-checkout_modal-card-bg, var(--card-bg, #0e101a))',
+                borderColor: 'var(--sec-checkout_modal-border, var(--border-color, rgba(255,255,255,0.15)))',
+                color: 'var(--sec-checkout_modal-text, var(--text-color, #ffffff))'
+              }}
+              className="border p-6 md:p-8 rounded-[2.5rem] w-full max-w-lg space-y-6 relative shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar backdrop-blur-xl transition-all duration-300"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 rounded-bl-[8rem] pointer-events-none blur-xl" />
 

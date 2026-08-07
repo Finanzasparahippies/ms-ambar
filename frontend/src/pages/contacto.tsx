@@ -43,7 +43,7 @@ const ContactPage = () => {
   };
 
   return (
-    <ThemedSection sectionKey="contact_section" className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans text-[#F4F6F0]">
+    <ThemedSection sectionKey="contact_section" className="selection:bg-amber-honey/30 min-h-screen pt-32 pb-20 font-sans">
       <Head>
         <title>Ms Ambar | Promociones & Contrataciones</title>
       </Head>
@@ -54,7 +54,8 @@ const ContactPage = () => {
             <motion.span
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-amber-honey text-xs font-black uppercase tracking-[0.5em] mb-8 block text-glow"
+              style={{ color: 'var(--sec-contact_section-accent, var(--accent-color, var(--primary-color)))' }}
+              className="text-xs font-black uppercase tracking-[0.5em] mb-8 block text-glow"
             >
               Management & Promociones
             </motion.span>
@@ -62,36 +63,59 @@ const ContactPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
+              style={{ color: 'var(--sec-contact_section-heading, var(--heading-color, #ffffff))' }}
               className="text-6xl md:text-8xl font-black tracking-tighter mb-10 leading-[0.9]"
             >
-              HAGAMOS ALGO<br /><span className="text-amber-honey opacity-80 italic">MEMORABLE</span>
+              HAGAMOS ALGO<br /><span style={{ color: 'var(--sec-contact_section-accent, var(--accent-color, var(--primary-color)))' }} className="opacity-80 italic">MEMORABLE</span>
             </motion.h1>
 
-            <p className="text-[#F4F6F0]/70 text-lg mb-16 max-w-md leading-relaxed">
+            <p style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="opacity-70 text-lg mb-16 max-w-md leading-relaxed">
               Para presentaciones en festivales, clubes, teatros o eventos privados, inicia tu solicitud formal aquí. Nuestro motor genera un borrador de acuerdo inmediato al finalizar.
             </p>
 
             <div className="space-y-6">
-              <div className="flex items-center gap-6 group bg-white/5 border border-white/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all">
-                <div className="w-14 h-14 bg-amber-honey rounded-2xl flex items-center justify-center text-nature-night shadow-lg shadow-amber-honey/20">
+              <div 
+                style={{
+                  backgroundColor: 'var(--sec-contact_section-card-bg, var(--card-bg, rgba(255,255,255,0.05)))',
+                  borderColor: 'var(--sec-contact_section-border, var(--border-color, rgba(255,255,255,0.1)))'
+                }}
+                className="flex items-center gap-6 group border p-6 rounded-3xl w-fit pr-12 transition-all backdrop-blur-md"
+              >
+                <div 
+                  style={{
+                    backgroundColor: 'var(--sec-contact_section-button-bg, var(--button-bg, #E5A93B))',
+                    color: 'var(--sec-contact_section-button-text, var(--button-text, #080c0a))'
+                  }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg"
+                >
                   <Mail size={24} />
                 </div>
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/50 mb-1">Email Oficial</p>
-                  <p className="text-sm font-bold text-[#F4F6F0]">promociones@msambar.com</p>
+                  <p style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-50 mb-1">Email Oficial</p>
+                  <p style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-sm font-bold">promociones@msambar.com</p>
                 </div>
               </div>
               <a
                 href="/MS_AMBAR_EPK.pdf"
                 download="MS_AMBAR_EPK.pdf"
-                className="flex items-center gap-6 group bg-white/5 border border-white/10 p-6 rounded-3xl w-fit pr-12 hover:border-amber-honey/20 transition-all cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--sec-contact_section-card-bg, var(--card-bg, rgba(255,255,255,0.05)))',
+                  borderColor: 'var(--sec-contact_section-border, var(--border-color, rgba(255,255,255,0.1)))'
+                }}
+                className="flex items-center gap-6 group border p-6 rounded-3xl w-fit pr-12 transition-all cursor-pointer backdrop-blur-md"
               >
-                <div className="w-14 h-14 bg-amber-honey/10 rounded-2xl flex items-center justify-center text-amber-honey">
+                <div 
+                  style={{
+                    backgroundColor: 'rgba(229, 169, 59, 0.1)',
+                    color: 'var(--sec-contact_section-accent, var(--accent-color, #E5A93B))'
+                  }}
+                  className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                >
                   <Download size={24} />
                 </div>
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/50 mb-1">Press Kit</p>
-                  <p className="text-sm font-bold underline decoration-amber-honey/40 text-[#F4F6F0]">Descargar EPK (PDF, 25MB)</p>
+                  <p style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-50 mb-1">Press Kit</p>
+                  <p style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-sm font-bold underline">Descargar EPK (PDF, 25MB)</p>
                 </div>
               </a>
             </div>
@@ -108,75 +132,110 @@ const ContactPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   onSubmit={handleSubmit}
-                  className="amber-glass p-8 md:p-12 rounded-[3rem] relative shadow-xl"
+                  style={{
+                    backgroundColor: 'var(--sec-contact_section-card-bg, var(--card-bg, rgba(12, 15, 13, 0.85)))',
+                    borderColor: 'var(--sec-contact_section-border, var(--border-color, rgba(255,255,255,0.15)))',
+                    boxShadow: 'var(--sec-contact_section-shadow, var(--theme-box-shadow, 0 20px 40px rgba(0,0,0,0.5)))'
+                  }}
+                  className="p-8 md:p-12 rounded-[3rem] relative shadow-xl border backdrop-blur-xl transition-all duration-300"
                 >
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/60 ml-1">Nombre del Promotor</label>
+                      <label style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-60 ml-1">Nombre del Promotor</label>
                       <input
                         type="text"
                         required
                         value={name}
                         onChange={e => setName(e.target.value)}
                         placeholder="Ej. Juan Pérez"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-white placeholder-white/30"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))',
+                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))'
+                        }}
+                        className="w-full border rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all placeholder:opacity-30"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/60 ml-1">Correo de Contacto</label>
+                      <label style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-60 ml-1">Correo de Contacto</label>
                       <input
                         type="email"
                         required
                         value={email}
                         onChange={e => setEmail(e.target.value)}
                         placeholder="promotor@evento.com"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-white placeholder-white/30"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))',
+                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))'
+                        }}
+                        className="w-full border rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all placeholder:opacity-30"
                       />
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/60 ml-1">Teléfono / WhatsApp</label>
+                      <label style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-60 ml-1">Teléfono / WhatsApp</label>
                       <input
                         type="tel"
                         required
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
                         placeholder="+52 55 1234 5678"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-white placeholder-white/30"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))',
+                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))'
+                        }}
+                        className="w-full border rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all placeholder:opacity-30"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/60 ml-1">Compañía / Razón Social</label>
+                      <label style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-60 ml-1">Compañía / Razón Social</label>
                       <input
                         type="text"
                         value={company}
                         onChange={e => setCompany(e.target.value)}
                         placeholder="Opcional"
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-white placeholder-white/30"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))',
+                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))'
+                        }}
+                        className="w-full border rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all placeholder:opacity-30"
                       />
                     </div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/60 ml-1">Fecha Tentativa</label>
+                      <label style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-60 ml-1">Fecha Tentativa</label>
                       <input
                         type="date"
                         required
                         value={date}
                         onChange={e => setDate(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all text-white"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))',
+                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))'
+                        }}
+                        className="w-full border rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/60 ml-1">Tipo de Foro</label>
+                      <label style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-60 ml-1">Tipo de Foro</label>
                       <div className="relative">
                         <select
                           value={venueType}
                           onChange={e => setVenueType(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all appearance-none text-white"
+                          style={{
+                            backgroundColor: 'rgba(255,255,255,0.05)',
+                            borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))',
+                            color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))'
+                          }}
+                          className="w-full border rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all appearance-none"
                         >
                           <option value="festival" className="bg-[#121915] text-[#F4F6F0]">Festival de Música</option>
                           <option value="theater" className="bg-[#121915] text-[#F4F6F0]">Teatro / Auditorio</option>
@@ -189,21 +248,30 @@ const ContactPage = () => {
                   </div>
 
                   <div className="space-y-2 mb-10">
-                    <label className="text-[9px] font-black uppercase tracking-widest text-[#F4F6F0]/60 ml-1">Detalles de la Oferta / Mensaje</label>
+                    <label style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }} className="text-[9px] font-black uppercase tracking-widest opacity-60 ml-1">Detalles de la Oferta / Mensaje</label>
                     <textarea
                       rows={4}
                       required
                       value={message}
                       onChange={e => setMessage(e.target.value)}
                       placeholder="Especifica aforo estimado, locación y condiciones propuestas..."
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all resize-none text-white placeholder-white/30"
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.05)',
+                        borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))',
+                        color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))'
+                      }}
+                      className="w-full border rounded-2xl px-5 py-4 text-xs font-bold focus:border-amber-honey outline-none transition-all resize-none placeholder:opacity-30"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full bg-amber-honey text-black px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-amber-honey/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                    style={{
+                      backgroundColor: 'var(--sec-contact_section-button-bg, var(--button-bg, #E5A93B))',
+                      color: 'var(--sec-contact_section-button-text, var(--button-text, #080c0a))'
+                    }}
+                    className="w-full px-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                   >
                     {submitting ? 'Procesando Booking...' : 'Enviar Propuesta Formal'}
                     <Send size={14} />

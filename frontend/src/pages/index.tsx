@@ -758,14 +758,21 @@ const Home = () => {
       })()}
 
       {/* ─── NEWSLETTER / CLUB SHOWCASE (Ambar te Escribe) ─── */}
-      <ThemedSection sectionKey="contact_section" className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden bg-white/[0.02]">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] sm:w-[450px] h-[280px] sm:h-[450px] bg-pink-500/5 rounded-full blur-2xl md:blur-[120px] pointer-events-none will-change-transform" />
+      <ThemedSection sectionKey="contact_section" className="py-16 md:py-24 border-t border-white/10 relative overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] sm:w-[450px] h-[280px] sm:h-[450px] bg-[var(--sec-contact_section-accent,var(--accent-color))] opacity-10 rounded-full blur-2xl md:blur-[120px] pointer-events-none will-change-transform" />
 
-        <div className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 bg-[#0c140f] border border-pink-500/10 p-12 md:p-14 rounded-[3rem] shadow-[0_0_50px_rgba(30,43,34,0.25)]">
+        <div 
+          style={{
+            backgroundColor: 'var(--sec-contact_section-card-bg, var(--card-bg, #0c140f))',
+            borderColor: 'var(--sec-contact_section-border, var(--border-color, rgba(255,255,255,0.1)))',
+            boxShadow: 'var(--sec-contact_section-shadow, var(--theme-box-shadow, 0 0 50px rgba(30,43,34,0.25)))'
+          }}
+          className="max-w-md mx-auto px-6 text-center space-y-8 relative z-10 border p-12 md:p-14 rounded-[3rem] backdrop-blur-md transition-all duration-300"
+        >
           <div className="space-y-3">
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Esto es solo para los reales</span>
-            <h3 className="text-4xl md:text-5xl font-serif text-white tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
-            <p className="text-white/60 text-xs max-w-sm mx-auto leading-relaxed">
+            <span style={{ color: 'var(--sec-contact_section-accent, var(--accent-color, var(--primary-color)))' }} className="text-[10px] font-black uppercase tracking-[0.25em]">Esto es solo para los reales</span>
+            <h3 style={{ color: 'var(--sec-contact_section-heading, var(--heading-color, #ffffff))' }} className="text-4xl md:text-5xl font-serif tracking-tight italic font-normal leading-tight">Ambar te escribe</h3>
+            <p style={{ color: 'var(--sec-contact_section-text, var(--text-color, rgba(255,255,255,0.7)))' }} className="text-xs max-w-sm mx-auto leading-relaxed opacity-80">
               Deja tu nombre y correo aquí para recibir el newsletter escrito por Ms. Ambar, en donde te contará ideas hechas canciones, fechas próximas de presentaciones o noticias exclusivas.
             </p>
           </div>
@@ -778,13 +785,18 @@ const Home = () => {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
-                  className="flex flex-col items-center justify-center gap-3 bg-amber-honey/10 border border-amber-honey/20 text-amber-honey p-8 rounded-[2rem] text-center"
+                  style={{
+                    backgroundColor: 'var(--sec-contact_section-card-bg, var(--card-bg, rgba(229,169,59,0.1)))',
+                    borderColor: 'var(--sec-contact_section-border, var(--border-color, rgba(229,169,59,0.2)))',
+                    color: 'var(--sec-contact_section-heading, var(--heading-color, #E5A93B))'
+                  }}
+                  className="flex flex-col items-center justify-center gap-3 border p-8 rounded-[2rem] text-center"
                 >
-                  <div className="w-12 h-12 bg-amber-honey/20 rounded-full flex items-center justify-center text-amber-honey">
+                  <div className="w-12 h-12 bg-amber-honey/20 rounded-full flex items-center justify-center">
                     <CheckCircle size={20} />
                   </div>
                   <h4 className="font-bold uppercase tracking-wider text-[11px] mt-2">¡Suscripción Completada!</h4>
-                  <p className="text-[10px] text-white/80 leading-relaxed">
+                  <p className="text-[10px] opacity-80 leading-relaxed">
                     Te has unido con éxito al club oficial de Ms Ambar.
                   </p>
                 </motion.div>
@@ -805,7 +817,12 @@ const Home = () => {
                         value={newsletterName}
                         onChange={e => setNewsletterName(e.target.value)}
                         required
-                        className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))',
+                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))'
+                        }}
+                        className="w-full rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border placeholder:opacity-40"
                         disabled={newsletterStatus === 'submitting'}
                       />
                       <input
@@ -817,29 +834,38 @@ const Home = () => {
                           if (newsletterStatus === 'error') setNewsletterStatus('idle');
                         }}
                         required
-                        className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border border-white/10 placeholder:text-white/30"
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))',
+                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))'
+                        }}
+                        className="w-full rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border placeholder:opacity-40"
                         disabled={newsletterStatus === 'submitting'}
                       />
                     </div>
 
                     <button
                       type="submit"
-                      className="w-full bg-gradient-to-r from-pink-500 via-rose-400 to-amber-400 hover:from-amber-gold hover:to-amber-500 active:scale-[0.98] text-[#06070b] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-[0_0_20px_rgba(245,158,11,0.15)] hover:shadow-[0_0_35px_rgba(245,158,11,0.35)] whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02]"
+                      style={{
+                        backgroundColor: 'var(--sec-contact_section-button-bg, var(--button-bg, #E5A93B))',
+                        color: 'var(--sec-contact_section-button-text, var(--button-text, #080c0a))'
+                      }}
+                      className="w-full active:scale-[0.98] font-black text-[10px] uppercase tracking-[0.25em] py-[18px] rounded-xl transition-all duration-300 shadow-md whitespace-nowrap text-center flex items-center justify-center gap-2 hover:scale-[1.02] disabled:opacity-50"
                       disabled={newsletterStatus === 'submitting'}
                     >
                       {newsletterStatus === 'submitting' ? (
                         <span className="flex items-center gap-2">
-                          <div className="w-3.5 h-3.5 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                          <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                           Procesando...
                         </span>
                       ) : (
                         <span className="flex items-center gap-2">
-                          Suscribirse al Club <Sparkles size={11} className="text-[#06070b] fill-current animate-pulse" />
+                          Suscribirse al Club <Sparkles size={11} className="fill-current animate-pulse" />
                         </span>
                       )}
                     </button>
 
-                    <p className="text-[9px] text-white/40 tracking-wider text-center pt-2">
+                    <p style={{ color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))' }} className="text-[9px] opacity-40 tracking-wider text-center pt-2">
                       Respetamos tu privacidad.
                     </p>
                   </motion.form>
@@ -848,7 +874,8 @@ const Home = () => {
                     <motion.div
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="text-amber-honey text-[9px] font-bold uppercase tracking-widest text-center"
+                      style={{ color: 'var(--sec-contact_section-accent, var(--accent-color, #E5A93B))' }}
+                      className="text-[9px] font-bold uppercase tracking-widest text-center"
                     >
                       ⚠️ {newsletterErrorMessage}
                     </motion.div>
@@ -861,7 +888,8 @@ const Home = () => {
           <div className="pt-2">
             <Link
               href="/ambar-te-escribe"
-              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#F4F6F0]/50 hover:text-amber-honey transition-colors"
+              style={{ color: 'var(--sec-contact_section-text, var(--text-color, #F4F6F0))' }}
+              className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] opacity-70 hover:opacity-100 transition-opacity"
             >
               Acceder al club<ChevronRight size={12} />
             </Link>

@@ -257,6 +257,19 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.setAttribute('data-theme-image-filter', cfg.imageFilter || 'none');
     root.setAttribute('data-theme-mode', cfg.themeMode || 'global');
 
+    // Smooth CSS Transition Injection for Live Dashboard Theme Customization
+    let baseTransitionTag = document.getElementById('ms-ambar-theme-transition-css');
+    if (!baseTransitionTag) {
+      baseTransitionTag = document.createElement('style');
+      baseTransitionTag.id = 'ms-ambar-theme-transition-css';
+      document.head.appendChild(baseTransitionTag);
+    }
+    baseTransitionTag.textContent = `
+      :root, section[data-section-key], .themed-card, .themed-button {
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      }
+    `;
+
     // Custom CSS injection
     let customStyleTag = document.getElementById('ms-ambar-custom-theme-css');
     if (!customStyleTag) {

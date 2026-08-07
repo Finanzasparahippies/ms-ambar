@@ -21,6 +21,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ImageOptimizerWidget from '../components/ImageOptimizerWidget';
+import ThemedSection from '../components/ThemedSection';
 import { useSectionTheme } from '../context/EventThemeContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -457,7 +458,7 @@ export default function GalleryPage() {
   const gallerySection = useSectionTheme('gallery_grid');
 
   return (
-    <div style={gallerySection.style} className="min-h-screen bg-nature-night text-nature-white selection:bg-amber-honey/30 pb-20 transition-colors duration-300">
+    <ThemedSection sectionKey="gallery_grid" className="min-h-screen selection:bg-amber-honey/30 pb-20">
       <Head>
         <title>Ms Ambar | Galería</title>
         <meta name="description" content="Visuales oficiales de conciertos, grabaciones y backstage exclusivo del club Ms Ambar." />
@@ -1203,6 +1204,6 @@ export default function GalleryPage() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </ThemedSection>
   );
 }

@@ -877,13 +877,26 @@ class SiteSettings(models.Model):
         verbose_name_plural = "Configuración del Sitio"
 
     def save(self, *args, **kwargs):
-        """Forzar siempre pk=1 (singleton)."""
+        """Forzar siempre pk=1 (singleton) y purgar caché del tema en producción."""
         self.pk = 1
         super().save(*args, **kwargs)
+        try:
+            from django.core.cache import cache
+            cache.delete('ms_ambar_active_theme_global')
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error al purgar la caché del tema activo tras guardar SiteSettings: {e}")
 
     def delete(self, *args, **kwargs):
-        """Prevent deletion of the singleton."""
-        pass
+        """Prevenir la eliminación del registro singleton de configuración."""
+        import logging
+        from django.core.exceptions import ValidationError
+        
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Intento bloqueado de eliminar el registro singleton SiteSettings con pk={self.pk}")
+        
+        raise ValidationError("El registro de configuración global (singleton) no puede ser eliminado.")
 
     @classmethod
     def get(cls):

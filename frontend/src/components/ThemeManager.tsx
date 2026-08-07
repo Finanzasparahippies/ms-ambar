@@ -59,6 +59,7 @@ const PAGE_ROUTES = [
       { id: 'hero', label: 'Hero Principal (Portada)', icon: '🌟' },
       { id: 'biography', label: 'Biografía & Cantautora', icon: '📜' },
       { id: 'events_grid', label: 'Próximos Conciertos & Boletos', icon: '🎫' },
+      { id: 'contact_section', label: 'Club de Fans & Newsletter', icon: '💌' },
       { id: 'tarot_experience', label: 'Experiencia Tarot & Mística', icon: '🔮' },
       { id: 'tour_timeline', label: 'Línea de Tiempo de Gira', icon: '🗓️' },
       { id: 'vip_experience', label: 'Experiencia VIP Meet & Greet', icon: '👑' },
@@ -119,7 +120,7 @@ const PAGE_ROUTES = [
     path: '/contacto',
     name: 'Contacto & Prensa',
     sections: [
-      { id: 'contacto', label: 'Formulario de Contacto & Redes', icon: '✉️' },
+      { id: 'contact_section', label: 'Formulario de Contacto & Booking', icon: '✉️' },
       { id: 'navbar', label: 'Navegación (Header Global)', icon: '🧭' },
       { id: 'footer', label: 'Pie de Página (Footer Global)', icon: '⚓' },
     ]
@@ -1048,210 +1049,75 @@ export const ThemeManager: React.FC = () => {
             {/* Dynamic Body Sections depending on selected route */}
             <div className="space-y-6 flex-1 flex flex-col justify-center">
               
-              {selectedRoutePath === '/' && (
-                <>
-                  {/* Hero Simulation */}
-                  <div
-                    onClick={(e) => handleVisualInspectorSelect(e, 'hero')}
-                    onMouseEnter={() => setHoveredSectionKey('hero')}
-                    onMouseLeave={() => setHoveredSectionKey(null)}
-                    style={{
-                      backgroundColor: sectionThemes['hero']?.bg_color || 'transparent',
-                    }}
-                    className={`p-8 rounded-3xl border text-center transition-all duration-300 relative cursor-pointer ${
-                      selectedSectionKey === 'hero'
-                        ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
-                        : hoveredSectionKey === 'hero'
-                        ? 'border-amber-honey/60 bg-white/5'
-                        : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
-                    }`}
-                  >
-                    {(selectedSectionKey === 'hero' || hoveredSectionKey === 'hero') && (
-                      <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
-                        Editar: Hero Principal
-                      </div>
-                    )}
-                    <h1 
-                      style={{ 
-                        color: getAccessibleTextColor(
-                          sectionThemes['hero']?.bg_color || backgroundStart, 
-                          sectionThemes['hero']?.heading_color || headingColor
-                        ) 
-                      }}
-                      className="text-3xl font-black italic tracking-tighter uppercase mb-2 font-serif"
-                    >
-                      Ms Ambar Live 2026
-                    </h1>
-                    <p 
+              {/* Dynamic Live Preview Canvas for all registered Page Sections */}
+              {currentRouteSpec.sections
+                .filter(sec => sec.id !== 'navbar' && sec.id !== 'footer')
+                .map((sec) => {
+                  const secSpec = sectionThemes[sec.id] || {};
+                  const isSelected = selectedSectionKey === sec.id;
+                  const isHovered = hoveredSectionKey === sec.id;
+                  const secBg = secSpec.bg_color || secSpec.card_bg || 'transparent';
+                  const secGradient = secSpec.bg_gradient || '';
+                  const secHeading = secSpec.heading_color || headingColor;
+                  const secText = secSpec.text_color || textColor;
+                  const secBtnBg = secSpec.button_bg || buttonBg;
+                  const secBtnText = secSpec.button_text || buttonText;
+
+                  return (
+                    <div
+                      key={sec.id}
+                      onClick={(e) => handleVisualInspectorSelect(e, sec.id)}
+                      onMouseEnter={() => setHoveredSectionKey(sec.id)}
+                      onMouseLeave={() => setHoveredSectionKey(null)}
                       style={{
-                        color: getAccessibleTextColor(
-                          sectionThemes['hero']?.bg_color || backgroundStart,
-                          textColor
-                        )
+                        backgroundColor: secBg !== 'transparent' ? secBg : undefined,
+                        backgroundImage: secGradient || undefined,
+                        boxShadow: secSpec.card_box_shadow || undefined,
                       }}
-                      className="text-xs max-w-sm mx-auto mb-4 opacity-80"
+                      className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
+                        isSelected
+                          ? 'border-amber-honey bg-amber-honey/10 shadow-glow ring-2 ring-amber-honey/40'
+                          : isHovered
+                          ? 'border-amber-honey/60 bg-white/5'
+                          : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
+                      }`}
                     >
-                      Voz mística & Experiencia sonora sensorial
-                    </p>
-                    <button 
-                      style={{ backgroundColor: buttonBg, color: buttonText }}
-                      className="px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-transform hover:scale-105"
-                    >
-                      Comprar Boletos
-                    </button>
-                  </div>
+                      {(isSelected || isHovered) && (
+                        <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
+                          Editar: {sec.label}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-base">{sec.icon}</span>
+                        <h3
+                          style={{ color: getAccessibleTextColor(secBg !== 'transparent' ? secBg : backgroundStart, secHeading) }}
+                          className="text-sm font-black uppercase tracking-wider font-serif"
+                        >
+                          {sec.label}
+                        </h3>
+                      </div>
 
-                  {/* Events Grid Simulation */}
-                  <div
-                    onClick={(e) => handleVisualInspectorSelect(e, 'events_grid')}
-                    onMouseEnter={() => setHoveredSectionKey('events_grid')}
-                    onMouseLeave={() => setHoveredSectionKey(null)}
-                    style={{
-                      backgroundColor: sectionThemes['events_grid']?.bg_color || 'transparent',
-                    }}
-                    className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
-                      selectedSectionKey === 'events_grid'
-                        ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
-                        : hoveredSectionKey === 'events_grid'
-                        ? 'border-amber-honey/60 bg-white/5'
-                        : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
-                    }`}
-                  >
-                    {(selectedSectionKey === 'events_grid' || hoveredSectionKey === 'events_grid') && (
-                      <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
-                        Editar: Próximos Conciertos
-                      </div>
-                    )}
-                    <h3 
-                      style={{
-                        color: getAccessibleTextColor(
-                          sectionThemes['events_grid']?.bg_color || backgroundStart,
-                          headingColor
-                        )
-                      }}
-                      className="text-xs font-black uppercase tracking-widest mb-3 font-serif"
-                    >
-                      Próximas Fechas
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-                        <div className="text-[10px] font-bold text-white">Auditorio Nacional</div>
-                        <div className="text-[9px] text-white/50">CDMX • 14 Octubre</div>
-                      </div>
-                      <div className="p-3 bg-white/5 rounded-2xl border border-white/10">
-                        <div className="text-[10px] font-bold text-white">Teatro Diana</div>
-                        <div className="text-[9px] text-white/50">Guadalajara • 28 Octubre</div>
+                      <p
+                        style={{ color: getAccessibleTextColor(secBg !== 'transparent' ? secBg : backgroundStart, secText) }}
+                        className="text-xs max-w-sm mb-4 opacity-80"
+                      >
+                        Simulación de sección <span className="font-mono text-amber-honey font-bold">{sec.id}</span> en {currentRouteSpec.name}.
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          style={{ backgroundColor: secBtnBg, color: secBtnText }}
+                          className="px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest transition-transform hover:scale-105 shadow-sm"
+                        >
+                          Acción {sec.label.split(' ')[0]}
+                        </button>
+                        <div className="text-[9px] opacity-60 font-mono" style={{ color: getAccessibleTextColor(secBg !== 'transparent' ? secBg : backgroundStart, secText) }}>
+                          [data-section-key="{sec.id}"]
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </>
-              )}
-
-              {selectedRoutePath === '/galeria' && (
-                <div
-                  onClick={(e) => handleVisualInspectorSelect(e, 'gallery_grid')}
-                  onMouseEnter={() => setHoveredSectionKey('gallery_grid')}
-                  onMouseLeave={() => setHoveredSectionKey(null)}
-                  style={{
-                    backgroundColor: sectionThemes['gallery_grid']?.bg_color || 'transparent',
-                  }}
-                  className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
-                    selectedSectionKey === 'gallery_grid'
-                      ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
-                      : hoveredSectionKey === 'gallery_grid'
-                      ? 'border-amber-honey/60 bg-white/5'
-                      : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
-                  }`}
-                >
-                  {(selectedSectionKey === 'gallery_grid' || hoveredSectionKey === 'gallery_grid') && (
-                    <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
-                      Editar: Grilla Masonry Galería
-                    </div>
-                  )}
-                  <h3 
-                    style={{
-                      color: getAccessibleTextColor(
-                        sectionThemes['gallery_grid']?.bg_color || backgroundStart,
-                        headingColor
-                      )
-                    }}
-                    className="text-xs font-black uppercase tracking-widest mb-3 font-serif"
-                  >
-                    Galería de Luz Multimedia
-                  </h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="h-20 bg-white/10 rounded-xl animate-pulse border border-white/10" />
-                    <div className="h-28 bg-white/10 rounded-xl animate-pulse border border-white/10" />
-                    <div className="h-20 bg-white/10 rounded-xl animate-pulse border border-white/10" />
-                  </div>
-                </div>
-              )}
-
-              {selectedRoutePath === '/biography' && (
-                <div
-                  onClick={(e) => handleVisualInspectorSelect(e, 'biography')}
-                  onMouseEnter={() => setHoveredSectionKey('biography')}
-                  onMouseLeave={() => setHoveredSectionKey(null)}
-                  style={{
-                    backgroundColor: sectionThemes['biography']?.bg_color || 'transparent',
-                  }}
-                  className={`p-6 rounded-3xl border transition-all duration-300 relative cursor-pointer ${
-                    selectedSectionKey === 'biography'
-                      ? 'border-amber-honey bg-amber-honey/10 shadow-glow'
-                      : hoveredSectionKey === 'biography'
-                      ? 'border-amber-honey/60 bg-white/5'
-                      : 'border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md'
-                  }`}
-                >
-                  {(selectedSectionKey === 'biography' || hoveredSectionKey === 'biography') && (
-                    <div className="absolute -top-3 left-4 bg-amber-honey text-black px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest z-10 shadow-md">
-                      Editar: Biografía Editorial
-                    </div>
-                  )}
-                  <h2 
-                    style={{
-                      color: getAccessibleTextColor(
-                        sectionThemes['biography']?.bg_color || backgroundStart,
-                        headingColor
-                      )
-                    }}
-                    className="text-xl font-black mb-2 font-serif"
-                  >
-                    La Cantautora
-                  </h2>
-                  <p 
-                    style={{
-                      color: getAccessibleTextColor(
-                        sectionThemes['biography']?.bg_color || backgroundStart,
-                        textColor
-                      )
-                    }}
-                    className="text-xs opacity-80"
-                  >
-                    Fusión mística de R&B, soul y música latina de vanguardia.
-                  </p>
-                </div>
-              )}
-
-              {/* Generic/Fallback simulation view for all other routes */}
-              {['/ambar-te-escribe', '/blog', '/comprar-boletos', '/contacto', '/entretenimiento', '/musica', '/tienda', '/tour', '/suscribirse', '/auth'].includes(selectedRoutePath) && (
-                <div
-                  onClick={(e) => {
-                    if (currentRouteSpec.sections[0]) {
-                      handleVisualInspectorSelect(e, currentRouteSpec.sections[0].id);
-                    }
-                  }}
-                  className="p-6 rounded-3xl border border-white/10 bg-[#0c0f0d]/60 backdrop-blur-md text-center space-y-3 cursor-pointer hover:border-amber-honey/50 transition-all"
-                >
-                  <div className="text-2xl">{currentRouteSpec.sections[0]?.icon || '✨'}</div>
-                  <h3 className="text-sm font-black text-amber-honey uppercase tracking-wider font-serif">
-                    {currentRouteSpec.name}
-                  </h3>
-                  <p className="text-xs text-white/60 max-w-xs mx-auto">
-                    Inspección activa para {currentRouteSpec.sections.length} secciones configurables en este módulo.
-                  </p>
-                </div>
-              )}
+                  );
+                })}
             </div>
 
             {/* Footer Simulation Bar */}

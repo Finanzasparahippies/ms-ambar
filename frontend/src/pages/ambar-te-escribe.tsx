@@ -441,7 +441,7 @@ export default function AmbarTeEscribePage() {
             color: rgba(255, 255, 255, 0.85);
           }
           .rich-text-content a {
-            color: #e5a93b;
+            color: var(--primary-color, #e5a93b);
             text-decoration: underline;
             transition: color 0.2s;
           }

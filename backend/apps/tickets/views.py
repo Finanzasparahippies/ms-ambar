@@ -789,6 +789,11 @@ class SiteSettingsView(APIView):
         serializer = SiteSettingsSerializer(settings_obj, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
+            try:
+                from django.core.cache import cache
+                cache.delete('ms_ambar_active_theme_global')
+            except Exception:
+                pass
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -805,6 +810,13 @@ class ActiveThemeView(APIView):
     def get(self, request):
         event_id = request.query_params.get('event_id')
         slug = request.query_params.get('slug')
+
+        from django.core.cache import cache
+        if not event_id and not slug:
+            cache_key = 'ms_ambar_active_theme_global'
+            cached_theme = cache.get(cache_key)
+            if cached_theme:
+                return Response(cached_theme)
 
         event = None
         if event_id:
@@ -825,6 +837,10 @@ class ActiveThemeView(APIView):
             theme_data = SiteSettings.get().get_theme_config()
             theme_data['event_id'] = None
             theme_data['event_title'] = None
+            try:
+                cache.set('ms_ambar_active_theme_global', theme_data, timeout=86400)
+            except Exception:
+                pass
 
         return Response(theme_data)
 

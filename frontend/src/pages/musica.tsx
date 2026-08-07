@@ -330,16 +330,22 @@ const MusicPage: React.FC = () => {
             <motion.h1
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
+              style={{ color: 'var(--sec-musica-heading, var(--heading-color, #ffffff))' }}
               className="text-5xl sm:text-7xl md:text-[8vw] font-black tracking-tighter leading-[0.85] mb-6"
             >
-              DISCO<span className="text-amber-honey text-glow">GRAFÍA</span>
+              DISCO<span style={{ color: 'var(--sec-musica-accent, var(--accent-color, #E5A93B))' }} className="text-glow">GRAFÍA</span>
             </motion.h1>
 
             {/* Configurable Discography Description with Emojis */}
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-base sm:text-lg md:text-xl font-medium leading-relaxed text-amber-honey/90 max-w-3xl mb-4 amber-glass p-5 rounded-2xl border border-amber-honey/20 shadow-lg"
+              style={{
+                color: 'var(--sec-musica-text, var(--text-color, #F4F6F0))',
+                backgroundColor: 'var(--sec-musica-card-bg, var(--card-bg, rgba(12,15,13,0.6)))',
+                borderColor: 'var(--sec-musica-border, var(--border-color, rgba(229,169,59,0.2)))'
+              }}
+              className="text-base sm:text-lg md:text-xl font-medium leading-relaxed max-w-3xl mb-4 p-5 rounded-2xl border backdrop-blur-md shadow-lg"
             >
               {discographyDescription}
             </motion.p>
@@ -348,19 +354,29 @@ const MusicPage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => handleSharePage()}
-              className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white hover:text-amber-honey"
+              style={{
+                backgroundColor: 'var(--sec-musica-card-bg, rgba(255,255,255,0.05))',
+                borderColor: 'var(--sec-musica-border, rgba(229,169,59,0.3))',
+                color: 'var(--sec-musica-text, #ffffff)'
+              }}
+              className="border px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50"
               title="Compartir Discografía"
             >
-              <Share2 size={14} className="text-amber-honey" /> Compartir
+              <Share2 size={14} style={{ color: 'var(--sec-musica-accent, #E5A93B)' }} /> Compartir
             </button>
 
             {isAdmin && (
               <button
                 onClick={handleSyncPlatform}
                 disabled={syncing}
-                className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 disabled:opacity-50"
+                style={{
+                  backgroundColor: 'var(--sec-musica-card-bg, rgba(255,255,255,0.05))',
+                  borderColor: 'var(--sec-musica-border, rgba(229,169,59,0.3))',
+                  color: 'var(--sec-musica-text, #ffffff)'
+                }}
+                className="border px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 disabled:opacity-50"
               >
-                <RefreshCw size={14} className={syncing ? 'animate-spin text-amber-honey' : ''} />
+                <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} style={{ color: 'var(--sec-musica-accent, #E5A93B)' }} />
                 {syncing ? 'Sincronizando APIs...' : 'Sincronizar Plataformas'}
               </button>
             )}
@@ -373,7 +389,12 @@ const MusicPage: React.FC = () => {
             href={OFFICIAL_LINKS.spotify}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 shadow-lg shadow-amber-honey/10"
+            style={{
+              backgroundColor: 'var(--sec-musica-button-bg, var(--button-bg, #E5A93B))',
+              color: 'var(--sec-musica-button-text, var(--button-text, #080c0a))',
+              borderColor: 'var(--sec-musica-border, #E5A93B)'
+            }}
+            className="border px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 shadow-lg"
           >
             <Play size={14} fill="currentColor" /> Spotify
           </a>
