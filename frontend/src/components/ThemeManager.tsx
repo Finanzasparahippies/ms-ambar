@@ -276,6 +276,9 @@ export const ThemeManager: React.FC = () => {
 
   // Debounce Timer Ref to achieve 60 FPS smooth updates without React re-render thrashing
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isInitializedRef = useRef(false);
+  const prevEventIdRef = useRef<number | string | null | undefined>(undefined);
+  const prevPayloadJsonRef = useRef<string>('');
 
   // Get active route specification with Fallback Resolution
   const currentRouteSpec = PAGE_ROUTES.find(r => r.path === selectedRoutePath) || (() => {
@@ -283,9 +286,11 @@ export const ThemeManager: React.FC = () => {
     return PAGE_ROUTES[0]; // Fallback safe preset
   })();
 
-  // Synchronize initial values from API context
+  // Synchronize initial values from API context (only on initial load or event switch)
   useEffect(() => {
-    if (theme) {
+    if (theme && (!isInitializedRef.current || prevEventIdRef.current !== theme.eventId)) {
+      isInitializedRef.current = true;
+      prevEventIdRef.current = theme.eventId;
       setPrimaryColor(theme.primaryColor || '#E5A93B');
       setSecondaryColor(theme.secondaryColor || '#22A6B7');
       setBackgroundStart(theme.backgroundStart || '#080c0a');
@@ -320,6 +325,7 @@ export const ThemeManager: React.FC = () => {
       setFontPreset(theme.fontPreset || 'cormorant');
       setCustomCss(theme.customCss || '');
       setSectionThemes(theme.sectionThemes || {});
+      setSyncStatus('saved');
     }
   }, [theme]);
 
@@ -328,52 +334,61 @@ export const ThemeManager: React.FC = () => {
    * Directs updates into documentElement styles avoiding expensive React lifecycle loops.
    */
   const handleLivePreview = useCallback(() => {
+    if (!isInitializedRef.current) return;
+
+    const payload = {
+      themeMode,
+      primaryColor,
+      secondaryColor,
+      backgroundStart,
+      backgroundEnd,
+      backgroundGradient,
+      accentColor,
+      cardBackground,
+      cardBoxShadow,
+      borderWidth,
+      borderOpacity,
+      borderStylePreset,
+      textColor,
+      headingColor,
+      subtitleColor,
+      buttonBg,
+      buttonText,
+      buttonHoverBg,
+      buttonHoverText,
+      buttonFocusRing,
+      cardHoverBg,
+      cardHoverBorder,
+      cardFocusRing,
+      elementHoverColor,
+      elementFocusRing,
+      borderColor,
+      particleShape,
+      particleDensity,
+      particleSpeed,
+      particleColor,
+      cardStyle,
+      backgroundPattern,
+      fontPreset,
+      customCss,
+      sectionThemes,
+    };
+
+    const payloadJson = JSON.stringify(payload);
+    if (payloadJson === prevPayloadJsonRef.current) {
+      return;
+    }
+
     setSyncStatus('syncing');
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
-    // Debounce at 16ms (~60 FPS)
     debounceTimerRef.current = setTimeout(() => {
-      setThemeOverride({
-        themeMode,
-        primaryColor,
-        secondaryColor,
-        backgroundStart,
-        backgroundEnd,
-        backgroundGradient,
-        accentColor,
-        cardBackground,
-        cardBoxShadow,
-        borderWidth,
-        borderOpacity,
-        borderStylePreset,
-        textColor,
-        headingColor,
-        subtitleColor,
-        buttonBg,
-        buttonText,
-        buttonHoverBg,
-        buttonHoverText,
-        buttonFocusRing,
-        cardHoverBg,
-        cardHoverBorder,
-        cardFocusRing,
-        elementHoverColor,
-        elementFocusRing,
-        borderColor,
-        particleShape,
-        particleDensity,
-        particleSpeed,
-        particleColor,
-        cardStyle,
-        backgroundPattern,
-        fontPreset,
-        customCss,
-        sectionThemes,
-      });
+      prevPayloadJsonRef.current = payloadJson;
+      setThemeOverride(payload);
       setSyncStatus('idle');
-    }, 16);
+    }, 50);
   }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, backgroundGradient, accentColor, cardBackground, cardBoxShadow, borderWidth, borderOpacity, borderStylePreset, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, particleDensity, particleSpeed, particleColor, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
 
   useEffect(() => {

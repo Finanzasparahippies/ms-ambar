@@ -12,7 +12,7 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useEventTheme();
-  const activeTarget = morphTarget !== 'none' ? morphTarget : (theme.particleShape || 'moon');
+  const activeTarget = (morphTarget && morphTarget !== 'none') ? morphTarget : (theme?.particleShape || 'moon');
   const morphTargetRef = useRef(activeTarget);
   const themeRef = useRef(theme);
 
@@ -567,7 +567,7 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
         parent.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
-  }, [theme.particleDensity]);
+  }, [theme?.particleDensity, activeTarget]);
 
   return <canvas ref={canvasRef} className={className} />;
 };
