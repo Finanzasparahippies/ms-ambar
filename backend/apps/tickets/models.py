@@ -289,6 +289,8 @@ PARTICLE_SHAPE_CHOICES = [
     ('moon', 'Media Luna'),
     ('cactus', 'Cactus / Desierto'),
     ('star', 'Estrella (Brillo)'),
+    ('triangle', 'Triángulo Místico'),
+    ('polygon', 'Polígono Geométrico'),
     ('infinity', 'Símbolo Infinito'),
     ('hexagon', 'Hexágono Futuro'),
     ('sun', 'Sol Radiante'),
@@ -380,6 +382,9 @@ class Event(models.Model):
     card_background = models.CharField(max_length=50, blank=True, null=True, help_text="Color de fondo de tarjetas de cristal (ej. #0c0f0d)")
     text_color = models.CharField(max_length=50, blank=True, null=True, help_text="Color principal del texto (ej. #F4F6F0)")
     particle_shape = models.CharField(max_length=50, choices=PARTICLE_SHAPE_CHOICES, blank=True, null=True, help_text="Figura geométrica del Canvas de partículas")
+    particle_density = models.IntegerField(default=65, blank=True, null=True, help_text="Densidad de partículas (10 a 200)")
+    particle_speed = models.FloatField(default=1.0, blank=True, null=True, help_text="Velocidad de partículas (0.1 a 5.0)")
+    particle_color = models.CharField(max_length=50, blank=True, null=True, help_text="Color de partículas (ej. #E5A93B)")
     card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, blank=True, null=True, help_text="Estilo de bordes de tarjetas y botones")
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, blank=True, null=True, help_text="Patrón visual de fondo")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, blank=True, null=True, help_text="Preset de fuentes tipográficas")
@@ -408,6 +413,9 @@ class Event(models.Model):
             'card_background': self.card_background or site_theme['card_background'],
             'text_color': self.text_color or site_theme['text_color'],
             'particle_shape': self.particle_shape or site_theme['particle_shape'],
+            'particle_density': self.particle_density if self.particle_density is not None else site_theme.get('particle_density', 65),
+            'particle_speed': self.particle_speed if self.particle_speed is not None else site_theme.get('particle_speed', 1.0),
+            'particle_color': self.particle_color or site_theme.get('particle_color', ''),
             'card_style': self.card_style or site_theme['card_style'],
             'background_pattern': self.background_pattern or site_theme['background_pattern'],
             'font_preset': self.font_preset or site_theme['font_preset'],
@@ -803,6 +811,9 @@ class SiteSettings(models.Model):
     border_style_preset = models.CharField(max_length=50, default='solid', blank=True, null=True, help_text="Estilo de borde (solid, glass, dashed, dotted)")
 
     particle_shape = models.CharField(max_length=50, choices=PARTICLE_SHAPE_CHOICES, default='moon', help_text="Figura geométrica del Canvas de partículas")
+    particle_density = models.IntegerField(default=65, help_text="Densidad de partículas (10 a 200)")
+    particle_speed = models.FloatField(default=1.0, help_text="Velocidad de partículas (0.1 a 5.0)")
+    particle_color = models.CharField(max_length=50, blank=True, null=True, default='', help_text="Color de partículas (ej. #E5A93B)")
     card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, default='rounded-full', help_text="Estilo de bordes de tarjetas y botones")
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
     theme_mode = models.CharField(max_length=20, default='global', help_text="Modo de aplicación de tema: 'global' o 'section'")
@@ -857,6 +868,9 @@ class SiteSettings(models.Model):
             'element_hover_color': getattr(self, 'element_hover_color', '#FFC048') or '#FFC048',
             'element_focus_ring': getattr(self, 'element_focus_ring', '#E5A93B') or '#E5A93B',
             'particle_shape': self.particle_shape or 'moon',
+            'particle_density': getattr(self, 'particle_density', 65) if getattr(self, 'particle_density', None) is not None else 65,
+            'particle_speed': getattr(self, 'particle_speed', 1.0) if getattr(self, 'particle_speed', None) is not None else 1.0,
+            'particle_color': getattr(self, 'particle_color', '') or '',
             'card_style': self.card_style or 'rounded-full',
             'background_pattern': self.background_pattern or 'stars',
             'font_preset': self.font_preset or 'cormorant',

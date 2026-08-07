@@ -28,6 +28,9 @@ export interface SectionThemeSpec {
   border_opacity?: number;
   border_style_preset?: string;
   particle_shape?: string;
+  particle_density?: number;
+  particle_speed?: number;
+  particle_color?: string;
   card_style?: string;
   animation_preset?: string;
   image_filter?: string;
@@ -73,6 +76,9 @@ export interface ThemeConfig {
   elementFocusRing?: string;
   borderColor?: string;
   particleShape: string;
+  particleDensity: number;
+  particleSpeed: number;
+  particleColor: string;
   cardStyle: string;
   backgroundPattern: string;
   fontPreset: string;
@@ -138,6 +144,9 @@ const DEFAULT_THEME: ThemeConfig = {
   elementFocusRing: '#E5A93B',
   borderColor: 'rgba(229, 169, 59, 0.25)',
   particleShape: 'moon',
+  particleDensity: 65,
+  particleSpeed: 1.0,
+  particleColor: '',
   cardStyle: 'rounded-full',
   backgroundPattern: 'stars',
   fontPreset: 'cormorant',
@@ -249,6 +258,11 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     else if (cfg.fontPreset === 'syne') fontSerif = "'Syne', sans-serif";
     root.style.setProperty('--theme-heading-font', fontSerif);
 
+    // Particle CSS variables
+    root.style.setProperty('--particle-density', String(cfg.particleDensity ?? 65));
+    root.style.setProperty('--particle-speed', String(cfg.particleSpeed ?? 1.0));
+    root.style.setProperty('--particle-color', cfg.particleColor || cfg.primaryColor || '#E5A93B');
+
     // Data attributes for layout selectors & animations
     root.setAttribute('data-theme-pattern', cfg.backgroundPattern || 'stars');
     root.setAttribute('data-theme-shape', cfg.particleShape || 'moon');
@@ -348,6 +362,9 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
           elementFocusRing: d.element_focus_ring || DEFAULT_THEME.elementFocusRing,
           borderColor: d.border_color || DEFAULT_THEME.borderColor,
           particleShape: d.particle_shape || DEFAULT_THEME.particleShape,
+          particleDensity: d.particle_density ?? DEFAULT_THEME.particleDensity,
+          particleSpeed: d.particle_speed ?? DEFAULT_THEME.particleSpeed,
+          particleColor: d.particle_color || DEFAULT_THEME.particleColor,
           cardStyle: d.card_style || DEFAULT_THEME.cardStyle,
           backgroundPattern: d.background_pattern || DEFAULT_THEME.backgroundPattern,
           fontPreset: d.font_preset || DEFAULT_THEME.fontPreset,
@@ -440,6 +457,9 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
       element_hover_color: sec.element_hover_color || theme.elementHoverColor || '#FFC048',
       element_focus_ring: sec.element_focus_ring || theme.elementFocusRing || theme.primaryColor,
       particle_shape: sec.particle_shape || theme.particleShape,
+      particle_density: sec.particle_density ?? theme.particleDensity,
+      particle_speed: sec.particle_speed ?? theme.particleSpeed,
+      particle_color: sec.particle_color || theme.particleColor,
       card_style: sec.card_style || theme.cardStyle,
       animation_preset: sec.animation_preset || theme.animationPreset,
       image_filter: sec.image_filter || theme.imageFilter,

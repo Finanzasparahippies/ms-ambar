@@ -21,6 +21,8 @@ const SHAPE_OPTIONS = [
   { id: 'circle', label: 'Círculo / Mundo', icon: '🌐' },
   { id: 'cactus', label: 'Cactus / Desierto', icon: '🌵' },
   { id: 'star', label: 'Estrella', icon: '⭐' },
+  { id: 'triangle', label: 'Triángulo Místico', icon: '🔺' },
+  { id: 'polygon', label: 'Polígono Geométrico', icon: '⬟' },
   { id: 'infinity', label: 'Infinito', icon: '♾️' },
   { id: 'hexagon', label: 'Hexágono Futuro', icon: '⬡' },
   { id: 'sun', label: 'Sol Radiante', icon: '☀️' },
@@ -258,6 +260,9 @@ export const ThemeManager: React.FC = () => {
   const [borderColor, setBorderColor] = useState('rgba(229, 169, 59, 0.25)');
 
   const [particleShape, setParticleShape] = useState('moon');
+  const [particleDensity, setParticleDensity] = useState(65);
+  const [particleSpeed, setParticleSpeed] = useState(1.0);
+  const [particleColor, setParticleColor] = useState('');
   const [cardStyle, setCardStyle] = useState('rounded-full');
   const [backgroundPattern, setBackgroundPattern] = useState('stars');
   const [fontPreset, setFontPreset] = useState('cormorant');
@@ -307,6 +312,9 @@ export const ThemeManager: React.FC = () => {
       setElementFocusRing(theme.elementFocusRing || theme.primaryColor || '#E5A93B');
       setBorderColor(theme.borderColor || '#E5A93B');
       setParticleShape(theme.particleShape || 'moon');
+      setParticleDensity(theme.particleDensity ?? 65);
+      setParticleSpeed(theme.particleSpeed ?? 1.0);
+      setParticleColor(theme.particleColor || '');
       setCardStyle(theme.cardStyle || 'rounded-full');
       setBackgroundPattern(theme.backgroundPattern || 'stars');
       setFontPreset(theme.fontPreset || 'cormorant');
@@ -355,6 +363,9 @@ export const ThemeManager: React.FC = () => {
         elementFocusRing,
         borderColor,
         particleShape,
+        particleDensity,
+        particleSpeed,
+        particleColor,
         cardStyle,
         backgroundPattern,
         fontPreset,
@@ -363,7 +374,7 @@ export const ThemeManager: React.FC = () => {
       });
       setSyncStatus('idle');
     }, 16);
-  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, backgroundGradient, accentColor, cardBackground, cardBoxShadow, borderWidth, borderOpacity, borderStylePreset, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
+  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, backgroundGradient, accentColor, cardBackground, cardBoxShadow, borderWidth, borderOpacity, borderStylePreset, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, particleDensity, particleSpeed, particleColor, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
 
   useEffect(() => {
     handleLivePreview();
@@ -436,6 +447,9 @@ export const ThemeManager: React.FC = () => {
       element_focus_ring: elementFocusRing,
       border_color: borderColor,
       particle_shape: particleShape,
+      particle_density: particleDensity,
+      particle_speed: particleSpeed,
+      particle_color: particleColor,
       card_style: cardStyle,
       background_pattern: backgroundPattern,
       font_preset: fontPreset,
@@ -1003,6 +1017,131 @@ export const ThemeManager: React.FC = () => {
                       <span className="text-[9px] font-bold truncate text-white/80">{p.name}</span>
                     </button>
                   ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Dedicated Particle System & Visual Effects Card */}
+          <div className="amber-glass p-6 rounded-3xl border border-white/10 space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <h3 className="text-xs font-black uppercase tracking-widest text-amber-honey flex items-center gap-2">
+                <Sparkles size={16} /> Fondo de Partículas & Efectos
+              </h3>
+              <span className="text-[9px] bg-amber-500/10 text-amber-300 px-2 py-0.5 rounded-full font-mono">
+                Canvas 60 FPS
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {/* Particle Shape Dropdown */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
+                  Forma / Geometría de Partículas:
+                </label>
+                <select
+                  value={themeMode === 'section' ? (currentSectionSpec.particle_shape || particleShape) : particleShape}
+                  onChange={(e) => {
+                    if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_shape', e.target.value);
+                    else setParticleShape(e.target.value);
+                  }}
+                  className="w-full bg-[#0d110e] border border-white/20 rounded-2xl px-4 py-3 text-xs font-bold text-white focus:border-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey"
+                >
+                  {SHAPE_OPTIONS.map(shape => (
+                    <option key={shape.id} value={shape.id} className="bg-[#0d110e] text-white py-1">
+                      {shape.icon} {shape.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Particle Density Slider */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-white/70">
+                    Densidad (Cantidad de Partículas):
+                  </label>
+                  <span className="text-xs font-mono font-bold text-amber-honey bg-white/5 px-2 py-0.5 rounded-lg border border-white/10">
+                    {themeMode === 'section' ? (currentSectionSpec.particle_density ?? particleDensity) : particleDensity} pts
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="200"
+                  step="5"
+                  value={themeMode === 'section' ? (currentSectionSpec.particle_density ?? particleDensity) : particleDensity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_density', val);
+                    else setParticleDensity(val);
+                  }}
+                  className="w-full accent-amber-honey cursor-pointer h-2 bg-white/10 rounded-lg"
+                />
+              </div>
+
+              {/* Particle Speed Slider */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-white/70">
+                    Velocidad de Movimiento:
+                  </label>
+                  <span className="text-xs font-mono font-bold text-amber-honey bg-white/5 px-2 py-0.5 rounded-lg border border-white/10">
+                    {(themeMode === 'section' ? (currentSectionSpec.particle_speed ?? particleSpeed) : particleSpeed).toFixed(1)}x
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="3.0"
+                  step="0.1"
+                  value={themeMode === 'section' ? (currentSectionSpec.particle_speed ?? particleSpeed) : particleSpeed}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_speed', val);
+                    else setParticleSpeed(val);
+                  }}
+                  className="w-full accent-amber-honey cursor-pointer h-2 bg-white/10 rounded-lg"
+                />
+              </div>
+
+              {/* Particle Custom Color Picker */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
+                  Color Personalizado de Partículas:
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={particleColor || primaryColor}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_color', e.target.value);
+                      else setParticleColor(e.target.value);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Auto (Usar color primario)"
+                    value={particleColor}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_color', e.target.value);
+                      else setParticleColor(e.target.value);
+                    }}
+                    className="bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white w-full focus:border-amber-honey focus:outline-none"
+                  />
+                  {particleColor && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_color', '');
+                        else setParticleColor('');
+                      }}
+                      className="text-[9px] px-2 py-2 bg-white/10 hover:bg-white/20 text-white/70 rounded-xl uppercase font-bold"
+                    >
+                      Auto
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

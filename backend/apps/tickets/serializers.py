@@ -69,7 +69,7 @@ class EventSerializer(serializers.ModelSerializer):
             'base_price', 'numbered_seat_base_price', 'price_with_fee',
             'theme_config',
             'primary_color', 'secondary_color', 'background_start', 'background_end',
-            'accent_color', 'card_background', 'text_color', 'particle_shape',
+            'accent_color', 'card_background', 'text_color', 'particle_shape', 'particle_density', 'particle_speed', 'particle_color',
             'card_style', 'background_pattern', 'font_preset', 'custom_css', 'section_themes'
         ]
         extra_kwargs = {
@@ -157,7 +157,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'button_hover_bg', 'button_hover_text', 'button_focus_ring',
             'card_hover_bg', 'card_hover_border', 'card_focus_ring',
             'element_hover_color', 'element_focus_ring',
-            'particle_shape', 'card_style', 'background_pattern', 'font_preset', 'allow_canvas_zoom', 'custom_css', 'section_themes'
+            'particle_shape', 'particle_density', 'particle_speed', 'particle_color', 'card_style', 'background_pattern', 'font_preset', 'allow_canvas_zoom', 'custom_css', 'section_themes'
         ]
 
     def _sanitize_css_str(self, value: str, field_name: str) -> str:

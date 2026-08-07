@@ -637,6 +637,24 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(res.data.get('theme_config', {}).get('primary_color'), '#00FF00')
         self.assertEqual(res.data.get('theme_config', {}).get('particle_shape'), 'star')
         self.assertEqual(res.data.get('theme_config', {}).get('custom_css'), 'body { font-weight: bold; }')
+
+    def test_particle_settings_persistence(self):
+        """Verify particle_density, particle_speed, and particle_color persistence via site-settings API."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('site-settings')
+        data = {
+            'particle_shape': 'triangle',
+            'particle_density': 120,
+            'particle_speed': 2.5,
+            'particle_color': '#FF0055'
+        }
+        res = self.client.post(url, data, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        cfg = res.data.get('theme_config', {})
+        self.assertEqual(cfg.get('particle_shape'), 'triangle')
+        self.assertEqual(cfg.get('particle_density'), 120)
+        self.assertEqual(cfg.get('particle_speed'), 2.5)
+        self.assertEqual(cfg.get('particle_color'), '#FF0055')
     def test_calculate_total_with_fee_gross_up(self):
         """Verify Gross-Up fee calculation guarantees 100% net base payout after Stripe fee + 16% IVA deduction."""
         from apps.tickets.fees import calculate_total_with_fee

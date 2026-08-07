@@ -14,10 +14,12 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
   const { theme } = useEventTheme();
   const activeTarget = morphTarget !== 'none' ? morphTarget : (theme.particleShape || 'moon');
   const morphTargetRef = useRef(activeTarget);
+  const themeRef = useRef(theme);
 
   useEffect(() => {
     morphTargetRef.current = activeTarget;
-  }, [activeTarget]);
+    themeRef.current = theme;
+  }, [activeTarget, theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -49,7 +51,8 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
       size: number;
     }> = [];
 
-    const numParticles = isMobile ? 22 : 65;
+    const baseDensity = theme.particleDensity ?? 65;
+    const numParticles = isMobile ? Math.max(10, Math.round(baseDensity * 0.35)) : baseDensity;
 
     for (let i = 0; i < numParticles; i++) {
       particles.push({
@@ -78,7 +81,9 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
         bee: [],
         eye: [],
         wave: [],
-        spiral: []
+        spiral: [],
+        triangle: [],
+        polygon: []
       };
 
       const cx = width / 2;
@@ -343,6 +348,44 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
           y: cy + Math.sin(t) * r
         });
       }
+
+      // 15. Triangle
+      const ptsTri: Array<{ x: number; y: number }> = [];
+      for (let k = 0; k < 3; k++) {
+        const angle = (k * Math.PI * 2) / 3 - Math.PI / 2;
+        ptsTri.push({
+          x: cx + Math.cos(angle) * radius * 1.15,
+          y: cy + Math.sin(angle) * radius * 1.15
+        });
+      }
+      for (let i = 0; i < numParticles; i++) {
+        const side = Math.floor((i / numParticles) * 3) % 3;
+        const nextSide = (side + 1) % 3;
+        const pct = ((i / numParticles) * 3) % 1;
+        shapes.triangle.push({
+          x: ptsTri[side].x + (ptsTri[nextSide].x - ptsTri[side].x) * pct,
+          y: ptsTri[side].y + (ptsTri[nextSide].y - ptsTri[side].y) * pct
+        });
+      }
+
+      // 16. Polygon (Pentágono)
+      const ptsPoly: Array<{ x: number; y: number }> = [];
+      for (let k = 0; k < 5; k++) {
+        const angle = (k * Math.PI * 2) / 5 - Math.PI / 2;
+        ptsPoly.push({
+          x: cx + Math.cos(angle) * radius,
+          y: cy + Math.sin(angle) * radius
+        });
+      }
+      for (let i = 0; i < numParticles; i++) {
+        const side = Math.floor((i / numParticles) * 5) % 5;
+        const nextSide = (side + 1) % 5;
+        const pct = ((i / numParticles) * 5) % 1;
+        shapes.polygon.push({
+          x: ptsPoly[side].x + (ptsPoly[nextSide].x - ptsPoly[side].x) * pct,
+          y: ptsPoly[side].y + (ptsPoly[nextSide].y - ptsPoly[side].y) * pct
+        });
+      }
     };
 
     calculateShapes();
@@ -426,8 +469,12 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
       const targetMode = morphTargetRef.current;
       const targetShape = targetMode && targetMode !== 'none' ? shapes[targetMode] : null;
 
-      const [pR, pG, pB] = parseRgbNums(theme.primaryColor || '#E5A93B');
-      const [sR, sG, sB] = parseRgbNums(theme.secondaryColor || '#22A6B7');
+      const activeTheme = themeRef.current;
+      const particleColorHex = activeTheme.particleColor || activeTheme.primaryColor || '#E5A93B';
+      const speedMult = activeTheme.particleSpeed ?? 1.0;
+
+      const [pR, pG, pB] = parseRgbNums(particleColorHex);
+      const [sR, sG, sB] = parseRgbNums(activeTheme.secondaryColor || '#22A6B7');
 
       const fillPrimary = `rgba(${pR}, ${pG}, ${pB}, ${targetShape ? 0.85 : 0.6})`;
       const fillSecondary = `rgba(${sR}, ${sG}, ${sB}, ${targetShape ? 0.85 : 0.5})`;
@@ -438,11 +485,11 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
         if (targetShape && targetShape[i]) {
           const target = targetShape[i];
           const jitter = (targetMode === 'hexagon' || targetMode === 'bee') ? (Math.random() - 0.5) * 1.5 : 0;
-          p1.x += (target.x + jitter - p1.x) * 0.08;
-          p1.y += (target.y + jitter - p1.y) * 0.08;
+          p1.x += (target.x + jitter - p1.x) * 0.08 * speedMult;
+          p1.y += (target.y + jitter - p1.y) * 0.08 * speedMult;
         } else {
-          p1.x += p1.vx;
-          p1.y += p1.vy;
+          p1.x += p1.vx * speedMult;
+          p1.y += p1.vy * speedMult;
           if (p1.x < 0 || p1.x > width) p1.vx *= -1;
           if (p1.y < 0 || p1.y > height) p1.vy *= -1;
 
@@ -511,6 +558,7 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
     return () => {
       observer.disconnect();
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      animationFrameId = 0;
       window.removeEventListener('resize', handleResize);
       if (resizeTimeout) clearTimeout(resizeTimeout);
       if (parent && !isTouchDevice) {
@@ -519,7 +567,7 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
         parent.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
-  }, []);
+  }, [theme.particleDensity]);
 
   return <canvas ref={canvasRef} className={className} />;
 };

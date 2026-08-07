@@ -161,5 +161,35 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
     expect(inputName).toHaveAttribute('name', 'newsletter-name');
     expect(screen.getByRole('button', { name: 'Suscribirse' })).toHaveAttribute('id', 'newsletter-submit-btn');
   });
+
+  test('EventThemeContext debe inyectar variables CSS de partículas (--particle-density, --particle-speed, --particle-color)', async () => {
+    await act(async () => {
+      render(
+        <EventThemeContextProvider>
+          <DummySectionConsumer sectionKey="hero" />
+        </EventThemeContextProvider>
+      );
+    });
+
+    const rootStyle = document.documentElement.style;
+    expect(rootStyle.getPropertyValue('--particle-density')).toBe('65');
+    expect(rootStyle.getPropertyValue('--particle-speed')).toBe('1');
+    expect(rootStyle.getPropertyValue('--particle-color')).toBeTruthy();
+  });
+
+  test('ThemeManager debe renderizar la tarjeta "Fondo de Partículas & Efectos" con sliders y opciones', async () => {
+    await act(async () => {
+      render(
+        <EventThemeContextProvider>
+          <ThemeManager />
+        </EventThemeContextProvider>
+      );
+    });
+
+    expect(screen.getByText('Fondo de Partículas & Efectos')).toBeInTheDocument();
+    expect(screen.getByText('Densidad (Cantidad de Partículas):')).toBeInTheDocument();
+    expect(screen.getByText('Velocidad de Movimiento:')).toBeInTheDocument();
+    expect(screen.getByText('Forma / Geometría de Partículas:')).toBeInTheDocument();
+  });
 });
 
