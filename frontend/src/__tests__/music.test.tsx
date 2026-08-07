@@ -55,11 +55,26 @@ describe('MusicPage Component', () => {
     updated_at: '2026-08-06T00:00:00Z'
   };
 
+  const mockPlaylistsData = [
+    {
+      id: 1,
+      title: 'Dinámica Spotify',
+      platform: 'spotify',
+      render_type: 'iframe',
+      embed_url: 'https://open.spotify.com/embed/playlist/4SIS3MJKl1MVuumtycPU22',
+      is_active: true,
+      order: 1
+    }
+  ];
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockedAxios.get.mockImplementation((url: string) => {
       if (url.includes('/music/config/')) {
         return Promise.resolve({ data: mockConfigData });
+      }
+      if (url.includes('/music/playlists/')) {
+        return Promise.resolve({ data: mockPlaylistsData });
       }
       return Promise.resolve({ data: mockAlbumsData });
     });
@@ -120,6 +135,9 @@ describe('MusicPage Component', () => {
       if (url.includes('/music/config/')) {
         return Promise.resolve({ data: mockConfigData });
       }
+      if (url.includes('/music/playlists/')) {
+        return Promise.resolve({ data: [] });
+      }
       return Promise.resolve({ data: [] });
     });
 
@@ -134,17 +152,13 @@ describe('MusicPage Component', () => {
     renderWithContext(<MusicPage />);
 
     await waitFor(() => {
-      expect(screen.getByTitle(/Spotify Playlist Oficial Ms Ambar/i)).toBeInTheDocument();
-      expect(screen.getByTitle(/YouTube Videografía Oficial Ms Ambar/i)).toBeInTheDocument();
+      expect(screen.getByTitle(/Dinámica Spotify/i)).toBeInTheDocument();
     });
 
-    const spotifyIframe = screen.getByTitle(/Spotify Playlist Oficial Ms Ambar/i);
+    const spotifyIframe = screen.getByTitle(/Dinámica Spotify/i);
     expect(spotifyIframe).toHaveAttribute('src', expect.stringContaining('4SIS3MJKl1MVuumtycPU22'));
     expect(spotifyIframe).toHaveAttribute('loading', 'lazy');
-
-    const youtubeIframe = screen.getByTitle(/YouTube Videografía Oficial Ms Ambar/i);
-    expect(youtubeIframe).toHaveAttribute('src', expect.stringContaining('PL1imJPq1V79Q72PCZk8bIBwQWW30a0fIP'));
-    expect(youtubeIframe).toHaveAttribute('loading', 'lazy');
   });
 });
+
 

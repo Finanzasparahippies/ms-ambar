@@ -37,6 +37,55 @@ interface AlbumItem {
   tracks: TrackItem[];
 }
 
+export interface PlaylistItem {
+  id: number;
+  title: string;
+  platform: 'spotify' | 'youtube' | 'apple_music' | 'amazon_music';
+  render_type: 'iframe' | 'api_sync';
+  embed_url: string;
+  external_id?: string;
+  description?: string;
+  is_active: boolean;
+  order: number;
+}
+
+class IframeErrorBoundary extends React.Component<
+  { children: React.ReactNode; title: string },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; title: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.warn('[IframeErrorBoundary] Error al renderizar reproductor embebido:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="amber-glass border border-amber-honey/20 p-8 rounded-[2.5rem] text-center max-w-lg mx-auto flex flex-col items-center justify-center my-6 shadow-xl">
+          <div className="w-12 h-12 rounded-full bg-amber-honey/10 border border-amber-honey/30 flex items-center justify-center mb-3 text-amber-honey">
+            <Disc size={24} className="animate-spin" />
+          </div>
+          <h4 className="text-sm font-black uppercase text-white tracking-tight mb-1">
+            Reproductor no disponible
+          </h4>
+          <p className="text-[11px] font-mono opacity-60 text-amber-honey/80">
+            No se pudo cargar el reproductor para "{this.props.title}". Verifica el enlace o intenta más tarde.
+          </p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const DEFAULT_COVER = 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&q=80';
 
 const OFFICIAL_LINKS = {
@@ -67,6 +116,7 @@ const AlbumCoverImage: React.FC<{ src?: string; alt: string }> = ({ src, alt }) 
 
 const MusicPage: React.FC = () => {
   const [albums, setAlbums] = useState<AlbumItem[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistItem[]>([]);
   const [discographyDescription, setDiscographyDescription] = useState<string>(
     'Explora las resonancias místicas, producciones acústicas y sencillos oficiales de Ms. Ambar en todas las plataformas digitales ✨🎶'
   );
@@ -79,6 +129,7 @@ const MusicPage: React.FC = () => {
   useEffect(() => {
     fetchAlbums();
     fetchMusicConfig();
+    fetchPlaylists();
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -86,6 +137,19 @@ const MusicPage: React.FC = () => {
       }
     };
   }, []);
+
+  const fetchPlaylists = async () => {
+    try {
+      const apiUrl = getApiUrl();
+      const res = await axios.get(`${apiUrl}/music/playlists/`);
+      if (res.data && Array.isArray(res.data)) {
+        setPlaylists(res.data);
+      }
+    } catch (err) {
+      console.warn('[MusicPage] Usando listas por defecto:', err);
+    }
+  };
+
 
   const fetchMusicConfig = async () => {
     try {
@@ -469,95 +533,164 @@ const MusicPage: React.FC = () => {
           )}
 
           {/* Official Embedded Playlists & Video Widgets Section */}
-              <motion.section
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="mt-20 md:mt-28"
-              >
-                <div className="flex items-center gap-3 text-amber-honey text-xs font-black uppercase tracking-[0.4em] mb-3">
-                  <Sparkles size={16} /> DESCUBRE A MS AMBAR
-                </div>
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-white mb-8">
-                  PLAYLISTS & <span className="text-amber-honey text-glow">VIDEOS</span>
-                </h2>
+          <motion.section
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="mt-20 md:mt-28"
+          >
+            <div className="flex items-center gap-3 text-amber-honey text-xs font-black uppercase tracking-[0.4em] mb-3">
+              <Sparkles size={16} /> DESCUBRE A MS AMBAR
+            </div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter text-white mb-8">
+              PLAYLISTS & <span className="text-amber-honey text-glow">VIDEOS</span>
+            </h2>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 w-full">
-                  {/* Spotify Official Playlist Widget */}
-                  <div className="amber-glass border border-amber-honey/20 hover:border-amber-honey/40 transition-all p-4 sm:p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between">
-                    <div className="flex items-center justify-between gap-3 mb-4 px-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-[#1DB954]/20 border border-[#1DB954]/40 flex items-center justify-center text-[#1DB954]">
-                          <Play size={14} fill="currentColor" className="ml-0.5" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 w-full">
+              {playlists && playlists.length > 0 ? (
+                playlists.map((pl) => (
+                  <IframeErrorBoundary key={pl.id} title={pl.title}>
+                    <div className="amber-glass border border-amber-honey/20 hover:border-amber-honey/40 transition-all p-4 sm:p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between">
+                      <div className="flex items-center justify-between gap-3 mb-4 px-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${
+                            pl.platform === 'spotify' ? 'bg-[#1DB954]/20 border-[#1DB954]/40 text-[#1DB954]' :
+                            pl.platform === 'youtube' ? 'bg-red-600/20 border-red-500/40 text-red-500' :
+                            pl.platform === 'apple_music' ? 'bg-pink-600/20 border-pink-500/40 text-pink-400' :
+                            'bg-cyan-600/20 border-cyan-500/40 text-cyan-400'
+                          }`}>
+                            {pl.platform === 'spotify' ? <Play size={14} fill="currentColor" className="ml-0.5" /> :
+                             pl.platform === 'youtube' ? <Youtube size={16} /> :
+                             pl.platform === 'apple_music' ? <Disc size={16} /> :
+                             <Music size={16} />}
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black uppercase text-white tracking-tight">{pl.title}</h3>
+                            <p className="text-[10px] font-mono text-amber-honey/70 uppercase">
+                              {pl.description || `Ms. Ambar • ${pl.platform}`}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-black uppercase text-white tracking-tight">Spotify Playlist</h3>
-                          <p className="text-[10px] font-mono text-amber-honey/70 uppercase">Ms. Ambar • Selección Oficial</p>
-                        </div>
+                        {pl.embed_url && (
+                          <a
+                            href={pl.embed_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors focus:outline-none"
+                          >
+                            Abrir ↗
+                          </a>
+                        )}
                       </div>
-                      <a
-                        href={OFFICIAL_LINKS.spotify}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors focus:outline-none"
-                      >
-                        Abrir en App ↗
-                      </a>
-                    </div>
 
-                    <div className="w-full rounded-2xl overflow-hidden shadow-inner border border-white/10 bg-black/40">
-                      <iframe
-                        src="https://open.spotify.com/embed/playlist/4SIS3MJKl1MVuumtycPU22?utm_source=generator&si=917272ce4bf54736"
-                        width="100%"
-                        height="352"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="lazy"
-                        title="Spotify Playlist Oficial Ms Ambar"
-                        className="w-full rounded-2xl min-h-[320px] sm:min-h-[352px]"
-                      />
+                      {pl.render_type === 'iframe' && pl.embed_url ? (
+                        <div className="w-full rounded-2xl overflow-hidden shadow-inner border border-white/10 bg-black/40 aspect-video lg:h-[352px]">
+                          <iframe
+                            src={pl.embed_url}
+                            width="100%"
+                            height="100%"
+                            frameBorder="0"
+                            allowFullScreen
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope; web-share"
+                            loading="lazy"
+                            title={pl.title}
+                            className="w-full h-full rounded-2xl min-h-[220px] sm:min-h-[280px] lg:min-h-[352px]"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full rounded-2xl p-6 border border-white/10 bg-black/30 text-center">
+                          <p className="text-xs text-amber-honey font-mono uppercase">
+                            Catálogo sincronizado por API ({pl.external_id || 'Global'})
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* YouTube Official Video Series Widget */}
-                  <div className="amber-glass border border-amber-honey/20 hover:border-amber-honey/40 transition-all p-4 sm:p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between">
-                    <div className="flex items-center justify-between gap-3 mb-4 px-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500">
-                          <Youtube size={16} />
+                  </IframeErrorBoundary>
+                ))
+              ) : (
+                <>
+                  {/* Spotify Official Playlist Widget Fallback */}
+                  <IframeErrorBoundary title="Spotify Playlist">
+                    <div className="amber-glass border border-amber-honey/20 hover:border-amber-honey/40 transition-all p-4 sm:p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between">
+                      <div className="flex items-center justify-between gap-3 mb-4 px-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-[#1DB954]/20 border border-[#1DB954]/40 flex items-center justify-center text-[#1DB954]">
+                            <Play size={14} fill="currentColor" className="ml-0.5" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black uppercase text-white tracking-tight">Spotify Playlist</h3>
+                            <p className="text-[10px] font-mono text-amber-honey/70 uppercase">Ms. Ambar • Selección Oficial</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-sm font-black uppercase text-white tracking-tight">YouTube Videografía</h3>
-                          <p className="text-[10px] font-mono text-amber-honey/70 uppercase">Canal Oficial • Videos & Lives</p>
-                        </div>
+                        <a
+                          href={OFFICIAL_LINKS.spotify}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors focus:outline-none"
+                        >
+                          Abrir en App ↗
+                        </a>
                       </div>
-                      <a
-                        href={OFFICIAL_LINKS.youtube}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors focus:outline-none"
-                      >
-                        Ver en YouTube ↗
-                      </a>
-                    </div>
 
-                    <div className="w-full rounded-2xl overflow-hidden shadow-inner border border-white/10 bg-black/40 aspect-video lg:h-[352px]">
-                      <iframe
-                        src="https://www.youtube.com/embed/videoseries?si=gPM5tQHCXG-Pcxpi&list=PL1imJPq1V79Q72PCZk8bIBwQWW30a0fIP"
-                        width="100%"
-                        height="100%"
-                        frameBorder="0"
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                        loading="lazy"
-                        title="YouTube Videografía Oficial Ms Ambar"
-                        className="w-full h-full rounded-2xl min-h-[220px] sm:min-h-[280px] lg:min-h-[352px]"
-                      />
+                      <div className="w-full rounded-2xl overflow-hidden shadow-inner border border-white/10 bg-black/40">
+                        <iframe
+                          src="https://open.spotify.com/embed/playlist/4SIS3MJKl1MVuumtycPU22?utm_source=generator&si=917272ce4bf54736"
+                          width="100%"
+                          height="352"
+                          frameBorder="0"
+                          allowFullScreen
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                          loading="lazy"
+                          title="Spotify Playlist Oficial Ms Ambar"
+                          className="w-full rounded-2xl min-h-[320px] sm:min-h-[352px]"
+                        />
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </motion.section>
+                  </IframeErrorBoundary>
+
+                  {/* YouTube Official Video Series Widget Fallback */}
+                  <IframeErrorBoundary title="YouTube Videografía">
+                    <div className="amber-glass border border-amber-honey/20 hover:border-amber-honey/40 transition-all p-4 sm:p-6 rounded-[2.5rem] shadow-2xl flex flex-col justify-between">
+                      <div className="flex items-center justify-between gap-3 mb-4 px-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-500">
+                            <Youtube size={16} />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-black uppercase text-white tracking-tight">YouTube Videografía</h3>
+                            <p className="text-[10px] font-mono text-amber-honey/70 uppercase">Canal Oficial • Videos & Lives</p>
+                          </div>
+                        </div>
+                        <a
+                          href={OFFICIAL_LINKS.youtube}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] font-black uppercase tracking-wider text-amber-honey hover:text-white transition-colors focus:outline-none"
+                        >
+                          Ver en YouTube ↗
+                        </a>
+                      </div>
+
+                      <div className="w-full rounded-2xl overflow-hidden shadow-inner border border-white/10 bg-black/40 aspect-video lg:h-[352px]">
+                        <iframe
+                          src="https://www.youtube.com/embed/videoseries?si=gPM5tQHCXG-Pcxpi&list=PL1imJPq1V79Q72PCZk8bIBwQWW30a0fIP"
+                          width="100%"
+                          height="100%"
+                          frameBorder="0"
+                          allowFullScreen
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                          loading="lazy"
+                          title="YouTube Videografía Oficial Ms Ambar"
+                          className="w-full h-full rounded-2xl min-h-[220px] sm:min-h-[280px] lg:min-h-[352px]"
+                        />
+                      </div>
+                    </div>
+                  </IframeErrorBoundary>
+                </>
+              )}
+            </div>
+          </motion.section>
+
       </div>
 
 

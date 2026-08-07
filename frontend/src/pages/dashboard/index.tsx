@@ -314,10 +314,38 @@ export default function AdminDashboard() {
   };
 
   // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme' | 'music'>('summary');
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [contracts, setContracts] = useState<BookingContract[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
+
+  // Music & API Credentials State
+  const [musicTabSubTab, setMusicTabSubTab] = useState<'credentials' | 'playlists'>('credentials');
+  const [musicDiscographyDesc, setMusicDiscographyDesc] = useState('');
+  const [youtubeApiKey, setYoutubeApiKey] = useState('');
+  const [spotifyClientId, setSpotifyClientId] = useState('');
+  const [spotifyClientSecret, setSpotifyClientSecret] = useState('');
+  const [appleMusicRegion, setAppleMusicRegion] = useState('us');
+  const [amazonMusicArtistId, setAmazonMusicArtistId] = useState('');
+  const [musicCredentialsLoading, setMusicCredentialsLoading] = useState(false);
+  const [musicCredentialsSaving, setMusicCredentialsSaving] = useState(false);
+  const [showSecretMap, setShowSecretMap] = useState<{ youtube: boolean; spotify: boolean }>({ youtube: false, spotify: false });
+
+  // Playlists CRUD State
+  const [musicPlaylists, setMusicPlaylists] = useState<any[]>([]);
+  const [musicPlaylistsLoading, setMusicPlaylistsLoading] = useState(false);
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState<any | null>(null);
+  const [plTitle, setPlTitle] = useState('');
+  const [plPlatform, setPlPlatform] = useState<'spotify' | 'youtube' | 'apple_music' | 'amazon_music'>('spotify');
+  const [plRenderType, setPlRenderType] = useState<'iframe' | 'api_sync'>('iframe');
+  const [plEmbedUrl, setPlEmbedUrl] = useState('');
+  const [plExternalId, setPlExternalId] = useState('');
+  const [plDescription, setPlDescription] = useState('');
+  const [plIsActive, setPlIsActive] = useState(true);
+  const [plOrder, setPlOrder] = useState(0);
+  const [plSaving, setPlSaving] = useState(false);
+
 
   // Campaigns & Subscribers State
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -899,7 +927,31 @@ export default function AdminDashboard() {
       } else if (tabName === 'coupons') {
         const res = await api.get('/tickets/coupons/');
         setCoupons(Array.isArray(res.data) ? res.data : []);
+      } else if (tabName === 'music') {
+        setMusicCredentialsLoading(true);
+        setMusicPlaylistsLoading(true);
+        try {
+          const [cfgRes, plRes] = await Promise.all([
+            api.get('/music/config/').catch(() => ({ data: null })),
+            api.get('/music/playlists/').catch(() => ({ data: [] }))
+          ]);
+          if (cfgRes?.data) {
+            setMusicDiscographyDesc(cfgRes.data.discography_description || '');
+            setYoutubeApiKey(cfgRes.data.youtube_api_key || '');
+            setSpotifyClientId(cfgRes.data.spotify_client_id || '');
+            setSpotifyClientSecret(cfgRes.data.spotify_client_secret || '');
+            setAppleMusicRegion(cfgRes.data.apple_music_region || 'us');
+            setAmazonMusicArtistId(cfgRes.data.amazon_music_artist_id || '');
+          }
+          setMusicPlaylists(Array.isArray(plRes?.data) ? plRes.data : []);
+        } catch (e) {
+          console.error("Error al cargar datos de la app música:", e);
+        } finally {
+          setMusicCredentialsLoading(false);
+          setMusicPlaylistsLoading(false);
+        }
       }
+
     } catch (e) {
       console.error(`Error loading tab ${tabName}:`, e);
     }
@@ -2893,11 +2945,534 @@ export default function AdminDashboard() {
             >
               🎨 Tema & Apariencia
             </button>
+            <button
+              onClick={() => setActiveTab('music')}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'music'
+                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                }`}
+            >
+              🎵 Música & APIs
+            </button>
           </div>
 
           {/* Main Administrative Views Context */}
           <div className="relative z-10">
             <AnimatePresence>
+
+              {/* TAB: MÚSICA & CONFIGURACIÓN DE APIS */}
+              {activeTab === 'music' && (
+                <motion.div
+                  key="music-tab"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-8"
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#141C16] p-6 rounded-3xl border border-[#2B392F]">
+                    <div>
+                      <h2 className="text-xl font-black text-white tracking-tight uppercase flex items-center gap-2">
+                        🎵 Gestión de Música & Integraciones API
+                      </h2>
+                      <p className="text-xs text-[#F4F6F0]/60 mt-1">
+                        Configura credenciales externas y administra las listas de reproducción embebidas en <code className="text-amber-honey">/musica</code>.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-[#0C120E] p-1.5 rounded-2xl border border-[#2B392F]">
+                      <button
+                        onClick={() => setMusicTabSubTab('credentials')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                          musicTabSubTab === 'credentials'
+                            ? 'bg-amber-honey text-[#1E2B22] shadow-md'
+                            : 'text-[#F4F6F0]/60 hover:text-white'
+                        }`}
+                      >
+                        Credenciales API
+                      </button>
+                      <button
+                        onClick={() => setMusicTabSubTab('playlists')}
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                          musicTabSubTab === 'playlists'
+                            ? 'bg-amber-honey text-[#1E2B22] shadow-md'
+                            : 'text-[#F4F6F0]/60 hover:text-white'
+                        }`}
+                      >
+                        Listas & Widgets ({musicPlaylists.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {musicTabSubTab === 'credentials' ? (
+                    /* SUBTAB 1: CREDENCIALES DE APIS DE STREAMING */
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        setMusicCredentialsSaving(true);
+                        try {
+                          const payload: Record<string, any> = {
+                            discography_description: musicDiscographyDesc,
+                            spotify_client_id: spotifyClientId,
+                            apple_music_region: appleMusicRegion,
+                            amazon_music_artist_id: amazonMusicArtistId,
+                          };
+                          if (youtubeApiKey && !youtubeApiKey.includes('••••••••')) {
+                            payload.youtube_api_key = youtubeApiKey;
+                          }
+                          if (spotifyClientSecret && !spotifyClientSecret.includes('••••••••')) {
+                            payload.spotify_client_secret = spotifyClientSecret;
+                          }
+
+                          const res = await api.put('/music/config/', payload);
+                          if (res.data) {
+                            showToast.success('Credenciales y configuración de música guardadas correctamente.');
+                            if (res.data.youtube_api_key) setYoutubeApiKey(res.data.youtube_api_key);
+                            if (res.data.spotify_client_secret) setSpotifyClientSecret(res.data.spotify_client_secret);
+                          }
+                        } catch (err: any) {
+                          console.error(err);
+                          showToast.error(err?.response?.data?.detail || 'Error al guardar credenciales.');
+                        } finally {
+                          setMusicCredentialsSaving(false);
+                        }
+                      }}
+                      className="bg-[#141C16] p-8 rounded-3xl border border-[#2B392F] space-y-6"
+                    >
+                      <h3 className="text-lg font-black text-amber-honey uppercase tracking-tight">
+                        Configuración Global de Discografía & Llaves de Integración
+                      </h3>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-white uppercase tracking-wider">
+                          Encabezado editable de Discografía (soporta Emojis ✨🎶)
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={musicDiscographyDesc}
+                          onChange={(e) => setMusicDiscographyDesc(e.target.value)}
+                          className="w-full bg-[#0C120E] border border-[#2B392F] rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-amber-honey"
+                          placeholder="Explora la música oficial de Ms Ambar..."
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[#2B392F]">
+                        {/* YouTube Credentials */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-red-500" /> YouTube Data API Key
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setShowSecretMap(prev => ({ ...prev, youtube: !prev.youtube }))}
+                              className="text-[10px] text-amber-honey hover:underline focus:outline-none"
+                            >
+                              {showSecretMap.youtube ? 'Ocultar' : 'Mostrar'}
+                            </button>
+                          </div>
+                          <input
+                            type={showSecretMap.youtube ? 'text' : 'password'}
+                            value={youtubeApiKey}
+                            onChange={(e) => setYoutubeApiKey(e.target.value)}
+                            placeholder="AIzaSy..."
+                            className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-amber-honey"
+                          />
+                        </div>
+
+                        {/* Apple Music Region */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-pink-500" /> Apple Music / iTunes Región
+                          </label>
+                          <input
+                            type="text"
+                            value={appleMusicRegion}
+                            onChange={(e) => setAppleMusicRegion(e.target.value)}
+                            placeholder="us, mx, es..."
+                            className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-amber-honey"
+                          />
+                        </div>
+
+                        {/* Spotify Client ID */}
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[#1DB954]" /> Spotify Client ID
+                          </label>
+                          <input
+                            type="text"
+                            value={spotifyClientId}
+                            onChange={(e) => setSpotifyClientId(e.target.value)}
+                            placeholder="32_caracteres_hash..."
+                            className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-amber-honey"
+                          />
+                        </div>
+
+                        {/* Spotify Client Secret */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                              <span className="w-2 h-2 rounded-full bg-[#1DB954]" /> Spotify Client Secret
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setShowSecretMap(prev => ({ ...prev, spotify: !prev.spotify }))}
+                              className="text-[10px] text-amber-honey hover:underline focus:outline-none"
+                            >
+                              {showSecretMap.spotify ? 'Ocultar' : 'Mostrar'}
+                            </button>
+                          </div>
+                          <input
+                            type={showSecretMap.spotify ? 'text' : 'password'}
+                            value={spotifyClientSecret}
+                            onChange={(e) => setSpotifyClientSecret(e.target.value)}
+                            placeholder="32_caracteres_secret..."
+                            className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-amber-honey"
+                          />
+                        </div>
+
+                        {/* Amazon Music Artist / Affiliate ID */}
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400" /> Amazon Music ID o Enlace Base de Artista
+                          </label>
+                          <input
+                            type="text"
+                            value={amazonMusicArtistId}
+                            onChange={(e) => setAmazonMusicArtistId(e.target.value)}
+                            placeholder="https://music.amazon.com/artists/..."
+                            className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-xs text-white font-mono focus:outline-none focus:border-amber-honey"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-4">
+                        <button
+                          type="submit"
+                          disabled={musicCredentialsSaving}
+                          className="bg-amber-honey text-[#1E2B22] font-black text-xs uppercase tracking-widest px-8 py-3.5 rounded-xl hover:bg-amber-gold transition-all shadow-lg shadow-amber-honey/20 disabled:opacity-50"
+                        >
+                          {musicCredentialsSaving ? 'Guardando Credenciales...' : 'Guardar Credenciales'}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    /* SUBTAB 2: CRUD DE LISTAS DE REPRODUCCIÓN & WIDGETS */
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                          Listas de Reproducción & Widgets Embebidos
+                        </h3>
+                        <button
+                          onClick={() => {
+                            setEditingPlaylist(null);
+                            setPlTitle('');
+                            setPlPlatform('spotify');
+                            setPlRenderType('iframe');
+                            setPlEmbedUrl('');
+                            setPlExternalId('');
+                            setPlDescription('');
+                            setPlIsActive(true);
+                            setPlOrder(musicPlaylists.length + 1);
+                            setIsPlaylistModalOpen(true);
+                          }}
+                          className="bg-amber-honey text-[#1E2B22] font-black text-xs uppercase tracking-widest px-5 py-3 rounded-xl hover:bg-amber-gold transition-all flex items-center gap-2 shadow-md"
+                        >
+                          <Plus size={16} /> Nueva Lista de Reproducción
+                        </button>
+                      </div>
+
+                      {musicPlaylists.length === 0 ? (
+                        <div className="bg-[#141C16] border border-[#2B392F] p-12 rounded-3xl text-center">
+                          <p className="text-sm text-[#F4F6F0]/60">
+                            No se han creado listas de reproducción dinámicas. El sitio muestra las playlists por defecto.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-[#141C16] border border-[#2B392F] rounded-3xl overflow-hidden shadow-xl">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-[#0C120E] text-amber-honey font-mono uppercase tracking-wider text-[10px] border-b border-[#2B392F]">
+                              <tr>
+                                <th className="p-4">Orden</th>
+                                <th className="p-4">Título</th>
+                                <th className="p-4">Plataforma</th>
+                                <th className="p-4">Modo</th>
+                                <th className="p-4">Estado</th>
+                                <th className="p-4 text-right">Acciones</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[#2B392F] text-white">
+                              {musicPlaylists.map((pl) => (
+                                <tr key={pl.id} className="hover:bg-white/5 transition-colors">
+                                  <td className="p-4 font-mono font-bold">{pl.order}</td>
+                                  <td className="p-4">
+                                    <p className="font-bold text-sm">{pl.title}</p>
+                                    {pl.description && (
+                                      <p className="text-[10px] text-[#F4F6F0]/50 truncate max-w-xs">{pl.description}</p>
+                                    )}
+                                  </td>
+                                  <td className="p-4">
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                      pl.platform === 'spotify' ? 'bg-[#1DB954]/20 text-[#1DB954] border border-[#1DB954]/40' :
+                                      pl.platform === 'youtube' ? 'bg-red-600/20 text-red-400 border border-red-500/40' :
+                                      pl.platform === 'apple_music' ? 'bg-pink-600/20 text-pink-400 border border-pink-500/40' :
+                                      'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
+                                    }`}>
+                                      {pl.platform}
+                                    </span>
+                                  </td>
+                                  <td className="p-4 font-mono text-[11px]">
+                                    {pl.render_type === 'iframe' ? 'Iframe Embebido' : 'API Sync'}
+                                  </td>
+                                  <td className="p-4">
+                                    <button
+                                      onClick={async () => {
+                                        try {
+                                          const newStatus = !pl.is_active;
+                                          await api.patch(`/music/playlists/${pl.id}/`, { is_active: newStatus });
+                                          setMusicPlaylists(prev => prev.map(p => p.id === pl.id ? { ...p, is_active: newStatus } : p));
+                                          showToast.success(`Estado actualizado: ${newStatus ? 'Activa' : 'Inactiva'}`);
+                                        } catch (err) {
+                                          showToast.error('Error al actualizar estado.');
+                                        }
+                                      }}
+                                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                        pl.is_active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
+                                      }`}
+                                    >
+                                      {pl.is_active ? 'Activa' : 'Inactiva'}
+                                    </button>
+                                  </td>
+                                  <td className="p-4 text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <button
+                                        onClick={() => {
+                                          setEditingPlaylist(pl);
+                                          setPlTitle(pl.title || '');
+                                          setPlPlatform(pl.platform || 'spotify');
+                                          setPlRenderType(pl.render_type || 'iframe');
+                                          setPlEmbedUrl(pl.embed_url || '');
+                                          setPlExternalId(pl.external_id || '');
+                                          setPlDescription(pl.description || '');
+                                          setPlIsActive(pl.is_active !== false);
+                                          setPlOrder(pl.order || 0);
+                                          setIsPlaylistModalOpen(true);
+                                        }}
+                                        className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-amber-honey transition-all"
+                                        title="Editar Lista"
+                                      >
+                                        <Edit2 size={14} />
+                                      </button>
+                                      <button
+                                        onClick={async () => {
+                                          const confirmed = await showConfirm(
+                                            'Eliminar Lista de Reproducción',
+                                            `¿Estás seguro de eliminar "${pl.title}"?`
+                                          );
+                                          if (!confirmed) return;
+                                          try {
+                                            await api.delete(`/music/playlists/${pl.id}/`);
+                                            showToast.success('Lista eliminada correctamente.');
+                                            setMusicPlaylists(prev => prev.filter(p => p.id !== pl.id));
+                                          } catch (err) {
+                                            showToast.error('Error al eliminar la lista.');
+                                          }
+                                        }}
+                                        className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 transition-all"
+                                        title="Eliminar Lista"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* MODAL EDITAR / CREAR LISTA DE REPRODUCCIÓN */}
+                  {isPlaylistModalOpen && (
+                    <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+                      <div className="bg-[#141C16] border border-[#2B392F] p-8 rounded-3xl max-w-xl w-full space-y-6 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                            {editingPlaylist ? 'Editar Lista de Reproducción' : 'Nueva Lista de Reproducción'}
+                          </h3>
+                          <button
+                            onClick={() => setIsPlaylistModalOpen(false)}
+                            className="text-white/60 hover:text-white transition-colors"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+
+                        <form
+                          onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!plTitle.trim()) {
+                              showToast.error('Ingresa un título para la lista.');
+                              return;
+                            }
+                            setPlSaving(true);
+                            try {
+                              const payload = {
+                                title: plTitle,
+                                platform: plPlatform,
+                                render_type: plRenderType,
+                                embed_url: plEmbedUrl,
+                                external_id: plExternalId,
+                                description: plDescription,
+                                is_active: plIsActive,
+                                order: Number(plOrder) || 0,
+                              };
+
+                              if (editingPlaylist) {
+                                await api.put(`/music/playlists/${editingPlaylist.id}/`, payload);
+                                showToast.success('Lista de reproducción actualizada.');
+                              } else {
+                                await api.post('/music/playlists/', payload);
+                                showToast.success('Lista de reproducción creada con éxito.');
+                              }
+                              setIsPlaylistModalOpen(false);
+                              const res = await api.get('/music/playlists/');
+                              setMusicPlaylists(Array.isArray(res.data) ? res.data : []);
+                            } catch (err: any) {
+                              console.error(err);
+                              const errorMsg = err?.response?.data?.embed_url?.[0] || err?.response?.data?.detail || 'Error al guardar lista de reproducción.';
+                              showToast.error(errorMsg);
+                            } finally {
+                              setPlSaving(false);
+                            }
+                          }}
+                          className="space-y-4 text-xs"
+                        >
+                          <div className="space-y-1">
+                            <label className="font-bold text-white uppercase">Título de la Lista / Widget</label>
+                            <input
+                              type="text"
+                              required
+                              value={plTitle}
+                              onChange={(e) => setPlTitle(e.target.value)}
+                              placeholder="Ej: Spotify Playlist Oficial"
+                              className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-white focus:outline-none focus:border-amber-honey"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="font-bold text-white uppercase">Plataforma</label>
+                              <select
+                                value={plPlatform}
+                                onChange={(e: any) => setPlPlatform(e.target.value)}
+                                className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-white focus:outline-none focus:border-amber-honey"
+                              >
+                                <option value="spotify">Spotify</option>
+                                <option value="youtube">YouTube</option>
+                                <option value="apple_music">Apple Music</option>
+                                <option value="amazon_music">Amazon Music</option>
+                              </select>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="font-bold text-white uppercase">Modo de Renderizado</label>
+                              <select
+                                value={plRenderType}
+                                onChange={(e: any) => setPlRenderType(e.target.value)}
+                                className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-white focus:outline-none focus:border-amber-honey"
+                              >
+                                <option value="iframe">Iframe Embebido</option>
+                                <option value="api_sync">Sincronización por API</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="font-bold text-white uppercase">URL de Iframe (Embed URL)</label>
+                            <input
+                              type="url"
+                              value={plEmbedUrl}
+                              onChange={(e) => setPlEmbedUrl(e.target.value)}
+                              placeholder="https://open.spotify.com/embed/playlist/..."
+                              className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-white font-mono text-[11px] focus:outline-none focus:border-amber-honey"
+                            />
+                            <p className="text-[10px] text-amber-honey/70">
+                              * Solo se permiten dominios de confianza: spotify.com, youtube.com, apple.com, amazon.com.
+                            </p>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="font-bold text-white uppercase">ID Externo (Opcional)</label>
+                              <input
+                                type="text"
+                                value={plExternalId}
+                                onChange={(e) => setPlExternalId(e.target.value)}
+                                placeholder="playlist_id_123"
+                                className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-white font-mono focus:outline-none focus:border-amber-honey"
+                              />
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="font-bold text-white uppercase">Orden</label>
+                              <input
+                                type="number"
+                                value={plOrder}
+                                onChange={(e) => setPlOrder(Number(e.target.value))}
+                                className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-white font-mono focus:outline-none focus:border-amber-honey"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="font-bold text-white uppercase">Descripción / Subtítulo</label>
+                            <input
+                              type="text"
+                              value={plDescription}
+                              onChange={(e) => setPlDescription(e.target.value)}
+                              placeholder="Ms. Ambar • Selección Oficial"
+                              className="w-full bg-[#0C120E] border border-[#2B392F] rounded-xl p-3 text-white focus:outline-none focus:border-amber-honey"
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-2">
+                            <input
+                              type="checkbox"
+                              id="pl_is_active"
+                              checked={plIsActive}
+                              onChange={(e) => setPlIsActive(e.target.checked)}
+                              className="w-4 h-4 accent-amber-honey"
+                            />
+                            <label htmlFor="pl_is_active" className="text-white font-bold cursor-pointer">
+                              Mostrar en la sección pública (/musica)
+                            </label>
+                          </div>
+
+                          <div className="flex justify-end gap-3 pt-4 border-t border-[#2B392F]">
+                            <button
+                              type="button"
+                              onClick={() => setIsPlaylistModalOpen(false)}
+                              className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold uppercase tracking-wider"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={plSaving}
+                              className="px-6 py-2.5 rounded-xl bg-amber-honey text-[#1E2B22] font-black uppercase tracking-wider hover:bg-amber-gold transition-all shadow-md disabled:opacity-50"
+                            >
+                              {plSaving ? 'Guardando...' : (editingPlaylist ? 'Actualizar' : 'Crear Lista')}
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
 
               {/* TAB: TEMA Y APARIENCIA VISUAL */}
               {activeTab === 'theme' && (
@@ -2911,6 +3486,7 @@ export default function AdminDashboard() {
                   <ThemeManager />
                 </motion.div>
               )}
+
 
               {/* TAB: CUPONES Y DESCUENTOS */}
 

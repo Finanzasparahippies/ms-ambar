@@ -97,3 +97,78 @@ class MusicAppTestCase(TestCase):
         logger = logging.getLogger('apps.music')
         logger.info("Prueba de traza de música con caracteres especiales: Ámbar Canción ✨🎵")
 
+    def test_playlist_crud_and_whitelist_validation(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        admin_user = User.objects.create_superuser('admin_music', 'admin@test.com', 'pass123')
+        self.client.force_authenticate(user=admin_user)
+
+        url = reverse('music-playlist-list')
+        
+        # 1. Crear playlist con dominio permitido
+        valid_payload = {
+            "title": "Oficial Spotify",
+            "platform": "spotify",
+            "render_type": "iframe",
+            "embed_url": "https://open.spotify.com/embed/playlist/4SIS3MJKl1MVuumtycPU22",
+            "is_active": True,
+            "order": 1
+        }
+        res_valid = self.client.post(url, valid_payload, format='json')
+        self.assertEqual(res_valid.status_code, status.HTTP_201_CREATED)
+        playlist_id = res_valid.data['id']
+
+        # 2. Intentar crear playlist con dominio no autorizado (malicioso)
+        invalid_payload = {
+            "title": "Playlist Maliciosa",
+            "platform": "spotify",
+            "render_type": "iframe",
+            "embed_url": "https://malicious-site.com/phishing/embed",
+            "is_active": True
+        }
+        res_invalid = self.client.post(url, invalid_payload, format='json')
+        self.assertEqual(res_invalid.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("embed_url", res_invalid.data)
+
+        # 3. Usuario anónimo solo ve activas
+        self.client.logout()
+        res_anon = self.client.get(url)
+        self.assertEqual(res_anon.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_anon.data), 1)
+
+    def test_music_config_credentials_masking(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        admin_user = User.objects.create_superuser('admin_config', 'admin2@test.com', 'pass123')
+        self.client.force_authenticate(user=admin_user)
+
+        url = reverse('music-config')
+        
+        # Guardar credenciales iniciales
+        payload = {
+            "discography_description": "Nueva desc",
+            "spotify_client_id": "sp_client_123",
+            "spotify_client_secret": "secret_real_9999",
+            "youtube_api_key": "yt_key_real_8888"
+        }
+        res_put = self.client.put(url, payload, format='json')
+        self.assertEqual(res_put.status_code, status.HTTP_200_OK)
+
+        # Verificar que la respuesta visual enmascara el secreto
+        self.assertIn("••••••••", res_put.data['spotify_client_secret'])
+        self.assertTrue(res_put.data['spotify_client_secret'].endswith("9999"))
+
+        # Actualizar conservando el placeholder enmascarado
+        update_payload = {
+            "discography_description": "Desc actualizada",
+            "spotify_client_secret": res_put.data['spotify_client_secret']
+        }
+        res_update = self.client.put(url, update_payload, format='json')
+        self.assertEqual(res_update.status_code, status.HTTP_200_OK)
+
+        # Verificar en BD que no se sobreescribió el secreto real
+        config = MusicConfig.get_solo()
+        self.assertEqual(config.spotify_client_secret, "secret_real_9999")
+        self.assertEqual(config.discography_description, "Desc actualizada")
+
+
