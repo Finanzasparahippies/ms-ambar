@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import axios from 'axios';
-import { EventThemeContextProvider, useSectionTheme } from '../context/EventThemeContext';
+import { EventThemeContextProvider, useSectionTheme, sanitizeCssProperty } from '../context/EventThemeContext';
 import ThemeManager from '../components/ThemeManager';
 import ThemedSection from '../components/ThemedSection';
 
@@ -117,4 +117,11 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
     expect(rootStyle.getPropertyValue('--card-hover-border')).toBeTruthy();
     expect(rootStyle.getPropertyValue('--element-hover-color')).toBeTruthy();
   });
+
+  test('sanitizeCssProperty debe bloquear tokens XSS peligrosos y retornar el fallback', () => {
+    expect(sanitizeCssProperty('url(javascript:alert(1))', 'fallback')).toBe('fallback');
+    expect(sanitizeCssProperty('expression(alert(1))', '')).toBe('');
+    expect(sanitizeCssProperty('linear-gradient(135deg, #000, #fff)', 'fallback')).toBe('linear-gradient(135deg, #000, #fff)');
+  });
 });
+

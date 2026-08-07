@@ -526,26 +526,4 @@ export const useSectionTheme = (sectionKey: string) => {
     };
   }, [theme, sectionKey, loading]);
 };
-      [`--sec-${sectionKey}-border`]: borderColor,
-      [`--sec-${sectionKey}-button-bg`]: buttonBg,
-      [`--sec-${sectionKey}-button-text`]: buttonText,
-    } as React.CSSProperties;
-
-    return {
-      style,
-      bgColor,
-      headingColor,
-      textColor,
-      subtitleColor,
-      accentColor,
-      cardBg,
-      borderColor,
-      buttonBg,
-      buttonText,
-      spec: sec,
-      rawTheme: theme,
-      loading
-    };
-  }, [theme, sectionKey, loading]);
-};
 
