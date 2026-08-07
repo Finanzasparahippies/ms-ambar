@@ -94,7 +94,7 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
       </EventThemeContextProvider>
     );
 
-    const heroSimulation = screen.getByText('Ms Ambar Live 2026').closest('div');
+    const heroSimulation = screen.getByText('Hero Principal (Portada)').closest('div');
     expect(heroSimulation).not.toBeNull();
 
     fireEvent.click(heroSimulation!);
@@ -104,7 +104,7 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
     });
   });
 
-  test('debe inyectar variables CSS para estados Hover y Focus en la raíz del DOM', async () => {
+  test('debe inyectar variables CSS para estados Hover y Focus y la regla de transiciones suaves en el DOM', async () => {
     render(
       <EventThemeContextProvider>
         <DummySectionConsumer sectionKey="hero" />
@@ -116,6 +116,9 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
     expect(rootStyle.getPropertyValue('--button-focus-ring')).toBeTruthy();
     expect(rootStyle.getPropertyValue('--card-hover-border')).toBeTruthy();
     expect(rootStyle.getPropertyValue('--element-hover-color')).toBeTruthy();
+
+    const transitionStyle = document.getElementById('ms-ambar-theme-transition-css');
+    expect(transitionStyle).toBeInTheDocument();
   });
 
   test('sanitizeCssProperty debe bloquear tokens XSS peligrosos y retornar el fallback', () => {
