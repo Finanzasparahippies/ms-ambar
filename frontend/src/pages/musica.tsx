@@ -122,11 +122,13 @@ const MusicPage: React.FC = () => {
   );
   const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [activeTrack, setActiveTrack] = useState<TrackItem | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
+    checkAdminStatus();
     fetchAlbums();
     fetchMusicConfig();
     fetchPlaylists();
@@ -137,6 +139,31 @@ const MusicPage: React.FC = () => {
       }
     };
   }, []);
+
+  const checkAdminStatus = () => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64));
+        if (payload && payload.is_staff && !(payload.exp && Date.now() / 1000 > payload.exp)) {
+          setIsAdmin(true);
+          return;
+        }
+      } catch (e) { }
+    }
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if (u && (u.is_staff || u.is_superuser)) {
+          setIsAdmin(true);
+        }
+      } catch (e) { }
+    }
+  };
+
 
   const fetchPlaylists = async () => {
     try {
@@ -322,20 +349,21 @@ const MusicPage: React.FC = () => {
             <button
               onClick={() => handleSharePage()}
               className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white hover:text-amber-honey"
-
               title="Compartir Discografía"
             >
               <Share2 size={14} className="text-amber-honey" /> Compartir
             </button>
 
-            <button
-              onClick={handleSyncPlatform}
-              disabled={syncing}
-              className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 disabled:opacity-50"
-            >
-              <RefreshCw size={14} className={syncing ? 'animate-spin text-amber-honey' : ''} />
-              {syncing ? 'Sincronizando APIs...' : 'Sincronizar Plataformas'}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleSyncPlatform}
+                disabled={syncing}
+                className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={syncing ? 'animate-spin text-amber-honey' : ''} />
+                {syncing ? 'Sincronizando APIs...' : 'Sincronizar Plataformas'}
+              </button>
+            )}
           </div>
         </header>
 
@@ -346,7 +374,6 @@ const MusicPage: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 shadow-lg shadow-amber-honey/10"
-
           >
             <Play size={14} fill="currentColor" /> Spotify
           </a>
@@ -355,7 +382,6 @@ const MusicPage: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
-
           >
             <Disc size={14} /> Apple Music
           </a>
@@ -364,7 +390,6 @@ const MusicPage: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
-
           >
             <Youtube size={14} className="text-red-500" /> YouTube
           </a>
@@ -373,7 +398,6 @@ const MusicPage: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
-
           >
             <Youtube size={14} className="text-red-500" /> YouTube Music
           </a>
@@ -382,7 +406,6 @@ const MusicPage: React.FC = () => {
             target="_blank"
             rel="noopener noreferrer"
             className="amber-glass border border-white/15 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-[0.25em] flex items-center gap-2.5 hover:bg-white/10 hover:border-amber-honey/50 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 text-white"
-
           >
             <Music size={14} className="text-cyan-400" /> Amazon Music
           </a>
@@ -402,18 +425,20 @@ const MusicPage: React.FC = () => {
               Esperando información nueva
             </h3>
             <p className="opacity-60 text-sm max-w-md mb-8 leading-relaxed">
-              No hay lanzamientos cargados en este momento. Haz clic en sincronizar para buscar metadatos en las plataformas oficiales de streaming.
+              No hay lanzamientos cargados en este momento.
             </p>
-            <button
-              onClick={handleSyncPlatform}
-              disabled={syncing}
-              className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-8 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2.5 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 shadow-xl shadow-amber-honey/20 disabled:opacity-50"
-
-            >
-              <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
-              {syncing ? 'Sincronizando Plataformas...' : 'Sincronizar Ahora'}
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleSyncPlatform}
+                disabled={syncing}
+                className="bg-amber-honey text-black hover:bg-amber-gold border border-amber-honey px-8 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2.5 transition-all hover:scale-105 focus:outline-none focus:ring-2 focus:ring-amber-honey/50 shadow-xl shadow-amber-honey/20 disabled:opacity-50"
+              >
+                <RefreshCw size={16} className={syncing ? 'animate-spin' : ''} />
+                {syncing ? 'Sincronizando Plataformas...' : 'Sincronizar Ahora'}
+              </button>
+            )}
           </motion.div>
+
         ) : (
           <div className="space-y-24 md:space-y-36">
             {activeAlbums.map((album) => {

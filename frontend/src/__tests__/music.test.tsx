@@ -12,6 +12,18 @@ const mockedAxios = axios as jest.Mocked<typeof axios>;
 window.HTMLMediaElement.prototype.play = jest.fn().mockImplementation(() => Promise.resolve());
 window.HTMLMediaElement.prototype.pause = jest.fn();
 
+// Mock localStorage
+const storageMock: Record<string, string> = {};
+Object.defineProperty(window, 'localStorage', {
+  value: {
+    getItem: (key: string) => storageMock[key] || null,
+    setItem: (key: string, value: string) => { storageMock[key] = value; },
+    removeItem: (key: string) => { delete storageMock[key]; },
+    clear: () => { Object.keys(storageMock).forEach(k => delete storageMock[k]); }
+  },
+  writable: true
+});
+
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
@@ -20,6 +32,7 @@ Object.assign(navigator, {
 });
 
 describe('MusicPage Component', () => {
+
   const mockAlbumsData = [
     {
       id: 1,
@@ -69,7 +82,9 @@ describe('MusicPage Component', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.keys(storageMock).forEach(k => delete storageMock[k]);
     mockedAxios.get.mockImplementation((url: string) => {
+
       if (url.includes('/music/config/')) {
         return Promise.resolve({ data: mockConfigData });
       }
@@ -159,6 +174,25 @@ describe('MusicPage Component', () => {
     expect(spotifyIframe).toHaveAttribute('src', expect.stringContaining('4SIS3MJKl1MVuumtycPU22'));
     expect(spotifyIframe).toHaveAttribute('loading', 'lazy');
   });
+
+  test('hides sync button for public users and displays it for staff admin users', async () => {
+    // 1. Público general (sin token admin) -> no debe mostrar el botón Sincronizar
+    renderWithContext(<MusicPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/DISCO/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Sincronizar Plataformas/i)).not.toBeInTheDocument();
+
+    // 2. Simular token de usuario staff admin en localStorage
+    const staffToken = 'header.' + btoa(JSON.stringify({ is_staff: true, exp: Date.now() / 1000 + 3600 })) + '.sig';
+    storageMock['token'] = staffToken;
+
+    renderWithContext(<MusicPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/Sincronizar Plataformas/i)).toBeInTheDocument();
+    });
+  });
 });
+
 
 
