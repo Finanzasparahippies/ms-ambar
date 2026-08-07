@@ -63,6 +63,13 @@ class MusicConfig(models.Model):
         default="Explora las producciones acústicas y sencillos oficiales de Ms. Ambar en todas las plataformas digitales ✨🎶",
         help_text="Descripción editable con emojis para el encabezado de la sección de discografía."
     )
+    # Credenciales de API externas configurables
+    youtube_api_key = models.CharField(max_length=255, blank=True, default="", help_text="YouTube Data API Key")
+    spotify_client_id = models.CharField(max_length=255, blank=True, default="", help_text="Spotify Client ID")
+    spotify_client_secret = models.CharField(max_length=255, blank=True, default="", help_text="Spotify Client Secret")
+    apple_music_region = models.CharField(max_length=10, blank=True, default="us", help_text="Código de región de Apple Music / iTunes (ej: us, mx)")
+    amazon_music_artist_id = models.CharField(max_length=255, blank=True, default="", help_text="ID o enlace base de artista/afiliado en Amazon Music")
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -76,5 +83,40 @@ class MusicConfig(models.Model):
     def get_solo(cls):
         config, _ = cls.objects.get_or_create(id=1)
         return config
+
+
+class Playlist(models.Model):
+    PLATFORM_CHOICES = [
+        ('spotify', 'Spotify'),
+        ('youtube', 'YouTube'),
+        ('apple_music', 'Apple Music'),
+        ('amazon_music', 'Amazon Music'),
+    ]
+
+    RENDER_CHOICES = [
+        ('iframe', 'Iframe Embebido'),
+        ('api_sync', 'Sincronización por API'),
+    ]
+
+    title = models.CharField(max_length=255, help_text="Título de la lista de reproducción o widget")
+    platform = models.CharField(max_length=50, blank=True, null=True, choices=PLATFORM_CHOICES, default='spotify', help_text="Plataforma de streaming")
+    render_type = models.CharField(max_length=50, blank=True, null=True, choices=RENDER_CHOICES, default='iframe', help_text="Modo de renderizado (Iframe o API)")
+    embed_url = models.TextField(blank=True, default="", help_text="URL del iframe embebido para Spotify / YouTube / etc.")
+    external_id = models.CharField(max_length=255, blank=True, default="", help_text="ID externo de playlist / colección en la plataforma")
+    description = models.TextField(blank=True, default="", help_text="Descripción o notas del widget")
+    is_active = models.BooleanField(default=True, help_text="Mostrar en el sitio público")
+    order = models.PositiveIntegerField(default=0, help_text="Orden de visualización")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = "Lista de Reproducción"
+        verbose_name_plural = "Listas de Reproducción"
+
+    def __str__(self):
+        return f"[{self.platform.upper()}] {self.title} ({self.render_type})"
+
 
 

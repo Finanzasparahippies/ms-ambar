@@ -44,8 +44,13 @@ class MusicIngestionService:
         if token:
             return token
 
-        client_id = getattr(settings, 'SPOTIFY_CLIENT_ID', '')
-        client_secret = getattr(settings, 'SPOTIFY_CLIENT_SECRET', '')
+        try:
+            config = MusicConfig.get_solo()
+            client_id = (config.spotify_client_id if config.spotify_client_id else getattr(settings, 'SPOTIFY_CLIENT_ID', '')).strip()
+            client_secret = (config.spotify_client_secret if config.spotify_client_secret else getattr(settings, 'SPOTIFY_CLIENT_SECRET', '')).strip()
+        except Exception:
+            client_id = getattr(settings, 'SPOTIFY_CLIENT_ID', '')
+            client_secret = getattr(settings, 'SPOTIFY_CLIENT_SECRET', '')
 
         if not client_id or not client_secret or client_id.startswith('mock_'):
             logger.info("[MusicIngestionService] Spotify Client ID/Secret son mock o vacíos. Omitiendo OAuth real.")
@@ -122,7 +127,13 @@ class MusicIngestionService:
             return cached_data
 
         url = getattr(settings, 'ITUNES_SEARCH_URL', 'https://itunes.apple.com/search')
-        params = {"term": artist_name, "entity": "song", "limit": 25}
+        try:
+            config = MusicConfig.get_solo()
+            region = config.apple_music_region or "us"
+        except Exception:
+            region = "us"
+
+        params = {"term": artist_name, "entity": "song", "limit": 25, "country": region}
         
         # Exponential backoff retry logic (max 2 retries)
         for attempt in range(2):
@@ -153,7 +164,12 @@ class MusicIngestionService:
             logger.info(f"[MusicIngestionService] Retornando videos de YouTube para '{query}' desde la caché de Django.")
             return cached_data
 
-        api_key = getattr(settings, 'YOUTUBE_API_KEY', '')
+        try:
+            config = MusicConfig.get_solo()
+            api_key = (config.youtube_api_key if config.youtube_api_key else getattr(settings, 'YOUTUBE_API_KEY', '')).strip()
+        except Exception:
+            api_key = getattr(settings, 'YOUTUBE_API_KEY', '')
+
         if not api_key or api_key.startswith('mock_'):
             logger.info("[MusicIngestionService] YouTube API Key es mock o vacía. Omitiendo consulta externa.")
             cache.set(cache_key, [], CACHE_TTL_SECONDS)

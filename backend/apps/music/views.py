@@ -4,8 +4,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Album, Track, MusicConfig
-from .serializers import AlbumSerializer, TrackSerializer, MusicConfigSerializer
+from django.core.cache import cache
+from .models import Album, Track, MusicConfig, Playlist
+from .serializers import AlbumSerializer, TrackSerializer, MusicConfigSerializer, PlaylistSerializer
 from .services import MusicIngestionService
 
 logger = logging.getLogger('apps.music')
@@ -21,7 +22,7 @@ class IsAdminOrReadOnly(permissions.BasePermission):
 
 
 class MusicConfigView(APIView):
-    """Endpoint para la lectura y actualización de la descripción configurable de discografía."""
+    """Endpoint para la lectura y actualización de la configuración y credenciales de música."""
     permission_classes = [IsAdminOrReadOnly]
 
     def get(self, request):
@@ -34,13 +35,30 @@ class MusicConfigView(APIView):
         serializer = MusicConfigSerializer(config, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
-            logger.info(f"[MUSIC/CONFIG] Descripción de discografía actualizada por usuario staff ID={getattr(request.user, 'id', 'Anon')}.")
+            # Invalidar cachés de autenticación y catálogos al actualizar claves de API
+            cache.delete("spotify_access_token")
+            logger.info(f"[MUSIC/CONFIG] Configuración de música y credenciales actualizada por usuario staff ID={getattr(request.user, 'id', 'Anon')}.")
             return Response(serializer.data, status=status.HTTP_200_OK)
-        logger.warning(f"[MUSIC/CONFIG] Error de validación al actualizar la descripción: {serializer.errors}")
+        logger.warning(f"[MUSIC/CONFIG] Error de validación al actualizar la configuración: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def patch(self, request):
         return self.put(request)
+
+
+class PlaylistViewSet(viewsets.ModelViewSet):
+    """ViewSet CRUD para la administración de listas de reproducción y widgets de streaming."""
+    queryset = Playlist.objects.all()
+    serializer_class = PlaylistSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get_queryset(self):
+        queryset = Playlist.objects.all()
+        # Si la petición no es de un usuario staff admin, filtrar solo activas
+        if not (self.request.user and self.request.user.is_staff):
+            queryset = queryset.filter(is_active=True)
+        return queryset
+
 
 
 
