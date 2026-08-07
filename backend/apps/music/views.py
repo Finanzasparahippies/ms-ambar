@@ -111,3 +111,13 @@ class SyncPlatformMusicView(APIView):
             }, status=status.HTTP_200_OK)
         logger.error(f"[MUSIC/SYNC] Falló la sincronización de metadatos de música para la consulta: '{query}'")
         return Response({"error": "No se pudieron obtener datos de las plataformas."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ApiHealthcheckView(APIView):
+    """Endpoint para verificar la validez y estado operativo de las credenciales de API de música."""
+    permission_classes = [IsAdminOrReadOnly]
+
+    def get(self, request):
+        health = MusicIngestionService.check_api_health()
+        return Response(health, status=status.HTTP_200_OK)
+

@@ -4,7 +4,7 @@ import time
 import requests
 from django.conf import settings
 from django.core.cache import cache
-from .models import Album, Track
+from .models import Album, Track, MusicConfig
 
 logger = logging.getLogger('apps.music')
 
@@ -290,3 +290,64 @@ class MusicIngestionService:
         """
         logger.info("[MusicIngestionService] Ejecutando seed inicial de discografía.")
         return MusicIngestionService.sync_platform_metadata("Ms Ambar")
+
+    @staticmethod
+    def check_api_health():
+        """
+        Verifica el estado operativo de las credenciales de API externas (Spotify, YouTube, iTunes)
+        ejecutando consultas livianas de prueba sin agotar la cuota de rate limiting.
+        """
+        try:
+            config = MusicConfig.get_solo()
+        except Exception:
+            config = None
+
+        results = {
+            "spotify": {"ok": False, "message": "No configurado"},
+            "youtube": {"ok": False, "message": "No configurado"},
+            "itunes": {"ok": True, "message": "API pública gratuita activa (sin API Key)"}
+        }
+
+        # Validar Spotify Credentials
+        sp_id = (config.spotify_client_id if config and config.spotify_client_id else getattr(settings, 'SPOTIFY_CLIENT_ID', '')).strip()
+        sp_sec = (config.spotify_client_secret if config and config.spotify_client_secret else getattr(settings, 'SPOTIFY_CLIENT_SECRET', '')).strip()
+
+        if sp_id and sp_sec and not sp_id.startswith('mock_'):
+            try:
+                res = requests.post(
+                    "https://accounts.spotify.com/api/token",
+                    data={"grant_type": "client_credentials"},
+                    auth=(sp_id, sp_sec),
+                    timeout=5
+                )
+                if res.status_code == 200:
+                    results["spotify"] = {"ok": True, "message": "Credenciales OAuth de Spotify activas y válidas"}
+                else:
+                    results["spotify"] = {"ok": False, "message": f"Fallo de autenticación Spotify (HTTP {res.status_code})"}
+            except Exception as err:
+                results["spotify"] = {"ok": False, "message": f"Error de conexión a Spotify: {sanitize_sensitive_info(err)}"}
+        elif sp_id.startswith('mock_'):
+            results["spotify"] = {"ok": True, "message": "Modo demostración / mock activo"}
+
+        # Validar YouTube API Key
+        yt_key = (config.youtube_api_key if config and config.youtube_api_key else getattr(settings, 'YOUTUBE_API_KEY', '')).strip()
+        if yt_key and not yt_key.startswith('mock_'):
+            try:
+                res = requests.get(
+                    "https://www.googleapis.com/youtube/v3/search",
+                    params={"part": "snippet", "q": "Ms Ambar", "maxResults": 1, "key": yt_key},
+                    timeout=5
+                )
+                if res.status_code == 200:
+                    results["youtube"] = {"ok": True, "message": "API Key de YouTube activa y válida"}
+                elif res.status_code in [400, 403]:
+                    results["youtube"] = {"ok": False, "message": f"Clave de YouTube inválida o cuota de API excedida (HTTP {res.status_code})"}
+                else:
+                    results["youtube"] = {"ok": False, "message": f"Respuesta inesperada de YouTube (HTTP {res.status_code})"}
+            except Exception as err:
+                results["youtube"] = {"ok": False, "message": f"Error de conexión a YouTube: {sanitize_sensitive_info(err)}"}
+        elif yt_key.startswith('mock_'):
+            results["youtube"] = {"ok": True, "message": "Modo demostración / mock activo"}
+
+        return results
+

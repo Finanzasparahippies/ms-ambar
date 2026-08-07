@@ -119,4 +119,33 @@ class Playlist(models.Model):
         return f"[{self.platform.upper()}] {self.title} ({self.render_type})"
 
 
+# Receptores de señales para invalidación inmediata de caché
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
+from django.core.cache import cache
+
+
+def clear_music_caches():
+    """Limpia en tiempo real las claves de caché de credenciales, playlists y catálogos de música."""
+    keys_to_clear = [
+        "spotify_access_token",
+        "music_config_cache",
+        "music_playlists_cache",
+        "spotify_catalog_ms_ambar",
+        "youtube_tracks_ms_ambar",
+        "itunes_tracks_ms_ambar"
+    ]
+    for key in keys_to_clear:
+        cache.delete(key)
+
+
+@receiver(post_save, sender=MusicConfig)
+@receiver(post_delete, sender=MusicConfig)
+@receiver(post_save, sender=Playlist)
+@receiver(post_delete, sender=Playlist)
+def invalidate_music_cache_signal_handler(sender, instance, **kwargs):
+    clear_music_caches()
+
+
+
 

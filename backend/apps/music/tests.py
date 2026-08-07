@@ -171,4 +171,26 @@ class MusicAppTestCase(TestCase):
         self.assertEqual(config.spotify_client_secret, "secret_real_9999")
         self.assertEqual(config.discography_description, "Desc actualizada")
 
+    def test_healthcheck_endpoint(self):
+        url = reverse('music-healthcheck')
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn("spotify", res.data)
+        self.assertIn("youtube", res.data)
+        self.assertIn("itunes", res.data)
+
+    def test_cache_invalidation_signal(self):
+        from .models import Playlist, clear_music_caches
+        cache.set("music_playlists_cache", ["dummy_cached_data"])
+        self.assertIsNotNone(cache.get("music_playlists_cache"))
+
+        # Al crear una nueva playlist, el signal post_save debe limpiar la caché automáticamente
+        Playlist.objects.create(
+            title="Playlist Test Invalidation",
+            platform="youtube",
+            embed_url="https://www.youtube.com/embed/videoseries?list=PL1imJPq1V79Q72PCZk8bIBwQWW30a0fIP"
+        )
+        self.assertIsNone(cache.get("music_playlists_cache"))
+
+
 
