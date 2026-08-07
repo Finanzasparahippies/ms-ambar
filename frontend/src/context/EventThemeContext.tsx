@@ -474,7 +474,7 @@ export const useSectionTheme = (sectionKey: string) => {
   const { theme, loading } = useEventTheme();
 
   return React.useMemo(() => {
-    const sec = theme.themeMode === 'section' ? (theme.sectionThemes?.[sectionKey] || {}) : {};
+    const sec = theme.sectionThemes?.[sectionKey] || {};
 
     // Resolución de Fallbacks Normalizados
     const bgColor = sec.bg_color || sec.card_bg || theme.backgroundStart;

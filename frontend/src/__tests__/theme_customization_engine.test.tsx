@@ -126,5 +126,24 @@ describe('Theme Customization Engine, Zero-Flicker & Scope Prefixing Tests', () 
     expect(sanitizeCssProperty('expression(alert(1))', '')).toBe('');
     expect(sanitizeCssProperty('linear-gradient(135deg, #000, #fff)', 'fallback')).toBe('linear-gradient(135deg, #000, #fff)');
   });
+
+  test('useSectionTheme debe resolver la especificación de contact_section y garantizar IDs únicos en formulario', async () => {
+    render(
+      <EventThemeContextProvider>
+        <ThemedSection sectionKey="contact_section">
+          <form id="landing-newsletter-form">
+            <label htmlFor="newsletter-name-input">Nombre</label>
+            <input id="newsletter-name-input" name="newsletter-name" />
+            <button id="newsletter-submit-btn">Suscribirse</button>
+          </form>
+        </ThemedSection>
+      </EventThemeContextProvider>
+    );
+
+    const inputName = screen.getByLabelText('Nombre');
+    expect(inputName).toHaveAttribute('id', 'newsletter-name-input');
+    expect(inputName).toHaveAttribute('name', 'newsletter-name');
+    expect(screen.getByRole('button', { name: 'Suscribirse' })).toHaveAttribute('id', 'newsletter-submit-btn');
+  });
 });
 

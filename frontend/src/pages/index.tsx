@@ -804,6 +804,7 @@ const Home = () => {
                 <div className="space-y-4">
                   <motion.form
                     key="form"
+                    id="landing-newsletter-form"
                     onSubmit={handleSubscribe}
                     className="flex flex-col gap-3 text-left"
                     initial={{ opacity: 0 }}
@@ -811,40 +812,51 @@ const Home = () => {
                     exit={{ opacity: 0 }}
                   >
                     <div className="space-y-3">
-                      <input
-                        type="text"
-                        placeholder="Nombre"
-                        value={newsletterName}
-                        onChange={e => setNewsletterName(e.target.value)}
-                        required
-                        style={{
-                          backgroundColor: 'rgba(255,255,255,0.05)',
-                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))',
-                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))'
-                        }}
-                        className="w-full rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border placeholder:opacity-40"
-                        disabled={newsletterStatus === 'submitting'}
-                      />
-                      <input
-                        type="email"
-                        placeholder="Dirección de correo electrónico"
-                        value={newsletterEmail}
-                        onChange={e => {
-                          setNewsletterEmail(e.target.value);
-                          if (newsletterStatus === 'error') setNewsletterStatus('idle');
-                        }}
-                        required
-                        style={{
-                          backgroundColor: 'rgba(255,255,255,0.05)',
-                          color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))',
-                          borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))'
-                        }}
-                        className="w-full rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/50 transition-all border placeholder:opacity-40"
-                        disabled={newsletterStatus === 'submitting'}
-                      />
+                      <div>
+                        <label htmlFor="newsletter-name-input" className="sr-only">Nombre completo</label>
+                        <input
+                          id="newsletter-name-input"
+                          name="newsletter-name"
+                          type="text"
+                          placeholder="Nombre"
+                          value={newsletterName}
+                          onChange={e => setNewsletterName(e.target.value)}
+                          required
+                          style={{
+                            backgroundColor: 'var(--sec-contact_section-card-bg, rgba(255,255,255,0.05))',
+                            color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))',
+                            borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))'
+                          }}
+                          className="w-full rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--sec-contact_section-accent,var(--accent-color))] transition-all border placeholder:opacity-40"
+                          disabled={newsletterStatus === 'submitting'}
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="newsletter-email-input" className="sr-only">Dirección de correo electrónico</label>
+                        <input
+                          id="newsletter-email-input"
+                          name="newsletter-email"
+                          type="email"
+                          placeholder="Dirección de correo electrónico"
+                          value={newsletterEmail}
+                          onChange={e => {
+                            setNewsletterEmail(e.target.value);
+                            if (newsletterStatus === 'error') setNewsletterStatus('idle');
+                          }}
+                          required
+                          style={{
+                            backgroundColor: 'var(--sec-contact_section-card-bg, rgba(255,255,255,0.05))',
+                            color: 'var(--sec-contact_section-text, var(--text-color, #ffffff))',
+                            borderColor: 'var(--sec-contact_section-border, rgba(255,255,255,0.1))'
+                          }}
+                          className="w-full rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[var(--sec-contact_section-accent,var(--accent-color))] transition-all border placeholder:opacity-40"
+                          disabled={newsletterStatus === 'submitting'}
+                        />
+                      </div>
                     </div>
 
                     <button
+                      id="newsletter-submit-btn"
                       type="submit"
                       style={{
                         backgroundColor: 'var(--sec-contact_section-button-bg, var(--button-bg, #E5A93B))',

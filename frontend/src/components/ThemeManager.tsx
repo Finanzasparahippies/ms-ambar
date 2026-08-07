@@ -190,6 +190,37 @@ const COLOR_PRESETS = [
   { id: 'cyber-ocean', name: 'Océano Futuro', primary: '#0EA5E9', secondary: '#6366F1', start: '#031a2b', end: '#020f1a', card: '#082f49', text: '#F0F9FF', heading: '#38BDF8' }
 ];
 
+const ThemeModeSelector: React.FC<{
+  themeMode: 'global' | 'section';
+  onChange: (mode: 'global' | 'section') => void;
+}> = ({ themeMode, onChange }) => (
+  <div>
+    <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
+      Modo de Aplicación:
+    </label>
+    <div className="grid grid-cols-2 gap-2 p-1 bg-[#0d110e] border border-white/20 rounded-2xl">
+      <button
+        type="button"
+        onClick={() => onChange('global')}
+        className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+          themeMode === 'global' ? 'bg-amber-honey text-black font-black shadow-glow' : 'text-white/70 hover:text-white'
+        }`}
+      >
+        Paleta Global
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('section')}
+        className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+          themeMode === 'section' ? 'bg-amber-honey text-black font-black shadow-glow' : 'text-white/70 hover:text-white'
+        }`}
+      >
+        Por Sección
+      </button>
+    </div>
+  </div>
+);
+
 export const ThemeManager: React.FC = () => {
   const { theme, setThemeOverride, resetThemeToDefaults, clearSectionOverrides } = useEventTheme();
 
@@ -224,7 +255,7 @@ export const ThemeManager: React.FC = () => {
   const [cardFocusRing, setCardFocusRing] = useState('#22A6B7');
   const [elementHoverColor, setElementHoverColor] = useState('#FFC048');
   const [elementFocusRing, setElementFocusRing] = useState('#E5A93B');
-  const [borderColor, setBorderColor] = useState('#E5A93B');
+  const [borderColor, setBorderColor] = useState('rgba(229, 169, 59, 0.25)');
 
   const [particleShape, setParticleShape] = useState('moon');
   const [cardStyle, setCardStyle] = useState('rounded-full');
@@ -345,6 +376,7 @@ export const ThemeManager: React.FC = () => {
    * Updates properties of a specific section in sectionThemes dictionary.
    */
   const updateSectionProp = (sectionKey: string, field: keyof SectionThemeSpec, val: any) => {
+    setThemeMode('section');
     setSectionThemes(prev => {
       const currentSec = prev[sectionKey] || {};
       const updatedSec = { ...currentSec, [field]: val };
@@ -562,32 +594,8 @@ export const ThemeManager: React.FC = () => {
               </select>
             </div>
 
-            {/* Mode Selector Toggle */}
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
-                Modo de Aplicación:
-              </label>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-[#0d110e] border border-white/20 rounded-2xl">
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('global')}
-                  className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    themeMode === 'global' ? 'bg-amber-honey text-black font-black shadow-glow' : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  Paleta Global
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setThemeMode('section')}
-                  className={`py-2 text-center rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                    themeMode === 'section' ? 'bg-amber-honey text-black font-black shadow-glow' : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  Por Sección
-                </button>
-              </div>
-            </div>
+            {/* Reusable Mode Selector Toggle */}
+            <ThemeModeSelector themeMode={themeMode} onChange={setThemeMode} />
 
             {/* Contextual Sections Buttons List */}
             <div>
