@@ -795,6 +795,13 @@ class SiteSettings(models.Model):
     element_hover_color = models.CharField(max_length=50, default='#FFC048', help_text="Color hover para elementos interactivos")
     element_focus_ring = models.CharField(max_length=50, default='#E5A93B', help_text="Color focus para elementos interactivos")
 
+    # Personalización Avanzada de Secciones y Contenedores (Degradados, Sombras y Bordes)
+    background_gradient = models.CharField(max_length=255, default='', blank=True, null=True, help_text="Degradado CSS de fondo (ej. linear-gradient(135deg, #080c0a 0%, #040605 100%))")
+    card_box_shadow = models.CharField(max_length=255, default='', blank=True, null=True, help_text="Sombra dinámica de tarjetas (ej. 0 10px 30px rgba(0,0,0,0.5))")
+    border_width = models.CharField(max_length=20, default='1px', blank=True, null=True, help_text="Grosor de borde de contenedor (ej. 1px, 2px)")
+    border_opacity = models.FloatField(default=0.25, blank=True, null=True, help_text="Opacidad de borde de 0.0 a 1.0")
+    border_style_preset = models.CharField(max_length=50, default='solid', blank=True, null=True, help_text="Estilo de borde (solid, glass, dashed, dotted)")
+
     particle_shape = models.CharField(max_length=50, choices=PARTICLE_SHAPE_CHOICES, default='moon', help_text="Figura geométrica del Canvas de partículas")
     card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, default='rounded-full', help_text="Estilo de bordes de tarjetas y botones")
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
@@ -833,8 +840,13 @@ class SiteSettings(models.Model):
             'secondary_color': self.secondary_color or '#22A6B7',
             'background_start': self.background_start or '#080c0a',
             'background_end': self.background_end or '#040605',
+            'background_gradient': getattr(self, 'background_gradient', '') or '',
             'accent_color': self.accent_color or '#9F2B00',
             'card_background': self.card_background or '#0c0f0d',
+            'card_box_shadow': getattr(self, 'card_box_shadow', '') or '',
+            'border_width': getattr(self, 'border_width', '1px') or '1px',
+            'border_opacity': getattr(self, 'border_opacity', 0.25) if getattr(self, 'border_opacity', None) is not None else 0.25,
+            'border_style_preset': getattr(self, 'border_style_preset', 'solid') or 'solid',
             'text_color': self.text_color or '#F4F6F0',
             'button_hover_bg': getattr(self, 'button_hover_bg', '#FFC048') or '#FFC048',
             'button_hover_text': getattr(self, 'button_hover_text', '#080c0a') or '#080c0a',

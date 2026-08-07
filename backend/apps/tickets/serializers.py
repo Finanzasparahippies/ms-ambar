@@ -152,12 +152,32 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             'tickets_page_subtitle', 'homepage_cta_text', 'fee_config', 'theme_config',
             'bio_badge', 'bio_title', 'bio_image', 'bio_image_url', 'bio_location', 'bio_content', 'bio_cta_text', 'bio_cta_url',
             'theme_mode', 'primary_color', 'secondary_color', 'background_start', 'background_end',
-            'accent_color', 'card_background', 'text_color',
+            'background_gradient', 'accent_color', 'card_background', 'card_box_shadow',
+            'border_width', 'border_opacity', 'border_style_preset', 'text_color',
             'button_hover_bg', 'button_hover_text', 'button_focus_ring',
             'card_hover_bg', 'card_hover_border', 'card_focus_ring',
             'element_hover_color', 'element_focus_ring',
             'particle_shape', 'card_style', 'background_pattern', 'font_preset', 'allow_canvas_zoom', 'custom_css', 'section_themes'
         ]
+
+    def _sanitize_css_str(self, value: str, field_name: str) -> str:
+        if not value:
+            return ""
+        val_lower = value.lower()
+        forbidden_tokens = ['javascript:', 'expression(', 'behavior:', 'url(data:', '<script', '</script', '@import', 'binding:']
+        for token in forbidden_tokens:
+            if token in val_lower:
+                raise serializers.ValidationError(f"Contenido no permitido o potencialmente peligroso en {field_name}.")
+        return value
+
+    def validate_custom_css(self, value):
+        return self._sanitize_css_str(value, 'custom_css')
+
+    def validate_background_gradient(self, value):
+        return self._sanitize_css_str(value, 'background_gradient')
+
+    def validate_card_box_shadow(self, value):
+        return self._sanitize_css_str(value, 'card_box_shadow')
 
     def get_bio_image_url(self, obj):
         request = self.context.get('request')
@@ -172,3 +192,4 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
 
     def get_fee_config(self, obj):
         return get_fee_config()
+

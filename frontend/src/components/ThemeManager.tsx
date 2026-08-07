@@ -203,8 +203,13 @@ export const ThemeManager: React.FC = () => {
   const [secondaryColor, setSecondaryColor] = useState('#22A6B7');
   const [backgroundStart, setBackgroundStart] = useState('#080c0a');
   const [backgroundEnd, setBackgroundEnd] = useState('#040605');
+  const [backgroundGradient, setBackgroundGradient] = useState('');
   const [accentColor, setAccentColor] = useState('#9F2B00');
   const [cardBackground, setCardBackground] = useState('#0c0f0d');
+  const [cardBoxShadow, setCardBoxShadow] = useState('');
+  const [borderWidth, setBorderWidth] = useState('1px');
+  const [borderOpacity, setBorderOpacity] = useState(0.25);
+  const [borderStylePreset, setBorderStylePreset] = useState('solid');
   const [textColor, setTextColor] = useState('#F4F6F0');
   const [headingColor, setHeadingColor] = useState('#E5A93B');
   const [subtitleColor, setSubtitleColor] = useState('#F4F6F0');
@@ -230,6 +235,7 @@ export const ThemeManager: React.FC = () => {
   // Section-level Themes State
   const [sectionThemes, setSectionThemes] = useState<Record<string, SectionThemeSpec>>({});
   const [saving, setSaving] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'saving' | 'saved'>('saved');
 
   // Debounce Timer Ref to achieve 60 FPS smooth updates without React re-render thrashing
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -247,8 +253,13 @@ export const ThemeManager: React.FC = () => {
       setSecondaryColor(theme.secondaryColor || '#22A6B7');
       setBackgroundStart(theme.backgroundStart || '#080c0a');
       setBackgroundEnd(theme.backgroundEnd || '#040605');
+      setBackgroundGradient(theme.backgroundGradient || '');
       setAccentColor(theme.accentColor || '#9F2B00');
       setCardBackground(theme.cardBackground || '#0c0f0d');
+      setCardBoxShadow(theme.cardBoxShadow || '');
+      setBorderWidth(theme.borderWidth || '1px');
+      setBorderOpacity(theme.borderOpacity ?? 0.25);
+      setBorderStylePreset(theme.borderStylePreset || 'solid');
       setTextColor(theme.textColor || '#F4F6F0');
       setHeadingColor(theme.headingColor || theme.primaryColor || '#E5A93B');
       setSubtitleColor(theme.subtitleColor || theme.textColor || '#F4F6F0');
@@ -277,6 +288,7 @@ export const ThemeManager: React.FC = () => {
    * Directs updates into documentElement styles avoiding expensive React lifecycle loops.
    */
   const handleLivePreview = useCallback(() => {
+    setSyncStatus('syncing');
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
@@ -289,8 +301,13 @@ export const ThemeManager: React.FC = () => {
         secondaryColor,
         backgroundStart,
         backgroundEnd,
+        backgroundGradient,
         accentColor,
         cardBackground,
+        cardBoxShadow,
+        borderWidth,
+        borderOpacity,
+        borderStylePreset,
         textColor,
         headingColor,
         subtitleColor,
@@ -312,8 +329,9 @@ export const ThemeManager: React.FC = () => {
         customCss,
         sectionThemes,
       });
+      setSyncStatus('idle');
     }, 16);
-  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, accentColor, cardBackground, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
+  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, backgroundGradient, accentColor, cardBackground, cardBoxShadow, borderWidth, borderOpacity, borderStylePreset, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
 
   useEffect(() => {
     handleLivePreview();
@@ -353,6 +371,7 @@ export const ThemeManager: React.FC = () => {
    */
   const handleSave = async () => {
     setSaving(true);
+    setSyncStatus('saving');
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
 
@@ -362,8 +381,13 @@ export const ThemeManager: React.FC = () => {
       secondary_color: secondaryColor,
       background_start: backgroundStart,
       background_end: backgroundEnd,
+      background_gradient: backgroundGradient,
       accent_color: accentColor,
       card_background: cardBackground,
+      card_box_shadow: cardBoxShadow,
+      border_width: borderWidth,
+      border_opacity: borderOpacity,
+      border_style_preset: borderStylePreset,
       text_color: textColor,
       heading_color: headingColor,
       subtitle_color: subtitleColor,
@@ -390,9 +414,11 @@ export const ThemeManager: React.FC = () => {
     try {
       const apiUrl = getApiUrl();
       await axios.post(`${apiUrl}/tickets/settings/`, payload, { headers });
+      setSyncStatus('saved');
       showToast.success('¡Configuración de tema guardada en el servidor!');
     } catch (e: any) {
       console.error('Error saving theme settings:', e);
+      setSyncStatus('idle');
       showToast.error(e.response?.data?.error || 'Error al guardar la personalización visual.');
     } finally {
       setSaving(false);
@@ -431,6 +457,33 @@ export const ThemeManager: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {/* Indicador Visual de Sincronización & Debounce State */}
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-[#0d110e] border border-white/20 text-xs font-mono">
+              {syncStatus === 'syncing' && (
+                <span className="flex items-center gap-1.5 text-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  Sincronizando previa...
+                </span>
+              )}
+              {syncStatus === 'saving' && (
+                <span className="flex items-center gap-1.5 text-sky-300">
+                  <RefreshCw className="animate-spin" size={14} />
+                  Guardando en servidor...
+                </span>
+              )}
+              {syncStatus === 'saved' && (
+                <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                  <Check size={14} />
+                  Cambios guardados
+                </span>
+              )}
+              {syncStatus === 'idle' && (
+                <span className="text-white/60 font-semibold">
+                  ✓ Previa lista
+                </span>
+              )}
+            </div>
+
             <button
               onClick={() => {
                 clearSectionOverrides();
@@ -743,6 +796,150 @@ export const ThemeManager: React.FC = () => {
                         className="bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white w-full"
                       />
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Degradados CSS & Sombras Dinámicas */}
+              <div className="pt-3 border-t border-white/10 space-y-3">
+                <label className="block text-[10px] font-black uppercase tracking-wider text-amber-honey flex items-center gap-1.5">
+                  <Sparkles size={12} /> Degradados & Sombras Avanzadas
+                </label>
+
+                {/* Degradado CSS de Fondo */}
+                <div>
+                  <label className="block text-[9px] font-bold text-white/60 mb-1">
+                    {themeMode === 'section' ? 'Degradado CSS de Sección:' : 'Degradado CSS Global:'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="linear-gradient(135deg, #080c0a 0%, #040605 100%)"
+                    value={themeMode === 'section' ? (currentSectionSpec.bg_gradient || backgroundGradient) : backgroundGradient}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'bg_gradient', e.target.value);
+                      else setBackgroundGradient(e.target.value);
+                    }}
+                    className="bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white w-full focus:border-amber-honey focus:outline-none"
+                  />
+                  <div className="flex gap-2 mt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = 'linear-gradient(135deg, #080c0a 0%, #16241c 100%)';
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'bg_gradient', val);
+                        else setBackgroundGradient(val);
+                      }}
+                      className="text-[9px] px-2 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-white/70"
+                    >
+                      Preset Ámbar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = 'radial-gradient(circle at center, #102a28 0%, #040605 100%)';
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'bg_gradient', val);
+                        else setBackgroundGradient(val);
+                      }}
+                      className="text-[9px] px-2 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-white/70"
+                    >
+                      Preset Esmeralda
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sombra Dinámica (Box Shadow) */}
+                <div>
+                  <label className="block text-[9px] font-bold text-white/60 mb-1">
+                    {themeMode === 'section' ? 'Sombra / Elevación de Sección:' : 'Sombra / Resplandor Dinámico:'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="0 20px 30px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(229, 169, 59, 0.2)"
+                    value={themeMode === 'section' ? (currentSectionSpec.card_box_shadow || cardBoxShadow) : cardBoxShadow}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'card_box_shadow', e.target.value);
+                      else setCardBoxShadow(e.target.value);
+                    }}
+                    className="bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white w-full focus:border-amber-honey focus:outline-none"
+                  />
+                  <div className="flex gap-2 mt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = '0 0 25px rgba(229, 169, 59, 0.35)';
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'card_box_shadow', val);
+                        else setCardBoxShadow(val);
+                      }}
+                      className="text-[9px] px-2 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg"
+                    >
+                      Glow Místico
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const val = '0 20px 25px -5px rgba(0, 0, 0, 0.7)';
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'card_box_shadow', val);
+                        else setCardBoxShadow(val);
+                      }}
+                      className="text-[9px] px-2 py-1 bg-white/5 hover:bg-white/10 text-white/70 rounded-lg"
+                    >
+                      Sombra Profunda
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gestión de Bordes: Grosor, Opacidad y Estilo */}
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[9px] font-bold text-white/60 mb-1">Grosor Borde:</label>
+                    <select
+                      value={themeMode === 'section' ? (currentSectionSpec.border_width || borderWidth) : borderWidth}
+                      onChange={(e) => {
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'border_width', e.target.value);
+                        else setBorderWidth(e.target.value);
+                      }}
+                      className="w-full bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white"
+                    >
+                      <option value="1px">1px (Fino)</option>
+                      <option value="2px">2px (Medio)</option>
+                      <option value="3px">3px (Grueso)</option>
+                      <option value="4px">4px (Bold)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] font-bold text-white/60 mb-1">Opacidad Borde:</label>
+                    <select
+                      value={String(themeMode === 'section' ? (currentSectionSpec.border_opacity ?? borderOpacity) : borderOpacity)}
+                      onChange={(e) => {
+                        const v = parseFloat(e.target.value);
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'border_opacity', v);
+                        else setBorderOpacity(v);
+                      }}
+                      className="w-full bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white"
+                    >
+                      <option value="0.1">10% (Sutil)</option>
+                      <option value="0.25">25% (Estándar)</option>
+                      <option value="0.5">50% (Intenso)</option>
+                      <option value="1">100% (Opaco)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] font-bold text-white/60 mb-1">Estilo Borde:</label>
+                    <select
+                      value={themeMode === 'section' ? (currentSectionSpec.border_style_preset || borderStylePreset) : borderStylePreset}
+                      onChange={(e) => {
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'border_style_preset', e.target.value);
+                        else setBorderStylePreset(e.target.value);
+                      }}
+                      className="w-full bg-[#0d110e] border border-white/20 rounded-lg px-2 py-1 text-[11px] font-mono text-white"
+                    >
+                      <option value="solid">Línea Solid</option>
+                      <option value="glass">Glass / Cristal</option>
+                      <option value="dashed">Punteado / Dashed</option>
+                      <option value="dotted">Puntos / Dotted</option>
+                    </select>
                   </div>
                 </div>
               </div>

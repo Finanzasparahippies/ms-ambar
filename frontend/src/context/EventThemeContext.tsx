@@ -4,6 +4,7 @@ import { getApiUrl } from '../lib/utils';
 
 export interface SectionThemeSpec {
   bg_color?: string;
+  bg_gradient?: string;
   bg_gradient_start?: string;
   bg_gradient_end?: string;
   text_color?: string;
@@ -11,6 +12,7 @@ export interface SectionThemeSpec {
   subtitle_color?: string;
   accent_color?: string;
   card_bg?: string;
+  card_box_shadow?: string;
   button_bg?: string;
   button_text?: string;
   button_hover_bg?: string;
@@ -22,6 +24,9 @@ export interface SectionThemeSpec {
   element_hover_color?: string;
   element_focus_ring?: string;
   border_color?: string;
+  border_width?: string;
+  border_opacity?: number;
+  border_style_preset?: string;
   particle_shape?: string;
   card_style?: string;
   animation_preset?: string;
@@ -46,8 +51,13 @@ export interface ThemeConfig {
   secondaryColor: string;
   backgroundStart: string;
   backgroundEnd: string;
+  backgroundGradient?: string;
   accentColor: string;
   cardBackground: string;
+  cardBoxShadow?: string;
+  borderWidth?: string;
+  borderOpacity?: number;
+  borderStylePreset?: string;
   textColor: string;
   headingColor?: string;
   subtitleColor?: string;
@@ -83,14 +93,36 @@ export interface ThemeConfig {
 
 const LOCAL_STORAGE_THEME_KEY = 'ms_ambar_theme_override_v2';
 
+/**
+ * Sanitizador Anti-XSS para cadenas de propiedades CSS (Degradados, Sombras y Reglas custom).
+ * Neutraliza tokens peligrosos como `javascript:`, `expression(`, `behavior:`, `url(data:`, etc.
+ */
+export function sanitizeCssProperty(value?: string, fallback = ''): string {
+  if (!value || typeof value !== 'string') return fallback;
+  const lower = value.toLowerCase();
+  const forbidden = ['javascript:', 'expression(', 'behavior:', 'url(data:', '<script', '</script', '@import', 'binding:'];
+  for (const token of forbidden) {
+    if (lower.includes(token)) {
+      console.warn(`[Anti-XSS Sanitizer] Token inseguro "${token}" detectado en propiedad CSS. Aplicando fallback seguro.`);
+      return fallback;
+    }
+  }
+  return value;
+}
+
 const DEFAULT_THEME: ThemeConfig = {
   themeMode: 'global',
   primaryColor: '#E5A93B',
   secondaryColor: '#22A6B7',
   backgroundStart: '#080c0a',
   backgroundEnd: '#040605',
+  backgroundGradient: '',
   accentColor: '#9F2B00',
   cardBackground: '#0c0f0d',
+  cardBoxShadow: '',
+  borderWidth: '1px',
+  borderOpacity: 0.25,
+  borderStylePreset: 'solid',
   textColor: '#F4F6F0',
   headingColor: '#E5A93B',
   subtitleColor: '#F4F6F0',
@@ -196,6 +228,13 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.style.setProperty('--element-focus-ring', cfg.elementFocusRing || cfg.primaryColor);
     root.style.setProperty('--border-color', cfg.borderColor || `rgba(${hexToRgbTriplet(cfg.primaryColor)}, 0.25)`);
 
+    // Inyección de Propiedades Avanzadas (Degradados, Sombras y Bordes con Anti-XSS Sanitizer)
+    root.style.setProperty('--theme-bg-gradient', sanitizeCssProperty(cfg.backgroundGradient, ''));
+    root.style.setProperty('--theme-box-shadow', sanitizeCssProperty(cfg.cardBoxShadow, ''));
+    root.style.setProperty('--theme-border-width', sanitizeCssProperty(cfg.borderWidth, '1px'));
+    root.style.setProperty('--theme-border-opacity', String(cfg.borderOpacity ?? 0.25));
+    root.style.setProperty('--theme-border-style', sanitizeCssProperty(cfg.borderStylePreset, 'solid'));
+
     // Card radius mapping
     let radius = '2rem';
     if (cfg.cardStyle === 'rounded-2xl') radius = '1.25rem';
@@ -225,7 +264,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
       customStyleTag.id = 'ms-ambar-custom-theme-css';
       document.head.appendChild(customStyleTag);
     }
-    customStyleTag.textContent = cfg.customCss || '';
+    customStyleTag.textContent = sanitizeCssProperty(cfg.customCss, '');
 
     // Synchronize legacy theme session storage key
     try {
@@ -274,8 +313,13 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
           secondaryColor: d.secondary_color || DEFAULT_THEME.secondaryColor,
           backgroundStart: d.background_start || DEFAULT_THEME.backgroundStart,
           backgroundEnd: d.background_end || DEFAULT_THEME.backgroundEnd,
+          backgroundGradient: d.background_gradient || DEFAULT_THEME.backgroundGradient,
           accentColor: d.accent_color || DEFAULT_THEME.accentColor,
           cardBackground: d.card_background || DEFAULT_THEME.cardBackground,
+          cardBoxShadow: d.card_box_shadow || DEFAULT_THEME.cardBoxShadow,
+          borderWidth: d.border_width || DEFAULT_THEME.borderWidth,
+          borderOpacity: d.border_opacity ?? DEFAULT_THEME.borderOpacity,
+          borderStylePreset: d.border_style_preset || DEFAULT_THEME.borderStylePreset,
           textColor: d.text_color || DEFAULT_THEME.textColor,
           headingColor: d.heading_color || d.primary_color || DEFAULT_THEME.headingColor,
           subtitleColor: d.subtitle_color || d.text_color || DEFAULT_THEME.subtitleColor,
@@ -365,8 +409,13 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
       text_color: sec.text_color || theme.textColor,
       subtitle_color: sec.subtitle_color || theme.subtitleColor || theme.textColor,
       accent_color: sec.accent_color || theme.accentColor || theme.primaryColor,
+      bg_gradient: sec.bg_gradient || theme.backgroundGradient,
       card_bg: sec.card_bg || theme.cardBackground,
+      card_box_shadow: sec.card_box_shadow || theme.cardBoxShadow,
       border_color: sec.border_color || theme.borderColor,
+      border_width: sec.border_width || theme.borderWidth,
+      border_opacity: sec.border_opacity ?? theme.borderOpacity,
+      border_style_preset: sec.border_style_preset || theme.borderStylePreset,
       button_bg: sec.button_bg || theme.buttonBg || theme.primaryColor,
       button_text: sec.button_text || theme.buttonText,
       button_hover_bg: sec.button_hover_bg || theme.buttonHoverBg || '#FFC048',
@@ -416,26 +465,67 @@ export const useSectionTheme = (sectionKey: string) => {
 
     // Resolución de Fallbacks Normalizados
     const bgColor = sec.bg_color || sec.card_bg || theme.backgroundStart;
+    const bgGradient = sanitizeCssProperty(sec.bg_gradient || theme.backgroundGradient, '');
     const headingColor = sec.heading_color || theme.headingColor || theme.primaryColor;
     const textColor = sec.text_color || theme.textColor;
     const subtitleColor = sec.subtitle_color || theme.subtitleColor || theme.textColor;
     const accentColor = sec.accent_color || theme.accentColor || theme.primaryColor;
     const cardBg = sec.card_bg || theme.cardBackground;
+    const cardBoxShadow = sanitizeCssProperty(sec.card_box_shadow || theme.cardBoxShadow, '');
     const borderColor = sec.border_color || theme.borderColor;
+    const borderWidth = sanitizeCssProperty(sec.border_width || theme.borderWidth, '1px');
+    const borderOpacity = sec.border_opacity ?? theme.borderOpacity ?? 0.25;
+    const borderStylePreset = sanitizeCssProperty(sec.border_style_preset || theme.borderStylePreset, 'solid');
     const buttonBg = sec.button_bg || theme.buttonBg || theme.primaryColor;
     const buttonText = sec.button_text || theme.buttonText || theme.backgroundStart;
 
     // Scope Prefixed CSS Variables
     const style = {
       backgroundColor: bgColor,
+      backgroundImage: bgGradient || undefined,
+      boxShadow: cardBoxShadow || undefined,
       color: textColor,
       borderColor: borderColor,
+      borderWidth: borderWidth,
+      borderStyle: borderStylePreset === 'glass' ? 'solid' : borderStylePreset,
       [`--sec-${sectionKey}-bg`]: bgColor,
+      [`--sec-${sectionKey}-gradient`]: bgGradient,
       [`--sec-${sectionKey}-heading`]: headingColor,
       [`--sec-${sectionKey}-text`]: textColor,
       [`--sec-${sectionKey}-subtitle`]: subtitleColor,
       [`--sec-${sectionKey}-accent`]: accentColor,
       [`--sec-${sectionKey}-card-bg`]: cardBg,
+      [`--sec-${sectionKey}-shadow`]: cardBoxShadow,
+      [`--sec-${sectionKey}-border`]: borderColor,
+      [`--sec-${sectionKey}-border-width`]: borderWidth,
+      [`--sec-${sectionKey}-border-opacity`]: String(borderOpacity),
+      [`--sec-${sectionKey}-border-style`]: borderStylePreset,
+      [`--sec-${sectionKey}-button-bg`]: buttonBg,
+      [`--sec-${sectionKey}-button-text`]: buttonText,
+    } as React.CSSProperties;
+
+    return {
+      style,
+      bgColor,
+      bgGradient,
+      headingColor,
+      textColor,
+      subtitleColor,
+      accentColor,
+      cardBg,
+      cardBoxShadow,
+      borderColor,
+      borderWidth,
+      borderOpacity,
+      borderStylePreset,
+      buttonBg,
+      buttonText,
+      spec: sec,
+      rawTheme: theme,
+      loading
+    };
+  }, [theme, sectionKey, loading]);
+};
       [`--sec-${sectionKey}-border`]: borderColor,
       [`--sec-${sectionKey}-button-bg`]: buttonBg,
       [`--sec-${sectionKey}-button-text`]: buttonText,

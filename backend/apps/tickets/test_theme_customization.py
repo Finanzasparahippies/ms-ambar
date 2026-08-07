@@ -61,6 +61,32 @@ class ThemeCustomizationSchemaAndScaleTest(TestCase):
         self.assertEqual(config['background_start'], '#080c0a')
         self.assertEqual(config['background_end'], '#040605')
 
+    def test_advanced_theme_properties_persistence(self):
+        """Verify gradients, box-shadows, and border properties persist correctly."""
+        self.settings.background_gradient = 'linear-gradient(135deg, #080c0a 0%, #040605 100%)'
+        self.settings.card_box_shadow = '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+        self.settings.border_width = '2px'
+        self.settings.border_opacity = 0.5
+        self.settings.border_style_preset = 'glass'
+        self.settings.save()
+
+        db_settings = SiteSettings.objects.get(pk=1)
+        self.assertEqual(db_settings.background_gradient, 'linear-gradient(135deg, #080c0a 0%, #040605 100%)')
+        self.assertEqual(db_settings.card_box_shadow, '0 20px 25px -5px rgba(0, 0, 0, 0.5)')
+        self.assertEqual(db_settings.border_width, '2px')
+        self.assertEqual(db_settings.border_opacity, 0.5)
+        self.assertEqual(db_settings.border_style_preset, 'glass')
+
+    def test_anti_xss_validation_rejection(self):
+        """Verify serializer rejects dangerous javascript payloads in CSS strings."""
+        serializer = SiteSettingsSerializer(data={
+            'custom_css': 'body { background: url(javascript:alert(1)); }',
+            'background_gradient': 'linear-gradient(135deg, #080c0a 0%, #040605 100%); expression(alert(1))',
+        }, partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('custom_css', serializer.errors) or self.assertIn('background_gradient', serializer.errors)
+
+
 
 class ThemeCustomizationPageOverrideIntegrationTest(APITestCase):
     def setUp(self):

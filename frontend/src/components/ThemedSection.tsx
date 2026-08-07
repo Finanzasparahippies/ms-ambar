@@ -28,15 +28,24 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
   children,
   id,
 }) => {
-  const { style: hookStyle, bgColor, headingColor, textColor, accentColor, cardBg, borderColor, buttonBg, buttonText, spec } = useSectionTheme(sectionKey);
+  const { 
+    style: hookStyle, bgColor, bgGradient, headingColor, textColor, accentColor, 
+    cardBg, cardBoxShadow, borderColor, borderWidth, borderOpacity, borderStylePreset, 
+    buttonBg, buttonText, spec 
+  } = useSectionTheme(sectionKey);
 
   const customVars: Record<string, string> = {
     [`--sec-${sectionKey}-bg`]: bgColor,
+    [`--sec-${sectionKey}-gradient`]: bgGradient || '',
     [`--sec-${sectionKey}-heading`]: headingColor,
     [`--sec-${sectionKey}-text`]: textColor,
     [`--sec-${sectionKey}-accent`]: accentColor,
     [`--sec-${sectionKey}-card-bg`]: cardBg,
+    [`--sec-${sectionKey}-shadow`]: cardBoxShadow || '',
     [`--sec-${sectionKey}-border`]: borderColor || 'rgba(229, 169, 59, 0.25)',
+    [`--sec-${sectionKey}-border-width`]: borderWidth || '1px',
+    [`--sec-${sectionKey}-border-opacity`]: String(borderOpacity ?? 0.25),
+    [`--sec-${sectionKey}-border-style`]: borderStylePreset || 'solid',
     [`--sec-${sectionKey}-button-bg`]: buttonBg,
     [`--sec-${sectionKey}-button-text`]: buttonText,
     '--primary-color': accentColor,
@@ -63,8 +72,12 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
 
   const combinedStyle: React.CSSProperties = {
     backgroundColor: bgColor,
+    backgroundImage: bgGradient || undefined,
+    boxShadow: cardBoxShadow || undefined,
     color: textColor,
     borderColor: borderColor,
+    borderWidth: borderWidth,
+    borderStyle: borderStylePreset === 'glass' ? 'solid' : borderStylePreset,
     ...customVars as any
   };
 
