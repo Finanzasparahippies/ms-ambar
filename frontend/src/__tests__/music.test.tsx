@@ -192,7 +192,47 @@ describe('MusicPage Component', () => {
       expect(screen.getByText(/Sincronizar Plataformas/i)).toBeInTheDocument();
     });
   });
+
+  test('renders Now Playing control bar with album cover, track title, album name, and MM:SS seek bar when track is clicked', async () => {
+    renderWithContext(<MusicPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Track Uno/i)).toBeInTheDocument();
+    });
+
+    const trackItem = screen.getByText(/Track Uno/i);
+    fireEvent.click(trackItem);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('now-playing-bar')).toBeInTheDocument();
+      expect(screen.getByTestId('now-playing-title')).toHaveTextContent('Track Uno');
+      expect(screen.getByTestId('now-playing-album')).toHaveTextContent('Ms Ambar Aleatorio');
+      expect(screen.getByTestId('seek-bar')).toBeInTheDocument();
+      expect(screen.getByTestId('current-time')).toHaveTextContent('00:00');
+      expect(screen.getByTestId('total-duration')).toHaveTextContent('03:35');
+    });
+  });
+
+  test('allows seeking/scrubbing through audio using progress bar range input', async () => {
+    renderWithContext(<MusicPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Track Uno/i)).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText(/Track Uno/i));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('seek-bar')).toBeInTheDocument();
+    });
+
+    const seekBar = screen.getByTestId('seek-bar');
+    fireEvent.change(seekBar, { target: { value: '60' } });
+
+    expect(screen.getByTestId('current-time')).toHaveTextContent('01:00');
+  });
 });
+
 
 
 

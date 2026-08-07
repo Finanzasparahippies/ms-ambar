@@ -20,6 +20,9 @@ interface TrackItem {
   youtube_id?: string;
   itunes_id?: string;
   is_single?: boolean;
+  cover_url?: string;
+  image_url?: string;
+  album_title?: string;
 }
 
 interface AlbumItem {
@@ -127,8 +130,6 @@ const MusicPage: React.FC = () => {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [activeTrack, setActiveTrack] = useState<TrackItem | null>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -267,19 +268,18 @@ const MusicPage: React.FC = () => {
     }
   };
 
-  const formatTime = (seconds: number): string => {
-    if (!seconds || isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
-
-  const toggleTrackPlayback = useCallback((track: TrackItem) => {
+  const toggleTrackPlayback = useCallback((track: TrackItem, albumTitle?: string, coverUrl?: string) => {
     const audioUrl = track.full_audio_url || track.audio_file || track.preview_url;
     if (!audioUrl) {
       showToast.error('Vista previa no disponible para este tema.');
       return;
     }
+
+    const trackToPlay: TrackItem = {
+      ...track,
+      album_title: track.album_title || albumTitle || 'Álbum Oficial',
+      cover_url: track.cover_url || track.image_url || coverUrl || DEFAULT_COVER
+    };
 
     if (activeTrack?.id === track.id) {
       if (isPlaying && audioRef.current) {
@@ -298,29 +298,11 @@ const MusicPage: React.FC = () => {
 
     const newAudio = new Audio(audioUrl);
     audioRef.current = newAudio;
-    setActiveTrack(track);
+    setActiveTrack(trackToPlay);
     setIsPlaying(true);
-    setCurrentTime(0);
-    setDuration(track.duration_seconds || 0);
-
-    newAudio.ontimeupdate = () => {
-      if (audioRef.current) {
-        setCurrentTime(audioRef.current.currentTime || 0);
-        if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-          setDuration(audioRef.current.duration);
-        }
-      }
-    };
-
-    newAudio.onloadedmetadata = () => {
-      if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
-        setDuration(audioRef.current.duration);
-      }
-    };
 
     newAudio.onended = () => {
       setIsPlaying(false);
-      setCurrentTime(0);
     };
 
     newAudio.play().catch((err) => {
@@ -552,7 +534,7 @@ const MusicPage: React.FC = () => {
                           return (
                             <div
                               key={track.id}
-                              onClick={() => toggleTrackPlayback(track)}
+                              onClick={() => toggleTrackPlayback(track, displayTitle, album.cover_url)}
                               className={`flex items-center justify-between py-3.5 px-5 rounded-2xl transition-all cursor-pointer border ${isCurrent
                                 ? 'bg-amber-honey/20 border-amber-honey text-amber-honey font-bold shadow-lg shadow-amber-honey/10'
                                 : 'bg-white/5 border-transparent hover:border-white/15 hover:bg-white/10 text-white/90'
@@ -773,62 +755,208 @@ const MusicPage: React.FC = () => {
       </div>
 
 
-      {/* Floating Sticky Audio Player Control Bar */}
-        <AnimatePresence>
-          {activeTrack && (
-            <motion.div
-              initial={{ y: 100, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 100, opacity: 0 }}
-              className="fixed bottom-6 left-6 right-6 md:left-auto md:right-10 md:w-96 z-[120] amber-glass p-4 rounded-3xl border border-amber-honey/40 shadow-2xl flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 truncate">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center font-bold shrink-0">
-                    <Volume2 size={20} className={isPlaying ? 'animate-bounce' : ''} />
-                  </div>
-                  <div className="truncate">
-                    <p className="text-xs font-black uppercase text-white truncate">{activeTrack.title}</p>
-                    <p className="text-[9px] font-mono text-amber-honey uppercase tracking-wider">Ms Ambar • Reproducción</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => toggleTrackPlayback(activeTrack)}
-                  className="w-10 h-10 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform focus:outline-none shrink-0"
-                >
-                  {isPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
-                </button>
-              </div>
-
-              <div className="w-full space-y-1">
-                <div
-                  className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden cursor-pointer relative"
-                  onClick={(e) => {
-                    if (audioRef.current && duration > 0) {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const clickX = e.clientX - rect.left;
-                      const newTime = (clickX / rect.width) * duration;
-                      audioRef.current.currentTime = newTime;
-                      setCurrentTime(newTime);
-                    }
-                  }}
-                >
-                  <div
-                    className="bg-amber-honey h-full rounded-full transition-all duration-100"
-                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[9px] font-mono text-amber-honey/80">
-                  <span>{formatTime(currentTime)}</span>
-                  <span>{formatTime(duration || activeTrack.duration_seconds || 0)}</span>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Floating Sticky Audio Player Control Bar ("Now Playing") */}
+      <NowPlayingPlayer
+        activeTrack={activeTrack}
+        isPlaying={isPlaying}
+        onTogglePlay={toggleTrackPlayback}
+        audioRef={audioRef}
+      />
     </ThemedSection>
   );
 };
+
+interface NowPlayingPlayerProps {
+  activeTrack: TrackItem | null;
+  isPlaying: boolean;
+  onTogglePlay: (track: TrackItem) => void;
+  audioRef: React.MutableRefObject<HTMLAudioElement | null>;
+}
+
+export const formatTime = (seconds: number): string => {
+  if (!seconds || isNaN(seconds) || seconds < 0) return '00:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  const formattedMins = mins < 10 ? `0${mins}` : `${mins}`;
+  const formattedSecs = secs < 10 ? `0${secs}` : `${secs}`;
+  return `${formattedMins}:${formattedSecs}`;
+};
+
+export const NowPlayingPlayer: React.FC<NowPlayingPlayerProps> = React.memo(({
+  activeTrack,
+  isPlaying,
+  onTogglePlay,
+  audioRef,
+}) => {
+  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const animFrameRef = useRef<number | null>(null);
+  const lastUpdateRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (activeTrack) {
+      setDuration(activeTrack.duration_seconds || 0);
+      setCurrentTime(0);
+    }
+  }, [activeTrack?.id]);
+
+  const updateProgress = useCallback(() => {
+    if (audioRef.current && !audioRef.current.paused && !isDragging) {
+      const now = performance.now();
+      if (now - lastUpdateRef.current >= 40) {
+        setCurrentTime(audioRef.current.currentTime || 0);
+        if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+          setDuration(audioRef.current.duration);
+        }
+        lastUpdateRef.current = now;
+      }
+      animFrameRef.current = requestAnimationFrame(updateProgress);
+    }
+  }, [audioRef, isDragging]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      animFrameRef.current = requestAnimationFrame(updateProgress);
+    } else {
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+    }
+
+    return () => {
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+    };
+  }, [isPlaying, updateProgress]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleLoadedMetadata = () => {
+      if (audio.duration && !isNaN(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
+
+    const handleTimeUpdate = () => {
+      if (!isDragging && audio) {
+        setCurrentTime(audio.currentTime || 0);
+        if (audio.duration && !isNaN(audio.duration)) {
+          setDuration(audio.duration);
+        }
+      }
+    };
+
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [audioRef, isDragging, activeTrack?.id]);
+
+  const handleSeekChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value);
+    setCurrentTime(newTime);
+    if (audioRef.current) {
+      audioRef.current.currentTime = newTime;
+    }
+  }, [audioRef]);
+
+  const handleSeekMouseDown = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
+  const handleSeekMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  if (!activeTrack) return null;
+
+  const coverSrc = activeTrack.cover_url || activeTrack.image_url || DEFAULT_COVER;
+  const totalDuration = duration || activeTrack.duration_seconds || 0;
+  const progressPercent = totalDuration > 0 ? Math.min(100, (currentTime / totalDuration) * 100) : 0;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        className="fixed bottom-6 left-6 right-6 md:left-auto md:right-10 md:w-[420px] z-[120] amber-glass p-5 rounded-3xl border border-amber-honey/40 shadow-2xl flex flex-col gap-4 backdrop-blur-xl"
+        data-testid="now-playing-bar"
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 truncate">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden border border-amber-honey/30 shrink-0 relative shadow-md">
+              <img
+                src={coverSrc}
+                alt={activeTrack.title}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = DEFAULT_COVER;
+                }}
+              />
+              <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                <Volume2 size={18} className={`text-amber-honey ${isPlaying ? 'animate-bounce' : ''}`} />
+              </div>
+            </div>
+            <div className="truncate">
+              <p className="text-xs font-black uppercase text-white truncate tracking-tight" data-testid="now-playing-title">
+                {activeTrack.title}
+              </p>
+              <p className="text-[10px] font-mono text-amber-honey/90 uppercase tracking-wider truncate" data-testid="now-playing-album">
+                {activeTrack.album_title || 'Álbum Oficial'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => onTogglePlay(activeTrack)}
+            aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+            className="w-11 h-11 rounded-2xl bg-amber-honey text-black flex items-center justify-center hover:scale-105 transition-transform focus:outline-none shrink-0 shadow-lg shadow-amber-honey/20"
+            data-testid="now-playing-toggle"
+          >
+            {isPlaying ? <Pause size={18} /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+          </button>
+        </div>
+
+        <div className="w-full space-y-1.5">
+          <div className="relative flex items-center">
+            <input
+              type="range"
+              min={0}
+              max={totalDuration || 100}
+              step={0.1}
+              value={currentTime}
+              onChange={handleSeekChange}
+              onMouseDown={handleSeekMouseDown}
+              onMouseUp={handleSeekMouseUp}
+              onTouchStart={handleSeekMouseDown}
+              onTouchEnd={handleSeekMouseUp}
+              aria-label="Barra de progreso"
+              data-testid="seek-bar"
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer accent-amber-honey focus:outline-none focus:ring-1 focus:ring-amber-honey/50"
+              style={{
+                background: `linear-gradient(to right, #E5A93B ${progressPercent}%, rgba(255, 255, 255, 0.2) ${progressPercent}%)`
+              }}
+            />
+          </div>
+          <div className="flex justify-between text-[10px] font-mono text-amber-honey/90 font-bold px-0.5">
+            <span data-testid="current-time">{formatTime(currentTime)}</span>
+            <span data-testid="total-duration">{formatTime(totalDuration)}</span>
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+});
+NowPlayingPlayer.displayName = 'NowPlayingPlayer';
 
 export default MusicPage;
