@@ -31,6 +31,7 @@ export interface SectionThemeSpec {
   particle_density?: number;
   particle_speed?: number;
   particle_color?: string;
+  particle_shadow?: string;
   card_style?: string;
   animation_preset?: string;
   image_filter?: string;
@@ -79,6 +80,7 @@ export interface ThemeConfig {
   particleDensity: number;
   particleSpeed: number;
   particleColor: string;
+  particleShadow: string;
   cardStyle: string;
   backgroundPattern: string;
   fontPreset: string;
@@ -147,6 +149,7 @@ const DEFAULT_THEME: ThemeConfig = {
   particleDensity: 65,
   particleSpeed: 1.0,
   particleColor: '',
+  particleShadow: '',
   cardStyle: 'rounded-full',
   backgroundPattern: 'stars',
   fontPreset: 'cormorant',
@@ -262,6 +265,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.style.setProperty('--particle-density', String(cfg.particleDensity ?? 65));
     root.style.setProperty('--particle-speed', String(cfg.particleSpeed ?? 1.0));
     root.style.setProperty('--particle-color', cfg.particleColor || cfg.primaryColor || '#E5A93B');
+    root.style.setProperty('--particle-shadow', cfg.particleShadow || cfg.particleColor || cfg.primaryColor || '#E5A93B');
 
     // Data attributes for layout selectors & animations
     root.setAttribute('data-theme-pattern', cfg.backgroundPattern || 'stars');
@@ -365,6 +369,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
           particleDensity: d.particle_density ?? DEFAULT_THEME.particleDensity,
           particleSpeed: d.particle_speed ?? DEFAULT_THEME.particleSpeed,
           particleColor: d.particle_color || DEFAULT_THEME.particleColor,
+          particleShadow: d.particle_shadow || DEFAULT_THEME.particleShadow,
           cardStyle: d.card_style || DEFAULT_THEME.cardStyle,
           backgroundPattern: d.background_pattern || DEFAULT_THEME.backgroundPattern,
           fontPreset: d.font_preset || DEFAULT_THEME.fontPreset,
@@ -460,6 +465,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
       particle_density: sec.particle_density ?? theme.particleDensity,
       particle_speed: sec.particle_speed ?? theme.particleSpeed,
       particle_color: sec.particle_color || theme.particleColor,
+      particle_shadow: sec.particle_shadow || theme.particleShadow,
       card_style: sec.card_style || theme.cardStyle,
       animation_preset: sec.animation_preset || theme.animationPreset,
       image_filter: sec.image_filter || theme.imageFilter,

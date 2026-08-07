@@ -385,6 +385,7 @@ class Event(models.Model):
     particle_density = models.IntegerField(default=65, blank=True, null=True, help_text="Densidad de partículas (10 a 200)")
     particle_speed = models.FloatField(default=1.0, blank=True, null=True, help_text="Velocidad de partículas (0.1 a 5.0)")
     particle_color = models.CharField(max_length=50, blank=True, null=True, help_text="Color de partículas (ej. #E5A93B)")
+    particle_shadow = models.CharField(max_length=100, blank=True, null=True, default='', help_text="Color/Efecto de sombra de partículas (ej. #E5A93B o rgba(229,169,59,0.8))")
     card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, blank=True, null=True, help_text="Estilo de bordes de tarjetas y botones")
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, blank=True, null=True, help_text="Patrón visual de fondo")
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, blank=True, null=True, help_text="Preset de fuentes tipográficas")
@@ -416,6 +417,7 @@ class Event(models.Model):
             'particle_density': self.particle_density if self.particle_density is not None else site_theme.get('particle_density', 65),
             'particle_speed': self.particle_speed if self.particle_speed is not None else site_theme.get('particle_speed', 1.0),
             'particle_color': self.particle_color or site_theme.get('particle_color', ''),
+            'particle_shadow': self.particle_shadow or site_theme.get('particle_shadow', ''),
             'card_style': self.card_style or site_theme['card_style'],
             'background_pattern': self.background_pattern or site_theme['background_pattern'],
             'font_preset': self.font_preset or site_theme['font_preset'],
@@ -814,6 +816,7 @@ class SiteSettings(models.Model):
     particle_density = models.IntegerField(default=65, help_text="Densidad de partículas (10 a 200)")
     particle_speed = models.FloatField(default=1.0, help_text="Velocidad de partículas (0.1 a 5.0)")
     particle_color = models.CharField(max_length=50, blank=True, null=True, default='', help_text="Color de partículas (ej. #E5A93B)")
+    particle_shadow = models.CharField(max_length=100, blank=True, null=True, default='', help_text="Color/Efecto de sombra de partículas (ej. #E5A93B o rgba(229,169,59,0.8))")
     card_style = models.CharField(max_length=50, choices=CARD_STYLE_CHOICES, default='rounded-full', help_text="Estilo de bordes de tarjetas y botones")
     background_pattern = models.CharField(max_length=50, choices=BACKGROUND_PATTERN_CHOICES, default='stars', help_text="Patrón visual de fondo")
     theme_mode = models.CharField(max_length=20, default='global', help_text="Modo de aplicación de tema: 'global' o 'section'")
@@ -871,6 +874,7 @@ class SiteSettings(models.Model):
             'particle_density': getattr(self, 'particle_density', 65) if getattr(self, 'particle_density', None) is not None else 65,
             'particle_speed': getattr(self, 'particle_speed', 1.0) if getattr(self, 'particle_speed', None) is not None else 1.0,
             'particle_color': getattr(self, 'particle_color', '') or '',
+            'particle_shadow': getattr(self, 'particle_shadow', '') or '',
             'card_style': self.card_style or 'rounded-full',
             'background_pattern': self.background_pattern or 'stars',
             'font_preset': self.font_preset or 'cormorant',

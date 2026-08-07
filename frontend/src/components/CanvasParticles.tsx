@@ -3,23 +3,49 @@ import { useEventTheme } from '../context/EventThemeContext';
 
 interface CanvasParticlesProps {
   morphTarget?: string;
+  sectionKey?: string;
   className?: string;
 }
 
 export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
   morphTarget = 'none',
+  sectionKey = 'hero',
   className = 'absolute inset-0 w-full h-full pointer-events-none'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useEventTheme();
-  const activeTarget = (morphTarget && morphTarget !== 'none') ? morphTarget : (theme?.particleShape || 'moon');
+
+  // Resolve section theme overrides if sectionKey is present or in section themeMode
+  const sectionSpec = sectionKey && theme?.sectionThemes ? theme.sectionThemes[sectionKey] : undefined;
+
+  const activeTarget = (morphTarget && morphTarget !== 'none')
+    ? morphTarget
+    : (sectionSpec?.particle_shape || theme?.particleShape || 'moon');
+
+  const activeDensity = sectionSpec?.particle_density ?? theme?.particleDensity ?? 65;
+  const activeSpeed = sectionSpec?.particle_speed ?? theme?.particleSpeed ?? 1.0;
+  const activeColor = sectionSpec?.particle_color || theme?.particleColor || theme?.primaryColor || '#E5A93B';
+  const activeShadow = sectionSpec?.particle_shadow || theme?.particleShadow || '';
+
   const morphTargetRef = useRef(activeTarget);
-  const themeRef = useRef(theme);
+  const themeRef = useRef({
+    particleColor: activeColor,
+    particleSpeed: activeSpeed,
+    particleShadow: activeShadow,
+    secondaryColor: theme?.secondaryColor || '#22A6B7',
+    primaryColor: theme?.primaryColor || '#E5A93B',
+  });
 
   useEffect(() => {
     morphTargetRef.current = activeTarget;
-    themeRef.current = theme;
-  }, [activeTarget, theme]);
+    themeRef.current = {
+      particleColor: activeColor,
+      particleSpeed: activeSpeed,
+      particleShadow: activeShadow,
+      secondaryColor: theme?.secondaryColor || '#22A6B7',
+      primaryColor: theme?.primaryColor || '#E5A93B',
+    };
+  }, [activeTarget, activeColor, activeSpeed, activeShadow, theme?.secondaryColor, theme?.primaryColor]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -51,7 +77,7 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
       size: number;
     }> = [];
 
-    const baseDensity = theme.particleDensity ?? 65;
+    const baseDensity = activeDensity;
     const numParticles = isMobile ? Math.max(10, Math.round(baseDensity * 0.35)) : baseDensity;
 
     for (let i = 0; i < numParticles; i++) {
@@ -437,11 +463,12 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
     observer.observe(canvas);
 
     const parseRgbNums = (hex: string): [number, number, number] => {
-      if (!hex) return [229, 169, 59];
-      let clean = hex.replace('#', '');
+      if (!hex || typeof hex !== 'string') return [229, 169, 59];
+      let clean = hex.replace('#', '').trim();
       if (clean.length === 3) clean = clean.split('').map(c => c + c).join('');
       if (clean.length !== 6) return [229, 169, 59];
       const num = parseInt(clean, 16);
+      if (isNaN(num)) return [229, 169, 59];
       return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
     };
 
@@ -472,6 +499,25 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
       const activeTheme = themeRef.current;
       const particleColorHex = activeTheme.particleColor || activeTheme.primaryColor || '#E5A93B';
       const speedMult = activeTheme.particleSpeed ?? 1.0;
+      const rawShadow = activeTheme.particleShadow;
+
+      // Strict validation and explicit reset of canvas shadow context to avoid sticky blur artifacts
+      let validShadowColor = 'transparent';
+      let validShadowBlur = 0;
+
+      if (
+        rawShadow && 
+        typeof rawShadow === 'string' && 
+        rawShadow.trim().length > 0 && 
+        rawShadow.trim() !== 'none' && 
+        rawShadow.trim() !== 'transparent'
+      ) {
+        validShadowColor = rawShadow.trim();
+        validShadowBlur = 10;
+      }
+
+      ctx.shadowColor = validShadowColor;
+      ctx.shadowBlur = validShadowBlur;
 
       const [pR, pG, pB] = parseRgbNums(particleColorHex);
       const [sR, sG, sB] = parseRgbNums(activeTheme.secondaryColor || '#22A6B7');
@@ -525,6 +571,10 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
       }
       ctx.fill();
 
+      // Explicitly reset shadowBlur to 0 after drawing particles to prevent bleeding into connecting lines
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
+
       // 4. Connecting lines (Desktop only)
       if (!isMobile) {
         for (let i = 0; i < particles.length; i++) {
@@ -567,9 +617,10 @@ export const CanvasParticles: React.FC<CanvasParticlesProps> = ({
         parent.removeEventListener('mouseleave', handleMouseLeave);
       }
     };
-  }, [theme?.particleDensity, activeTarget]);
+  }, [activeDensity, activeTarget]);
 
   return <canvas ref={canvasRef} className={className} />;
 };
 
 export default CanvasParticles;
+

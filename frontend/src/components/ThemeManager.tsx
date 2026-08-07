@@ -263,6 +263,7 @@ export const ThemeManager: React.FC = () => {
   const [particleDensity, setParticleDensity] = useState(65);
   const [particleSpeed, setParticleSpeed] = useState(1.0);
   const [particleColor, setParticleColor] = useState('');
+  const [particleShadow, setParticleShadow] = useState('');
   const [cardStyle, setCardStyle] = useState('rounded-full');
   const [backgroundPattern, setBackgroundPattern] = useState('stars');
   const [fontPreset, setFontPreset] = useState('cormorant');
@@ -320,6 +321,7 @@ export const ThemeManager: React.FC = () => {
       setParticleDensity(theme.particleDensity ?? 65);
       setParticleSpeed(theme.particleSpeed ?? 1.0);
       setParticleColor(theme.particleColor || '');
+      setParticleShadow(theme.particleShadow || '');
       setCardStyle(theme.cardStyle || 'rounded-full');
       setBackgroundPattern(theme.backgroundPattern || 'stars');
       setFontPreset(theme.fontPreset || 'cormorant');
@@ -367,6 +369,7 @@ export const ThemeManager: React.FC = () => {
       particleDensity,
       particleSpeed,
       particleColor,
+      particleShadow,
       cardStyle,
       backgroundPattern,
       fontPreset,
@@ -389,7 +392,7 @@ export const ThemeManager: React.FC = () => {
       setThemeOverride(payload);
       setSyncStatus('idle');
     }, 50);
-  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, backgroundGradient, accentColor, cardBackground, cardBoxShadow, borderWidth, borderOpacity, borderStylePreset, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, particleDensity, particleSpeed, particleColor, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
+  }, [themeMode, primaryColor, secondaryColor, backgroundStart, backgroundEnd, backgroundGradient, accentColor, cardBackground, cardBoxShadow, borderWidth, borderOpacity, borderStylePreset, textColor, headingColor, subtitleColor, buttonBg, buttonText, buttonHoverBg, buttonHoverText, buttonFocusRing, cardHoverBg, cardHoverBorder, cardFocusRing, elementHoverColor, elementFocusRing, borderColor, particleShape, particleDensity, particleSpeed, particleColor, particleShadow, cardStyle, backgroundPattern, fontPreset, customCss, sectionThemes, setThemeOverride]);
 
   useEffect(() => {
     handleLivePreview();
@@ -465,6 +468,7 @@ export const ThemeManager: React.FC = () => {
       particle_density: particleDensity,
       particle_speed: particleSpeed,
       particle_color: particleColor,
+      particle_shadow: particleShadow,
       card_style: cardStyle,
       background_pattern: backgroundPattern,
       font_preset: fontPreset,
@@ -1155,6 +1159,46 @@ export const ThemeManager: React.FC = () => {
                       className="text-[9px] px-2 py-2 bg-white/10 hover:bg-white/20 text-white/70 rounded-xl uppercase font-bold"
                     >
                       Auto
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Particle Custom Shadow / Glow Picker */}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
+                  Sombra / Resplandor de Partículas:
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={(themeMode === 'section' ? (currentSectionSpec.particle_shadow || particleShadow) : particleShadow) || particleColor || primaryColor}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_shadow', e.target.value);
+                      else setParticleShadow(e.target.value);
+                    }}
+                    className="w-10 h-10 rounded-xl bg-transparent border-0 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Sin sombra (Vacío)"
+                    value={themeMode === 'section' ? (currentSectionSpec.particle_shadow || particleShadow) : particleShadow}
+                    onChange={(e) => {
+                      if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_shadow', e.target.value);
+                      else setParticleShadow(e.target.value);
+                    }}
+                    className="bg-[#0d110e] border border-white/20 rounded-xl px-3 py-2 text-xs font-mono text-white w-full focus:border-amber-honey focus:outline-none"
+                  />
+                  {(themeMode === 'section' ? currentSectionSpec.particle_shadow : particleShadow) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (themeMode === 'section') updateSectionProp(selectedSectionKey, 'particle_shadow', '');
+                        else setParticleShadow('');
+                      }}
+                      className="text-[9px] px-2 py-2 bg-white/10 hover:bg-white/20 text-white/70 rounded-xl uppercase font-bold"
+                    >
+                      Limpiar
                     </button>
                   )}
                 </div>
