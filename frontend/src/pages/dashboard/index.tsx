@@ -1,98 +1,94 @@
-import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import api from '../../lib/api';
-import { showAlert, showConfirm, showToast } from '../../lib/notifications';
-import { cn } from '../../lib/utils';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
-import { motion, AnimatePresence } from 'framer-motion';
-import CouponManager from '../../components/CouponManager';
-import ThemeManager from '../../components/ThemeManager';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  DollarSign,
-  TicketIcon,
-  ShoppingBag,
-  Users,
   Activity,
-  Database,
-  Cpu,
-  HardDrive,
-  Layers,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
-  Gauge,
-  ExternalLink,
-  Truck,
-  Package,
-  Landmark,
-  PlusCircle,
-  ClipboardList,
-  Check,
-  MapPin,
-  Mail,
-  User as UserIcon,
-  Ticket,
-  Plus,
-  Trash2,
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  BarChart2,
+  Bold,
   Calendar,
+  Camera,
+  Check,
+  ChevronRight,
+  ClipboardList,
+  Cpu,
+  Database,
+  DollarSign,
+  Download,
   Edit2,
-  X,
+  ExternalLink,
   Eye,
   EyeOff,
-  Bold,
+  FileText,
+  FolderOpen,
+  HardDrive,
+  Image as ImageIcon,
   Italic,
-  Underline,
+  Landmark,
+  Layers,
+  Link2,
   List,
   ListOrdered,
-  Quote,
-  Link2,
-  Image as ImageIcon,
-  ChevronDown,
-  Sliders,
-  Target,
-  FolderOpen,
-  Palette,
-  Monitor,
-  Tablet,
-  Smartphone,
-  Smile,
-  Camera,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
-  Printer,
+  Mail,
+  MapPin,
   Maximize2,
   Minimize2,
-  BarChart2,
+  Monitor,
+  Package,
+  Palette,
   PieChart,
-  Download,
+  Plus,
+  PlusCircle,
+  Printer,
+  Quote,
+  RefreshCw,
   Search,
-  FileText,
-  RefreshCw
+  ShoppingBag,
+  Sliders,
+  Smartphone,
+  Smile,
+  Tablet,
+  Target,
+  Ticket,
+  TicketIcon,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  Truck,
+  Underline,
+  User as UserIcon,
+  Users,
+  X
 } from 'lucide-react';
-import { getApiUrl } from '../../lib/utils';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import React, { useEffect, useState } from 'react';
+import CouponManager from '../../components/CouponManager';
+import ThemeManager from '../../components/ThemeManager';
+import api from '../../lib/api';
+import { showAlert, showConfirm, showToast } from '../../lib/notifications';
+import { cn, getApiUrl } from '../../lib/utils';
 
 import {
-  DashboardStats,
-  SystemMetrics,
-  Order,
-  Expense,
-  Coupon,
+  BookingContract,
   Campaign,
-  MarketingList,
-  Subscriber,
-  Product,
+  CampaignTemplateImage,
   Category,
+  Coupon,
+  DashboardStats,
   Event,
+  Expense,
+  MarketingList,
+  Order,
+  Product,
+  Subscriber,
+  SystemMetrics,
   Theater,
   User,
-  UserProfile,
-  BookingContract,
-  BookingInquiry,
-  CampaignTemplateImage
+  UserProfile
 } from '../../types';
 
 const API_URL = typeof window !== 'undefined' ? getApiUrl() : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
@@ -166,12 +162,12 @@ const formatCampaignText = (text: string, mode: 'poem' | 'letter', alignment: st
 
   return text.replace(blockRegex, (match, tag, attrs, content) => {
     const t = tag.toLowerCase();
-    
+
     // Determinar la alineación de este bloque específico
     let textAlign = alignment;
     const styleMatch = attrs.match(/text-align\s*:\s*(left|center|right|justify)/i);
     const alignMatch = attrs.match(/\balign\s*=\s*["']?(left|center|right|justify)/i);
-    
+
     if (styleMatch) {
       textAlign = styleMatch[1].toLowerCase();
     } else if (alignMatch) {
@@ -330,6 +326,12 @@ export default function AdminDashboard() {
   const [musicCredentialsLoading, setMusicCredentialsLoading] = useState(false);
   const [musicCredentialsSaving, setMusicCredentialsSaving] = useState(false);
   const [showSecretMap, setShowSecretMap] = useState<{ youtube: boolean; spotify: boolean }>({ youtube: false, spotify: false });
+  const [musicHealthcheck, setMusicHealthcheck] = useState<{
+    spotify?: { ok: boolean; message: string };
+    youtube?: { ok: boolean; message: string };
+    itunes?: { ok: boolean; message: string };
+  } | null>(null);
+  const [musicHealthcheckLoading, setMusicHealthcheckLoading] = useState(false);
 
   // Playlists CRUD State
   const [musicPlaylists, setMusicPlaylists] = useState<any[]>([]);
@@ -418,22 +420,22 @@ export default function AdminDashboard() {
   const [campCardPaddingDesktop, setCampCardPaddingDesktop] = useState('40px');
   const [campCardPaddingTablet, setCampCardPaddingTablet] = useState('40px');
   const [campCardPaddingMobile, setCampCardPaddingMobile] = useState('16px');
-  
+
   const [campTitleFontSizeDesktop, setCampTitleFontSizeDesktop] = useState('26px');
   const [campTitleFontSizeTablet, setCampTitleFontSizeTablet] = useState('22px');
   const [campTitleFontSizeMobile, setCampTitleFontSizeMobile] = useState('18px');
-  
+
   const [campBodyFontSizeDesktop, setCampBodyFontSizeDesktop] = useState('16px');
   const [campBodyFontSizeTablet, setCampBodyFontSizeTablet] = useState('15px');
   const [campBodyFontSizeMobile, setCampBodyFontSizeMobile] = useState('14px');
   const [campBodyAlignmentTablet, setCampBodyAlignmentTablet] = useState('center');
   const [campBodyAlignmentMobile, setCampBodyAlignmentMobile] = useState('center');
-  
+
   const [campImageWidthTablet, setCampImageWidthTablet] = useState('100%');
   const [campImageWidthMobile, setCampImageWidthMobile] = useState('100%');
   const [campImageAlignTablet, setCampImageAlignTablet] = useState('center');
   const [campImageAlignMobile, setCampImageAlignMobile] = useState('center');
-  
+
   const [campCtaAlignTablet, setCampCtaAlignTablet] = useState('center');
   const [campCtaAlignMobile, setCampCtaAlignMobile] = useState('center');
 
@@ -840,7 +842,7 @@ export default function AdminDashboard() {
                 localStorage.setItem('user', JSON.stringify(u));
                 setCurrentUser(u);
               }
-            } catch (err) {}
+            } catch (err) { }
           }
         }
         if (systemRes?.data) {
@@ -931,9 +933,10 @@ export default function AdminDashboard() {
         setMusicCredentialsLoading(true);
         setMusicPlaylistsLoading(true);
         try {
-          const [cfgRes, plRes] = await Promise.all([
+          const [cfgRes, plRes, healthRes] = await Promise.all([
             api.get('/music/config/').catch(() => ({ data: null })),
-            api.get('/music/playlists/').catch(() => ({ data: [] }))
+            api.get('/music/playlists/').catch(() => ({ data: [] })),
+            api.get('/music/healthcheck/').catch(() => ({ data: null }))
           ]);
           if (cfgRes?.data) {
             setMusicDiscographyDesc(cfgRes.data.discography_description || '');
@@ -944,6 +947,9 @@ export default function AdminDashboard() {
             setAmazonMusicArtistId(cfgRes.data.amazon_music_artist_id || '');
           }
           setMusicPlaylists(Array.isArray(plRes?.data) ? plRes.data : []);
+          if (healthRes?.data) {
+            setMusicHealthcheck(healthRes.data);
+          }
         } catch (e) {
           console.error("Error al cargar datos de la app música:", e);
         } finally {
@@ -1456,23 +1462,23 @@ export default function AdminDashboard() {
     setCampImageAlignMobile(styles.image_align_mobile || campaign.image_style?.align || 'center');
     setCampCtaAlignTablet(styles.cta_alignment_tablet || styles.cta_alignment || 'center');
     setCampCtaAlignMobile(styles.cta_alignment_mobile || styles.cta_alignment || 'center');
-    
+
     // Load responsive section styles
     setCampTitlePaddingTablet(styles.title_padding_tablet || styles.title_padding || '0px');
     setCampTitlePaddingMobile(styles.title_padding_mobile || styles.title_padding_tablet || styles.title_padding || '0px');
     setCampTitleRadiusTablet(styles.title_radius_tablet || styles.title_radius || '0px');
     setCampTitleRadiusMobile(styles.title_radius_mobile || styles.title_radius_tablet || styles.title_radius || '0px');
-    
+
     setCampBodyPaddingTablet(styles.body_padding_tablet || styles.body_padding || '0px');
     setCampBodyPaddingMobile(styles.body_padding_mobile || styles.body_padding_tablet || styles.body_padding || '0px');
     setCampBodyRadiusTablet(styles.body_radius_tablet || styles.body_radius || '0px');
     setCampBodyRadiusMobile(styles.body_radius_mobile || styles.body_radius_tablet || styles.body_radius || '0px');
-    
+
     setCampFooterPaddingTablet(styles.footer_padding_tablet || styles.footer_padding || '0px');
     setCampFooterPaddingMobile(styles.footer_padding_mobile || styles.footer_padding_tablet || styles.footer_padding || '0px');
     setCampFooterRadiusTablet(styles.footer_radius_tablet || styles.footer_radius || '0px');
     setCampFooterRadiusMobile(styles.footer_radius_mobile || styles.footer_radius_tablet || styles.footer_radius || '0px');
-    
+
     setPreviewViewport('desktop');
     setIsPreviewExpanded(false);
     setIsSectionStyleSectionOpen(false);
@@ -1800,7 +1806,7 @@ export default function AdminDashboard() {
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
           const range = selection.getRangeAt(0);
-          
+
           // Verificar que la selección esté realmente dentro del editor
           if (campaignEditorRef.current.contains(range.commonAncestorContainer)) {
             const img = document.createElement('img');
@@ -1823,7 +1829,7 @@ export default function AdminDashboard() {
             return;
           }
         }
-        
+
         // Si no hay selección válida, añadir al final de la vista y actualizar estado
         campaignEditorRef.current.innerHTML += imgHtml;
         setCampPoemText(campaignEditorRef.current.innerHTML);
@@ -1831,11 +1837,11 @@ export default function AdminDashboard() {
         // Si está en otra sección (Diseño, Portada, Biblioteca) o en otro tab (Título, Pie):
         // 1. Guardar estado del editor actual si es que hay algo montado
         syncEditorState();
-        
+
         // 2. Cambiar de sección al cuerpo del email
         setSettingsTab('content');
         setEditorActiveTab('body');
-        
+
         // 3. Añadir la imagen al final del estado del cuerpo
         setCampPoemText((prev: string) => {
           const base = prev || '';
@@ -1969,7 +1975,7 @@ export default function AdminDashboard() {
     setEditingEvent(event);
     setEventTitle(event.title);
     setEventArtist(event.artist);
-    
+
     let formattedDate = '';
     if (event.date) {
       const d = new Date(event.date);
@@ -2005,7 +2011,7 @@ export default function AdminDashboard() {
     if (!eventArtist.trim()) { setEventErrorMsg('El artista es obligatorio.'); return; }
     if (!eventDate) { setEventErrorMsg('La fecha es obligatoria.'); return; }
     if (eventType === 'concert' && !eventTheater) { setEventErrorMsg('Debes seleccionar un teatro para un concierto.'); return; }
-    
+
     if (eventType === 'meet_greet') {
       if (!eventMgPrice || parseFloat(eventMgPrice) < 0) { setEventErrorMsg('El precio de la convivencia debe ser un valor válido.'); return; }
       if (!eventMgLimit || parseInt(eventMgLimit) < 0) { setEventErrorMsg('El límite de boletos debe ser un valor válido.'); return; }
@@ -2016,7 +2022,7 @@ export default function AdminDashboard() {
     setEventSuccessMsg(null);
 
     const token = localStorage.getItem('token');
-    const headers = { 
+    const headers = {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'multipart/form-data'
     };
@@ -2441,10 +2447,10 @@ export default function AdminDashboard() {
   const chartData = chartPeriod === 'monthly'
     ? monthlyData
     : chartPeriod === 'weekly'
-    ? weeklyData
-    : chartPeriod === 'event'
-    ? eventData
-    : dailyData;
+      ? weeklyData
+      : chartPeriod === 'event'
+        ? eventData
+        : dailyData;
 
   // SVG Area Chart calculations
   const chartWidth = 700;
@@ -2983,21 +2989,19 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-2 bg-[#0C120E] p-1.5 rounded-2xl border border-[#2B392F]">
                       <button
                         onClick={() => setMusicTabSubTab('credentials')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                          musicTabSubTab === 'credentials'
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${musicTabSubTab === 'credentials'
                             ? 'bg-amber-honey text-[#1E2B22] shadow-md'
                             : 'text-[#F4F6F0]/60 hover:text-white'
-                        }`}
+                          }`}
                       >
                         Credenciales API
                       </button>
                       <button
                         onClick={() => setMusicTabSubTab('playlists')}
-                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                          musicTabSubTab === 'playlists'
+                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${musicTabSubTab === 'playlists'
                             ? 'bg-amber-honey text-[#1E2B22] shadow-md'
                             : 'text-[#F4F6F0]/60 hover:text-white'
-                        }`}
+                          }`}
                       >
                         Listas & Widgets ({musicPlaylists.length})
                       </button>
@@ -3029,6 +3033,10 @@ export default function AdminDashboard() {
                             showToast.success('Credenciales y configuración de música guardadas correctamente.');
                             if (res.data.youtube_api_key) setYoutubeApiKey(res.data.youtube_api_key);
                             if (res.data.spotify_client_secret) setSpotifyClientSecret(res.data.spotify_client_secret);
+                            // Refresh healthcheck badges
+                            api.get('/music/healthcheck/').then(hc => {
+                              if (hc?.data) setMusicHealthcheck(hc.data);
+                            }).catch(() => { });
                           }
                         } catch (err: any) {
                           console.error(err);
@@ -3039,6 +3047,87 @@ export default function AdminDashboard() {
                       }}
                       className="bg-[#141C16] p-8 rounded-3xl border border-[#2B392F] space-y-6"
                     >
+                      {/* API Healthcheck Monitoring Badges */}
+                      <div className="bg-[#0C120E] p-6 rounded-2xl border border-[#2B392F] space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Activity size={16} className="text-amber-honey" />
+                            <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                              Estado de Salud de APIs de Musica (Live Healthcheck)
+                            </h4>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setMusicHealthcheckLoading(true);
+                              try {
+                                const res = await api.get('/music/healthcheck/');
+                                setMusicHealthcheck(res.data);
+                                showToast.success('Healthcheck de APIs actualizado.');
+                              } catch (e) {
+                                showToast.error('Error al consultar estado de APIs.');
+                              } finally {
+                                setMusicHealthcheckLoading(false);
+                              }
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-wider text-amber-honey transition-all flex items-center gap-1.5"
+                          >
+                            <RefreshCw size={12} className={musicHealthcheckLoading ? 'animate-spin' : ''} />
+                            Verificar Estado
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {/* Spotify Badge */}
+                          <div className="p-4 bg-[#141C16] border border-[#2B392F] rounded-xl flex items-start gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 mt-0.5 ${musicHealthcheck?.spotify?.ok ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-white">Spotify Web API</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${musicHealthcheck?.spotify?.ok ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                  {musicHealthcheck?.spotify?.ok ? 'Activo' : 'Atención'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-[#F4F6F0]/60 mt-1 leading-snug">
+                                {musicHealthcheck?.spotify?.message || 'Sin verificar'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* YouTube Badge */}
+                          <div className="p-4 bg-[#141C16] border border-[#2B392F] rounded-xl flex items-start gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 mt-0.5 ${musicHealthcheck?.youtube?.ok ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-white">YouTube Data API</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${musicHealthcheck?.youtube?.ok ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                  {musicHealthcheck?.youtube?.ok ? 'Activo' : 'Atención'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-[#F4F6F0]/60 mt-1 leading-snug">
+                                {musicHealthcheck?.youtube?.message || 'Sin verificar'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* iTunes / Apple Music Badge */}
+                          <div className="p-4 bg-[#141C16] border border-[#2B392F] rounded-xl flex items-start gap-3">
+                            <span className={`w-3 h-3 rounded-full shrink-0 mt-0.5 ${musicHealthcheck?.itunes?.ok ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black text-white">Apple Music / iTunes</span>
+                                <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${musicHealthcheck?.itunes?.ok ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                                  {musicHealthcheck?.itunes?.ok ? 'Activo (Público)' : 'Atención'}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-[#F4F6F0]/60 mt-1 leading-snug">
+                                {musicHealthcheck?.itunes?.message || 'Sin verificar'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       <h3 className="text-lg font-black text-amber-honey uppercase tracking-tight">
                         Configuración Global de Discografía & Llaves de Integración
                       </h3>
@@ -3212,12 +3301,11 @@ export default function AdminDashboard() {
                                     )}
                                   </td>
                                   <td className="p-4">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                      pl.platform === 'spotify' ? 'bg-[#1DB954]/20 text-[#1DB954] border border-[#1DB954]/40' :
-                                      pl.platform === 'youtube' ? 'bg-red-600/20 text-red-400 border border-red-500/40' :
-                                      pl.platform === 'apple_music' ? 'bg-pink-600/20 text-pink-400 border border-pink-500/40' :
-                                      'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
-                                    }`}>
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${pl.platform === 'spotify' ? 'bg-[#1DB954]/20 text-[#1DB954] border border-[#1DB954]/40' :
+                                        pl.platform === 'youtube' ? 'bg-red-600/20 text-red-400 border border-red-500/40' :
+                                          pl.platform === 'apple_music' ? 'bg-pink-600/20 text-pink-400 border border-pink-500/40' :
+                                            'bg-cyan-600/20 text-cyan-400 border border-cyan-500/40'
+                                      }`}>
                                       {pl.platform}
                                     </span>
                                   </td>
@@ -3236,9 +3324,8 @@ export default function AdminDashboard() {
                                           showToast.error('Error al actualizar estado.');
                                         }
                                       }}
-                                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                        pl.is_active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
-                                      }`}
+                                      className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${pl.is_active ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' : 'bg-red-500/20 text-red-400 border border-red-500/40'
+                                        }`}
                                     >
                                       {pl.is_active ? 'Activa' : 'Inactiva'}
                                     </button>
@@ -5951,7 +6038,7 @@ export default function AdminDashboard() {
                     {/* Section: Biografía Personalizada */}
                     <div className="border-t border-white/10 pt-4 space-y-4">
                       <h4 className="text-xs font-black uppercase tracking-wider text-amber-honey">📖 Personalización de la Biografía (Landing Page)</h4>
-                      
+
                       <div className="grid sm:grid-cols-3 gap-4">
                         <div className="space-y-1">
                           <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Badge Biografía</label>
@@ -6139,20 +6226,18 @@ export default function AdminDashboard() {
                               </div>
                             )}
                             <div className="absolute top-3 right-3 flex gap-1">
-                              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${
-                                event.event_type === 'concert'
+                              <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border ${event.event_type === 'concert'
                                   ? 'bg-purple-950/80 text-purple-300 border-purple-800'
                                   : 'bg-amber-950/80 text-amber-300 border-amber-800'
-                              }`}>
+                                }`}>
                                 {event.event_type === 'concert' ? 'Concierto' : 'Meet & Greet'}
                               </span>
                               <button
                                 onClick={() => handleToggleEventActive(event)}
-                                className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-all ${
-                                  event.is_active
+                                className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border transition-all ${event.is_active
                                     ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800 hover:bg-emerald-900'
                                     : 'bg-red-950/80 text-red-300 border-red-800 hover:bg-red-900'
-                                }`}
+                                  }`}
                               >
                                 {event.is_active ? 'Activo' : 'Inactivo'}
                               </button>
@@ -6310,7 +6395,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Navigation Tab Bar for Editor Settings */}
                     <div className="flex bg-white/5 border border-white/10 rounded-2xl p-1 gap-1 overflow-x-auto custom-scroll mb-4">
                       {[
@@ -6328,11 +6413,10 @@ export default function AdminDashboard() {
                             syncEditorState();
                             setSettingsTab(tab.id as any);
                           }}
-                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 whitespace-nowrap ${
-                            settingsTab === tab.id
+                          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-200 whitespace-nowrap ${settingsTab === tab.id
                               ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
                               : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                          }`}
+                            }`}
                         >
                           {tab.icon}
                           {tab.label}
@@ -6361,11 +6445,10 @@ export default function AdminDashboard() {
                                 key={vp.id}
                                 type="button"
                                 onClick={() => setPreviewViewport(vp.id as any)}
-                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                  previewViewport === vp.id
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${previewViewport === vp.id
                                     ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
                                     : 'text-[#F4F6F0]/65 hover:text-[#F4F6F0] hover:bg-white/5'
-                                }`}
+                                  }`}
                               >
                                 {vp.icon}
                                 <span className="hidden sm:inline">{vp.label}</span>
@@ -6459,11 +6542,10 @@ export default function AdminDashboard() {
                                   key={mode.id}
                                   type="button"
                                   onClick={() => setCampTextMode(mode.id as any)}
-                                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                    campTextMode === mode.id
+                                  className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${campTextMode === mode.id
                                       ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
                                       : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                                  }`}
+                                    }`}
                                 >
                                   {mode.label}
                                 </button>
@@ -6498,11 +6580,10 @@ export default function AdminDashboard() {
                                     }
                                     setEditorActiveTab(tab.id as any);
                                   }}
-                                  className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                    editorActiveTab === tab.id
+                                  className={`flex-1 py-2 text-center rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${editorActiveTab === tab.id
                                       ? 'bg-amber-honey text-[#030303] shadow-md'
                                       : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                                  }`}
+                                    }`}
                                 >
                                   {tab.label}
                                 </button>
@@ -6951,8 +7032,8 @@ export default function AdminDashboard() {
                                 <select
                                   value={
                                     previewViewport === 'desktop' ? campImageWidth :
-                                    previewViewport === 'tablet' ? campImageWidthTablet :
-                                    campImageWidthMobile
+                                      previewViewport === 'tablet' ? campImageWidthTablet :
+                                        campImageWidthMobile
                                   }
                                   onChange={e => {
                                     if (previewViewport === 'desktop') setCampImageWidth(e.target.value);
@@ -6972,8 +7053,8 @@ export default function AdminDashboard() {
                                 <select
                                   value={
                                     previewViewport === 'desktop' ? campImageAlign :
-                                    previewViewport === 'tablet' ? campImageAlignTablet :
-                                    campImageAlignMobile
+                                      previewViewport === 'tablet' ? campImageAlignTablet :
+                                        campImageAlignMobile
                                   }
                                   onChange={e => {
                                     if (previewViewport === 'desktop') setCampImageAlign(e.target.value);
@@ -7044,8 +7125,8 @@ export default function AdminDashboard() {
                                 <select
                                   value={
                                     previewViewport === 'desktop' ? campCardPaddingDesktop :
-                                    previewViewport === 'tablet' ? campCardPaddingTablet :
-                                    campCardPaddingMobile
+                                      previewViewport === 'tablet' ? campCardPaddingTablet :
+                                        campCardPaddingMobile
                                   }
                                   onChange={e => {
                                     if (previewViewport === 'desktop') setCampCardPaddingDesktop(e.target.value);
@@ -7056,24 +7137,24 @@ export default function AdminDashboard() {
                                 >
                                   {(previewViewport === 'desktop'
                                     ? [
-                                        { value: '20px', label: 'Sutil (20px)' },
-                                        { value: '32px', label: 'Mediano (32px)' },
-                                        { value: '40px', label: 'Elegante (40px)' },
-                                        { value: '48px', label: 'Extra Elegante (48px)' },
-                                      ]
+                                      { value: '20px', label: 'Sutil (20px)' },
+                                      { value: '32px', label: 'Mediano (32px)' },
+                                      { value: '40px', label: 'Elegante (40px)' },
+                                      { value: '48px', label: 'Extra Elegante (48px)' },
+                                    ]
                                     : previewViewport === 'tablet'
                                       ? [
-                                          { value: '20px', label: 'Sutil (20px)' },
-                                          { value: '24px', label: 'Mediano (24px)' },
-                                          { value: '32px', label: 'Elegante (32px)' },
-                                          { value: '40px', label: 'Extra Elegante (40px)' },
-                                        ]
+                                        { value: '20px', label: 'Sutil (20px)' },
+                                        { value: '24px', label: 'Mediano (24px)' },
+                                        { value: '32px', label: 'Elegante (32px)' },
+                                        { value: '40px', label: 'Extra Elegante (40px)' },
+                                      ]
                                       : [
-                                          { value: '12px', label: 'Sutil (12px)' },
-                                          { value: '16px', label: 'Mediano (16px)' },
-                                          { value: '20px', label: 'Elegante (20px)' },
-                                          { value: '24px', label: 'Extra Elegante (24px)' },
-                                        ]
+                                        { value: '12px', label: 'Sutil (12px)' },
+                                        { value: '16px', label: 'Mediano (16px)' },
+                                        { value: '20px', label: 'Elegante (20px)' },
+                                        { value: '24px', label: 'Extra Elegante (24px)' },
+                                      ]
                                   ).map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                   ))}
@@ -7137,8 +7218,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campTitlePadding :
-                                      previewViewport === 'tablet' ? campTitlePaddingTablet :
-                                      campTitlePaddingMobile
+                                        previewViewport === 'tablet' ? campTitlePaddingTablet :
+                                          campTitlePaddingMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampTitlePadding(e.target.value);
@@ -7160,8 +7241,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campTitleRadius :
-                                      previewViewport === 'tablet' ? campTitleRadiusTablet :
-                                      campTitleRadiusMobile
+                                        previewViewport === 'tablet' ? campTitleRadiusTablet :
+                                          campTitleRadiusMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampTitleRadius(e.target.value);
@@ -7186,8 +7267,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campTitleFontSizeDesktop :
-                                      previewViewport === 'tablet' ? campTitleFontSizeTablet :
-                                      campTitleFontSizeMobile
+                                        previewViewport === 'tablet' ? campTitleFontSizeTablet :
+                                          campTitleFontSizeMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampTitleFontSizeDesktop(e.target.value);
@@ -7287,8 +7368,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campBodyPadding :
-                                      previewViewport === 'tablet' ? campBodyPaddingTablet :
-                                      campBodyPaddingMobile
+                                        previewViewport === 'tablet' ? campBodyPaddingTablet :
+                                          campBodyPaddingMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampBodyPadding(e.target.value);
@@ -7310,8 +7391,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campBodyRadius :
-                                      previewViewport === 'tablet' ? campBodyRadiusTablet :
-                                      campBodyRadiusMobile
+                                        previewViewport === 'tablet' ? campBodyRadiusTablet :
+                                          campBodyRadiusMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampBodyRadius(e.target.value);
@@ -7336,8 +7417,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campBodyAlignment :
-                                      previewViewport === 'tablet' ? campBodyAlignmentTablet :
-                                      campBodyAlignmentMobile
+                                        previewViewport === 'tablet' ? campBodyAlignmentTablet :
+                                          campBodyAlignmentMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampBodyAlignment(e.target.value);
@@ -7360,8 +7441,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campBodyFontSizeDesktop :
-                                      previewViewport === 'tablet' ? campBodyFontSizeTablet :
-                                      campBodyFontSizeMobile
+                                        previewViewport === 'tablet' ? campBodyFontSizeTablet :
+                                          campBodyFontSizeMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampBodyFontSizeDesktop(e.target.value);
@@ -7461,8 +7542,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campFooterPadding :
-                                      previewViewport === 'tablet' ? campFooterPaddingTablet :
-                                      campFooterPaddingMobile
+                                        previewViewport === 'tablet' ? campFooterPaddingTablet :
+                                          campFooterPaddingMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampFooterPadding(e.target.value);
@@ -7484,8 +7565,8 @@ export default function AdminDashboard() {
                                   <select
                                     value={
                                       previewViewport === 'desktop' ? campFooterRadius :
-                                      previewViewport === 'tablet' ? campFooterRadiusTablet :
-                                      campFooterRadiusMobile
+                                        previewViewport === 'tablet' ? campFooterRadiusTablet :
+                                          campFooterRadiusMobile
                                     }
                                     onChange={e => {
                                       if (previewViewport === 'desktop') setCampFooterRadius(e.target.value);
@@ -7533,7 +7614,7 @@ export default function AdminDashboard() {
                           {/* GLOBAL CTA BLOCK SETTINGS */}
                           <div className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3">
                             <span className="text-[9px] text-amber-honey uppercase tracking-widest font-black block border-b border-white/5 pb-1">Distribución del Bloque de Botones</span>
-                            
+
                             <div className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <label className="text-[8px] text-[#F4F6F0]/60 uppercase tracking-widest font-black block">Margen Sup.</label>
@@ -7571,8 +7652,8 @@ export default function AdminDashboard() {
                                 <select
                                   value={
                                     previewViewport === 'desktop' ? campCtaAlignment :
-                                    previewViewport === 'tablet' ? campCtaAlignTablet :
-                                    campCtaAlignMobile
+                                      previewViewport === 'tablet' ? campCtaAlignTablet :
+                                        campCtaAlignMobile
                                   }
                                   onChange={e => {
                                     if (previewViewport === 'desktop') setCampCtaAlignment(e.target.value);
@@ -8015,11 +8096,10 @@ export default function AdminDashboard() {
                               key={vp.id}
                               type="button"
                               onClick={() => setPreviewViewport(vp.id as any)}
-                              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all duration-200 ${
-                                previewViewport === vp.id
+                              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all duration-200 ${previewViewport === vp.id
                                   ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
                                   : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                              }`}
+                                }`}
                             >
                               {vp.icon}
                               <span>{vp.label}</span>
@@ -8039,7 +8119,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
 
-                    <div 
+                    <div
                       className="border border-white/10 rounded-2xl overflow-hidden flex flex-col bg-[#080C0A] transition-all duration-300 mx-auto w-full"
                       style={{
                         width: previewViewport === 'mobile' ? '375px' : previewViewport === 'tablet' ? '768px' : '100%',
@@ -8132,7 +8212,7 @@ export default function AdminDashboard() {
                             <div style={{
                               textAlign: (
                                 ((previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'left' ? 'left' :
-                                (previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'right' ? 'right' : 'center') as any
+                                  (previewViewport === 'mobile' ? campImageAlignMobile : previewViewport === 'tablet' ? campImageAlignTablet : campImageAlign) === 'right' ? 'right' : 'center') as any
                               ),
                               marginBottom: '15px'
                             }}>
@@ -8407,71 +8487,71 @@ export default function AdminDashboard() {
 
               const activeCardPadding =
                 modalPreviewViewport === 'mobile' ? (styles.card_padding_mobile || '16px') :
-                modalPreviewViewport === 'tablet' ? (styles.card_padding_tablet || '32px') :
-                (styles.card_padding_desktop || styles.card_padding || '40px');
+                  modalPreviewViewport === 'tablet' ? (styles.card_padding_tablet || '32px') :
+                    (styles.card_padding_desktop || styles.card_padding || '40px');
 
               const activeTitlePadding =
                 modalPreviewViewport === 'mobile' ? (styles.title_padding_mobile || styles.title_padding || '0px') :
-                modalPreviewViewport === 'tablet' ? (styles.title_padding_tablet || styles.title_padding || '0px') :
-                (styles.title_padding || '0px');
+                  modalPreviewViewport === 'tablet' ? (styles.title_padding_tablet || styles.title_padding || '0px') :
+                    (styles.title_padding || '0px');
 
               const activeTitleRadius =
                 modalPreviewViewport === 'mobile' ? (styles.title_radius_mobile || styles.title_radius || '0px') :
-                modalPreviewViewport === 'tablet' ? (styles.title_radius_tablet || styles.title_radius || '0px') :
-                (styles.title_radius || '0px');
+                  modalPreviewViewport === 'tablet' ? (styles.title_radius_tablet || styles.title_radius || '0px') :
+                    (styles.title_radius || '0px');
 
               const activeTitleFontSize =
                 modalPreviewViewport === 'mobile' ? (styles.title_font_size_mobile || '20px') :
-                modalPreviewViewport === 'tablet' ? (styles.title_font_size_tablet || '24px') :
-                (styles.title_font_size_desktop || '26px');
+                  modalPreviewViewport === 'tablet' ? (styles.title_font_size_tablet || '24px') :
+                    (styles.title_font_size_desktop || '26px');
 
               const activeBodyPadding =
                 modalPreviewViewport === 'mobile' ? (styles.body_padding_mobile || styles.body_padding || '0px') :
-                modalPreviewViewport === 'tablet' ? (styles.body_padding_tablet || styles.body_padding || '0px') :
-                (styles.body_padding || '0px');
+                  modalPreviewViewport === 'tablet' ? (styles.body_padding_tablet || styles.body_padding || '0px') :
+                    (styles.body_padding || '0px');
 
               const activeBodyRadius =
                 modalPreviewViewport === 'mobile' ? (styles.body_radius_mobile || styles.body_radius || '0px') :
-                modalPreviewViewport === 'tablet' ? (styles.body_radius_tablet || styles.body_radius || '0px') :
-                (styles.body_radius || '0px');
+                  modalPreviewViewport === 'tablet' ? (styles.body_radius_tablet || styles.body_radius || '0px') :
+                    (styles.body_radius || '0px');
 
               const activeBodyFontSize =
                 modalPreviewViewport === 'mobile' ? (styles.body_font_size_mobile || '14px') :
-                modalPreviewViewport === 'tablet' ? (styles.body_font_size_tablet || '15px') :
-                (styles.body_font_size_desktop || '16px');
+                  modalPreviewViewport === 'tablet' ? (styles.body_font_size_tablet || '15px') :
+                    (styles.body_font_size_desktop || '16px');
 
               const activeBodyAlignment =
                 modalPreviewViewport === 'mobile' ? (styles.body_alignment_mobile || styles.body_alignment || 'center') :
-                modalPreviewViewport === 'tablet' ? (styles.body_alignment_tablet || styles.body_alignment || 'center') :
-                (styles.body_alignment || 'center');
+                  modalPreviewViewport === 'tablet' ? (styles.body_alignment_tablet || styles.body_alignment || 'center') :
+                    (styles.body_alignment || 'center');
 
               const activeImageWidth =
                 modalPreviewViewport === 'mobile' ? (styles.image_width_mobile || '100%') :
-                modalPreviewViewport === 'tablet' ? (styles.image_width_tablet || '100%') :
-                (styles.image_width || previewCampaign.image_style?.width || '100%');
+                  modalPreviewViewport === 'tablet' ? (styles.image_width_tablet || '100%') :
+                    (styles.image_width || previewCampaign.image_style?.width || '100%');
 
               const activeImageAlign =
                 modalPreviewViewport === 'mobile' ? (styles.image_align_mobile || 'center') :
-                modalPreviewViewport === 'tablet' ? (styles.image_align_tablet || 'center') :
-                (styles.image_align || previewCampaign.image_style?.align || 'center');
+                  modalPreviewViewport === 'tablet' ? (styles.image_align_tablet || 'center') :
+                    (styles.image_align || previewCampaign.image_style?.align || 'center');
 
               const activeImageRadius =
                 styles.image_radius || previewCampaign.image_style?.radius || '20px';
 
               const activeCtaAlign =
                 modalPreviewViewport === 'mobile' ? (styles.cta_alignment_mobile || 'center') :
-                modalPreviewViewport === 'tablet' ? (styles.cta_alignment_tablet || 'center') :
-                (styles.cta_alignment || 'center');
+                  modalPreviewViewport === 'tablet' ? (styles.cta_alignment_tablet || 'center') :
+                    (styles.cta_alignment || 'center');
 
               const activeFooterPadding =
                 modalPreviewViewport === 'mobile' ? (styles.footer_padding_mobile || styles.footer_padding || '0px') :
-                modalPreviewViewport === 'tablet' ? (styles.footer_padding_tablet || styles.footer_padding || '0px') :
-                (styles.footer_padding || '0px');
+                  modalPreviewViewport === 'tablet' ? (styles.footer_padding_tablet || styles.footer_padding || '0px') :
+                    (styles.footer_padding || '0px');
 
               const activeFooterRadius =
                 modalPreviewViewport === 'mobile' ? (styles.footer_radius_mobile || styles.footer_radius || '0px') :
-                modalPreviewViewport === 'tablet' ? (styles.footer_radius_tablet || styles.footer_radius || '0px') :
-                (styles.footer_radius || '0px');
+                  modalPreviewViewport === 'tablet' ? (styles.footer_radius_tablet || styles.footer_radius || '0px') :
+                    (styles.footer_radius || '0px');
 
               const titleBgStyle: any = styles.title_bg_color && styles.title_bg_color !== 'transparent'
                 ? { backgroundColor: styles.title_bg_color }
@@ -8535,11 +8615,10 @@ export default function AdminDashboard() {
                             key={vp.id}
                             type="button"
                             onClick={() => setModalPreviewViewport(vp.id as any)}
-                            className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all duration-200 ${
-                              modalPreviewViewport === vp.id
+                            className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all duration-200 ${modalPreviewViewport === vp.id
                                 ? 'bg-amber-honey text-[#030303] shadow-md scale-[1.02]'
                                 : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                            }`}
+                              }`}
                           >
                             {vp.icon}
                             <span>{vp.label}</span>
