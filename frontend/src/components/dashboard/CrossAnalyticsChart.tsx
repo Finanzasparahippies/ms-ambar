@@ -30,7 +30,7 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
   }
 
   // Estimar costo pauta diario para la gráfica basada en adSpendTotal
-  const estimatedDailyAdSpend = adSpendTotal > 0 ? roundVal(adSpendTotal / data.length) : roundVal(28250 / data.length);
+  const estimatedDailyAdSpend = (adSpendTotal && adSpendTotal > 0 && data.length > 0) ? roundVal(adSpendTotal / data.length) : 0;
 
   // Calcular valor máximo para escalar barras/gráficas adecuadamente
   const maxVal = Math.max(

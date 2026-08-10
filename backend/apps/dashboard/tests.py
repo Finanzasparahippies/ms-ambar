@@ -155,6 +155,25 @@ class DashboardAppTests(APITestCase):
         self.assertEqual(response.data['vitals'][0]['name'], 'LCP')
         self.assertEqual(response.data['vitals'][0]['value'], 2000.0)
 
+        # Ads metrics safety verification
+        self.assertIn('ads', response.data)
+        self.assertIn('is_connected', response.data['ads'])
+        self.assertIn('summary', response.data['ads'])
+
+    def test_analytics_overview_without_ads_credentials(self):
+        """Verify dashboard overview handles unconfigured/failing ads gracefully."""
+        url = reverse('analytics_overview')
+        self.client.force_authenticate(user=self.admin_user)
+        
+        from unittest.mock import patch
+        with patch('apps.dashboard.services.ads_service.AdsIntegrationService.is_google_ads_configured', return_value=False), \
+             patch('apps.dashboard.services.ads_service.AdsIntegrationService.is_meta_ads_configured', return_value=False):
+            response = self.client.get(url + '?period=7d')
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertIn('ads', response.data)
+            self.assertFalse(response.data['ads']['is_connected'])
+            self.assertEqual(response.data['ads']['summary']['total_spend'], 0.0)
+
     def test_system_metrics_unauthorized(self):
         """Verify that only admin users can access system metrics."""
         url = reverse('system_metrics')

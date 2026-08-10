@@ -24,10 +24,25 @@ class AdsIntegrationService:
     CACHE_TTL_SECONDS = 3600  # 1 hora de caché por defecto para proteger rate limits
 
     @classmethod
+    def is_google_ads_configured(cls):
+        developer_token = getattr(settings, 'GOOGLE_ADS_DEVELOPER_TOKEN', '')
+        client_id = getattr(settings, 'GOOGLE_ADS_CLIENT_ID', '')
+        client_secret = getattr(settings, 'GOOGLE_ADS_CLIENT_SECRET', '')
+        customer_id = getattr(settings, 'GOOGLE_ADS_CUSTOMER_ID', '')
+        return bool(developer_token and client_id and client_secret and customer_id and not str(developer_token).startswith('mock_'))
+
+    @classmethod
+    def is_meta_ads_configured(cls):
+        access_token = getattr(settings, 'META_ADS_ACCESS_TOKEN', '')
+        ad_account_id = getattr(settings, 'META_ADS_ACCOUNT_ID', '')
+        return bool(access_token and ad_account_id and not str(access_token).startswith('mock_'))
+
+    @classmethod
     def get_ads_performance(cls, period="30d", force_refresh=False):
         """
         Recupera el consolidado de métricas publicitarias.
         Usa la caché activa para respetar los rate limits de Google y Meta.
+        Incluye manejo nulo y bandera de estado de conexión.
         """
         cache_key = f"{cls.CACHE_KEY}_{period}"
         if not force_refresh:
@@ -36,34 +51,77 @@ class AdsIntegrationService:
                 logger.info(f"[AdsIntegrationService] Retornando métricas de pauta desde la caché (Periodo: {period}).")
                 return cached_data
 
-        google_metrics = cls.fetch_google_ads_metrics(period)
-        meta_metrics = cls.fetch_meta_ads_metrics(period)
+        try:
+            google_configured = cls.is_google_ads_configured()
+            meta_configured = cls.is_meta_ads_configured()
+            is_connected = google_configured or meta_configured
 
-        # Consolidado total
-        total_spend = round(google_metrics['spend'] + meta_metrics['spend'], 2)
-        total_impressions = google_metrics['impressions'] + meta_metrics['impressions']
-        total_clicks = google_metrics['clicks'] + meta_metrics['clicks']
-        total_conversions = google_metrics['conversions'] + meta_metrics['conversions']
+            google_metrics = cls.fetch_google_ads_metrics(period) if google_configured else {"spend": 0.0, "impressions": 0, "clicks": 0, "conversions": 0, "ctr": 0.0, "cpa": 0.0, "roas": 0.0, "campaigns": []}
+            meta_metrics = cls.fetch_meta_ads_metrics(period) if meta_configured else {"spend": 0.0, "impressions": 0, "clicks": 0, "conversions": 0, "ctr": 0.0, "cpa": 0.0, "roas": 0.0, "campaigns": []}
 
-        ctr = round((total_clicks / total_impressions * 100), 2) if total_impressions > 0 else 0.0
-        cpa = round((total_spend / total_conversions), 2) if total_conversions > 0 else 0.0
+            if not is_connected:
+                result = {
+                    "is_connected": False,
+                    "summary": {
+                        "total_spend": 0.0,
+                        "total_impressions": 0,
+                        "total_clicks": 0,
+                        "total_conversions": 0,
+                        "ctr": 0.0,
+                        "cpa": 0.0,
+                        "roas": 0.0,
+                    },
+                    "platforms": {
+                        "google_ads": google_metrics,
+                        "meta_ads": meta_metrics
+                    },
+                    "campaigns": []
+                }
+            else:
+                total_spend = round(float(google_metrics.get('spend', 0.0)) + float(meta_metrics.get('spend', 0.0)), 2)
+                total_impressions = int(google_metrics.get('impressions', 0)) + int(meta_metrics.get('impressions', 0))
+                total_clicks = int(google_metrics.get('clicks', 0)) + int(meta_metrics.get('clicks', 0))
+                total_conversions = int(google_metrics.get('conversions', 0)) + int(meta_metrics.get('conversions', 0))
 
-        result = {
-            "summary": {
-                "total_spend": total_spend,
-                "total_impressions": total_impressions,
-                "total_clicks": total_clicks,
-                "total_conversions": total_conversions,
-                "ctr": ctr,
-                "cpa": cpa,
-                "roas": round((google_metrics.get("roas", 0) + meta_metrics.get("roas", 0)) / 2, 2) if total_spend > 0 else 0.0,
-            },
-            "platforms": {
-                "google_ads": google_metrics,
-                "meta_ads": meta_metrics
-            },
-            "campaigns": google_metrics.get("campaigns", []) + meta_metrics.get("campaigns", [])
-        }
+                ctr = round((total_clicks / total_impressions * 100), 2) if total_impressions > 0 else 0.0
+                cpa = round((total_spend / total_conversions), 2) if total_conversions > 0 else 0.0
+
+                result = {
+                    "is_connected": True,
+                    "summary": {
+                        "total_spend": total_spend,
+                        "total_impressions": total_impressions,
+                        "total_clicks": total_clicks,
+                        "total_conversions": total_conversions,
+                        "ctr": ctr,
+                        "cpa": cpa,
+                        "roas": round((float(google_metrics.get("roas", 0)) + float(meta_metrics.get("roas", 0))) / 2, 2) if total_spend > 0 else 0.0,
+                    },
+                    "platforms": {
+                        "google_ads": google_metrics,
+                        "meta_ads": meta_metrics
+                    },
+                    "campaigns": google_metrics.get("campaigns", []) + meta_metrics.get("campaigns", [])
+                }
+        except Exception as ex:
+            logger.error(f"[AdsIntegrationService] Error inesperado al obtener métricas de pauta: {ex}", exc_info=True)
+            result = {
+                "is_connected": False,
+                "summary": {
+                    "total_spend": 0.0,
+                    "total_impressions": 0,
+                    "total_clicks": 0,
+                    "total_conversions": 0,
+                    "ctr": 0.0,
+                    "cpa": 0.0,
+                    "roas": 0.0,
+                },
+                "platforms": {
+                    "google_ads": {"spend": 0.0, "impressions": 0, "clicks": 0, "conversions": 0, "campaigns": []},
+                    "meta_ads": {"spend": 0.0, "impressions": 0, "clicks": 0, "conversions": 0, "campaigns": []}
+                },
+                "campaigns": []
+            }
 
         try:
             cache.set(cache_key, result, cls.CACHE_TTL_SECONDS)

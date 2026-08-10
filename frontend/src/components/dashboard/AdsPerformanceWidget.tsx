@@ -26,6 +26,7 @@ interface AdsSummary {
 
 interface AdsPerformanceProps {
   adsData: {
+    is_connected?: boolean;
     summary?: AdsSummary;
     campaigns?: Campaign[];
   } | null;
@@ -49,28 +50,34 @@ export const AdsPerformanceWidget: React.FC<AdsPerformanceProps> = ({ adsData, l
   }
 
   const summary = adsData?.summary || {
-    total_spend: 28250.00,
-    total_impressions: 425000,
-    total_clicks: 23650,
-    total_conversions: 750,
-    ctr: 5.56,
-    cpa: 37.67,
-    roas: 4.3
+    total_spend: 0,
+    total_impressions: 0,
+    total_clicks: 0,
+    total_conversions: 0,
+    ctr: 0,
+    cpa: 0,
+    roas: 0
   };
 
   const campaigns = adsData?.campaigns || [];
   const filteredCampaigns = selectedPlatform === 'all' 
     ? campaigns 
-    : campaigns.filter(c => c.platform.toLowerCase().includes(selectedPlatform.toLowerCase()));
+    : campaigns.filter(c => c.platform?.toLowerCase().includes(selectedPlatform.toLowerCase()));
 
   return (
     <div className="p-6 rounded-2xl bg-gradient-to-br from-neutral-900/90 via-black/80 to-amber-950/30 backdrop-blur-xl border border-amber-500/20 shadow-2xl space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Megaphone className="w-5 h-5 text-amber-400" />
             <h3 className="text-xl font-bold text-white tracking-wide">Rendimiento de Pauta Publicitaria</h3>
+            {adsData?.is_connected === false && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1.5 shadow-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                Pauta Desconectada / Modo Seguro
+              </span>
+            )}
           </div>
           <p className="text-xs text-neutral-400 mt-1">
             Consolidado en tiempo real: Google Ads API & Meta Marketing API

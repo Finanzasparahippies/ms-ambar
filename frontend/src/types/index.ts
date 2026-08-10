@@ -223,6 +223,7 @@ export interface DashboardStats {
     revenue_breakdown: any[];
   };
   ads?: {
+    is_connected?: boolean;
     summary?: {
       total_spend: number;
       total_impressions: number;
@@ -232,6 +233,7 @@ export interface DashboardStats {
       cpa: number;
       roas: number;
     };
+    platforms?: any;
     campaigns?: any[];
   };
   status: string;
