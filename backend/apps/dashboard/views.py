@@ -132,7 +132,10 @@ class AnalyticsOverview(APIView):
                     logger.warning(f"Formato de start_date inválido ({request.query_params.get('start_date')}), usando por defecto: {err}")
             if request.query_params.get('end_date'):
                 try:
-                    end_date = datetime.fromisoformat(request.query_params['end_date']).replace(tzinfo=dt_timezone.utc)
+                    parsed_end = datetime.fromisoformat(request.query_params['end_date'])
+                    if parsed_end.time() == datetime.min.time():
+                        parsed_end = datetime.combine(parsed_end.date(), datetime.max.time())
+                    end_date = parsed_end.replace(tzinfo=dt_timezone.utc)
                 except (ValueError, TypeError) as err:
                     logger.warning(f"Formato de end_date inválido ({request.query_params.get('end_date')}), usando por defecto: {err}")
             
@@ -250,31 +253,34 @@ class AnalyticsOverview(APIView):
                     logger.warning(f"[AnalyticsOverview] Error calculating PerformanceMetrics: {ex}", exc_info=True)
                     vitals = []
 
-            # 6. Chart Data (Daily ticket sales and shop sales for the last 30 days)
+            # 6. Chart Data (Daily ticket sales and shop sales for the 30 days up to end_date)
             daily_stats = []
+            daily_start_base = end_date - timedelta(days=29)
             for i in range(30):
                 try:
-                    current_date = start_date + timedelta(days=i)
-                    date_str = current_date.strftime('%d %b')
+                    current_dt = daily_start_base + timedelta(days=i)
+                    date_str = current_dt.strftime('%d %b')
                     
+                    d_start = datetime.combine(current_dt.date(), datetime.min.time(), tzinfo=dt_timezone.utc)
+                    d_end = datetime.combine(current_dt.date(), datetime.max.time(), tzinfo=dt_timezone.utc)
+
                     date_tickets = Ticket.objects.filter(
                         status__in=['paid', 'used'],
-                        created_at__date=current_date.date()
+                        created_at__gte=d_start,
+                        created_at__lte=d_end
                     ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
                     t_daily_sales = sum(get_ticket_actual_price(t) for t in date_tickets)
                         
-                    s_daily_sales = Order.objects.filter(
+                    date_orders = Order.objects.filter(
                         status__in=['paid', 'shipped', 'delivered'],
-                        created_at__date=current_date.date()
-                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-                    s_daily_sales = float(s_daily_sales)
+                        created_at__gte=d_start,
+                        created_at__lte=d_end
+                    )
+                    s_daily_sales = float(date_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
                     
-                    # Estadísticas cruzadas por día (Nuevos usuarios, Pagos exitosos vs fallidos)
-                    d_start = datetime.combine(current_date.date(), datetime.min.time(), tzinfo=dt_timezone.utc)
-                    d_end = datetime.combine(current_date.date(), datetime.max.time(), tzinfo=dt_timezone.utc)
                     d_users = User.objects.filter(date_joined__gte=d_start, date_joined__lte=d_end).count()
                     d_failed = Ticket.objects.filter(status='cancelled', created_at__gte=d_start, created_at__lte=d_end).count() + Order.objects.filter(status='cancelled', created_at__gte=d_start, created_at__lte=d_end).count()
-                    d_successful = date_tickets.count() + Order.objects.filter(status__in=['paid', 'shipped', 'delivered'], created_at__date=current_date.date()).count()
+                    d_successful = date_tickets.count() + date_orders.count()
 
                     daily_stats.append({
                         'date': date_str,

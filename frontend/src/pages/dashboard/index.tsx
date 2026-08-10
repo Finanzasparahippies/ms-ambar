@@ -4029,15 +4029,29 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* Sección de Análisis Cruzado de Negocio & Rendimiento de Pauta Publicitaria */}
-                  <div className="space-y-8 my-8">
-                    <CrossAnalyticsChart 
-                      data={stats?.charts?.daily_sales || []} 
-                      adSpendTotal={stats?.ads?.summary?.total_spend || 0}
-                    />
-                    <AdsPerformanceWidget 
-                      adsData={stats?.ads || null}
-                    />
+                  {/* Separación de Contenedores: Ventas & Inteligencia vs Pauta Publicitaria (Ads) */}
+                  <div className="space-y-10 my-8">
+                    {/* Contenedor 1: Gráficas & Métricas Cruzadas de Ventas */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <span className="w-3 h-3 rounded-full bg-amber-400 animate-pulse"></span>
+                        <h2 className="text-xl font-black uppercase tracking-wider text-white">Inteligencia y Analítica Cruzada de Ventas</h2>
+                      </div>
+                      <CrossAnalyticsChart 
+                        data={stats?.charts?.daily_sales || []} 
+                      />
+                    </div>
+
+                    {/* Contenedor 2: Gráficas & Rendimiento de Pauta Publicitaria (Ads) */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <span className="w-3 h-3 rounded-full bg-purple-400 animate-pulse"></span>
+                        <h2 className="text-xl font-black uppercase tracking-wider text-white">Consolidado de Pauta Publicitaria (Google Ads & Meta Ads)</h2>
+                      </div>
+                      <AdsPerformanceWidget 
+                        adsData={stats?.ads || null}
+                      />
+                    </div>
                   </div>
 
                   {/* Health and Products section */}

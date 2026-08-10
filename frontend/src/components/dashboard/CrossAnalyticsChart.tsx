@@ -17,8 +17,8 @@ interface CrossAnalyticsProps {
   adSpendTotal?: number;
 }
 
-export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpendTotal = 0 }) => {
-  const [activeSeries, setActiveSeries] = useState<'sales_vs_ads' | 'users_vs_conversions' | 'funnel'>('sales_vs_ads');
+export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => {
+  const [activeSeries, setActiveSeries] = useState<'sales_breakdown' | 'users_vs_conversions' | 'funnel'>('sales_breakdown');
   const [hoveredItem, setHoveredItem] = useState<DailyStat | null>(null);
 
   if (!data || data.length === 0) {
@@ -29,22 +29,15 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
     );
   }
 
-  // Estimar costo pauta diario para la gráfica basada en adSpendTotal
-  const estimatedDailyAdSpend = (adSpendTotal && adSpendTotal > 0 && data.length > 0) ? roundVal(adSpendTotal / data.length) : 0;
-
   // Calcular valor máximo para escalar barras/gráficas adecuadamente
   const maxVal = Math.max(
     1,
     ...data.map(d => {
-      if (activeSeries === 'sales_vs_ads') return Math.max(d.total, estimatedDailyAdSpend);
+      if (activeSeries === 'sales_breakdown') return Math.max(d.tickets, d.shop, d.total, 1);
       if (activeSeries === 'users_vs_conversions') return Math.max((d.new_users || 0) * 10, 50);
       return Math.max((d.successful_payments || 0), (d.failed_payments || 0), 1);
     })
   );
-
-  function roundVal(num: number) {
-    return Math.round(num * 100) / 100;
-  }
 
   return (
     <div className="p-6 rounded-2xl bg-gradient-to-br from-neutral-900/90 via-black/80 to-amber-950/20 backdrop-blur-xl border border-amber-500/20 shadow-2xl space-y-6">
@@ -53,24 +46,24 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
         <div>
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-amber-400" />
-            <h3 className="text-xl font-bold text-white tracking-wide">Análisis Cruzado de Negocio & Conversiones</h3>
+            <h3 className="text-xl font-bold text-white tracking-wide">Análisis Cruzado de Ventas & Conversiones</h3>
           </div>
           <p className="text-xs text-neutral-400 mt-1">
-            Cruce en tiempo real entre Pauta Publicitaria, Ventas y Embudo Transaccional
+            Métricas transaccionales por día: Taquilla, Tienda Oficial, Usuarios y Conversiones
           </p>
         </div>
 
         {/* Series Selector */}
         <div className="flex items-center gap-1.5 p-1 bg-black/60 rounded-xl border border-amber-500/10">
           <button
-            onClick={() => setActiveSeries('sales_vs_ads')}
+            onClick={() => setActiveSeries('sales_breakdown')}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              activeSeries === 'sales_vs_ads'
+              activeSeries === 'sales_breakdown'
                 ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold shadow-lg shadow-amber-500/20'
                 : 'text-neutral-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Ventas vs Pauta
+            Taquilla vs Tienda
           </button>
           <button
             onClick={() => setActiveSeries('users_vs_conversions')}
@@ -80,7 +73,7 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
                 : 'text-neutral-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Usuarios vs Registro
+            Nuevos Registros
           </button>
           <button
             onClick={() => setActiveSeries('funnel')}
@@ -90,29 +83,29 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
                 : 'text-neutral-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            Pagos Aprobados vs Fallidos
+            Aprobados vs Fallidos
           </button>
         </div>
       </div>
 
       {/* Legend Badges */}
       <div className="flex items-center gap-4 text-xs font-medium border-b border-amber-500/10 pb-4">
-        {activeSeries === 'sales_vs_ads' && (
+        {activeSeries === 'sales_breakdown' && (
           <>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>
-              <span className="text-white">Ventas Brutas ($)</span>
+              <span className="text-white">Ventas Taquilla ($)</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-purple-500 shadow-sm shadow-purple-500/50"></span>
-              <span className="text-neutral-300">Gasto Pauta ($)</span>
+              <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50"></span>
+              <span className="text-neutral-300">Ventas Tienda ($)</span>
             </div>
           </>
         )}
         {activeSeries === 'users_vs_conversions' && (
           <>
             <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50"></span>
+              <span className="w-3 h-3 rounded-full bg-amber-400 shadow-sm shadow-amber-400/50"></span>
               <span className="text-white">Nuevos Usuarios Registrados</span>
             </div>
           </>
@@ -137,9 +130,9 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
           let height1 = 0;
           let height2 = 0;
 
-          if (activeSeries === 'sales_vs_ads') {
-            height1 = (item.total / maxVal) * 100;
-            height2 = (estimatedDailyAdSpend / maxVal) * 100;
+          if (activeSeries === 'sales_breakdown') {
+            height1 = (item.tickets / maxVal) * 100;
+            height2 = (item.shop / maxVal) * 100;
           } else if (activeSeries === 'users_vs_conversions') {
             height1 = (((item.new_users || 0) * 10) / maxVal) * 100;
           } else {
@@ -156,7 +149,7 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
             >
               {/* Bars Group */}
               <div className="w-full flex items-end justify-center gap-0.5 h-full">
-                {activeSeries === 'sales_vs_ads' && (
+                {activeSeries === 'sales_breakdown' && (
                   <>
                     <motion.div
                       initial={{ height: 0 }}
@@ -166,7 +159,7 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(4, height2)}%` }}
-                      className="w-1/2 bg-gradient-to-t from-purple-700 to-purple-400 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-purple-500/10"
+                      className="w-1/2 bg-gradient-to-t from-cyan-600 to-cyan-400 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-cyan-500/10"
                     />
                   </>
                 )}
@@ -174,7 +167,7 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: `${Math.max(4, height1)}%` }}
-                    className="w-full max-w-[14px] bg-gradient-to-t from-cyan-600 to-cyan-400 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-cyan-500/10"
+                    className="w-full max-w-[14px] bg-gradient-to-t from-amber-500 to-amber-300 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-amber-500/10"
                   />
                 )}
                 {activeSeries === 'funnel' && (
@@ -211,12 +204,13 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data, adSpe
         >
           <div>
             <span className="text-amber-400 font-semibold">{hoveredItem.date}:</span>
-            <span className="text-neutral-300 ml-2">Ventas: ${hoveredItem.total.toLocaleString()} MXN</span>
+            <span className="text-neutral-300 ml-2">Total Ventas: ${hoveredItem.total.toLocaleString()} MXN</span>
           </div>
           <div className="flex items-center gap-4 text-neutral-400">
+            <span>Taquilla: <strong className="text-amber-400">${hoveredItem.tickets.toLocaleString()}</strong></span>
+            <span>Tienda: <strong className="text-cyan-400">${hoveredItem.shop.toLocaleString()}</strong></span>
             <span>Registros: <strong className="text-white">{hoveredItem.new_users || 0}</strong></span>
             <span>Aprobados: <strong className="text-emerald-400">{hoveredItem.successful_payments || 0}</strong></span>
-            <span>Fallidos: <strong className="text-rose-400">{hoveredItem.failed_payments || 0}</strong></span>
           </div>
         </motion.div>
       )}
