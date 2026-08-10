@@ -525,7 +525,41 @@ class AnalyticsOverview(APIView):
             return Response(metrics)
         except Exception as e:
             logger.error(f"[AnalyticsOverview] Unhandled Error in analytics: {e}", exc_info=True)
-            return Response({'error': str(e), 'status': 'error'}, status=500)
+            try:
+                all_t = Ticket.objects.filter(status__in=['paid', 'used'])
+                all_o = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
+                fallback_t_sales = sum(get_ticket_actual_price(t) for t in all_t)
+                fallback_s_sales = float(all_o.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
+                fallback_gross = fallback_t_sales + fallback_s_sales
+                return Response({
+                    'financials': {
+                        'gross_sales': round(fallback_gross, 2),
+                        'ticket_sales': round(fallback_t_sales, 2),
+                        'shop_sales': round(fallback_s_sales, 2),
+                        'mg_revenue': 0.0,
+                        'total_expenses': 0.0,
+                        'net_profit': round(fallback_gross, 2),
+                    },
+                    'users': {'new_users': 0, 'total_users': User.objects.count()},
+                    'funnel': {'successful_count': all_t.count() + all_o.count(), 'successful_amount': round(fallback_gross, 2), 'failed_count': 0},
+                    'ads': {"is_connected": False, "summary": {"total_spend": 0.0, "total_impressions": 0, "total_clicks": 0, "total_conversions": 0, "ctr": 0.0, "cpa": 0.0, "roas": 0.0}, "platforms": {}, "campaigns": []},
+                    'tickets': {'total_sold': all_t.count(), 'mg_upgrades': 0},
+                    'shop': {'total_orders': all_o.count(), 'low_stock_count': 0, 'total_products': Product.objects.count(), 'top_products': []},
+                    'vitals': [],
+                    'charts': {
+                        'daily_sales': [],
+                        'weekly_sales': [],
+                        'monthly_sales': [],
+                        'event_sales': [],
+                        'revenue_breakdown': []
+                    },
+                    'is_historical_fallback': True,
+                    'status': 'degraded',
+                    'error_details': str(e)
+                })
+            except Exception as fallback_err:
+                logger.error(f"[AnalyticsOverview] Critical failure in fallback generation: {fallback_err}", exc_info=True)
+                return Response({'error': str(e), 'status': 'error'}, status=500)
 
 
 class AnalyticsUnitDataView(APIView):

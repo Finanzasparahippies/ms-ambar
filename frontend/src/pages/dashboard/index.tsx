@@ -820,7 +820,10 @@ export default function AdminDashboard() {
       if (staffFlag) {
         // Essential Initial Staff Data Fetching via singleton api client
         const [analyticsRes, systemRes, ordersRes, profileRes] = await Promise.all([
-          api.get('/dashboard/analytics/').catch(() => ({ data: null })),
+          api.get('/dashboard/analytics/').catch((err: any) => {
+            console.error("[Dashboard Analytics Error]", err?.response?.status, err?.response?.data || err?.message || err);
+            return { data: null };
+          }),
           api.get('/dashboard/system/').catch((err: unknown) => {
             console.error("System metrics fetch failed, using fallback", err);
             return { data: null };
