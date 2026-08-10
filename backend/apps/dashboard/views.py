@@ -110,37 +110,6 @@ class AnalyticsOverview(APIView):
 
     def get(self, request):
         try:
-            if not request.user.is_superuser:
-                low_stock_products = Product.objects.filter(stock__lt=5).count()
-                total_products_count = Product.objects.count()
-                return Response({
-                    'financials': {
-                        'gross_sales': 0.0,
-                        'ticket_sales': 0.0,
-                        'shop_sales': 0.0,
-                        'mg_revenue': 0.0,
-                        'total_expenses': 0.0,
-                        'net_profit': 0.0,
-                    },
-                    'tickets': {
-                        'total_sold': 0,
-                        'mg_upgrades': 0,
-                    },
-                    'shop': {
-                        'total_orders': 0,
-                        'low_stock_count': low_stock_products,
-                        'total_products': total_products_count,
-                        'top_products': []
-                    },
-                    'vitals': [],
-                    'charts': {
-                        'daily_sales': [],
-                        'monthly_sales': []
-                    },
-                    'status': 'success',
-                    'is_restricted': True
-                })
-
             # 1. Date range for charts and period financial metrics (Default last 30 days or specified period)
             period_param = str(request.query_params.get('period', '30d')).lower()
             end_date = timezone.now()
@@ -745,8 +714,6 @@ class DashboardExpensesView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        if not request.user.is_superuser:
-            return Response([])
         try:
             expenses = Expense.objects.all().order_by('-created_at')
             expenses_data = [{
