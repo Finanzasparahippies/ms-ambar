@@ -832,13 +832,21 @@ export default function AdminDashboard() {
           api.get('/users/profile/').catch(() => ({ data: null })),
         ]);
 
+        const statsPayload = (analyticsRes?.data && typeof analyticsRes.data === 'object' && 'financials' in analyticsRes.data)
+          ? analyticsRes.data
+          : (analyticsRes && typeof analyticsRes === 'object' && 'financials' in analyticsRes)
+            ? analyticsRes
+            : null;
+
         if (process.env.NODE_ENV !== 'production' || typeof window !== 'undefined') {
-          console.log("[Dashboard Analytics Debug] analyticsRes payload:", analyticsRes?.data);
+          console.log("[Dashboard Analytics Debug] Raw analyticsRes:", analyticsRes);
+          console.log("[Dashboard Analytics Debug] Extracted statsPayload:", statsPayload);
         }
-        if (analyticsRes?.data) {
-          setStats(analyticsRes.data);
+
+        if (statsPayload) {
+          setStats(statsPayload);
         } else {
-          console.warn("[Dashboard Analytics Debug] analyticsRes.data está vacío o es null.");
+          console.warn("[Dashboard Analytics Debug] analyticsRes.data está vacío o no tiene clave 'financials':", analyticsRes);
         }
         if (Array.isArray(ordersRes?.data)) setOrders(ordersRes.data);
         if (profileRes && profileRes.data) {
