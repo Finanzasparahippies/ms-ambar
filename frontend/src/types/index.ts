@@ -222,6 +222,18 @@ export interface DashboardStats {
     event_sales: any[];
     revenue_breakdown: any[];
   };
+  ads?: {
+    summary?: {
+      total_spend: number;
+      total_impressions: number;
+      total_clicks: number;
+      total_conversions: number;
+      ctr: number;
+      cpa: number;
+      roas: number;
+    };
+    campaigns?: any[];
+  };
   status: string;
   is_restricted?: boolean;
 }
