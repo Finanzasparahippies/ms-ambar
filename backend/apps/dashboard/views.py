@@ -208,6 +208,42 @@ class AnalyticsOverview(APIView):
             shop_sales = float(period_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
             gross_sales = ticket_sales + shop_sales
 
+            # Fallback Defensivo Absoluto: si gross_sales sigue siendo 0.0 pero existen transacciones en la BD
+            if gross_sales == 0.0 and period_param != 'all':
+                all_paid_tickets = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+                all_paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
+
+                if all_paid_tickets.exists() or all_paid_orders.exists():
+                    is_historical_fallback = True
+                    ticket_sales = 0.0
+                    mg_upgrades_sold = 0
+                    mg_revenue = 0.0
+
+                    for t in all_paid_tickets:
+                        try:
+                            event = getattr(t, 'event', None)
+                            if event and (getattr(t, 'has_mg', False) or getattr(event, 'event_type', '') == 'meet_greet'):
+                                mg_upgrades_sold += 1
+                                mg_revenue += float(getattr(event, 'mg_price', 0.0) or 0.0)
+                            ticket_sales += get_ticket_actual_price(t)
+                        except Exception as ex:
+                            continue
+
+                    total_tickets_sold = all_paid_tickets.count()
+                    total_orders_count = all_paid_orders.count()
+                    shop_sales = float(all_paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
+                    gross_sales = ticket_sales + shop_sales
+
+                    # Re-anclar fechas a la transacción más reciente para que daily_stats y weekly_stats muestren los gráficos
+                    latest_t = all_paid_tickets.order_by('-created_at').first()
+                    latest_o = all_paid_orders.order_by('-created_at').first()
+                    l_dates = [d for d in [getattr(latest_t, 'created_at', None), getattr(latest_o, 'created_at', None)] if d]
+                    if l_dates:
+                        end_date = max(l_dates)
+                        start_date = end_date - timedelta(days=period_days)
+
+            logger.info(f"[AnalyticsOverview Debug] Period ({start_date.isoformat()} -> {end_date.isoformat()}) | Tickets sold: {total_tickets_sold} | Ticket sales: ${ticket_sales:.2f} | Shop sales: ${shop_sales:.2f} | Gross: ${gross_sales:.2f} | Fallback: {is_historical_fallback}")
+
             # 3b. Expenses & Net Profit for active period
             period_expenses = Expense.objects.filter(
                 created_at__gte=start_date,

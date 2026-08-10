@@ -829,7 +829,14 @@ export default function AdminDashboard() {
           api.get('/users/profile/').catch(() => ({ data: null })),
         ]);
 
-        if (analyticsRes?.data) setStats(analyticsRes.data);
+        if (process.env.NODE_ENV !== 'production' || typeof window !== 'undefined') {
+          console.log("[Dashboard Analytics Debug] analyticsRes payload:", analyticsRes?.data);
+        }
+        if (analyticsRes?.data) {
+          setStats(analyticsRes.data);
+        } else {
+          console.warn("[Dashboard Analytics Debug] analyticsRes.data está vacío o es null.");
+        }
         if (Array.isArray(ordersRes?.data)) setOrders(ordersRes.data);
         if (profileRes && profileRes.data) {
           setClientProfile(profileRes.data);
