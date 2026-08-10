@@ -60,6 +60,7 @@ import {
   Truck,
   Underline,
   User as UserIcon,
+  UserCheck,
   Users,
   X
 } from 'lucide-react';
@@ -255,7 +256,7 @@ export default function AdminDashboard() {
   const [drillDownData, setDrillDownData] = useState<Record<string, unknown> | null>(null);
 
   // Unit Data Visualizer Modal State
-  const [unitModalType, setUnitModalType] = useState<'tickets' | 'orders' | 'expenses' | 'mg_upgrades' | null>(null);
+  const [unitModalType, setUnitModalType] = useState<'tickets' | 'orders' | 'expenses' | 'mg_upgrades' | 'users' | null>(null);
   const [unitModalTitle, setUnitModalTitle] = useState('');
   const [unitDataList, setUnitDataList] = useState<Record<string, any>[]>([]);
   const [unitDataLoading, setUnitDataLoading] = useState(false);
@@ -367,6 +368,67 @@ export default function AdminDashboard() {
   const [listErrorMsg, setListErrorMsg] = useState<string | null>(null);
   const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers' | 'lists'>('campaigns');
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [subscribersCount, setSubscribersCount] = useState<number>(0);
+  const [subscriberPage, setSubscriberPage] = useState<number>(1);
+  const [subscriberPageSize, setSubscriberPageSize] = useState<number>(50);
+  const [subscriberSearch, setSubscriberSearch] = useState<string>('');
+  const [debouncedSubscriberSearch, setDebouncedSubscriberSearch] = useState<string>('');
+  const [subscriberListFilter, setSubscriberListFilter] = useState<string>('');
+  const [subscriberIsActiveFilter, setSubscriberIsActiveFilter] = useState<string>('');
+  const [subscriberLoading, setSubscriberLoading] = useState<boolean>(false);
+
+  // Debounce para búsqueda de suscriptores (400ms)
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSubscriberSearch(subscriberSearch);
+      setSubscriberPage(1);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [subscriberSearch]);
+
+  const fetchSubscribersData = useCallback(async (
+    page = subscriberPage,
+    pageSize = subscriberPageSize,
+    search = debouncedSubscriberSearch,
+    listId = subscriberListFilter,
+    activeFilter = subscriberIsActiveFilter
+  ) => {
+    setSubscriberLoading(true);
+    try {
+      const params: any = {
+        page,
+        page_size: pageSize
+      };
+      if (search) params.search = search;
+      if (listId) params.marketing_list_id = listId;
+      if (activeFilter) params.is_active = activeFilter;
+
+      const res = await api.get('/blog/subscribers/', { params });
+      const rawData = res.data;
+
+      if (Array.isArray(rawData)) {
+        setSubscribers(rawData);
+        setSubscribersCount(rawData.length);
+      } else if (rawData && typeof rawData === 'object') {
+        const list = Array.isArray(rawData.results) ? rawData.results : [];
+        setSubscribers(list);
+        setSubscribersCount(typeof rawData.count === 'number' ? rawData.count : list.length);
+      } else {
+        setSubscribers([]);
+        setSubscribersCount(0);
+      }
+    } catch (err) {
+      console.error('[Fetch Subscribers Error]', err);
+    } finally {
+      setSubscriberLoading(false);
+    }
+  }, [subscriberPage, subscriberPageSize, debouncedSubscriberSearch, subscriberListFilter, subscriberIsActiveFilter]);
+
+  useEffect(() => {
+    if (activeTab === 'campaigns' && campaignSubTab === 'subscribers') {
+      fetchSubscribersData();
+    }
+  }, [debouncedSubscriberSearch, subscriberPage, subscriberPageSize, subscriberListFilter, subscriberIsActiveFilter, activeTab, campaignSubTab]);
   const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'content' | 'theme' | 'cover' | 'sections' | 'ctas' | 'library'>('content');
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
@@ -913,18 +975,15 @@ export default function AdminDashboard() {
         const res = await api.get('/bookings/contracts/');
         setContracts(Array.isArray(res.data) ? res.data : []);
       } else if (tabName === 'campaigns') {
-        const [campRes, subRes, tplRes, listRes] = await Promise.all([
+        const [campRes, tplRes, listRes] = await Promise.all([
           api.get('/blog/campaigns/').catch(() => ({ data: [] })),
-          api.get('/blog/subscribers/').catch(() => ({ data: [] })),
           api.get('/blog/campaign-template-images/').catch(() => ({ data: [] })),
           api.get('/blog/marketing-lists/').catch(() => ({ data: [] }))
         ]);
         setCampaigns(Array.isArray(campRes.data) ? campRes.data : []);
-        const rawSubData = subRes.data;
-        const subList = Array.isArray(rawSubData) ? rawSubData : (Array.isArray(rawSubData?.results) ? rawSubData.results : []);
-        setSubscribers(subList);
         setTemplateImages(Array.isArray(tplRes.data) ? tplRes.data : []);
         setMarketingLists(Array.isArray(listRes.data) ? listRes.data : []);
+        fetchSubscribersData();
       } else if (tabName === 'events') {
         const [evRes, stRes] = await Promise.all([
           api.get('/tickets/events/').catch(() => ({ data: [] })),
@@ -3668,8 +3727,8 @@ export default function AdminDashboard() {
                       </div>
                     )}
 
-                    {/* stat cards (3x2 Grid) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {/* stat cards (Grid 1 to 4 cols) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     <StatCard
                       title="Ingresos del Período"
                       value={formatCurrency(financials?.gross_sales)}
@@ -3717,6 +3776,14 @@ export default function AdminDashboard() {
                       color="yellow"
                       detail={`Ingreso M&G: ${formatCurrency(financials?.mg_revenue)} 🔍`}
                       onClick={() => fetchUnitData('mg_upgrades', 'Upgrades Meet & Greet Unitarios')}
+                    />
+                    <StatCard
+                      title="Nuevos Registros"
+                      value={stats?.users?.new_users ?? 0}
+                      icon={<UserCheck className="text-cyan-400" />}
+                      color="gold"
+                      detail={`Total Registrados: ${stats?.users?.total_users ?? 0} usuarios 🔍`}
+                      onClick={() => fetchUnitData('users', 'Auditoría de Nuevos Usuarios Registrados')}
                     />
                   </div>
 
@@ -5862,7 +5929,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           <div className="text-[10px] text-[#F4F6F0]/50 uppercase tracking-widest font-black pl-1">
-                            Total en Bóveda: {subscribers.length} contactos
+                            Total en Bóveda: <span className="text-amber-honey font-bold">{subscribersCount.toLocaleString()}</span> contactos
                           </div>
                         </div>
 
@@ -5931,12 +5998,120 @@ export default function AdminDashboard() {
                         </div>
                       </div>
 
+                      {/* Control Bar: Search, Filters, Page Size */}
+                      <div className="amber-glass border border-white/10 rounded-[2rem] p-6 space-y-4 shadow-lg shadow-black/20">
+                        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                          <div className="flex-1 flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus-within:border-amber-honey transition-all">
+                            <Search size={16} className="text-amber-honey shrink-0" />
+                            <input
+                              type="text"
+                              value={subscriberSearch}
+                              onChange={e => setSubscriberSearch(e.target.value)}
+                              placeholder="Buscar suscriptor por correo o nombre (Debounce 400ms)..."
+                              className="w-full bg-transparent text-xs text-[#F4F6F0] outline-none placeholder:text-[#F4F6F0]/40 font-medium"
+                            />
+                            {subscriberSearch && (
+                              <button
+                                onClick={() => setSubscriberSearch('')}
+                                className="text-xs text-[#F4F6F0]/40 hover:text-white transition-colors"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3">
+                            {/* Filter by List */}
+                            <select
+                              value={subscriberListFilter}
+                              onChange={e => {
+                                setSubscriberListFilter(e.target.value);
+                                setSubscriberPage(1);
+                              }}
+                              className="bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:border-amber-honey transition-all [color-scheme:dark]"
+                            >
+                              <option value="">Todas las Listas</option>
+                              {marketingLists.map((l: any) => (
+                                <option key={l.id} value={l.id}>{l.name}</option>
+                              ))}
+                            </select>
+
+                            {/* Filter by Status */}
+                            <select
+                              value={subscriberIsActiveFilter}
+                              onChange={e => {
+                                setSubscriberIsActiveFilter(e.target.value);
+                                setSubscriberPage(1);
+                              }}
+                              className="bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:border-amber-honey transition-all [color-scheme:dark]"
+                            >
+                              <option value="">Todos los Estados</option>
+                              <option value="true">Activos</option>
+                              <option value="false">Inactivos</option>
+                            </select>
+
+                            {/* Page Size Selector */}
+                            <select
+                              value={subscriberPageSize}
+                              onChange={e => {
+                                setSubscriberPageSize(Number(e.target.value));
+                                setSubscriberPage(1);
+                              }}
+                              className="bg-white/5 text-[#F4F6F0] border border-white/10 rounded-xl px-3 py-2 text-xs font-semibold focus:border-amber-honey transition-all [color-scheme:dark]"
+                            >
+                              <option value={25}>25 / pág</option>
+                              <option value={50}>50 / pág</option>
+                              <option value={100}>100 / pág</option>
+                              <option value={250}>250 / pág</option>
+                              <option value={500}>500 / pág</option>
+                              <option value={1000}>1000 / pág</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Top Paginator */}
+                        {(() => {
+                          const totalPages = Math.max(1, Math.ceil(subscribersCount / subscriberPageSize));
+                          return (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/10 pt-4 text-xs">
+                              <span className="text-[#F4F6F0]/60 text-[11px]">
+                                Mostrando página <strong className="text-amber-honey">{subscriberPage}</strong> de <strong className="text-[#F4F6F0]">{totalPages}</strong> ({subscribersCount.toLocaleString()} contactos en total)
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setSubscriberPage(p => Math.max(1, p - 1))}
+                                  disabled={subscriberPage <= 1 || subscriberLoading}
+                                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-[#F4F6F0] font-semibold text-xs transition-all flex items-center gap-1"
+                                >
+                                  <ChevronLeft size={14} /> Anterior
+                                </button>
+                                <button
+                                  onClick={() => setSubscriberPage(p => Math.min(totalPages, p + 1))}
+                                  disabled={subscriberPage >= totalPages || subscriberLoading}
+                                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-[#F4F6F0] font-semibold text-xs transition-all flex items-center gap-1"
+                                >
+                                  Siguiente <ChevronRight size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
                       {/* Subscribers list table */}
                       <div className="amber-glass border border-white/10 rounded-[2rem] p-6 overflow-hidden shadow-lg shadow-black/20">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-[#F4F6F0] mb-4">Lista de Contactos</h4>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-xs font-black uppercase tracking-wider text-[#F4F6F0]">Lista de Contactos</h4>
+                          {subscriberLoading && (
+                            <div className="flex items-center gap-2 text-xs text-amber-honey animate-pulse">
+                              <RefreshCw size={12} className="animate-spin" /> Cargando datos...
+                            </div>
+                          )}
+                        </div>
+
                         {subscribers.length === 0 ? (
                           <div className="p-8 text-center text-xs text-[#F4F6F0]/40 italic">
-                            No hay suscriptores en la base de datos.
+                            {subscriberLoading ? 'Cargando suscriptores...' : 'No se encontraron suscriptores con los criterios especificados.'}
                           </div>
                         ) : (
                           <div className="overflow-x-auto">
@@ -5992,6 +6167,34 @@ export default function AdminDashboard() {
                             </table>
                           </div>
                         )}
+
+                        {/* Bottom Paginator Bar */}
+                        {subscribers.length > 0 && (() => {
+                          const totalPages = Math.max(1, Math.ceil(subscribersCount / subscriberPageSize));
+                          return (
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-white/10 pt-4 mt-4 text-xs">
+                              <span className="text-[#F4F6F0]/60 text-[11px]">
+                                Página <strong className="text-amber-honey">{subscriberPage}</strong> de <strong className="text-[#F4F6F0]">{totalPages}</strong>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => setSubscriberPage(p => Math.max(1, p - 1))}
+                                  disabled={subscriberPage <= 1 || subscriberLoading}
+                                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-[#F4F6F0] font-semibold text-xs transition-all flex items-center gap-1"
+                                >
+                                  <ChevronLeft size={14} /> Anterior
+                                </button>
+                                <button
+                                  onClick={() => setSubscriberPage(p => Math.min(totalPages, p + 1))}
+                                  disabled={subscriberPage >= totalPages || subscriberLoading}
+                                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 disabled:opacity-30 disabled:cursor-not-allowed text-[#F4F6F0] font-semibold text-xs transition-all flex items-center gap-1"
+                                >
+                                  Siguiente <ChevronRight size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   )}
@@ -9203,6 +9406,14 @@ export default function AdminDashboard() {
                             <th className="py-3 px-3 text-right">Precio M&G</th>
                           </>
                         )}
+                        {unitModalType === 'users' && (
+                          <>
+                            <th className="py-3 px-3">Nombre Completo</th>
+                            <th className="py-3 px-3">Email / Usuario</th>
+                            <th className="py-3 px-3">Rol</th>
+                            <th className="py-3 px-3 text-right">Estado</th>
+                          </>
+                        )}
                         <th className="py-3 px-3 text-right">Fecha</th>
                       </tr>
                     </thead>
@@ -9254,6 +9465,25 @@ export default function AdminDashboard() {
                               <td className="py-3 px-3 text-[#F4F6F0]/90">{item.buyer}</td>
                               <td className="py-3 px-3 italic">{item.event}</td>
                               <td className="py-3 px-3 text-right font-mono text-yellow-400 font-black">${item.mg_price?.toFixed(2)}</td>
+                            </>
+                          )}
+
+                          {unitModalType === 'users' && (
+                            <>
+                              <td className="py-3 px-3 font-medium text-[#F4F6F0]/90">{item.full_name || 'Sin Nombre'}</td>
+                              <td className="py-3 px-3 font-mono text-amber-honey">{item.email || item.username}</td>
+                              <td className="py-3 px-3 text-[10px]">
+                                {item.is_staff ? (
+                                  <span className="bg-amber-500/20 text-amber-honey text-[9px] px-2 py-0.5 rounded-full font-black uppercase">Staff / Admin</span>
+                                ) : (
+                                  <span className="text-[#F4F6F0]/50">Usuario Estándar</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-right">
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase ${item.is_active ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                  {item.is_active ? 'Activo' : 'Inactivo'}
+                                </span>
+                              </td>
                             </>
                           )}
 

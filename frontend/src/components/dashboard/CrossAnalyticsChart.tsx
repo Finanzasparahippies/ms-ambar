@@ -28,7 +28,7 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
       1,
       ...data.map(d => {
         if (activeSeries === 'sales_breakdown') return Math.max(d.tickets, d.shop, d.total, 1);
-        if (activeSeries === 'users_vs_conversions') return Math.max((d.new_users || 0) * 10, 50);
+        if (activeSeries === 'users_vs_conversions') return Math.max(d.new_users || 0, 1);
         return Math.max((d.successful_payments || 0), (d.failed_payments || 0), 1);
       })
     );
@@ -140,7 +140,7 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
             height1 = (item.tickets / maxVal) * 100;
             height2 = (item.shop / maxVal) * 100;
           } else if (activeSeries === 'users_vs_conversions') {
-            height1 = (((item.new_users || 0) * 10) / maxVal) * 100;
+            height1 = ((item.new_users || 0) / maxVal) * 100;
           } else {
             height1 = ((item.successful_payments || 0) / maxVal) * 100;
             height2 = ((item.failed_payments || 0) / maxVal) * 100;

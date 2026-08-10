@@ -396,12 +396,19 @@ class AnalyticsOverview(APIView):
                     w_orders = [o for o in all_paid_orders_list if getattr(o, 'created_at', None) and w_start <= o.created_at <= w_end]
                     s_w_sales = sum(float(getattr(o, 'total_amount', 0.0) or 0.0) for o in w_orders)
 
+                    w_users = sum(1 for u in all_users_list if getattr(u, 'date_joined', None) and w_start <= u.date_joined <= w_end)
+                    w_failed = sum(1 for t in all_cancelled_tickets_list if getattr(t, 'created_at', None) and w_start <= t.created_at <= w_end) + sum(1 for o in all_cancelled_orders_list if getattr(o, 'created_at', None) and w_start <= o.created_at <= w_end)
+                    w_successful = len(w_tickets) + len(w_orders)
+
                     weekly_stats.append({
                         'date': w_label,
                         'range': f"{w_start.strftime('%d %b')} - {w_end.strftime('%d %b')}",
                         'tickets': round(t_w_sales, 2),
                         'shop': round(s_w_sales, 2),
-                        'total': round(t_w_sales + s_w_sales, 2)
+                        'total': round(t_w_sales + s_w_sales, 2),
+                        'new_users': w_users,
+                        'successful_payments': w_successful,
+                        'failed_payments': w_failed
                     })
                 except Exception as ex:
                     logger.warning(f"[AnalyticsOverview] Error calculating weekly stats iteration i={i}: {ex}")
@@ -661,6 +668,32 @@ class AnalyticsUnitDataView(APIView):
                     else:
                         results.append(row)
                 return Response({'type': 'mg_upgrades', 'count': len(results), 'data': results[:200]})
+
+            elif data_type == 'users':
+                qs = User.objects.all().order_by('-date_joined')
+                results = []
+                for u in qs:
+                    email = getattr(u, 'email', '') or ''
+                    username = getattr(u, 'username', '') or ''
+                    full_name = f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+                    row = {
+                        'id': u.id,
+                        'email': email,
+                        'username': username,
+                        'full_name': full_name or username or email,
+                        'is_active': getattr(u, 'is_active', True),
+                        'is_staff': getattr(u, 'is_staff', False),
+                        'created_at': u.date_joined.isoformat() if getattr(u, 'date_joined', None) else ''
+                    }
+                    if search_query:
+                        if (search_query in email.lower() or
+                            search_query in username.lower() or
+                            search_query in full_name.lower() or
+                            search_query in str(u.id)):
+                            results.append(row)
+                    else:
+                        results.append(row)
+                return Response({'type': 'users', 'count': len(results), 'data': results[:200]})
 
             else:
                 return Response({'error': 'Tipo de dato no válido.'}, status=400)

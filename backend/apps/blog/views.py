@@ -209,10 +209,40 @@ class PostViewSet(viewsets.ModelViewSet):
             post.is_notified = True
             post.save()
 
+from django.db.models import Q
+
 class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
-    queryset = NewsletterSubscriber.objects.all().order_by('-created_at')
     serializer_class = NewsletterSubscriberSerializer
     pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        qs = NewsletterSubscriber.objects.all().order_by('-created_at')
+        search = self.request.query_params.get('search', '').strip()
+        if search:
+            qs = qs.filter(Q(email__icontains=search) | Q(name__icontains=search))
+            
+        list_id = self.request.query_params.get('marketing_list_id') or self.request.query_params.get('list_id')
+        if list_id:
+            try:
+                qs = qs.filter(marketing_list_id=int(list_id))
+            except (ValueError, TypeError):
+                pass
+                
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None and is_active != '':
+            if is_active.lower() in ['true', '1']:
+                qs = qs.filter(is_active=True)
+            elif is_active.lower() in ['false', '0']:
+                qs = qs.filter(is_active=False)
+
+        is_premium = self.request.query_params.get('is_premium')
+        if is_premium is not None and is_premium != '':
+            if is_premium.lower() in ['true', '1']:
+                qs = qs.filter(is_premium=True)
+            elif is_premium.lower() in ['false', '0']:
+                qs = qs.filter(is_premium=False)
+
+        return qs
     
     def get_permissions(self):
         if self.action in ['list', 'retrieve', 'destroy']:

@@ -204,6 +204,15 @@ export interface Financials {
 
 export interface DashboardStats {
   financials: Financials;
+  users?: {
+    new_users: number;
+    total_users: number;
+  };
+  funnel?: {
+    successful_count: number;
+    successful_amount: number;
+    failed_count: number;
+  };
   tickets: {
     total_sold: number;
     mg_upgrades: number;
