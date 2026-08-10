@@ -180,10 +180,12 @@ class DashboardAppTests(APITestCase):
         url = reverse('analytics_overview')
         self.client.force_authenticate(user=self.admin_user)
 
-        # Move ticket date to 60 days ago
+        # Move ticket and order dates to 60 days ago
         old_date = timezone.now() - timedelta(days=60)
         from apps.tickets.models import Ticket
+        from apps.shop.models import Order
         Ticket.objects.all().update(created_at=old_date)
+        Order.objects.all().update(created_at=old_date)
 
         # Request 7d period where 0 sales occurred in the last 7 days
         response = self.client.get(url + '?period=7d')
