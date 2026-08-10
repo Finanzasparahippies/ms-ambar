@@ -3603,24 +3603,63 @@ export default function AdminDashboard() {
               )}
 
               {/* TAB 1: SUMMARY DASHBOARD */}
-              {activeTab === 'summary' && (
-                <motion.div
-                  key="summary-tab"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.3 }}
-                  className="space-y-8"
-                >
-                  {stats?.is_historical_fallback && (
-                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2.5 backdrop-blur-md shadow-lg">
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
-                      <span><strong>Aviso de Analítica:</strong> Mostrando histórico acumulado total (sin transacciones registradas en los últimos 30 días).</span>
-                    </div>
-                  )}
+              {activeTab === 'summary' && (() => {
+                const financials = stats?.financials;
+                const tickets = stats?.tickets;
+                const shop = stats?.shop;
+                const breakdownData = stats?.charts?.revenue_breakdown || [];
 
-                  {/* stat cards (3x2 Grid) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                const rawChartData = chartPeriod === 'monthly'
+                  ? (stats?.charts?.monthly_sales || [])
+                  : chartPeriod === 'weekly'
+                    ? (stats?.charts?.weekly_sales || [])
+                    : chartPeriod === 'event'
+                      ? (stats?.charts?.event_sales || [])
+                      : (stats?.charts?.daily_sales || []);
+
+                const chartWidth = 700;
+                const chartHeight = 320;
+                const paddingLeft = 45;
+                const paddingRight = 20;
+                const paddingTop = 20;
+                const paddingBottom = 40;
+                const innerWidth = chartWidth - paddingLeft - paddingRight;
+                const innerHeight = chartHeight - paddingTop - paddingBottom;
+
+                const maxVal = Math.max(1, ...rawChartData.map((d: any) => Number(d.total || d.ticket_revenue || 0)));
+
+                const points = rawChartData.map((d: any, idx: number) => {
+                  const step = rawChartData.length > 1 ? innerWidth / (rawChartData.length - 1) : innerWidth / 2;
+                  const x = paddingLeft + (rawChartData.length > 1 ? idx * step : innerWidth / 2);
+                  const val = Number(d.total || d.ticket_revenue || 0);
+                  const y = paddingTop + innerHeight * (1 - val / maxVal);
+                  return { x, y, data: d };
+                });
+
+                const linePath = points.length > 0 ? points.reduce((acc: string, p: any, idx: number) => {
+                  return idx === 0 ? `M ${p.x} ${p.y}` : `${acc} L ${p.x} ${p.y}`;
+                }, '') : '';
+
+                const areaPath = points.length > 0 ? `${linePath} L ${points[points.length - 1].x} ${paddingTop + innerHeight} L ${points[0].x} ${paddingTop + innerHeight} Z` : '';
+
+                return (
+                  <motion.div
+                    key="summary-tab"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-8"
+                  >
+                    {stats?.is_historical_fallback && (
+                      <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+                        <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                        <span><strong>Aviso de Analítica:</strong> Mostrando histórico acumulado total (sin transacciones registradas en los últimos 30 días).</span>
+                      </div>
+                    )}
+
+                    {/* stat cards (3x2 Grid) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard
                       title="Ingresos del Período"
                       value={formatCurrency(financials?.gross_sales)}
@@ -4149,7 +4188,8 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </motion.div>
-              )}
+              );
+            })()}
 
               {/* TAB 2: ORDERS MANAGEMENT QUEUE */}
               {activeTab === 'orders' && (

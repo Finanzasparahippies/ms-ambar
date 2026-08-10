@@ -72,7 +72,7 @@ def send_ticket_email(ticket):
         'section_str': section_str,
         'theater_name': theater_name,
         'theater_loc': theater_loc,
-        'event_date': ticket.event.date.strftime('%d / %m / %Y'),
+        'event_date': local_event_date.strftime('%d / %m / %Y'),
         'event_time': event_time_str,
         'frontend_url': settings.FRONTEND_URL,
         'venue_location': ticket.event.venue_address,
