@@ -257,8 +257,16 @@ SES_EMAIL_HOST_USER = env("SES_EMAIL_HOST_USER", default="")
 SES_EMAIL_HOST_PASSWORD = env("SES_EMAIL_HOST_PASSWORD", default="")
 SES_DEFAULT_FROM_EMAIL = env("SES_DEFAULT_FROM_EMAIL", default="Ms Ambar <hola@msambar.com>")
 
-# Asegurar la creación dinámica del directorio de logs para evitar errores de E/S
-LOGS_DIR = BASE_DIR / 'logs'
+# Determinación dinámica del entorno activo para aislamiento estricto de logs (production, staging, test, local)
+if TESTING:
+    LOG_ENV = "test"
+else:
+    LOG_ENV = ENVIRONMENT.lower()
+
+ENV_TAG = f"[{LOG_ENV.upper()}]"
+
+# Asegurar la creación dinámica del directorio de logs aislado por entorno
+LOGS_DIR = BASE_DIR / 'logs' / LOG_ENV
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Logging configuration to display logs in console and log files with Nectar Labs styling
@@ -280,11 +288,20 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
+        'env_file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / f'{LOG_ENV}.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
+            'backupCount': 5,
+            'formatter': 'clean',
+            'encoding': 'utf-8',
+        },
         'tickets_file': {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'tickets.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -293,7 +310,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'shop.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -302,7 +319,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'blog.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -311,7 +328,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'dashboard.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -320,7 +337,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'events.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -329,7 +346,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'users.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -338,7 +355,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'gallery.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -347,7 +364,7 @@ LOGGING = {
             'level': 'INFO',
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': str(LOGS_DIR / 'music.log'),
-            'maxBytes': 5 * 1024 * 1024,  # 5MB
+            'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
             'formatter': 'clean',
             'encoding': 'utf-8',
@@ -355,62 +372,62 @@ LOGGING = {
     },
     'loggers': {
         'apps': {
-            'handlers': ['console'],
+            'handlers': ['console', 'env_file'],
             'level': 'DEBUG',
             'propagate': False,
         },
         'apps.tickets': {
-            'handlers': ['console', 'tickets_file'],
+            'handlers': ['console', 'env_file', 'tickets_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.tickets.delivery': {
-            'handlers': ['console', 'tickets_file'],
+            'handlers': ['console', 'env_file', 'tickets_file'],
             'level': 'DEBUG',
             'propagate': False,
         },
         'apps.shop': {
-            'handlers': ['console', 'shop_file'],
+            'handlers': ['console', 'env_file', 'shop_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.events': {
-            'handlers': ['console', 'events_file'],
+            'handlers': ['console', 'env_file', 'events_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.users': {
-            'handlers': ['console', 'users_file'],
+            'handlers': ['console', 'env_file', 'users_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.blog': {
-            'handlers': ['console', 'blog_file'],
+            'handlers': ['console', 'env_file', 'blog_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.dashboard': {
-            'handlers': ['console', 'dashboard_file'],
+            'handlers': ['console', 'env_file', 'dashboard_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.gallery': {
-            'handlers': ['console', 'gallery_file'],
+            'handlers': ['console', 'env_file', 'gallery_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'apps.music': {
-            'handlers': ['console', 'music_file'],
+            'handlers': ['console', 'env_file', 'music_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'config': {
-            'handlers': ['console'],
+            'handlers': ['console', 'env_file'],
             'level': 'INFO',
             'propagate': False,
         },
         'tests': {
-            'handlers': ['console'],
+            'handlers': ['console', 'env_file'],
             'level': 'INFO',
             'propagate': False,
         },
