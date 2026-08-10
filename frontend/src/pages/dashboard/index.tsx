@@ -222,6 +222,11 @@ const formatCampaignText = (text: string, mode: 'poem' | 'letter', alignment: st
 };
 
 export default function AdminDashboard() {
+  const formatCurrency = (val?: number | null) => {
+    const num = typeof val === 'number' && !isNaN(val) ? val : 0;
+    return `$${num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   const resolveFontStack = (fontKey: string) => {
     switch (fontKey) {
       case 'playfair': return "'Playfair Display', Georgia, serif";
@@ -3611,7 +3616,7 @@ export default function AdminDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard
                       title="Ingresos del Período"
-                      value={`$${financials?.gross_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      value={formatCurrency(financials?.gross_sales)}
                       icon={<DollarSign className="text-amber-400" />}
                       color="amber"
                       detail="Ventas del Período: Taquilla + Tienda 🔍"
@@ -3619,23 +3624,23 @@ export default function AdminDashboard() {
                     />
                     <StatCard
                       title="Ventas del Período (Tickets)"
-                      value={`$${financials?.ticket_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      value={formatCurrency(financials?.ticket_sales)}
                       icon={<TicketIcon className="text-amber-300" />}
                       color="gold"
-                      detail={`Boletos: ${tickets?.total_sold} vendidos en el período 🔍`}
+                      detail={`Boletos: ${tickets?.total_sold ?? 0} vendidos en el período 🔍`}
                       onClick={() => fetchUnitData('tickets', 'Ventas del Período (Tickets Unitarios)')}
                     />
                     <StatCard
                       title="Ventas del Período (Tienda)"
-                      value={`$${financials?.shop_sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      value={formatCurrency(financials?.shop_sales)}
                       icon={<ShoppingBag className="text-amber-500" />}
                       color="honey"
-                      detail={`Pedidos: ${shop?.total_orders} completados en el período 🔍`}
+                      detail={`Pedidos: ${shop?.total_orders ?? 0} completados en el período 🔍`}
                       onClick={() => fetchUnitData('orders', 'Ventas del Período (Pedidos Unitarios)')}
                     />
                     <StatCard
                       title="Gastos del Período"
-                      value={`$${financials?.total_expenses?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      value={formatCurrency(financials?.total_expenses)}
                       icon={<TrendingDown className="text-red-400" />}
                       color="honey"
                       detail="Gastos registrados en el período 🔍"
@@ -3643,7 +3648,7 @@ export default function AdminDashboard() {
                     />
                     <StatCard
                       title="Beneficio Neto del Período"
-                      value={`$${financials?.net_profit?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                      value={formatCurrency(financials?.net_profit)}
                       icon={<Landmark className="text-green-400" />}
                       color="amber"
                       detail="Ingresos del período libres de gastos 🔍"
@@ -3654,7 +3659,7 @@ export default function AdminDashboard() {
                       value={tickets?.mg_upgrades ?? 0}
                       icon={<Users className="text-yellow-400" />}
                       color="yellow"
-                      detail={`Ingreso M&G: $${financials?.mg_revenue.toLocaleString()} 🔍`}
+                      detail={`Ingreso M&G: ${formatCurrency(financials?.mg_revenue)} 🔍`}
                       onClick={() => fetchUnitData('mg_upgrades', 'Upgrades Meet & Greet Unitarios')}
                     />
                   </div>
