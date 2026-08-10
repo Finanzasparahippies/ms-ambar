@@ -12,6 +12,7 @@ from django.db import connection
 # Import models from sibling apps
 from apps.tickets.models import Ticket, Event, Seat, GADeclaration
 from apps.shop.models import Order, Product, OrderItem, Expense
+from apps.dashboard.services.ads_service import AdsIntegrationService
 
 try:
     from apps.performance.models import PerformanceMetric
@@ -268,11 +269,21 @@ class AnalyticsOverview(APIView):
                     ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
                     s_daily_sales = float(s_daily_sales)
                     
+                    # Estadísticas cruzadas por día (Nuevos usuarios, Pagos exitosos vs fallidos)
+                    d_start = datetime.combine(current_date.date(), datetime.min.time(), tzinfo=dt_timezone.utc)
+                    d_end = datetime.combine(current_date.date(), datetime.max.time(), tzinfo=dt_timezone.utc)
+                    d_users = User.objects.filter(date_joined__gte=d_start, date_joined__lte=d_end).count()
+                    d_failed = Ticket.objects.filter(status='cancelled', created_at__gte=d_start, created_at__lte=d_end).count() + Order.objects.filter(status='cancelled', created_at__gte=d_start, created_at__lte=d_end).count()
+                    d_successful = date_tickets.count() + Order.objects.filter(status__in=['paid', 'shipped', 'delivered'], created_at__date=current_date.date()).count()
+
                     daily_stats.append({
                         'date': date_str,
                         'tickets': round(t_daily_sales, 2),
                         'shop': round(s_daily_sales, 2),
-                        'total': round(t_daily_sales + s_daily_sales, 2)
+                        'total': round(t_daily_sales + s_daily_sales, 2),
+                        'new_users': d_users,
+                        'successful_payments': d_successful,
+                        'failed_payments': d_failed
                     })
                 except Exception as ex:
                     logger.warning(f"[AnalyticsOverview] Error calculating daily stats iteration i={i}: {ex}")
@@ -311,12 +322,19 @@ class AnalyticsOverview(APIView):
                     ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
                     s_m_sales = float(s_m_sales)
 
+                    m_users = User.objects.filter(date_joined__gte=m_start, date_joined__lte=m_end).count()
+                    m_failed = Ticket.objects.filter(status='cancelled', created_at__gte=m_start, created_at__lte=m_end).count() + Order.objects.filter(status='cancelled', created_at__gte=m_start, created_at__lte=m_end).count()
+                    m_successful = m_tickets.count() + Order.objects.filter(status__in=['paid', 'shipped', 'delivered'], created_at__gte=m_start, created_at__lte=m_end).count()
+
                     monthly_stats.append({
                         'date': m_label,
                         'month_key': m_start.strftime('%Y-%m'),
                         'tickets': round(t_m_sales, 2),
                         'shop': round(s_m_sales, 2),
-                        'total': round(t_m_sales + s_m_sales, 2)
+                        'total': round(t_m_sales + s_m_sales, 2),
+                        'new_users': m_users,
+                        'successful_payments': m_successful,
+                        'failed_payments': m_failed
                     })
                 except Exception as ex:
                     logger.warning(f"[AnalyticsOverview] Error calculating monthly stats iteration i={i}: {ex}")
@@ -389,6 +407,17 @@ class AnalyticsOverview(APIView):
                 {'category': 'Gastos Operativos', 'amount': round(total_expenses, 2), 'percentage': round((total_expenses / total_rev_pool) * 100, 1)}
             ]
 
+            # 11. Métricas de Usuarios y Embudo de Transacciones
+            new_users_count = User.objects.filter(date_joined__gte=start_date, date_joined__lte=end_date).count()
+            total_users_count = User.objects.count()
+            failed_tickets_count = Ticket.objects.filter(status='cancelled', created_at__gte=start_date, created_at__lte=end_date).count()
+            failed_orders_count = Order.objects.filter(status='cancelled', created_at__gte=start_date, created_at__lte=end_date).count()
+            total_failed_count = failed_tickets_count + failed_orders_count
+            total_successful_count = total_tickets_sold + total_orders_count
+
+            # 12. Métricas de Pauta Publicitaria (Google Ads & Meta Ads)
+            ads_performance = AdsIntegrationService.get_ads_performance(period=period_param)
+
             metrics = {
                 'financials': {
                     'gross_sales': round(gross_sales, 2),
@@ -398,6 +427,16 @@ class AnalyticsOverview(APIView):
                     'total_expenses': round(total_expenses, 2),
                     'net_profit': round(net_profit, 2),
                 },
+                'users': {
+                    'new_users': new_users_count,
+                    'total_users': total_users_count,
+                },
+                'funnel': {
+                    'successful_count': total_successful_count,
+                    'successful_amount': round(gross_sales, 2),
+                    'failed_count': total_failed_count,
+                },
+                'ads': ads_performance,
                 'tickets': {
                     'total_sold': total_tickets_sold,
                     'mg_upgrades': mg_upgrades_sold,
@@ -754,4 +793,18 @@ class DashboardExpensesView(APIView):
             }, status=201)
         except Exception as e:
             logger.error(f"[DashboardExpensesView] Error creating expense: {e}", exc_info=True)
+            return Response({'error': str(e)}, status=500)
+
+
+class AdsPerformanceView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        period = str(request.query_params.get('period', '30d')).lower()
+        force_refresh = request.query_params.get('refresh') == 'true'
+        try:
+            ads_data = AdsIntegrationService.get_ads_performance(period=period, force_refresh=force_refresh)
+            return Response(ads_data)
+        except Exception as e:
+            logger.error(f"[AdsPerformanceView] Error al consultar métricas de anuncios: {e}", exc_info=True)
             return Response({'error': str(e)}, status=500)

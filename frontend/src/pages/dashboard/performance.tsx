@@ -40,6 +40,7 @@ const PerformanceDashboard = () => {
   const [exportingPptx, setExportingPptx] = useState(false);
   const [expandedBases, setExpandedBases] = useState<Record<string, boolean>>({});
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+  const [selectedEnv, setSelectedEnv] = useState<'all' | 'production' | 'staging' | 'local'>('all');
 
   const toggleExpand = (base: string) => {
     setExpandedBases(prev => ({ ...prev, [base]: !prev[base] }));
@@ -573,17 +574,47 @@ const PerformanceDashboard = () => {
 
       {/* Auditoría, Purga y Logs del Sistema de Apps */}
       <div className="bg-[#0D120F]/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-xl shadow-black/40">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-xl font-black text-[#F4F6F0] uppercase tracking-wider flex items-center gap-2 italic">
-              <FileText size={20} className="text-amber-500" /> Auditoría, Purga & Control de Logs por Módulo
+              <FileText size={20} className="text-amber-500" /> Auditoría, Purga & Control de Logs por Entorno
             </h2>
-            <p className="text-xs text-[#F4F6F0]/40 mt-1">Descarga o vacía en caliente el historial de eventos estructurados con bloqueo seguro fcntl</p>
+            <p className="text-xs text-[#F4F6F0]/40 mt-1">Descarga o vacía en caliente el historial de eventos estructurados aislado por ambiente</p>
+          </div>
+
+          {/* Environment Selector Tabs */}
+          <div className="flex items-center gap-1 bg-[#080C0A] p-1.5 rounded-xl border border-white/10 self-start md:self-auto">
+            {[
+              { id: 'all', label: 'Todos los Logs' },
+              { id: 'production', label: 'Producción' },
+              { id: 'staging', label: 'Staging' },
+              { id: 'local', label: 'Local / Módulos' }
+            ].map((env) => (
+              <button
+                key={env.id}
+                onClick={() => setSelectedEnv(env.id as any)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all ${
+                  selectedEnv === env.id
+                    ? 'bg-amber-500 text-black font-black shadow-lg shadow-amber-500/20'
+                    : 'text-[#F4F6F0]/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {env.label}
+              </button>
+            ))}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {groupedLogs.map(({ base, appLabel, appDescription, badgeColor, shadowColor, activeLog, history }) => {
+          {groupedLogs
+            .filter(item => {
+              if (selectedEnv === 'all') return true;
+              if (selectedEnv === 'production') return item.base === 'production.log';
+              if (selectedEnv === 'staging') return item.base === 'staging.log';
+              if (selectedEnv === 'local') return !['production.log', 'staging.log'].includes(item.base);
+              return true;
+            })
+            .map(({ base, appLabel, appDescription, badgeColor, shadowColor, activeLog, history }) => {
             const isExpanded = expandedBases[base] || false;
             
             return (

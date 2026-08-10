@@ -160,6 +160,16 @@ STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
 STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
 
+# Marketing & Advertising APIs (Google Ads & Meta/Facebook Ads)
+GOOGLE_ADS_DEVELOPER_TOKEN = env("GOOGLE_ADS_DEVELOPER_TOKEN", default="")
+GOOGLE_ADS_CLIENT_ID = env("GOOGLE_ADS_CLIENT_ID", default="")
+GOOGLE_ADS_CLIENT_SECRET = env("GOOGLE_ADS_CLIENT_SECRET", default="")
+GOOGLE_ADS_CUSTOMER_ID = env("GOOGLE_ADS_CUSTOMER_ID", default="")
+
+META_ADS_ACCESS_TOKEN = env("META_ADS_ACCESS_TOKEN", default="")
+META_ADS_ACCOUNT_ID = env("META_ADS_ACCOUNT_ID", default="")
+META_ADS_PIXEL_ID = env("META_ADS_PIXEL_ID", default="")
+
 # Frontend URL
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 

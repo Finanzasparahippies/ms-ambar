@@ -303,3 +303,23 @@ class DashboardAppTests(APITestCase):
 
         response_expenses_post = self.client.post(url_expenses, {'title': 'New Rent', 'amount': 100})
         self.assertEqual(response_expenses_post.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_ads_performance_endpoint(self):
+        """Verify admin can retrieve ads performance metrics."""
+        url = reverse('dashboard_ads_performance')
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('summary', response.data)
+        self.assertIn('platforms', response.data)
+        self.assertIn('campaigns', response.data)
+
+    def test_analytics_overview_includes_ads_users_funnel(self):
+        """Verify AnalyticsOverview response contains users, funnel and ads analytics."""
+        url = reverse('analytics_overview')
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('users', response.data)
+        self.assertIn('funnel', response.data)
+        self.assertIn('ads', response.data)

@@ -68,6 +68,8 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useState } from 'react';
 import CouponManager from '../../components/CouponManager';
 import ThemeManager from '../../components/ThemeManager';
+import { AdsPerformanceWidget } from '../../components/dashboard/AdsPerformanceWidget';
+import { CrossAnalyticsChart } from '../../components/dashboard/CrossAnalyticsChart';
 import api from '../../lib/api';
 import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import { cn, getApiUrl } from '../../lib/utils';
@@ -4013,6 +4015,17 @@ export default function AdminDashboard() {
                       </div>
 
                     </div>
+                  </div>
+
+                  {/* Sección de Análisis Cruzado de Negocio & Rendimiento de Pauta Publicitaria */}
+                  <div className="space-y-8 my-8">
+                    <CrossAnalyticsChart 
+                      data={stats?.charts?.daily_sales || []} 
+                      adSpendTotal={stats?.ads?.summary?.total_spend || 0}
+                    />
+                    <AdsPerformanceWidget 
+                      adsData={stats?.ads || null}
+                    />
                   </div>
 
                   {/* Health and Products section */}
