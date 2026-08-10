@@ -68,16 +68,21 @@ def stripe_webhook(request):
             return HttpResponse("Event already processed", status=200)
         try:
             StripeEvent.objects.create(event_id=event_id)
-        except Exception:
+        except Exception as e:
+            logger.info(f"Registro duplicado/concurrente de StripeEvent para evento {event_id}: {e}")
             return HttpResponse("Event processing in progress", status=200)
 
     # Handle the checkout.session.completed and payment_intent.succeeded events
-    if event['type'] in ['checkout.session.completed', 'payment_intent.succeeded']:
-        session = event['data']['object']
-        handle_successful_payment(session)
-    elif event['type'] in ['payment_intent.payment_failed', 'checkout.session.expired']:
-        session = event['data']['object']
-        handle_failed_payment(session)
+    try:
+        if event['type'] in ['checkout.session.completed', 'payment_intent.succeeded']:
+            session = event['data']['object']
+            handle_successful_payment(session)
+        elif event['type'] in ['payment_intent.payment_failed', 'checkout.session.expired']:
+            session = event['data']['object']
+            handle_failed_payment(session)
+    except Exception as e:
+        logger.error(f"[Stripe Webhook] Error interno procesando evento {event.get('id') if event else 'desconocido'}: {e}", exc_info=True)
+        return HttpResponse("Error procesado internamente", status=200)
 
     return HttpResponse(status=200)
 

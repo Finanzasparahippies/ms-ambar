@@ -1,6 +1,9 @@
 import stripe
+import logging
 from django.conf import settings
 from apps.tickets.models import Ticket
+
+logger = logging.getLogger(__name__)
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -151,8 +154,8 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
         from apps.tickets.models import SiteSettings
         site_settings = SiteSettings.get()
         pass_fees_to_buyer = getattr(site_settings, 'pass_fees_to_buyer', True)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Fallo al consultar SiteSettings en checkout de tienda: {e}", exc_info=True)
 
     service_fee_amount = 0.0
     fee_info = {'service_fee': 0.0, 'total': total_base_amount}

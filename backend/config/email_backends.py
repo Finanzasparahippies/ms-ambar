@@ -95,7 +95,7 @@ class FailoverEmailBackend(BaseEmailBackend):
                 return sent_count
                 
             except Exception as e:
-                logger.warning(f"FailoverEmailBackend: Failed to send via {name}: {e}. Trying next provider...")
+                logger.warning(f"FailoverEmailBackend: Failed to send via {name}: {e}. Trying next provider...", exc_info=True)
                 last_error = e
                 # Restore original from_emails so the next provider can try
                 for i, msg in enumerate(email_messages):

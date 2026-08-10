@@ -1,3 +1,4 @@
+import logging
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -5,6 +6,8 @@ from rest_framework.permissions import AllowAny, IsAdminUser
 from django.db.models import Avg, Max, Count
 from .models import PerformanceMetric, ServerRequestLog
 from .serializers import PerformanceMetricSerializer, ServerRequestLogSerializer
+
+logger = logging.getLogger(__name__)
 
 class PerformanceViewSet(viewsets.ViewSet):
     permission_classes = [AllowAny]
@@ -78,9 +81,9 @@ class PerformanceViewSet(viewsets.ViewSet):
                             'size': stat.st_size,
                             'modified': stat.st_mtime
                         }
-        except Exception:
+        except Exception as e:
             # En caso de error de lectura, continuamos para no romper el admin
-            pass
+            logger.warning(f"Error escaneando directorio de logs: {e}", exc_info=True)
 
         # Asegurar que las bases principales siempre aparezcan listadas,
         # aunque no se hayan escrito aún físicamente en disco.
@@ -174,15 +177,15 @@ class PerformanceViewSet(viewsets.ViewSet):
                 try:
                     import fcntl
                     fcntl.flock(f, fcntl.LOCK_EX)
-                except Exception:
-                    pass
+                except (ImportError, OSError, AttributeError) as err:
+                    logger.debug(f"Bloqueo fcntl LOCK_EX no disponible: {err}")
                 f.truncate(0)
                 f.seek(0)
                 try:
                     import fcntl
                     fcntl.flock(f, fcntl.LOCK_UN)
-                except Exception:
-                    pass
+                except (ImportError, OSError, AttributeError) as err:
+                    logger.debug(f"Desbloqueo fcntl LOCK_UN no disponible: {err}")
             return Response({'message': f'Log {file_name} purgado exitosamente.', 'file': file_name}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': f'No se pudo purgar el archivo: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

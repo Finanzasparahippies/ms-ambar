@@ -48,7 +48,8 @@ class MusicIngestionService:
             config = MusicConfig.get_solo()
             client_id = (config.spotify_client_id if config.spotify_client_id else getattr(settings, 'SPOTIFY_CLIENT_ID', '')).strip()
             client_secret = (config.spotify_client_secret if config.spotify_client_secret else getattr(settings, 'SPOTIFY_CLIENT_SECRET', '')).strip()
-        except Exception:
+        except Exception as err:
+            logger.warning(f"[MusicIngestionService] No se pudo obtener MusicConfig solo instance para Spotify, usando settings: {err}")
             client_id = getattr(settings, 'SPOTIFY_CLIENT_ID', '')
             client_secret = getattr(settings, 'SPOTIFY_CLIENT_SECRET', '')
 
@@ -130,7 +131,8 @@ class MusicIngestionService:
         try:
             config = MusicConfig.get_solo()
             region = config.apple_music_region or "us"
-        except Exception:
+        except Exception as err:
+            logger.warning(f"[MusicIngestionService] No se pudo obtener MusicConfig solo instance para iTunes region: {err}")
             region = "us"
 
         params = {"term": artist_name, "entity": "song", "limit": 25, "country": region}
@@ -167,7 +169,8 @@ class MusicIngestionService:
         try:
             config = MusicConfig.get_solo()
             api_key = (config.youtube_api_key if config.youtube_api_key else getattr(settings, 'YOUTUBE_API_KEY', '')).strip()
-        except Exception:
+        except Exception as err:
+            logger.warning(f"[MusicIngestionService] No se pudo obtener MusicConfig solo instance para YouTube: {err}")
             api_key = getattr(settings, 'YOUTUBE_API_KEY', '')
 
         if not api_key or api_key.startswith('mock_'):
@@ -299,7 +302,8 @@ class MusicIngestionService:
         """
         try:
             config = MusicConfig.get_solo()
-        except Exception:
+        except Exception as err:
+            logger.warning(f"[MusicIngestionService] No se pudo obtener MusicConfig solo instance en check_api_health: {err}")
             config = None
 
         results = {

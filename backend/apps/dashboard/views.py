@@ -158,13 +158,13 @@ class AnalyticsOverview(APIView):
             if request.query_params.get('start_date'):
                 try:
                     start_date = datetime.fromisoformat(request.query_params['start_date']).replace(tzinfo=dt_timezone.utc)
-                except (ValueError, TypeError):
-                    pass
+                except (ValueError, TypeError) as err:
+                    logger.warning(f"Formato de start_date inválido ({request.query_params.get('start_date')}), usando por defecto: {err}")
             if request.query_params.get('end_date'):
                 try:
                     end_date = datetime.fromisoformat(request.query_params['end_date']).replace(tzinfo=dt_timezone.utc)
-                except (ValueError, TypeError):
-                    pass
+                except (ValueError, TypeError) as err:
+                    logger.warning(f"Formato de end_date inválido ({request.query_params.get('end_date')}), usando por defecto: {err}")
             
             # 2. Financial Metrics - Tickets (Filtered by Active Period)
             paid_tickets = Ticket.objects.filter(

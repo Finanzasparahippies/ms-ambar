@@ -56,8 +56,8 @@ class Command(BaseCommand):
                         ticket.save(update_fields=['status'])
                         cancelled_count += 1
                         self.stdout.write(self.style.WARNING(f"Boleto #{ticket.id} cancelado: Stripe Session {ticket.stripe_session_id} estado '{session.payment_status}'"))
-                except stripe.error.InvalidRequestError:
-                    pass
+                except stripe.error.InvalidRequestError as e:
+                    logger.warning(f"Stripe Session ID inválido o no encontrado para boleto #{ticket.id}: {ticket.stripe_session_id} - {e}")
                 except Exception as e:
                     logger.warning(f"Error verificando Stripe Session {ticket.stripe_session_id}: {e}")
 

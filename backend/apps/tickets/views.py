@@ -379,7 +379,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                     dynamic_price = event.get_dynamic_price(raw_seat_price) if hasattr(event, 'get_dynamic_price') else raw_seat_price
                     total_base_amount += dynamic_price
                 except Seat.DoesNotExist:
-                    pass
+                    logger.warning(f"Seat ID no encontrado durante cálculo de precio: {seat_id}")
             if has_mg and float(event.mg_price) > 0:
                 total_base_amount += float(event.mg_price) * len(seat_ids)
 
@@ -398,8 +398,8 @@ class TicketViewSet(viewsets.ModelViewSet):
         try:
             site_settings = SiteSettings.get()
             pass_fees_to_buyer = getattr(site_settings, 'pass_fees_to_buyer', True)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Fallo al obtener SiteSettings para pass_fees_to_buyer, usando default (True): {e}", exc_info=True)
 
         total_with_fees = total_base_amount
         if pass_fees_to_buyer and total_base_amount > 0:
@@ -792,8 +792,8 @@ class SiteSettingsView(APIView):
             try:
                 from django.core.cache import cache
                 cache.delete('ms_ambar_active_theme_global')
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.error(f"Error al invalidar caché 'ms_ambar_active_theme_global': {exc}", exc_info=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -839,8 +839,8 @@ class ActiveThemeView(APIView):
             theme_data['event_title'] = None
             try:
                 cache.set('ms_ambar_active_theme_global', theme_data, timeout=86400)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.error(f"Error al guardar caché 'ms_ambar_active_theme_global': {exc}", exc_info=True)
 
         return Response(theme_data)
 

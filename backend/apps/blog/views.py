@@ -457,39 +457,43 @@ class SESIdentityVerificationViewSet(viewsets.ModelViewSet):
 
         # 2. Process delivery notification
         if message_type == 'Notification':
-            message = json.loads(data.get('Message', '{}'))
-            notification_type = message.get('notificationType')
+            try:
+                message = json.loads(data.get('Message', '{}'))
+                notification_type = message.get('notificationType')
 
-            # Bounces
-            if notification_type == 'Bounce':
-                bounce = message.get('bounce', {})
-                bounce_type = bounce.get('bounceType')
-                
-                if bounce_type == 'Permanent':
-                    bounced_recipients = bounce.get('bouncedRecipients', [])
-                    for recipient in bounced_recipients:
+                # Bounces
+                if notification_type == 'Bounce':
+                    bounce = message.get('bounce', {})
+                    bounce_type = bounce.get('bounceType')
+                    
+                    if bounce_type == 'Permanent':
+                        bounced_recipients = bounce.get('bouncedRecipients', [])
+                        for recipient in bounced_recipients:
+                            email = recipient.get('emailAddress')
+                            try:
+                                sub = NewsletterSubscriber.objects.get(email=email)
+                                sub.is_active = False
+                                sub.save()
+                                logger.info(f"Subscriber {email} deactivated due to Hard Bounce.")
+                            except NewsletterSubscriber.DoesNotExist:
+                                logger.warning(f"SES bounce recibido para suscriptor inexistente: {email}")
+
+                # Complaints
+                elif notification_type == 'Complaint':
+                    complaint = message.get('complaint', {})
+                    complained_recipients = complaint.get('complainedRecipients', [])
+                    for recipient in complained_recipients:
                         email = recipient.get('emailAddress')
                         try:
                             sub = NewsletterSubscriber.objects.get(email=email)
                             sub.is_active = False
                             sub.save()
-                            logger.info(f"Subscriber {email} deactivated due to Hard Bounce.")
+                            logger.info(f"Subscriber {email} deactivated due to Complaint/Spam report.")
                         except NewsletterSubscriber.DoesNotExist:
-                            pass
-
-            # Complaints
-            elif notification_type == 'Complaint':
-                complaint = message.get('complaint', {})
-                complained_recipients = complaint.get('complainedRecipients', [])
-                for recipient in complained_recipients:
-                    email = recipient.get('emailAddress')
-                    try:
-                        sub = NewsletterSubscriber.objects.get(email=email)
-                        sub.is_active = False
-                        sub.save()
-                        logger.info(f"Subscriber {email} deactivated due to Complaint/Spam report.")
-                    except NewsletterSubscriber.DoesNotExist:
-                        pass
+                            logger.warning(f"SES complaint recibido para suscriptor inexistente: {email}")
+            except Exception as e:
+                logger.error(f"[SES Webhook] Error procesando notificación SNS: {e}", exc_info=True)
+                return Response("Error procesado internamente", status=status.HTTP_200_OK)
 
         return Response("OK", status=status.HTTP_200_OK)
 

@@ -108,7 +108,7 @@ class PasswordResetRequestView(APIView):
                 email_msg.send(fail_silently=False)
                 email_sent = True
             except Exception as e:
-                logger.error(f"Error al enviar correo electrónico de recuperación: {e}")
+                logger.error(f"Error al enviar correo electrónico de recuperación: {e}", exc_info=True)
                 # We continue since we already logged it to console for the dev to use.
 
             response_data = {

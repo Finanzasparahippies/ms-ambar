@@ -1,6 +1,9 @@
 import time
+import logging
 from django.db import connection
 from .models import ServerRequestLog
+
+logger = logging.getLogger(__name__)
 
 class PerformanceMiddleware:
     def __init__(self, get_response):
@@ -29,8 +32,8 @@ class PerformanceMiddleware:
                 response_time=round(duration, 4),
                 query_count=query_count
             )
-        except Exception:
-            # Avoid breaking the site if logging fails
-            pass
+        except Exception as e:
+            # Avoid breaking the site if logging fails, but log the exception
+            logger.error(f"Fallo al guardar ServerRequestLog: {e}", exc_info=True)
 
         return response
