@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, Users, DollarSign, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 
 interface DailyStat {
@@ -21,6 +21,19 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
   const [activeSeries, setActiveSeries] = useState<'sales_breakdown' | 'users_vs_conversions' | 'funnel'>('sales_breakdown');
   const [hoveredItem, setHoveredItem] = useState<DailyStat | null>(null);
 
+  // Memorizar valor máximo para evitar recálculos pesados durante hover continuo
+  const maxVal = useMemo(() => {
+    if (!data || data.length === 0) return 1;
+    return Math.max(
+      1,
+      ...data.map(d => {
+        if (activeSeries === 'sales_breakdown') return Math.max(d.tickets, d.shop, d.total, 1);
+        if (activeSeries === 'users_vs_conversions') return Math.max((d.new_users || 0) * 10, 50);
+        return Math.max((d.successful_payments || 0), (d.failed_payments || 0), 1);
+      })
+    );
+  }, [data, activeSeries]);
+
   if (!data || data.length === 0) {
     return (
       <div className="p-6 rounded-2xl bg-black/40 border border-amber-500/20 text-center text-neutral-500 text-sm">
@@ -28,16 +41,6 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
       </div>
     );
   }
-
-  // Calcular valor máximo para escalar barras/gráficas adecuadamente
-  const maxVal = Math.max(
-    1,
-    ...data.map(d => {
-      if (activeSeries === 'sales_breakdown') return Math.max(d.tickets, d.shop, d.total, 1);
-      if (activeSeries === 'users_vs_conversions') return Math.max((d.new_users || 0) * 10, 50);
-      return Math.max((d.successful_payments || 0), (d.failed_payments || 0), 1);
-    })
-  );
 
   return (
     <div className="p-6 rounded-2xl bg-gradient-to-br from-neutral-900/90 via-black/80 to-amber-950/20 backdrop-blur-xl border border-amber-500/20 shadow-2xl space-y-6">
@@ -125,7 +128,10 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
       </div>
 
       {/* Interactive Visual Bar Chart */}
-      <div className="h-64 flex items-end justify-between gap-1 sm:gap-2 pt-6 pb-2 px-2 bg-black/40 rounded-xl border border-white/5 relative">
+      <div
+        className="h-64 flex items-end justify-between gap-1 sm:gap-2 pt-6 pb-2 px-2 bg-black/40 rounded-xl border border-white/5 relative"
+        onMouseLeave={() => setHoveredItem(null)}
+      >
         {data.map((item, idx) => {
           let height1 = 0;
           let height2 = 0;
@@ -140,12 +146,13 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
             height2 = ((item.failed_payments || 0) / maxVal) * 100;
           }
 
+          const isHovered = hoveredItem?.date === item.date;
+
           return (
             <div
               key={idx}
               className="flex-1 flex flex-col items-center justify-end h-full group relative cursor-pointer"
               onMouseEnter={() => setHoveredItem(item)}
-              onMouseLeave={() => setHoveredItem(null)}
             >
               {/* Bars Group */}
               <div className="w-full flex items-end justify-center gap-0.5 h-full">
@@ -154,12 +161,18 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(4, height1)}%` }}
-                      className="w-1/2 bg-gradient-to-t from-amber-600 to-amber-400 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-amber-500/10"
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                      className={`w-1/2 bg-gradient-to-t from-amber-600 to-amber-400 rounded-t-sm transition-[filter,opacity] duration-150 ease-out shadow-md shadow-amber-500/10 will-change-[filter,opacity] ${
+                        isHovered ? 'brightness-125 scale-[1.02]' : 'group-hover:brightness-110'
+                      }`}
                     />
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(4, height2)}%` }}
-                      className="w-1/2 bg-gradient-to-t from-cyan-600 to-cyan-400 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-cyan-500/10"
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                      className={`w-1/2 bg-gradient-to-t from-cyan-600 to-cyan-400 rounded-t-sm transition-[filter,opacity] duration-150 ease-out shadow-md shadow-cyan-500/10 will-change-[filter,opacity] ${
+                        isHovered ? 'brightness-125 scale-[1.02]' : 'group-hover:brightness-110'
+                      }`}
                     />
                   </>
                 )}
@@ -167,7 +180,10 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
                   <motion.div
                     initial={{ height: 0 }}
                     animate={{ height: `${Math.max(4, height1)}%` }}
-                    className="w-full max-w-[14px] bg-gradient-to-t from-amber-500 to-amber-300 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-amber-500/10"
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className={`w-full max-w-[14px] bg-gradient-to-t from-amber-500 to-amber-300 rounded-t-sm transition-[filter,opacity] duration-150 ease-out shadow-md shadow-amber-500/10 will-change-[filter,opacity] ${
+                      isHovered ? 'brightness-125 scale-[1.02]' : 'group-hover:brightness-110'
+                    }`}
                   />
                 )}
                 {activeSeries === 'funnel' && (
@@ -175,19 +191,27 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(4, height1)}%` }}
-                      className="w-1/2 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-emerald-500/10"
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                      className={`w-1/2 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t-sm transition-[filter,opacity] duration-150 ease-out shadow-md shadow-emerald-500/10 will-change-[filter,opacity] ${
+                        isHovered ? 'brightness-125 scale-[1.02]' : 'group-hover:brightness-110'
+                      }`}
                     />
                     <motion.div
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(4, height2)}%` }}
-                      className="w-1/2 bg-gradient-to-t from-rose-700 to-rose-500 rounded-t-sm group-hover:brightness-125 transition-all shadow-md shadow-rose-500/10"
+                      transition={{ duration: 0.3, ease: 'easeOut' }}
+                      className={`w-1/2 bg-gradient-to-t from-rose-700 to-rose-500 rounded-t-sm transition-[filter,opacity] duration-150 ease-out shadow-md shadow-rose-500/10 will-change-[filter,opacity] ${
+                        isHovered ? 'brightness-125 scale-[1.02]' : 'group-hover:brightness-110'
+                      }`}
                     />
                   </>
                 )}
               </div>
 
               {/* Date Label */}
-              <span className="text-[9px] text-neutral-500 mt-2 truncate w-full text-center group-hover:text-amber-400 transition-colors">
+              <span className={`text-[9px] mt-2 truncate w-full text-center transition-colors ${
+                isHovered ? 'text-amber-400 font-semibold' : 'text-neutral-500 group-hover:text-neutral-300'
+              }`}>
                 {item.date}
               </span>
             </div>
@@ -195,25 +219,44 @@ export const CrossAnalyticsChart: React.FC<CrossAnalyticsProps> = ({ data }) => 
         })}
       </div>
 
-      {/* Amber-Glass Enriched Tooltip Box */}
-      {hoveredItem && (
-        <motion.div
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-3 rounded-xl bg-neutral-900/95 border border-amber-500/30 text-xs shadow-2xl flex items-center justify-between gap-6"
-        >
-          <div>
-            <span className="text-amber-400 font-semibold">{hoveredItem.date}:</span>
-            <span className="text-neutral-300 ml-2">Total Ventas: ${hoveredItem.total.toLocaleString()} MXN</span>
-          </div>
-          <div className="flex items-center gap-4 text-neutral-400">
-            <span>Taquilla: <strong className="text-amber-400">${hoveredItem.tickets.toLocaleString()}</strong></span>
-            <span>Tienda: <strong className="text-cyan-400">${hoveredItem.shop.toLocaleString()}</strong></span>
-            <span>Registros: <strong className="text-white">{hoveredItem.new_users || 0}</strong></span>
-            <span>Aprobados: <strong className="text-emerald-400">{hoveredItem.successful_payments || 0}</strong></span>
-          </div>
-        </motion.div>
-      )}
+      {/* Amber-Glass Enriched Tooltip Box (Fixed Height Slot to Prevent Layout Shift) */}
+      <div className="h-12 min-h-[48px] flex items-center justify-between px-4 rounded-xl bg-neutral-900/90 border border-amber-500/20 text-xs shadow-xl relative overflow-hidden">
+        <AnimatePresence mode="wait">
+          {hoveredItem ? (
+            <motion.div
+              key={hoveredItem.date}
+              initial={{ opacity: 0, y: 3 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -3 }}
+              transition={{ duration: 0.12, ease: 'easeOut' }}
+              className="w-full flex flex-wrap items-center justify-between gap-4 pointer-events-none will-change-[transform,opacity]"
+            >
+              <div>
+                <span className="text-amber-400 font-semibold">{hoveredItem.date}:</span>
+                <span className="text-neutral-300 ml-2">Total Ventas: ${hoveredItem.total.toLocaleString()} MXN</span>
+              </div>
+              <div className="flex items-center gap-4 text-neutral-400">
+                <span>Taquilla: <strong className="text-amber-400">${hoveredItem.tickets.toLocaleString()}</strong></span>
+                <span>Tienda: <strong className="text-cyan-400">${hoveredItem.shop.toLocaleString()}</strong></span>
+                <span>Registros: <strong className="text-white">{hoveredItem.new_users || 0}</strong></span>
+                <span>Aprobados: <strong className="text-emerald-400">{hoveredItem.successful_payments || 0}</strong></span>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="placeholder"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="w-full text-center text-neutral-500 text-xs pointer-events-none will-change-[opacity]"
+            >
+              Pasa el cursor sobre las barras para inspeccionar el desglose transaccional del día.
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
+
