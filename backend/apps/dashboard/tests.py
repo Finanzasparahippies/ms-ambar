@@ -3,6 +3,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from datetime import timedelta
 from apps.shop.models import Category, Product, Order, OrderItem, Expense
 from apps.tickets.models import Theater, Event, Seat, Ticket
 from apps.performance.models import PerformanceMetric
