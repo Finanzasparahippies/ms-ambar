@@ -149,3 +149,49 @@ class PerformanceAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('text/plain; charset=utf-8', response.headers.get('Content-Type', ''))
 
+    def test_purge_log_success_for_admin(self):
+        """Verify admin can purge/empty a log file in real time."""
+        from django.conf import settings
+        import os
+        logs_dir = getattr(settings, 'LOGS_DIR', settings.BASE_DIR / 'logs')
+        os.makedirs(logs_dir, exist_ok=True)
+        test_file = os.path.join(logs_dir, 'tickets.log')
+        with open(test_file, 'w', encoding='utf-8') as f:
+            f.write("Log dummy data before purge\n")
+
+        url = '/api/performance/logs/purge/'
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post(url, {'file': 'tickets.log'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(os.path.getsize(test_file), 0)
+
+    def test_purge_log_unauthorized(self):
+        """Verify unauthenticated user cannot purge log files."""
+        url = '/api/performance/logs/purge/'
+        response = self.client.post(url, {'file': 'tickets.log'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_purge_log_invalid_file_rejected(self):
+        """Verify path traversal or invalid file names are rejected on purge."""
+        url = '/api/performance/logs/purge/'
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post(url, {'file': '../settings.py'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_export_pdf_success_for_admin(self):
+        """Verify admin can generate and download executive PDF report."""
+        url = '/api/performance/export/pdf/'
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers.get('Content-Type'), 'application/pdf')
+
+    def test_export_pptx_success_for_admin(self):
+        """Verify admin can generate and download executive PowerPoint presentation."""
+        url = '/api/performance/export/pptx/'
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers.get('Content-Type'), 'application/vnd.openxmlformats-officedocument.presentationml.presentation')
+
+
