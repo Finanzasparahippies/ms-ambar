@@ -423,8 +423,28 @@ class AnalyticsOverview(APIView):
             total_failed_count = failed_tickets_count + failed_orders_count
             total_successful_count = total_tickets_sold + total_orders_count
 
-            # 12. Métricas de Pauta Publicitaria (Google Ads & Meta Ads)
-            ads_performance = AdsIntegrationService.get_ads_performance(period=period_param)
+            # 12. Métricas de Pauta Publicitaria (Google Ads & Meta Ads) - Aislamiento Anti-Fallos
+            try:
+                ads_performance = AdsIntegrationService.get_ads_performance(period=period_param)
+            except Exception as ads_err:
+                logger.warning(f"[AnalyticsOverview] Fallback para Ads API no configurada o inaccesible: {ads_err}")
+                ads_performance = {
+                    "is_connected": False,
+                    "summary": {
+                        "total_spend": 0.0,
+                        "total_impressions": 0,
+                        "total_clicks": 0,
+                        "total_conversions": 0,
+                        "ctr": 0.0,
+                        "cpa": 0.0,
+                        "roas": 0.0,
+                    },
+                    "platforms": {
+                        "google_ads": {"spend": 0.0, "impressions": 0, "clicks": 0, "conversions": 0, "campaigns": []},
+                        "meta_ads": {"spend": 0.0, "impressions": 0, "clicks": 0, "conversions": 0, "campaigns": []}
+                    },
+                    "campaigns": []
+                }
 
             metrics = {
                 'financials': {
@@ -476,7 +496,7 @@ class AnalyticsUnitDataView(APIView):
     permission_classes = [IsAdminUser]
 
     def get(self, request):
-        if not request.user.is_superuser:
+        if not (request.user.is_staff or request.user.is_superuser):
             return Response({'error': 'Acceso denegado.'}, status=403)
 
         data_type = request.query_params.get('type', 'tickets')

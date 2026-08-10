@@ -818,9 +818,6 @@ export default function AdminDashboard() {
 
     try {
       if (staffFlag) {
-        if (!superuserFlag && activeTab === 'summary') {
-          setActiveTab('orders');
-        }
         // Essential Initial Staff Data Fetching via singleton api client
         const [analyticsRes, systemRes, ordersRes, profileRes] = await Promise.all([
           api.get('/dashboard/analytics/').catch(() => ({ data: null })),
@@ -837,9 +834,6 @@ export default function AdminDashboard() {
         if (profileRes && profileRes.data) {
           setClientProfile(profileRes.data);
           const realSuperuser = profileRes.data.is_superuser || false;
-          if (!realSuperuser && activeTab === 'summary') {
-            setActiveTab('orders');
-          }
           const userStr = localStorage.getItem('user');
           if (userStr) {
             try {
@@ -2854,17 +2848,15 @@ export default function AdminDashboard() {
 
           {/* Navigation Tabs Bar */}
           <div className="flex gap-4 mb-8 amber-glass border border-white/10 p-2 rounded-2xl w-fit relative z-10 shadow-lg flex-wrap">
-            {isSuperuser && (
-              <button
-                onClick={() => setActiveTab('summary')}
-                className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'summary'
-                  ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
-                  : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
-                  }`}
-              >
-                📊 Resumen General
-              </button>
-            )}
+            <button
+              onClick={() => setActiveTab('summary')}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'summary'
+                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                }`}
+            >
+              📊 Resumen General
+            </button>
             <button
               onClick={() => setActiveTab('orders')}
               className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'orders'
