@@ -112,34 +112,70 @@ class AnalyticsOverview(APIView):
         try:
             # 1. Date range for charts and period financial metrics (Default last 30 days or specified period)
             period_param = str(request.query_params.get('period', '30d')).lower()
-            end_date = timezone.now()
+            now_utc = timezone.now()
 
             if period_param == '7d':
-                start_date = end_date - timedelta(days=6)
+                period_days = 6
             elif period_param == '90d':
-                start_date = end_date - timedelta(days=89)
+                period_days = 89
             elif period_param in ['365d', '1y']:
-                start_date = end_date - timedelta(days=364)
-            elif period_param == 'all':
-                start_date = datetime(2020, 1, 1, tzinfo=dt_timezone.utc)
+                period_days = 364
             else:
-                start_date = end_date - timedelta(days=29)
+                period_days = 29
 
-            if request.query_params.get('start_date'):
-                try:
-                    start_date = datetime.fromisoformat(request.query_params['start_date']).replace(tzinfo=dt_timezone.utc)
-                except (ValueError, TypeError) as err:
-                    logger.warning(f"Formato de start_date inválido ({request.query_params.get('start_date')}), usando por defecto: {err}")
-            if request.query_params.get('end_date'):
+            has_custom_start = bool(request.query_params.get('start_date'))
+            has_custom_end = bool(request.query_params.get('end_date'))
+            end_date = now_utc
+
+            if has_custom_end:
                 try:
                     parsed_end = datetime.fromisoformat(request.query_params['end_date'])
                     if parsed_end.time() == datetime.min.time():
                         parsed_end = datetime.combine(parsed_end.date(), datetime.max.time())
-                    end_date = parsed_end.replace(tzinfo=dt_timezone.utc)
+                    if parsed_end.tzinfo is None:
+                        parsed_end = parsed_end.replace(tzinfo=dt_timezone.utc)
+                    else:
+                        parsed_end = parsed_end.astimezone(dt_timezone.utc)
+                    end_date = parsed_end
                 except (ValueError, TypeError) as err:
                     logger.warning(f"Formato de end_date inválido ({request.query_params.get('end_date')}), usando por defecto: {err}")
-            
-            # 2. Financial Metrics - Tickets (Filtered by Active Period with Smart Fallback)
+
+            if has_custom_start:
+                try:
+                    parsed_start = datetime.fromisoformat(request.query_params['start_date'])
+                    if parsed_start.tzinfo is None:
+                        parsed_start = parsed_start.replace(tzinfo=dt_timezone.utc)
+                    else:
+                        parsed_start = parsed_start.astimezone(dt_timezone.utc)
+                    start_date = parsed_start
+                except (ValueError, TypeError) as err:
+                    logger.warning(f"Formato de start_date inválido ({request.query_params.get('start_date')}), usando por defecto: {err}")
+                    start_date = end_date - timedelta(days=period_days)
+            elif period_param == 'all':
+                earliest_ticket = Ticket.objects.filter(status__in=['paid', 'used']).order_by('created_at').first()
+                earliest_order = Order.objects.filter(status__in=['paid', 'shipped', 'delivered']).order_by('created_at').first()
+                earliest_dates = [d for d in [getattr(earliest_ticket, 'created_at', None), getattr(earliest_order, 'created_at', None)] if d]
+                start_date = min(earliest_dates) if earliest_dates else datetime(2020, 1, 1, tzinfo=dt_timezone.utc)
+            else:
+                start_date = end_date - timedelta(days=period_days)
+
+            # Smart Fallback & Date Anchor: si en el periodo solicitado no existen transacciones activas,
+            # anclamos end_date al registro comercial más reciente en la BD para que las gráficas y contenedores reflejen datos reales.
+            is_historical_fallback = False
+            if not has_custom_start and not has_custom_end and period_param != 'all':
+                recent_tickets_exist = Ticket.objects.filter(status__in=['paid', 'used'], created_at__gte=start_date, created_at__lte=end_date).exists()
+                recent_orders_exist = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'], created_at__gte=start_date, created_at__lte=end_date).exists()
+
+                if not recent_tickets_exist and not recent_orders_exist:
+                    latest_ticket = Ticket.objects.filter(status__in=['paid', 'used']).order_by('-created_at').first()
+                    latest_order = Order.objects.filter(status__in=['paid', 'shipped', 'delivered']).order_by('-created_at').first()
+                    latest_dates = [d for d in [getattr(latest_ticket, 'created_at', None), getattr(latest_order, 'created_at', None)] if d]
+                    if latest_dates:
+                        end_date = max(latest_dates)
+                        start_date = end_date - timedelta(days=period_days)
+                        is_historical_fallback = True
+
+            # 2. Financial Metrics - Tickets & Orders
             period_tickets = Ticket.objects.filter(
                 status__in=['paid', 'used'],
                 created_at__gte=start_date,
@@ -167,50 +203,16 @@ class AnalyticsOverview(APIView):
                     logger.warning(f"[AnalyticsOverview] Error processing paid ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
                     continue
 
+            total_tickets_sold = period_tickets.count()
             total_orders_count = period_orders.count()
-            shop_sales = period_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-            shop_sales = float(shop_sales)
+            shop_sales = float(period_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
             gross_sales = ticket_sales + shop_sales
 
-            # Smart Fallback: si el periodo activo no registra ventas pero existen datos históricos en la DB
-            is_historical_fallback = False
-            if gross_sales == 0.0 and period_param != 'all':
-                all_paid_tickets = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                all_paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
-
-                if all_paid_tickets.exists() or all_paid_orders.exists():
-                    is_historical_fallback = True
-                    ticket_sales = 0.0
-                    mg_upgrades_sold = 0
-                    mg_revenue = 0.0
-
-                    for t in all_paid_tickets:
-                        try:
-                            event = getattr(t, 'event', None)
-                            if event and (getattr(t, 'has_mg', False) or getattr(event, 'event_type', '') == 'meet_greet'):
-                                mg_upgrades_sold += 1
-                                mg_revenue += float(getattr(event, 'mg_price', 0.0) or 0.0)
-                            ticket_sales += get_ticket_actual_price(t)
-                        except Exception as ex:
-                            continue
-
-                    total_tickets_sold = all_paid_tickets.count()
-                    total_orders_count = all_paid_orders.count()
-                    shop_sales = float(all_paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
-                    gross_sales = ticket_sales + shop_sales
-                else:
-                    total_tickets_sold = period_tickets.count()
-            else:
-                total_tickets_sold = period_tickets.count()
-
-            # 3b. Expenses & Net Profit for active period or fallback
-            if is_historical_fallback:
-                period_expenses = Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0
-            else:
-                period_expenses = Expense.objects.filter(
-                    created_at__gte=start_date,
-                    created_at__lte=end_date
-                ).aggregate(Sum('amount'))['amount__sum'] or 0
+            # 3b. Expenses & Net Profit for active period
+            period_expenses = Expense.objects.filter(
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            ).aggregate(Sum('amount'))['amount__sum'] or 0
             total_expenses = float(period_expenses)
             net_profit = gross_sales - total_expenses
             
@@ -297,7 +299,7 @@ class AnalyticsOverview(APIView):
 
             # 7. Monthly Chart Data (Last 12 months aggregated)
             monthly_stats = []
-            now = timezone.now()
+            now = end_date
             for i in range(11, -1, -1):
                 try:
                     yr = now.year
