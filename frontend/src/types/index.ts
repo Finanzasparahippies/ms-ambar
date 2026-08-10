@@ -238,6 +238,7 @@ export interface DashboardStats {
   };
   status: string;
   is_restricted?: boolean;
+  is_historical_fallback?: boolean;
 }
 
 export interface SystemMetrics {

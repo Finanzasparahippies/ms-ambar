@@ -3612,6 +3612,13 @@ export default function AdminDashboard() {
                   transition={{ duration: 0.3 }}
                   className="space-y-8"
                 >
+                  {stats?.is_historical_fallback && (
+                    <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2.5 backdrop-blur-md shadow-lg">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                      <span><strong>Aviso de Analítica:</strong> Mostrando histórico acumulado total (sin transacciones registradas en los últimos 30 días).</span>
+                    </div>
+                  )}
+
                   {/* stat cards (3x2 Grid) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <StatCard

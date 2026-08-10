@@ -174,6 +174,23 @@ class DashboardAppTests(APITestCase):
             self.assertFalse(response.data['ads']['is_connected'])
             self.assertEqual(response.data['ads']['summary']['total_spend'], 0.0)
 
+    def test_analytics_overview_smart_date_fallback(self):
+        """Verify smart date range fallback activates when no sales occur in requested narrow window."""
+        url = reverse('analytics_overview')
+        self.client.force_authenticate(user=self.admin_user)
+
+        # Move ticket date to 60 days ago
+        old_date = timezone.now() - timedelta(days=60)
+        from apps.tickets.models import Ticket
+        Ticket.objects.all().update(created_at=old_date)
+
+        # Request 7d period where 0 sales occurred in the last 7 days
+        response = self.client.get(url + '?period=7d')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('is_historical_fallback', response.data)
+        self.assertTrue(response.data['is_historical_fallback'])
+        self.assertGreater(response.data['financials']['gross_sales'], 0)
+
     def test_system_metrics_unauthorized(self):
         """Verify that only admin users can access system metrics."""
         url = reverse('system_metrics')

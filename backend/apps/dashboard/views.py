@@ -136,19 +136,24 @@ class AnalyticsOverview(APIView):
                 except (ValueError, TypeError) as err:
                     logger.warning(f"Formato de end_date inválido ({request.query_params.get('end_date')}), usando por defecto: {err}")
             
-            # 2. Financial Metrics - Tickets (Filtered by Active Period)
-            paid_tickets = Ticket.objects.filter(
+            # 2. Financial Metrics - Tickets (Filtered by Active Period with Smart Fallback)
+            period_tickets = Ticket.objects.filter(
                 status__in=['paid', 'used'],
                 created_at__gte=start_date,
                 created_at__lte=end_date
             ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-            total_tickets_sold = paid_tickets.count()
-            
+
+            period_orders = Order.objects.filter(
+                status__in=['paid', 'shipped', 'delivered'],
+                created_at__gte=start_date,
+                created_at__lte=end_date
+            )
+
             ticket_sales = 0.0
             mg_upgrades_sold = 0
             mg_revenue = 0.0
-            
-            for t in paid_tickets:
+
+            for t in period_tickets:
                 try:
                     event = getattr(t, 'event', None)
                     if event and (getattr(t, 'has_mg', False) or getattr(event, 'event_type', '') == 'meet_greet'):
@@ -159,24 +164,50 @@ class AnalyticsOverview(APIView):
                     logger.warning(f"[AnalyticsOverview] Error processing paid ticket #{getattr(t, 'id', 'unknown')}: {ex}", exc_info=True)
                     continue
 
-            # 3. Financial Metrics - Shop / Merch (Filtered by Active Period)
-            paid_orders = Order.objects.filter(
-                status__in=['paid', 'shipped', 'delivered'],
-                created_at__gte=start_date,
-                created_at__lte=end_date
-            )
-            total_orders_count = paid_orders.count()
-            shop_sales = paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
+            total_orders_count = period_orders.count()
+            shop_sales = period_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0
             shop_sales = float(shop_sales)
-            
-            # Gross Sales combined for active period
             gross_sales = ticket_sales + shop_sales
 
-            # 3b. Expenses & Net Profit for active period
-            period_expenses = Expense.objects.filter(
-                created_at__gte=start_date,
-                created_at__lte=end_date
-            ).aggregate(Sum('amount'))['amount__sum'] or 0
+            # Smart Fallback: si el periodo activo no registra ventas pero existen datos históricos en la DB
+            is_historical_fallback = False
+            if gross_sales == 0.0 and period_param != 'all':
+                all_paid_tickets = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
+                all_paid_orders = Order.objects.filter(status__in=['paid', 'shipped', 'delivered'])
+
+                if all_paid_tickets.exists() or all_paid_orders.exists():
+                    is_historical_fallback = True
+                    ticket_sales = 0.0
+                    mg_upgrades_sold = 0
+                    mg_revenue = 0.0
+
+                    for t in all_paid_tickets:
+                        try:
+                            event = getattr(t, 'event', None)
+                            if event and (getattr(t, 'has_mg', False) or getattr(event, 'event_type', '') == 'meet_greet'):
+                                mg_upgrades_sold += 1
+                                mg_revenue += float(getattr(event, 'mg_price', 0.0) or 0.0)
+                            ticket_sales += get_ticket_actual_price(t)
+                        except Exception as ex:
+                            continue
+
+                    total_tickets_sold = all_paid_tickets.count()
+                    total_orders_count = all_paid_orders.count()
+                    shop_sales = float(all_paid_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
+                    gross_sales = ticket_sales + shop_sales
+                else:
+                    total_tickets_sold = period_tickets.count()
+            else:
+                total_tickets_sold = period_tickets.count()
+
+            # 3b. Expenses & Net Profit for active period or fallback
+            if is_historical_fallback:
+                period_expenses = Expense.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+            else:
+                period_expenses = Expense.objects.filter(
+                    created_at__gte=start_date,
+                    created_at__lte=end_date
+                ).aggregate(Sum('amount'))['amount__sum'] or 0
             total_expenses = float(period_expenses)
             net_profit = gross_sales - total_expenses
             
@@ -424,6 +455,7 @@ class AnalyticsOverview(APIView):
                     'event_sales': event_stats,
                     'revenue_breakdown': revenue_breakdown
                 },
+                'is_historical_fallback': is_historical_fallback,
                 'status': 'success'
             }
             return Response(metrics)
