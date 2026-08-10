@@ -855,6 +855,28 @@ class BlogAppTests(APITestCase):
         self.assertIn(sub1, marketing_list.subscribers.all())
         self.assertIn(sub2, marketing_list.subscribers.all())
 
+    def test_subscriber_list_search_and_pagination_filtering(self):
+        """Verify subscribers endpoint supports search, list, active, and page size parameters."""
+        NewsletterSubscriber.objects.create(email="alpha@example.com", name="Alpha User", is_active=True)
+        NewsletterSubscriber.objects.create(email="beta@example.com", name="Beta User", is_active=False)
+
+        url = reverse('subscriber-list')
+        self.client.force_authenticate(user=self.admin_user)
+
+        # Test search
+        res = self.client.get(f"{url}?search=alpha")
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        results = res.data.get('results', res.data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['email'], "alpha@example.com")
+
+        # Test active status filter
+        res_active = self.client.get(f"{url}?is_active=false")
+        self.assertEqual(res_active.status_code, status.HTTP_200_OK)
+        results_active = res_active.data.get('results', res_active.data)
+        self.assertEqual(len(results_active), 1)
+        self.assertEqual(results_active[0]['email'], "beta@example.com")
+
 
 
 

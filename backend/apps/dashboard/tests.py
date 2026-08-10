@@ -355,3 +355,17 @@ class DashboardAppTests(APITestCase):
         self.assertIn('users', response.data)
         self.assertIn('funnel', response.data)
         self.assertIn('ads', response.data)
+        # Verify weekly_stats includes new_users key
+        weekly = response.data['charts']['weekly_sales']
+        self.assertTrue(len(weekly) > 0)
+        self.assertIn('new_users', weekly[0])
+
+    def test_analytics_unit_data_users(self):
+        """Verify admin can query registered users drill-down unit data."""
+        url = reverse('analytics_unit_data') + '?type=users'
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['type'], 'users')
+        self.assertTrue(len(response.data['data']) >= 2)
+        self.assertEqual(response.data['data'][0]['email'], self.admin_user.email)

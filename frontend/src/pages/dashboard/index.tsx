@@ -12,6 +12,7 @@ import {
   Calendar,
   Camera,
   Check,
+  ChevronLeft,
   ChevronRight,
   ClipboardList,
   Cpu,
@@ -66,7 +67,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import CouponManager from '../../components/CouponManager';
 import ThemeManager from '../../components/ThemeManager';
 import { AdsPerformanceWidget } from '../../components/dashboard/AdsPerformanceWidget';
@@ -262,7 +263,7 @@ export default function AdminDashboard() {
   const [unitDataLoading, setUnitDataLoading] = useState(false);
   const [unitSearchQuery, setUnitSearchQuery] = useState('');
 
-  const fetchUnitData = async (type: 'tickets' | 'orders' | 'expenses' | 'mg_upgrades', title: string) => {
+  const fetchUnitData = async (type: 'tickets' | 'orders' | 'expenses' | 'mg_upgrades' | 'users', title: string) => {
     setUnitModalType(type);
     setUnitModalTitle(title);
     setUnitDataLoading(true);
