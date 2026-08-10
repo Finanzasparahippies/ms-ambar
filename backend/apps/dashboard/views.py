@@ -291,6 +291,20 @@ class AnalyticsOverview(APIView):
                     logger.warning(f"[AnalyticsOverview] Error calculating PerformanceMetrics: {ex}", exc_info=True)
                     vitals = []
 
+            # Cargar colecciones en memoria para evitar cientos de consultas N+1 en bucles
+            all_paid_tickets_list = list(Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon'))
+            all_paid_orders_list = list(Order.objects.filter(status__in=['paid', 'shipped', 'delivered']))
+            all_cancelled_tickets_list = list(Ticket.objects.filter(status='cancelled'))
+            all_cancelled_orders_list = list(Order.objects.filter(status='cancelled'))
+            all_users_list = list(User.objects.all())
+
+            ticket_price_map = {}
+            for t in all_paid_tickets_list:
+                try:
+                    ticket_price_map[t.id] = get_ticket_actual_price(t)
+                except Exception:
+                    ticket_price_map[t.id] = 0.0
+
             # 6. Chart Data (Daily ticket sales and shop sales for the 30 days up to end_date)
             daily_stats = []
             daily_start_base = end_date - timedelta(days=29)
@@ -302,23 +316,15 @@ class AnalyticsOverview(APIView):
                     d_start = datetime.combine(current_dt.date(), datetime.min.time(), tzinfo=dt_timezone.utc)
                     d_end = datetime.combine(current_dt.date(), datetime.max.time(), tzinfo=dt_timezone.utc)
 
-                    date_tickets = Ticket.objects.filter(
-                        status__in=['paid', 'used'],
-                        created_at__gte=d_start,
-                        created_at__lte=d_end
-                    ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                    t_daily_sales = sum(get_ticket_actual_price(t) for t in date_tickets)
-                        
-                    date_orders = Order.objects.filter(
-                        status__in=['paid', 'shipped', 'delivered'],
-                        created_at__gte=d_start,
-                        created_at__lte=d_end
-                    )
-                    s_daily_sales = float(date_orders.aggregate(Sum('total_amount'))['total_amount__sum'] or 0)
-                    
-                    d_users = User.objects.filter(date_joined__gte=d_start, date_joined__lte=d_end).count()
-                    d_failed = Ticket.objects.filter(status='cancelled', created_at__gte=d_start, created_at__lte=d_end).count() + Order.objects.filter(status='cancelled', created_at__gte=d_start, created_at__lte=d_end).count()
-                    d_successful = date_tickets.count() + date_orders.count()
+                    d_tickets = [t for t in all_paid_tickets_list if getattr(t, 'created_at', None) and d_start <= t.created_at <= d_end]
+                    t_daily_sales = sum(ticket_price_map.get(t.id, 0.0) for t in d_tickets)
+
+                    d_orders = [o for o in all_paid_orders_list if getattr(o, 'created_at', None) and d_start <= o.created_at <= d_end]
+                    s_daily_sales = sum(float(getattr(o, 'total_amount', 0.0) or 0.0) for o in d_orders)
+
+                    d_users = sum(1 for u in all_users_list if getattr(u, 'date_joined', None) and d_start <= u.date_joined <= d_end)
+                    d_failed = sum(1 for t in all_cancelled_tickets_list if getattr(t, 'created_at', None) and d_start <= t.created_at <= d_end) + sum(1 for o in all_cancelled_orders_list if getattr(o, 'created_at', None) and d_start <= o.created_at <= d_end)
+                    d_successful = len(d_tickets) + len(d_orders)
 
                     daily_stats.append({
                         'date': date_str,
@@ -352,23 +358,15 @@ class AnalyticsOverview(APIView):
 
                     m_label = m_start.strftime('%b %Y')
                     
-                    m_tickets = Ticket.objects.filter(
-                        status__in=['paid', 'used'],
-                        created_at__gte=m_start,
-                        created_at__lte=m_end
-                    ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                    t_m_sales = sum(get_ticket_actual_price(t) for t in m_tickets)
+                    m_tickets = [t for t in all_paid_tickets_list if getattr(t, 'created_at', None) and m_start <= t.created_at <= m_end]
+                    t_m_sales = sum(ticket_price_map.get(t.id, 0.0) for t in m_tickets)
 
-                    s_m_sales = Order.objects.filter(
-                        status__in=['paid', 'shipped', 'delivered'],
-                        created_at__gte=m_start,
-                        created_at__lte=m_end
-                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-                    s_m_sales = float(s_m_sales)
+                    m_orders = [o for o in all_paid_orders_list if getattr(o, 'created_at', None) and m_start <= o.created_at <= m_end]
+                    s_m_sales = sum(float(getattr(o, 'total_amount', 0.0) or 0.0) for o in m_orders)
 
-                    m_users = User.objects.filter(date_joined__gte=m_start, date_joined__lte=m_end).count()
-                    m_failed = Ticket.objects.filter(status='cancelled', created_at__gte=m_start, created_at__lte=m_end).count() + Order.objects.filter(status='cancelled', created_at__gte=m_start, created_at__lte=m_end).count()
-                    m_successful = m_tickets.count() + Order.objects.filter(status__in=['paid', 'shipped', 'delivered'], created_at__gte=m_start, created_at__lte=m_end).count()
+                    m_users = sum(1 for u in all_users_list if getattr(u, 'date_joined', None) and m_start <= u.date_joined <= m_end)
+                    m_failed = sum(1 for t in all_cancelled_tickets_list if getattr(t, 'created_at', None) and m_start <= t.created_at <= m_end) + sum(1 for o in all_cancelled_orders_list if getattr(o, 'created_at', None) and m_start <= o.created_at <= m_end)
+                    m_successful = len(m_tickets) + len(m_orders)
 
                     monthly_stats.append({
                         'date': m_label,
@@ -392,19 +390,11 @@ class AnalyticsOverview(APIView):
                     w_end = end_date - timedelta(weeks=i)
                     w_label = f"Sem {12-i}"
 
-                    w_tickets = Ticket.objects.filter(
-                        status__in=['paid', 'used'],
-                        created_at__gte=w_start,
-                        created_at__lte=w_end
-                    ).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                    t_w_sales = sum(get_ticket_actual_price(t) for t in w_tickets)
+                    w_tickets = [t for t in all_paid_tickets_list if getattr(t, 'created_at', None) and w_start <= t.created_at <= w_end]
+                    t_w_sales = sum(ticket_price_map.get(t.id, 0.0) for t in w_tickets)
 
-                    s_w_sales = Order.objects.filter(
-                        status__in=['paid', 'shipped', 'delivered'],
-                        created_at__gte=w_start,
-                        created_at__lte=w_end
-                    ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0
-                    s_w_sales = float(s_w_sales)
+                    w_orders = [o for o in all_paid_orders_list if getattr(o, 'created_at', None) and w_start <= o.created_at <= w_end]
+                    s_w_sales = sum(float(getattr(o, 'total_amount', 0.0) or 0.0) for o in w_orders)
 
                     weekly_stats.append({
                         'date': w_label,
@@ -421,9 +411,9 @@ class AnalyticsOverview(APIView):
             event_stats = []
             try:
                 for ev in Event.objects.all().order_by('-date'):
-                    ev_tickets = Ticket.objects.filter(event=ev, status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon')
-                    ev_t_sold = ev_tickets.count()
-                    ev_t_revenue = sum(get_ticket_actual_price(t) for t in ev_tickets)
+                    ev_tickets = [t for t in all_paid_tickets_list if getattr(t, 'event_id', None) == ev.id]
+                    ev_t_sold = len(ev_tickets)
+                    ev_t_revenue = sum(ticket_price_map.get(t.id, 0.0) for t in ev_tickets)
                     ev_mg_count = sum(1 for t in ev_tickets if getattr(t, 'has_mg', False))
                     ev_mg_revenue = ev_mg_count * float(getattr(ev, 'mg_price', 0.0) or 0.0)
 

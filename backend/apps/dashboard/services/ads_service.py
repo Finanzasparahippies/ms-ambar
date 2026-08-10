@@ -159,7 +159,7 @@ class AdsIntegrationService:
                        metrics.cost_micros, metrics.conversions 
                 FROM campaign WHERE segments.date DURING LAST_30_DAYS
             """
-            response = requests.post(url, json={"query": query}, headers=headers, timeout=5)
+            response = requests.post(url, json={"query": query}, headers=headers, timeout=1.5)
             if response.status_code == 200:
                 data = response.json()
                 return cls._parse_google_response(data)
@@ -192,7 +192,7 @@ class AdsIntegrationService:
                 "fields": "campaign_name,impressions,clicks,spend,actions",
                 "date_preset": "last_30d"
             }
-            response = requests.get(url, params=params, timeout=5)
+            response = requests.get(url, params=params, timeout=1.5)
             if response.status_code == 200:
                 data = response.json()
                 return cls._parse_meta_response(data)
