@@ -160,6 +160,9 @@ STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
 STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
 
+# Cloudflare Turnstile Anti-Spam
+CLOUDFLARE_TURNSTILE_SECRET_KEY = env("CLOUDFLARE_TURNSTILE_SECRET_KEY", default="")
+
 # Marketing & Advertising APIs (Google Ads & Meta/Facebook Ads)
 GOOGLE_ADS_DEVELOPER_TOKEN = env("GOOGLE_ADS_DEVELOPER_TOKEN", default="")
 GOOGLE_ADS_CLIENT_ID = env("GOOGLE_ADS_CLIENT_ID", default="")

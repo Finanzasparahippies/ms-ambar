@@ -211,9 +211,17 @@ class PostViewSet(viewsets.ModelViewSet):
 
 from django.db.models import Q
 
+from config.anti_spam import validate_registration_anti_spam
+
 class NewsletterSubscriberViewSet(viewsets.ModelViewSet):
     serializer_class = NewsletterSubscriberSerializer
     pagination_class = StandardResultsSetPagination
+
+    def create(self, request, *args, **kwargs):
+        is_valid, error_msg = validate_registration_anti_spam(request.data, request=request)
+        if not is_valid:
+            return Response({"email": [error_msg]}, status=status.HTTP_400_BAD_REQUEST)
+        return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
         qs = NewsletterSubscriber.objects.all().order_by('-created_at')

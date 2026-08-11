@@ -22,6 +22,8 @@ from apps.users.serializers import (
     UserProfileSerializer,
 )
 
+from config.anti_spam import validate_registration_anti_spam
+
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,10 @@ class UserRegisterView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
+        is_valid, error_msg = validate_registration_anti_spam(request.data, request=request)
+        if not is_valid:
+            return Response({"email": [error_msg]}, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = UserRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()

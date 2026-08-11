@@ -2,8 +2,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AlertCircle, Check, Sparkles, X } from 'lucide-react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Script from 'next/script';
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import api from '../lib/api';
 
 interface Toast {
@@ -15,9 +16,14 @@ interface Toast {
 export default function Suscribirse() {
   const [newsletterName, setNewsletterName] = useState('');
   const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [websiteHp, setWebsiteHp] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
   const [newsletterSubmitting, setNewsletterSubmitting] = useState(false);
   const [newsletterSuccess, setNewsletterSuccess] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY || '';
 
   // Check if already subscribed in this browser
   useEffect(() => {
@@ -26,6 +32,34 @@ export default function Suscribirse() {
       setNewsletterSuccess(true);
     }
   }, []);
+
+  // Initialize Turnstile widget if site key is configured
+  useEffect(() => {
+    if (typeof window !== 'undefined' && turnstileSiteKey && turnstileContainerRef.current) {
+      if ((window as any).turnstile) {
+        try {
+          (window as any).turnstile.render(turnstileContainerRef.current, {
+            sitekey: turnstileSiteKey,
+            callback: (token: string) => setTurnstileToken(token),
+            'expired-callback': () => setTurnstileToken(''),
+            'error-callback': () => setTurnstileToken('')
+          });
+        } catch (e) {
+          // Widget already rendered or turnstile not ready yet
+        }
+      }
+    }
+  }, [turnstileSiteKey]);
+
+  const resetTurnstile = () => {
+    if (typeof window !== 'undefined' && (window as any).turnstile?.reset) {
+      try {
+        (window as any).turnstile.reset();
+      } catch (e) {
+        // ignore if widget reset fails
+      }
+    }
+  };
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
@@ -38,11 +72,24 @@ export default function Suscribirse() {
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsletterEmail.trim()) return;
+
+    // Honeypot check: If bot filled website_hp, cancel API request and simulate success UI
+    if (websiteHp.trim() !== '') {
+      localStorage.setItem('ms_ambar_subscriber_email', newsletterEmail);
+      setNewsletterSuccess(true);
+      setNewsletterEmail('');
+      setNewsletterName('');
+      setWebsiteHp('');
+      showToast('Te has suscrito con éxito al Newsletter de Ms Ambar.', 'success');
+      return;
+    }
+
     setNewsletterSubmitting(true);
     try {
       await api.post('/blog/subscribers/', {
         email: newsletterEmail,
-        name: newsletterName
+        name: newsletterName,
+        turnstile_token: turnstileToken
       });
       localStorage.setItem('ms_ambar_subscriber_email', newsletterEmail);
       setNewsletterSuccess(true);
@@ -50,6 +97,7 @@ export default function Suscribirse() {
       setNewsletterName('');
       showToast('Te has suscrito con éxito al Newsletter de Ms Ambar.', 'success');
     } catch (err: any) {
+      resetTurnstile();
       if (process.env.NODE_ENV !== 'test') {
         console.error(err);
       }
@@ -80,6 +128,27 @@ export default function Suscribirse() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
 
+      {turnstileSiteKey && (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          strategy="afterInteractive"
+          onLoad={() => {
+            if (typeof window !== 'undefined' && (window as any).turnstile && turnstileContainerRef.current) {
+              try {
+                (window as any).turnstile.render(turnstileContainerRef.current, {
+                  sitekey: turnstileSiteKey,
+                  callback: (token: string) => setTurnstileToken(token),
+                  'expired-callback': () => setTurnstileToken(''),
+                  'error-callback': () => setTurnstileToken('')
+                });
+              } catch (e) {
+                // ignore
+              }
+            }
+          }}
+        />
+      )}
+
       {/* Decorative background ambient glows */}
       <div className="absolute top-[-15%] left-[-15%] w-[60%] h-[60%] bg-amber-honey/5 blur-[130px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-15%] right-[-15%] w-[50%] h-[50%] bg-nature-sky/5 blur-[120px] rounded-full pointer-events-none" />
@@ -106,6 +175,21 @@ export default function Suscribirse() {
             </p>
 
             <form className="flex flex-col gap-3 text-left" onSubmit={handleSubscribe}>
+              {/* Honeypot field for bot detection (Hidden visually and from accessibility tree) */}
+              <div style={{ display: 'none' }} aria-hidden="true">
+                <label htmlFor="website_hp" className="sr-only">Website</label>
+                <input
+                  id="website_hp"
+                  type="text"
+                  name="website_hp"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  autoComplete="off"
+                  value={websiteHp}
+                  onChange={e => setWebsiteHp(e.target.value)}
+                />
+              </div>
+
               <input
                 type="text"
                 required
@@ -124,6 +208,12 @@ export default function Suscribirse() {
                 className="w-full bg-white/5 text-white rounded-xl px-5 py-4 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-honey/20 transition-all border border-[#ffffff]/10 placeholder:text-white/30"
                 disabled={newsletterSubmitting}
               />
+
+              {turnstileSiteKey && (
+                <div className="flex justify-center my-2">
+                  <div ref={turnstileContainerRef} className="cf-turnstile" data-sitekey={turnstileSiteKey} />
+                </div>
+              )}
               <button
                 type="submit"
                 disabled={newsletterSubmitting}

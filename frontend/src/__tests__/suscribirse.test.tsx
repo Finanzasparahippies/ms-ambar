@@ -88,7 +88,7 @@ describe('Suscribirse Page Component', () => {
       expect(mockedApi.post).toHaveBeenCalledTimes(1);
       expect(mockedApi.post).toHaveBeenCalledWith(
         '/blog/subscribers/',
-        { email: 'juan@example.com', name: 'Juan' }
+        { email: 'juan@example.com', name: 'Juan', turnstile_token: '' }
       );
       expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
       expect(screen.getByText(/Frecuencia Sintonizada/i)).toBeInTheDocument();
@@ -97,6 +97,43 @@ describe('Suscribirse Page Component', () => {
     });
 
     expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('juan@example.com');
+  });
+
+  test('honeypot field website_hp has correct accessibility attributes tabIndex="-1" and aria-hidden="true"', async () => {
+    await act(async () => {
+      render(<Suscribirse />);
+    });
+
+    const honeypotInput = document.querySelector('input[name="website_hp"]');
+    expect(honeypotInput).toBeInTheDocument();
+    expect(honeypotInput).toHaveAttribute('tabindex', '-1');
+    expect(honeypotInput).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  test('simulates success in UI and cancels API post if honeypot website_hp is filled by a bot', async () => {
+    const user = userEvent.setup();
+
+    render(<Suscribirse />);
+
+    const nameInput = screen.getByPlaceholderText('Tu Nombre');
+    const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
+    const honeypotInput = document.querySelector('input[name="website_hp"]') as HTMLInputElement;
+    const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
+
+    await user.type(nameInput, 'BotName');
+    await user.type(emailInput, 'spammer@botdomain.com');
+    await user.type(honeypotInput, 'http://spam-link.com');
+
+    await act(async () => {
+      await user.click(submitButton);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/¡Suscripción Completa!/i)).toBeInTheDocument();
+    });
+
+    expect(mockedApi.post).not.toHaveBeenCalled();
+    expect(localStorage.getItem('ms_ambar_subscriber_email')).toBe('spammer@botdomain.com');
   });
 
   test('interprets 400 / already exists backend errors as success (already subscribed)', async () => {
