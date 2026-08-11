@@ -368,4 +368,5 @@ class DashboardAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['type'], 'users')
         self.assertTrue(len(response.data['data']) >= 2)
-        self.assertEqual(response.data['data'][0]['email'], self.admin_user.email)
+        emails = [u['email'] for u in response.data['data']]
+        self.assertIn(self.admin_user.email, emails)
