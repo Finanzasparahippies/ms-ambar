@@ -878,6 +878,89 @@ class BlogAppTests(APITestCase):
         self.assertEqual(results_active[0]['email'], "beta@example.com")
 
 
+from django.core.management import call_command
+from io import StringIO
+import os
+from apps.tickets.models import Ticket, Event, Theater, Seat
+
+class SpamBotPurgeCommandTests(APITestCase):
+    def setUp(self):
+        # Create staff user
+        self.staff_user = User.objects.create_user(
+            email='staff_user@msambar.com',
+            username='staff_user',
+            password='password123',
+            is_staff=True
+        )
+
+        # Create Theater, Event & Ticket for a buyer
+        self.theater = Theater.objects.create(name="Teatro Principal")
+        self.seat = Seat.objects.create(theater=self.theater, section="VIP", row="A", number=1)
+        self.event = Event.objects.create(title="Concierto Ámbar", theater=self.theater, date="2026-10-01 20:00:00+00:00")
+        self.ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat,
+            user_email="juan.perez@gmail.com",
+            status="paid"
+        )
+
+        # Create Spam / Bot subscribers
+        self.bot_dot = NewsletterSubscriber.objects.create(email="a.b.c.d.e@gmail.com")
+        self.bot_sms = NewsletterSubscriber.objects.create(email="alert@txt.att.net")
+        self.bot_regex = NewsletterSubscriber.objects.create(email="a.b.c.d.test@domain.com")
+        self.bot_scraped = NewsletterSubscriber.objects.create(email="bot@xwf.google.com")
+        self.bot_tld = NewsletterSubscriber.objects.create(email="spammer@domain.xyz")
+
+        # Create Legitimate / Protected subscribers
+        self.sub_legit = NewsletterSubscriber.objects.create(email="legit_fan@example.com")
+        self.sub_buyer_tag = NewsletterSubscriber.objects.create(email="buyer_tag@example.com", tags="comprador")
+        self.sub_gmail_alias = NewsletterSubscriber.objects.create(email="j.u.a.n.p.e.r.e.z+promo@gmail.com")
+        self.sub_staff = NewsletterSubscriber.objects.create(email="staff_user@msambar.com")
+
+    def test_purge_spam_bots_dry_run(self):
+        """Verify dry-run mode identifies spam without deleting database records."""
+        out = StringIO()
+        call_command('purge_spam_bots', '--dry-run', stdout=out)
+        output = out.getvalue()
+
+        self.assertIn("DRY RUN", output)
+        self.assertIn("Spam/Bots identificados: 5", output)
+        self.assertIn("Registros eliminados: 0", output)
+
+        # Verify all 9 subscribers still exist
+        self.assertEqual(NewsletterSubscriber.objects.count(), 9)
+
+    def test_purge_spam_bots_execution_and_exclusions(self):
+        """Verify real execution deletes spam records while preserving buyers, staff, and Gmail aliases."""
+        out = StringIO()
+        call_command('purge_spam_bots', stdout=out)
+        output = out.getvalue()
+
+        self.assertIn("REAL EXECUTION", output)
+        self.assertIn("Registros eliminados de la BD: 5", output)
+
+        # Verify remaining count = 4
+        self.assertEqual(NewsletterSubscriber.objects.count(), 4)
+
+        # Verify spam bots were deleted
+        self.assertFalse(NewsletterSubscriber.objects.filter(email="a.b.c.d.e@gmail.com").exists())
+        self.assertFalse(NewsletterSubscriber.objects.filter(email="alert@txt.att.net").exists())
+        self.assertFalse(NewsletterSubscriber.objects.filter(email="a.b.c.d.test@domain.com").exists())
+        self.assertFalse(NewsletterSubscriber.objects.filter(email="bot@xwf.google.com").exists())
+        self.assertFalse(NewsletterSubscriber.objects.filter(email="spammer@domain.xyz").exists())
+
+        # Verify protected subscribers remain
+        self.assertTrue(NewsletterSubscriber.objects.filter(email="legit_fan@example.com").exists())
+        self.assertTrue(NewsletterSubscriber.objects.filter(email="buyer_tag@example.com").exists())
+        self.assertTrue(NewsletterSubscriber.objects.filter(email="j.u.a.n.p.e.r.e.z+promo@gmail.com").exists())
+        self.assertTrue(NewsletterSubscriber.objects.filter(email="staff_user@msambar.com").exists())
+
+        # Verify audit log was written
+        log_path = os.path.join(os.getcwd(), 'logs', 'purge_bots.log')
+        self.assertTrue(os.path.exists(log_path))
+
+
+
 
 
 

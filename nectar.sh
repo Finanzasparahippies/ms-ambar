@@ -222,11 +222,23 @@ show_help() {
     echo "  certbot                 - Request Let's Encrypt SSL certificate"
     echo ""
     echo "=== UTILITIES ==="
+    echo "  purge-bots              - Purge bot/spam subscribers in dev backend (supports --dry-run)"
+    echo "  purge-bots-staging      - Purge bot/spam subscribers in staging backend"
+    echo "  purge-bots-prod         - Purge bot/spam subscribers in production backend"
     echo "  clean [--all|-a]        - Comprehensive Docker and VPS cleanup (use --all for deep prune)"
     echo "  help                    - Show this help screen"
 }
 
 case $COMMAND in
+    purge-bots|purge-bots-dev)
+        run_django_cmd_dev purge_spam_bots "$@"
+        ;;
+    purge-bots-staging)
+        run_django_cmd_staging purge_spam_bots "$@"
+        ;;
+    purge-bots-prod)
+        run_django_cmd_prod purge_spam_bots "$@"
+        ;;
     dev)
         echo "Starting MS AMBAR Dev Environment using ${COMPOSE_BIN}..."
         remove_conflicting_containers ambar_dev_db ambar_dev_backend ambar_dev_frontend ambar_dev_nginx
