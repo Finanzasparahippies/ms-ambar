@@ -39,7 +39,7 @@ class AntiSpamTests(APITestCase):
 
     def test_newsletter_subscription_disposable_email_rejected(self):
         """Verify subscriber creation endpoint rejects disposable emails with HTTP 400."""
-        url = reverse('newslettersubscriber-list')
+        url = reverse('subscriber-list')
         data = {
             'email': 'spammer@mailinator.com',
             'name': 'Spam Bot'
