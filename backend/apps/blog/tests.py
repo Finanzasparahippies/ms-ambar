@@ -895,7 +895,7 @@ class SpamBotPurgeCommandTests(APITestCase):
 
         # Create Theater, Event & Ticket for a buyer
         self.theater = Theater.objects.create(name="Teatro Principal")
-        self.seat = Seat.objects.create(theater=self.theater, section="VIP", row="A", number=1)
+        self.seat = Seat.objects.create(theater=self.theater, section="VIP", row="A", number=1, base_price=1000)
         self.event = Event.objects.create(title="Concierto Ámbar", theater=self.theater, date="2026-10-01 20:00:00+00:00")
         self.ticket = Ticket.objects.create(
             event=self.event,
