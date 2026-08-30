@@ -186,15 +186,15 @@ export interface ProductSpecification {
 export interface Product {
   id: number;
   name: string;
-  slug?: string;
+  slug: string;
   description: string;
   detailed_description?: string;
   specifications?: ProductSpecification;
   price: string | number;
-  stock?: number;
-  category?: number | string | { id?: number; name: string; slug?: string };
+  stock: number;
+  category: number | string | { id?: number; name: string; slug?: string };
   category_name?: string;
-  is_active?: boolean;
+  is_active: boolean;
   image?: string;
 }
 
