@@ -2310,7 +2310,7 @@ export default function AdminDashboard() {
   const handleProdImageFileSelected = async (file: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      showToast('Por favor selecciona un archivo de imagen válido (JPG, PNG, WebP).', 'error');
+      showToast.error('Por favor selecciona un archivo de imagen válido (JPG, PNG, WebP).');
       return;
     }
 
@@ -2339,13 +2339,13 @@ export default function AdminDashboard() {
           optimizedSize: result.optimized_size,
           reductionPercent: result.reduction_percent
         });
-        showToast(`Imagen optimizada a WebP (-${result.reduction_percent}% de peso).`, 'success');
+        showToast.success(`Imagen optimizada a WebP (-${result.reduction_percent}% de peso).`);
       } else {
-        showToast(result?.error || 'No se pudo optimizar la imagen.', 'error');
+        showToast.error(result?.error || 'No se pudo optimizar la imagen.');
       }
     } catch (err: any) {
       console.error('Error optimizando imagen de producto:', err);
-      showToast('Error durante la compresión de la imagen.', 'error');
+      showToast.error('Error durante la compresión de la imagen.');
     } finally {
       setIsOptimizingProdImage(false);
     }
@@ -5113,7 +5113,7 @@ export default function AdminDashboard() {
                           defaultCategory="Productos"
                           onCancel={() => setIsCatalogOptimizerModalOpen(false)}
                           onSuccess={(metrics) => {
-                            showToast(`Se procesaron ${metrics.processed_count} imágenes exitosamente.`, 'success');
+                            showToast.success(`Se procesaron ${metrics.processed_count} imágenes exitosamente.`);
                             fetchDashboardData();
                           }}
                         />

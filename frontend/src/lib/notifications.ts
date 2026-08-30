@@ -59,53 +59,74 @@ export const showAlert = async (
   });
 };
 
-export const showToast = {
-  success: (msg: string) => {
-    toast.success(msg, {
-      duration: 3500,
-      style: {
-        background: '#0c0f0d',
-        color: '#F4F6F0',
-        border: '1px solid rgba(229, 169, 59, 0.25)',
-        borderRadius: '1rem',
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '0.875rem',
-      },
-      iconTheme: {
-        primary: '#E5A93B',
-        secondary: '#0c0f0d',
-      },
-    });
-  },
-  error: (msg: string) => {
-    toast.error(msg, {
-      duration: 3500,
-      style: {
-        background: '#0c0f0d',
-        color: '#F4F6F0',
-        border: '1px solid rgba(239, 68, 68, 0.25)',
-        borderRadius: '1rem',
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '0.875rem',
-      },
-      iconTheme: {
-        primary: '#EF4444',
-        secondary: '#0c0f0d',
-      },
-    });
-  },
-  info: (msg: string) => {
-    toast(msg, {
-      duration: 3500,
-      style: {
-        background: '#0c0f0d',
-        color: '#F4F6F0',
-        border: '1px solid rgba(59, 130, 246, 0.25)',
-        borderRadius: '1rem',
-        fontFamily: 'Outfit, sans-serif',
-        fontSize: '0.875rem',
-      },
-      icon: 'ℹ️',
-    });
-  }
+type ToastType = 'success' | 'error' | 'info';
+
+export interface ToastFunction {
+  (msg: string, type?: ToastType): void;
+  success: (msg: string) => void;
+  error: (msg: string) => void;
+  info: (msg: string) => void;
+}
+
+const toastSuccess = (msg: string) => {
+  toast.success(msg, {
+    duration: 3500,
+    style: {
+      background: '#0c0f0d',
+      color: '#F4F6F0',
+      border: '1px solid rgba(229, 169, 59, 0.25)',
+      borderRadius: '1rem',
+      fontFamily: 'Outfit, sans-serif',
+      fontSize: '0.875rem',
+    },
+    iconTheme: {
+      primary: '#E5A93B',
+      secondary: '#0c0f0d',
+    },
+  });
 };
+
+const toastError = (msg: string) => {
+  toast.error(msg, {
+    duration: 3500,
+    style: {
+      background: '#0c0f0d',
+      color: '#F4F6F0',
+      border: '1px solid rgba(239, 68, 68, 0.25)',
+      borderRadius: '1rem',
+      fontFamily: 'Outfit, sans-serif',
+      fontSize: '0.875rem',
+    },
+    iconTheme: {
+      primary: '#EF4444',
+      secondary: '#0c0f0d',
+    },
+  });
+};
+
+const toastInfo = (msg: string) => {
+  toast(msg, {
+    duration: 3500,
+    style: {
+      background: '#0c0f0d',
+      color: '#F4F6F0',
+      border: '1px solid rgba(59, 130, 246, 0.25)',
+      borderRadius: '1rem',
+      fontFamily: 'Outfit, sans-serif',
+      fontSize: '0.875rem',
+    },
+    icon: 'ℹ️',
+  });
+};
+
+const showToastCallable = ((msg: string, type: ToastType = 'info') => {
+  if (type === 'success') toastSuccess(msg);
+  else if (type === 'error') toastError(msg);
+  else toastInfo(msg);
+}) as ToastFunction;
+
+showToastCallable.success = toastSuccess;
+showToastCallable.error = toastError;
+showToastCallable.info = toastInfo;
+
+export const showToast = showToastCallable;
