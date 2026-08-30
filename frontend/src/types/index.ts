@@ -198,6 +198,11 @@ export interface Product {
   slug: string;
   description: string;
   detailed_description?: string;
+  material?: string;
+  dimensions?: string;
+  weight?: string;
+  origin?: string;
+  care_instructions?: string;
   specifications?: ProductSpecification;
   price: string | number;
   stock: number;

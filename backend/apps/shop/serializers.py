@@ -52,11 +52,37 @@ class ProductSerializer(serializers.ModelSerializer):
         if isinstance(specs, str):
             import json
             try:
-                ret['specifications'] = json.loads(specs)
+                specs = json.loads(specs)
             except Exception:
-                ret['specifications'] = {}
+                specs = {}
+        
+        if isinstance(specs, dict):
+            # Sync flat fields from specifications dict if provided
+            if 'material' in specs and not ret.get('material'):
+                ret['material'] = str(specs['material'] or '').strip()
+            if 'dimensions' in specs and not ret.get('dimensions'):
+                ret['dimensions'] = str(specs['dimensions'] or '').strip()
+            if 'weight' in specs and not ret.get('weight'):
+                ret['weight'] = str(specs['weight'] or '').strip()
+            if 'origin' in specs and not ret.get('origin'):
+                ret['origin'] = str(specs['origin'] or '').strip()
+            if 'care_instructions' in specs and not ret.get('care_instructions'):
+                ret['care_instructions'] = str(specs['care_instructions'] or '').strip()
+            ret['specifications'] = specs
         elif specs is None:
             ret['specifications'] = {}
+        return ret
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Ensure specifications dict is always populated from flat columns
+        ret['specifications'] = {
+            'material': instance.material or ret.get('specifications', {}).get('material', ''),
+            'dimensions': instance.dimensions or ret.get('specifications', {}).get('dimensions', ''),
+            'weight': instance.weight or ret.get('specifications', {}).get('weight', ''),
+            'origin': instance.origin or ret.get('specifications', {}).get('origin', ''),
+            'care_instructions': instance.care_instructions or ret.get('specifications', {}).get('care_instructions', ''),
+        }
         return ret
 
     def create(self, validated_data):
@@ -106,6 +132,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'slug', 'description', 'detailed_description',
+            'material', 'dimensions', 'weight', 'origin', 'care_instructions',
             'specifications', 'price', 'stock',
             'image', 'images', 'uploaded_images', 'category', 'category_name', 'is_active',
             'created_at', 'stripe_product_id', 'stripe_price_id'

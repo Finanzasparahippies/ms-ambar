@@ -89,18 +89,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     (typeof product.category === 'object' ? product.category?.name : undefined) ||
     'Colección Oficial';
 
-  const specs = product.specifications;
-  const hasSpecs =
-    Boolean(specs) &&
-    Boolean(
-      specs?.material ||
-      specs?.dimensions ||
-      specs?.weight ||
-      specs?.care_instructions ||
-      specs?.origin ||
-      (specs?.details && Object.keys(specs.details).length > 0) ||
-      product.detailed_description
-    );
+  const resolvedSpecs = {
+    material: product.material || product.specifications?.material,
+    dimensions: product.dimensions || product.specifications?.dimensions,
+    weight: product.weight || product.specifications?.weight,
+    origin: product.origin || product.specifications?.origin,
+    care_instructions: product.care_instructions || product.specifications?.care_instructions,
+    details: product.specifications?.details,
+  };
+
+  const hasSpecs = Boolean(
+    resolvedSpecs.material ||
+    resolvedSpecs.dimensions ||
+    resolvedSpecs.weight ||
+    resolvedSpecs.care_instructions ||
+    resolvedSpecs.origin ||
+    (resolvedSpecs.details && Object.keys(resolvedSpecs.details).length > 0) ||
+    product.detailed_description
+  );
 
   return (
     <motion.div
@@ -126,7 +132,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               type="button"
               onClick={handlePrevImage}
-              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-amber-honey border border-white/10 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md"
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/80 hover:bg-amber-honey text-white hover:text-black border border-white/20 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md shadow-lg"
               aria-label="Imagen anterior"
             >
               <ChevronLeft size={14} />
@@ -135,7 +141,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               type="button"
               onClick={handleNextImage}
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-amber-honey border border-white/10 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/80 hover:bg-amber-honey text-white hover:text-black border border-white/20 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md shadow-lg"
               aria-label="Siguiente imagen"
             >
               <ChevronRight size={14} />
@@ -149,7 +155,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   className={`h-1.5 rounded-full transition-all duration-300 ${
                     dotIdx === activeImageIndex
                       ? 'w-4 bg-amber-honey shadow-sm shadow-amber-honey/50'
-                      : 'w-1.5 bg-white/40'
+                      : 'w-1.5 bg-white/60'
                   }`}
                 />
               ))}
@@ -159,11 +165,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Category & Badge Overlay */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
-          <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em] bg-black/60 backdrop-blur-md border border-white/10 text-white/90">
+          <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em] bg-black/75 backdrop-blur-md border border-white/15 text-white shadow-md">
             {categoryLabel}
           </span>
           {typeof product.stock === 'number' && product.stock <= 5 && product.stock > 0 && (
-            <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 backdrop-blur-md border border-amber-500/40 text-amber-honey">
+            <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/30 backdrop-blur-md border border-amber-500/60 text-amber-honey shadow-md">
               ¡Últimas {product.stock}!
             </span>
           )}
@@ -171,7 +177,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Admin Quick Action Controls */}
         {isAdmin && (
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20 opacity-95 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             {onEdit && (
               <button
                 type="button"
@@ -179,7 +185,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   e.stopPropagation();
                   onEdit(product);
                 }}
-                className="w-8 h-8 rounded-full bg-black/70 hover:bg-amber-400 text-amber-400 hover:text-black border border-amber-400/40 flex items-center justify-center transition-all shadow-md backdrop-blur-md"
+                className="w-8 h-8 rounded-full bg-black/85 hover:bg-amber-honey text-amber-honey hover:text-black border border-amber-honey/50 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
                 title="Editar Producto"
                 aria-label="Editar Producto"
               >
@@ -193,7 +199,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   e.stopPropagation();
                   onDelete(product);
                 }}
-                className="w-8 h-8 rounded-full bg-black/70 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 flex items-center justify-center transition-all shadow-md backdrop-blur-md"
+                className="w-8 h-8 rounded-full bg-black/85 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/50 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
                 title="Eliminar Producto"
                 aria-label="Eliminar Producto"
               >
@@ -204,7 +210,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         )}
       </div>
 
-      {/* Product Information Header (Always Visible) */}
+      {/* Product Information Header */}
       <div className="flex-1 flex flex-col justify-between px-1">
         <div>
           <div className="flex justify-between items-start gap-2 mb-1.5">
@@ -217,7 +223,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {product.description && (
-            <p className="text-xs text-white/60 line-clamp-2 mb-3 leading-relaxed">
+            <p className="text-xs text-white/70 line-clamp-2 mb-3 leading-relaxed">
               {product.description}
             </p>
           )}
@@ -229,16 +235,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               type="button"
               onClick={() => setShowSpecs((prev) => !prev)}
-              className="w-full py-1.5 px-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 hover:border-amber-honey/20 text-white/70 hover:text-white flex items-center justify-between text-[10px] font-bold uppercase tracking-wider transition-all"
+              className="w-full py-2 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 hover:border-amber-honey/40 text-white flex items-center justify-between text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
               aria-expanded={showSpecs}
             >
               <span className="flex items-center gap-1.5">
-                <Info size={12} className="text-amber-honey" />
+                <Info size={13} className="text-amber-honey" />
                 Especificaciones Técnicas
               </span>
               <ChevronDown
                 size={14}
-                className={`transition-transform duration-300 text-white/50 ${showSpecs ? 'rotate-180 text-amber-honey' : ''}`}
+                className={`transition-transform duration-300 text-white/70 ${showSpecs ? 'rotate-180 text-amber-honey' : ''}`}
               />
             </button>
 
@@ -252,59 +258,59 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   transition={{ duration: 0.25, ease: 'easeInOut' }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-2 p-3 bg-black/40 border border-white/10 rounded-xl space-y-2 text-[11px] text-white/80">
+                  <div className="mt-2 p-3.5 bg-black/60 border border-white/15 rounded-xl space-y-2.5 text-[11px] text-white/90 shadow-inner">
                     {product.detailed_description && (
-                      <p className="text-[10px] text-white/70 italic pb-1.5 border-b border-white/5 leading-relaxed">
+                      <p className="text-[10px] text-white/80 italic pb-2 border-b border-white/10 leading-relaxed">
                         {product.detailed_description}
                       </p>
                     )}
 
-                    {specs?.material && (
+                    {resolvedSpecs.material && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/40 uppercase tracking-widest font-semibold flex items-center gap-1">
-                          <Layers size={10} className="text-amber-honey" /> Material
+                        <span className="text-white/50 uppercase tracking-widest font-bold flex items-center gap-1">
+                          <Layers size={11} className="text-amber-honey" /> Material
                         </span>
-                        <span className="font-medium text-white/90">{specs.material}</span>
+                        <span className="font-semibold text-white">{resolvedSpecs.material}</span>
                       </div>
                     )}
 
-                    {specs?.dimensions && (
+                    {resolvedSpecs.dimensions && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/40 uppercase tracking-widest font-semibold">Dimensiones</span>
-                        <span className="font-medium text-white/90">{specs.dimensions}</span>
+                        <span className="text-white/50 uppercase tracking-widest font-bold">Dimensiones</span>
+                        <span className="font-semibold text-white">{resolvedSpecs.dimensions}</span>
                       </div>
                     )}
 
-                    {specs?.weight && (
+                    {resolvedSpecs.weight && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/40 uppercase tracking-widest font-semibold">Peso</span>
-                        <span className="font-medium text-white/90">{specs.weight}</span>
+                        <span className="text-white/50 uppercase tracking-widest font-bold">Peso</span>
+                        <span className="font-semibold text-white">{resolvedSpecs.weight}</span>
                       </div>
                     )}
 
-                    {specs?.origin && (
+                    {resolvedSpecs.origin && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/40 uppercase tracking-widest font-semibold">Origen</span>
-                        <span className="font-medium text-white/90">{specs.origin}</span>
+                        <span className="text-white/50 uppercase tracking-widest font-bold">Origen</span>
+                        <span className="font-semibold text-white">{resolvedSpecs.origin}</span>
                       </div>
                     )}
 
-                    {specs?.care_instructions && (
-                      <div className="pt-1 border-t border-white/5">
-                        <span className="block text-[9px] text-white/40 uppercase tracking-widest font-semibold mb-0.5">
+                    {resolvedSpecs.care_instructions && (
+                      <div className="pt-1.5 border-t border-white/10">
+                        <span className="block text-[9px] text-white/50 uppercase tracking-widest font-bold mb-0.5">
                           Cuidados
                         </span>
-                        <span className="text-[10px] text-white/80 leading-tight block">
-                          {specs.care_instructions}
+                        <span className="text-[10px] text-white/90 leading-tight block">
+                          {resolvedSpecs.care_instructions}
                         </span>
                       </div>
                     )}
 
-                    {specs?.details &&
-                      Object.entries(specs.details).map(([key, val]) => (
+                    {resolvedSpecs.details &&
+                      Object.entries(resolvedSpecs.details).map(([key, val]) => (
                         <div key={key} className="flex justify-between items-center text-[10px]">
-                          <span className="text-white/40 uppercase tracking-widest font-semibold">{key}</span>
-                          <span className="font-medium text-white/90">{val}</span>
+                          <span className="text-white/50 uppercase tracking-widest font-bold">{key}</span>
+                          <span className="font-semibold text-white">{val}</span>
                         </div>
                       ))}
                   </div>
@@ -315,49 +321,49 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         )}
 
         {/* Action Bar: Interactive Quantity Controls & Add to Cart */}
-        <div className="pt-2 flex items-center gap-2 border-t border-white/5">
+        <div className="pt-2.5 flex items-center gap-2 border-t border-white/10">
           {/* Quantity Stepper */}
-          <div className="flex items-center bg-white/[0.04] border border-white/10 rounded-xl p-1 shrink-0">
+          <div className="flex items-center bg-white/[0.08] border border-white/20 rounded-xl p-1 shrink-0 shadow-sm">
             <button
               type="button"
               onClick={handleDecrement}
               disabled={quantity <= 1}
-              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white transition-all"
+              className="w-7 h-7 rounded-lg bg-white/[0.12] hover:bg-white/[0.24] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white font-bold transition-all border border-white/10"
               aria-label="Disminuir cantidad"
             >
               <Minus size={12} />
             </button>
-            <span className="w-8 text-center text-xs font-mono font-bold text-white selection:bg-none">
+            <span className="w-8 text-center text-xs font-mono font-black text-white selection:bg-none">
               {quantity}
             </span>
             <button
               type="button"
               onClick={handleIncrement}
-              className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/15 active:scale-95 flex items-center justify-center text-white transition-all"
+              className="w-7 h-7 rounded-lg bg-white/[0.12] hover:bg-white/[0.24] active:scale-95 flex items-center justify-center text-white font-bold transition-all border border-white/10"
               aria-label="Aumentar cantidad"
             >
               <Plus size={12} />
             </button>
           </div>
 
-          {/* Add to Cart Button */}
+          {/* Add to Cart Button (High Contrast Gold) */}
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={handleAddToCart}
-            className={`flex-1 py-2.5 px-3 rounded-xl font-black uppercase tracking-wider text-[10px] flex items-center justify-center gap-1.5 transition-all shadow-md ${
+            className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-lg ${
               isAdded
-                ? 'bg-green-500 text-nature-night shadow-green-500/20'
-                : 'bg-amber-honey hover:bg-amber-500 text-nature-night shadow-amber-honey/20'
+                ? 'bg-green-500 text-black border border-green-400 shadow-green-500/30'
+                : 'bg-amber-honey hover:bg-amber-400 text-black border border-amber-honey/60 shadow-amber-honey/25 hover:scale-[1.02]'
             }`}
           >
             {isAdded ? (
               <>
-                <Check size={14} className="stroke-[3]" />
+                <Check size={15} className="stroke-[3]" />
                 <span>¡Agregado!</span>
               </>
             ) : (
               <>
-                <ShoppingBag size={14} />
+                <ShoppingBag size={15} className="stroke-[2.5]" />
                 <span>Agregar ({quantity})</span>
               </>
             )}

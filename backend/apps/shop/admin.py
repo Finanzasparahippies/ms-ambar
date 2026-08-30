@@ -13,11 +13,22 @@ class ProductImageInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('name', 'price', 'stock', 'category', 'is_active')
-    list_filter = ('category', 'is_active')
-    search_fields = ('name', 'description', 'detailed_description')
+    list_display = ('name', 'price', 'stock', 'category', 'is_active', 'material', 'origin')
+    list_filter = ('category', 'is_active', 'origin')
+    search_fields = ('name', 'description', 'detailed_description', 'material', 'origin')
     prepopulated_fields = {'slug': ('name',)}
     inlines = [ProductImageInline]
+    fieldsets = (
+        ('Información Básica', {
+            'fields': ('name', 'slug', 'category', 'price', 'stock', 'is_active', 'description', 'detailed_description')
+        }),
+        ('Especificaciones Técnicas', {
+            'fields': ('material', 'dimensions', 'weight', 'origin', 'care_instructions', 'specifications')
+        }),
+        ('Portada & Pasarela', {
+            'fields': ('image', 'stripe_product_id', 'stripe_price_id')
+        }),
+    )
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
