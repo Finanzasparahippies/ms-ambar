@@ -8,7 +8,9 @@ import {
   Info,
   Layers,
   Sparkles,
-  Check
+  Check,
+  Pencil,
+  Trash2
 } from 'lucide-react';
 import { Product } from '../types';
 
@@ -16,9 +18,19 @@ interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product, quantity: number) => void;
   index?: number;
+  isAdmin?: boolean;
+  onEdit?: (product: Product) => void;
+  onDelete?: (product: Product) => void;
 }
 
-export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, index = 0 }) => {
+export const ProductCard: React.FC<ProductCardProps> = ({
+  product,
+  onAddToCart,
+  index = 0,
+  isAdmin = false,
+  onEdit,
+  onDelete
+}) => {
   const [quantity, setQuantity] = useState<number>(1);
   const [showSpecs, setShowSpecs] = useState<boolean>(false);
   const [isAdded, setIsAdded] = useState<boolean>(false);
@@ -93,6 +105,40 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, 
             </span>
           )}
         </div>
+
+        {/* Admin Quick Action Controls */}
+        {isAdmin && (
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            {onEdit && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(product);
+                }}
+                className="w-8 h-8 rounded-full bg-black/70 hover:bg-amber-400 text-amber-400 hover:text-black border border-amber-400/40 flex items-center justify-center transition-all shadow-md backdrop-blur-md"
+                title="Editar Producto"
+                aria-label="Editar Producto"
+              >
+                <Pencil size={13} />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(product);
+                }}
+                className="w-8 h-8 rounded-full bg-black/70 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/40 flex items-center justify-center transition-all shadow-md backdrop-blur-md"
+                title="Eliminar Producto"
+                aria-label="Eliminar Producto"
+              >
+                <Trash2 size={13} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Product Information Header (Always Visible) */}

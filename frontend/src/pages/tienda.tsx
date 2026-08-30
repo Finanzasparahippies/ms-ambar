@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, ChangeEvent, DragEvent } from 'react';
 import Head from 'next/head';
 import api from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,11 +15,23 @@ import {
   Phone,
   Truck,
   Package,
-  ShoppingBag as CartIcon
+  ShoppingBag as CartIcon,
+  Sparkles,
+  Pencil,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  Check,
+  Tag,
+  Sliders,
+  AlertCircle
 } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
+import Swal from 'sweetalert2';
 import ThemedSection from '../components/ThemedSection';
 import ProductCard from '../components/ProductCard';
-import { Product } from '../types';
+import ImageOptimizerWidget, { OptimizationMetrics } from '../components/ImageOptimizerWidget';
+import { Product, Category } from '../types';
 
 const FALLBACK_PRODUCTS: Product[] = [
   {
@@ -122,13 +134,55 @@ interface ShippingRate {
   is_fallback?: boolean;
 }
 
+// Generador de Slugs Limpios y SEO amigables
+const slugifyText = (text: string): string => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Quitar acentos
+    .replace(/[^a-z0-9 -]/g, '') // Quitar caracteres inválidos
+    .replace(/\s+/g, '-') // Espacios a guiones
+    .replace(/-+/g, '-'); // Múltiples guiones a uno
+};
+
 export default function TiendaPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'success'>('cart');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  // Modales de Administración
+  const [isProductModalOpen, setIsProductModalOpen] = useState<boolean>(false);
+  const [isOptimizerModalOpen, setIsOptimizerModalOpen] = useState<boolean>(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Estado del Formulario de Producto
+  const [formName, setFormName] = useState<string>('');
+  const [formSlug, setFormSlug] = useState<string>('');
+  const [formPrice, setFormPrice] = useState<string>('');
+  const [formStock, setFormStock] = useState<string>('10');
+  const [formCategoryId, setFormCategoryId] = useState<string>('');
+  const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [formDescription, setFormDescription] = useState<string>('');
+  const [formDetailedDescription, setFormDetailedDescription] = useState<string>('');
+  const [formImage, setFormImage] = useState<string>('');
+  const [formIsActive, setFormIsActive] = useState<boolean>(true);
+  const [isSavingProduct, setIsSavingProduct] = useState<boolean>(false);
+
+  // Estado de Optimización de Imagen en Formulario
+  const [isOptimizingImage, setIsOptimizingImage] = useState<boolean>(false);
+  const [optimizationStats, setOptimizationStats] = useState<{
+    originalSize: number;
+    optimizedSize: number;
+    reductionPercent: number;
+  } | null>(null);
+  const productImageInputRef = useRef<HTMLInputElement>(null);
 
   // Formulario de Envío
   const [email, setEmail] = useState('');
@@ -147,21 +201,59 @@ export default function TiendaPage() {
   const [quotingShipping, setQuotingShipping] = useState<boolean>(false);
   const [orderResult, setOrderResult] = useState<any>(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await api.get('/shop/products/');
-        if (res.data && res.data.length > 0) {
-          setProducts(res.data);
-        } else {
-          setProducts(FALLBACK_PRODUCTS);
-        }
-      } catch (e) {
-        console.warn("Using fallback merchandise products due to backend API offline:", e);
+  const fetchProducts = async () => {
+    try {
+      const res = await api.get('/shop/products/');
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        setProducts(res.data);
+      } else {
         setProducts(FALLBACK_PRODUCTS);
       }
-    };
+    } catch (e) {
+      console.warn("Using fallback merchandise products due to backend API offline:", e);
+      setProducts(FALLBACK_PRODUCTS);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await api.get('/shop/categories/');
+      if (res.data && Array.isArray(res.data)) {
+        setCategories(res.data);
+      }
+    } catch (e) {
+      console.warn("Error fetching categories:", e);
+    }
+  };
+
+  const checkAdminStatus = () => {
+    if (typeof window === 'undefined') return;
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const payload = JSON.parse(atob(base64));
+        if (payload && (payload.is_staff || payload.is_superuser) && !(payload.exp && Date.now() / 1000 > payload.exp)) {
+          setIsAdmin(true);
+          return;
+        }
+      } catch (e) { }
+    }
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        if (u && (u.is_staff || u.is_superuser)) {
+          setIsAdmin(true);
+        }
+      } catch (e) { }
+    }
+  };
+
+  useEffect(() => {
+    checkAdminStatus();
     fetchProducts();
+    fetchCategories();
 
     // Auto-completar datos si el usuario tiene sesión activa
     const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
@@ -191,7 +283,6 @@ export default function TiendaPage() {
     setQuotingShipping(true);
     setError(null);
     try {
-      // 1. Resolver sugerencia de Estado
       try {
         const lookupRes = await api.get(`/shop/shipping/postal-code/${cp}/`);
         if (lookupRes.data?.valid && lookupRes.data?.state_name) {
@@ -201,11 +292,8 @@ export default function TiendaPage() {
           );
           if (matchedState) setState(matchedState);
         }
-      } catch (e) {
-        // Fallback no bloqueante si falla el lookup
-      }
+      } catch (e) { }
 
-      // 2. Cotizar tarifas de paquetería (Skydropx + Fallback Resiliente)
       const quoteRes = await api.post('/shop/shipping/quote/', {
         postal_code: cp,
         weight_kg: 1.0
@@ -230,6 +318,197 @@ export default function TiendaPage() {
       setSelectedRate(fallbackRate);
     } finally {
       setQuotingShipping(false);
+    }
+  };
+
+  // Apertura y reseteo del modal de Producto
+  const handleOpenAddProduct = () => {
+    setEditingProduct(null);
+    setFormName('');
+    setFormSlug('');
+    setFormPrice('');
+    setFormStock('10');
+    setFormCategoryId(categories[0]?.id ? String(categories[0].id) : '');
+    setNewCategoryName('');
+    setFormDescription('');
+    setFormDetailedDescription('');
+    setFormImage('');
+    setFormIsActive(true);
+    setOptimizationStats(null);
+    setIsProductModalOpen(true);
+  };
+
+  const handleOpenEditProduct = (product: Product) => {
+    setEditingProduct(product);
+    setFormName(product.name || '');
+    setFormSlug(product.slug || slugifyText(product.name || ''));
+    setFormPrice(String(product.price || ''));
+    setFormStock(String(product.stock ?? 0));
+    
+    let catId = '';
+    if (typeof product.category === 'object' && product.category?.id) {
+      catId = String(product.category.id);
+    } else if (typeof product.category === 'number') {
+      catId = String(product.category);
+    }
+    setFormCategoryId(catId);
+    setNewCategoryName('');
+    setFormDescription(product.description || '');
+    setFormDetailedDescription(product.detailed_description || '');
+    setFormImage(product.image || '');
+    setFormIsActive(product.is_active ?? true);
+    setOptimizationStats(null);
+    setIsProductModalOpen(true);
+  };
+
+  // Auto-completado de slug al escribir el nombre (si no se ha editado manualmente)
+  const handleNameChange = (val: string) => {
+    setFormName(val);
+    if (!editingProduct) {
+      setFormSlug(slugifyText(val));
+    }
+  };
+
+  // Optimización de Imagen directa para el Producto (Pillow -> WebP -> Cloudinary)
+  const handleImageFileSelected = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor selecciona un archivo de imagen válido (JPG, PNG, WebP).');
+      return;
+    }
+
+    setIsOptimizingImage(true);
+    setOptimizationStats(null);
+    const formData = new FormData();
+    formData.append('files', file);
+    formData.append('quality', '80');
+    formData.append('max_size', '1440');
+    formData.append('to_webp', 'true');
+    formData.append('save_to_gallery', 'false');
+    formData.append('category', 'Productos');
+
+    try {
+      const res = await api.post<OptimizationMetrics>('/gallery/items/optimize_images/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const result = res.data?.results?.[0];
+      if (result && result.status === 'success' && result.url) {
+        setFormImage(result.url);
+        setOptimizationStats({
+          originalSize: result.original_size,
+          optimizedSize: result.optimized_size,
+          reductionPercent: result.reduction_percent
+        });
+        toast.success(`Imagen optimizada a WebP (-${result.reduction_percent}% de peso).`);
+      } else {
+        toast.error(result?.error || 'No se pudo optimizar la imagen.');
+      }
+    } catch (err: any) {
+      console.error('Error optimizando imagen de producto:', err);
+      toast.error('Error durante la compresión de la imagen.');
+    } finally {
+      setIsOptimizingImage(false);
+    }
+  };
+
+  // Guardar / Actualizar Producto con Revalidación Reactiva Inmediata
+  const handleSaveProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) {
+      toast.error('El nombre del producto es requerido.');
+      return;
+    }
+    const numPrice = parseFloat(formPrice);
+    if (isNaN(numPrice) || numPrice <= 0) {
+      toast.error('Ingresa un precio numérico válido mayor a 0.');
+      return;
+    }
+    const numStock = parseInt(formStock, 10);
+    if (isNaN(numStock) || numStock < 0) {
+      toast.error('Ingresa una cantidad de stock válida.');
+      return;
+    }
+
+    setIsSavingProduct(true);
+    try {
+      let finalCategoryId: number | null = formCategoryId ? parseInt(formCategoryId, 10) : null;
+      if (newCategoryName.trim()) {
+        try {
+          const catRes = await api.post('/shop/categories/', {
+            name: newCategoryName.trim(),
+            slug: slugifyText(newCategoryName.trim())
+          });
+          if (catRes.data?.id) {
+            finalCategoryId = catRes.data.id;
+            await fetchCategories();
+          }
+        } catch (catErr) {
+          console.warn('No se pudo crear nueva categoría, usando selección previa:', catErr);
+        }
+      }
+
+      const payload = {
+        name: formName.trim(),
+        slug: formSlug.trim() || slugifyText(formName),
+        price: numPrice,
+        stock: numStock,
+        category: finalCategoryId,
+        description: formDescription.trim(),
+        detailed_description: formDetailedDescription.trim() || undefined,
+        image: formImage.trim() || undefined,
+        is_active: formIsActive
+      };
+
+      let savedProduct: Product;
+      if (editingProduct) {
+        const res = await api.patch(`/shop/products/${editingProduct.id}/`, payload);
+        savedProduct = res.data;
+        setProducts(prev => prev.map(p => (p.id === editingProduct.id ? { ...p, ...savedProduct } : p)));
+        toast.success(`Producto "${savedProduct.name}" actualizado.`);
+      } else {
+        const res = await api.post('/shop/products/', payload);
+        savedProduct = res.data;
+        setProducts(prev => [savedProduct, ...prev]);
+        toast.success(`Producto "${savedProduct.name}" creado con éxito.`);
+      }
+
+      setIsProductModalOpen(false);
+      fetchProducts();
+    } catch (err: any) {
+      console.error('Error guardando producto:', err);
+      const errMsg = err.response?.data?.name?.[0] || err.response?.data?.error || 'Error al guardar el producto en el servidor.';
+      toast.error(errMsg);
+    } finally {
+      setIsSavingProduct(false);
+    }
+  };
+
+  // Eliminación de Producto con Confirmación SweetAlert2 y Revalidación Reactiva
+  const handleDeleteProduct = async (product: Product) => {
+    const result = await Swal.fire({
+      title: '¿Eliminar Producto?',
+      text: `¿Estás seguro de que deseas eliminar "${product.name}" de la tienda?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#E5A93B',
+      cancelButtonColor: 'rgba(255,255,255,0.08)',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+      background: '#0B0F0D',
+      color: '#F4F6F0',
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await api.delete(`/shop/products/${product.id}/`);
+        setProducts(prev => prev.filter(p => p.id !== product.id));
+        toast.success(`"${product.name}" ha sido eliminado.`);
+        fetchProducts();
+      } catch (err: any) {
+        console.error('Error eliminando producto:', err);
+        toast.error('No se pudo eliminar el producto del servidor.');
+      }
     }
   };
 
@@ -310,11 +589,9 @@ export default function TiendaPage() {
 
       if (res.data?.checkout_url) {
         if (res.data.checkout_url.includes('checkout.stripe.com')) {
-          // Redirección segura hacia la pasarela de Stripe
           window.location.href = res.data.checkout_url;
           return;
         } else {
-          // Modo local/mock
           setOrderResult({
             order_id: res.data.order_id,
             total_amount: orderTotal,
@@ -336,12 +613,21 @@ export default function TiendaPage() {
     }
   };
 
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
   return (
     <ThemedSection sectionKey="tienda" className="selection:bg-amber-honey/30 min-h-screen relative">
       <Head>
         <title>Ms Ambar | Tienda Oficial</title>
-        <meta name="description" content="Tienda oficial de mercancía exclusiva y música de Ms Ambar." />
+        <meta name="description" content="Tienda oficial de mercancía exclusiva, vinilos y arte conceptual de Ms Ambar." />
       </Head>
+      <Toaster position="bottom-right" />
 
       {/* Floating Cart Button */}
       {cartItemsCount > 0 && (
@@ -362,15 +648,44 @@ export default function TiendaPage() {
       )}
 
       <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-24 pt-6">
-        {/* Encabezado y Manifiesto Artístico */}
-        <header className="mb-16 md:mb-20 text-center max-w-4xl mx-auto">
+        {/* Encabezado y Barra de Herramientas de Administrador */}
+        <header className="mb-12 md:mb-16 text-center max-w-4xl mx-auto relative">
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter mb-8"
+            className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter mb-4"
           >
             TIEN<span className="text-amber-honey text-glow">DA</span>
           </motion.h1>
+
+          <p className="opacity-50 uppercase tracking-[0.4em] text-[10px] md:text-xs font-black mb-8">
+            Catálogo Oficial & Mercancía Exclusiva
+          </p>
+
+          {/* Admin Control Bar */}
+          {isAdmin && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-wrap items-center justify-center gap-3 mb-10"
+            >
+              <button
+                onClick={handleOpenAddProduct}
+                className="bg-amber-honey text-nature-night hover:bg-amber-400 px-6 py-3 rounded-full text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 shadow-xl shadow-amber-honey/20"
+              >
+                <Plus size={16} />
+                Agregar Producto
+              </button>
+
+              <button
+                onClick={() => setIsOptimizerModalOpen(true)}
+                className="amber-glass border border-amber-honey/30 hover:border-amber-honey px-6 py-3 rounded-full text-xs font-black uppercase tracking-[0.2em] flex items-center gap-2 text-amber-honey hover:text-white transition-all hover:scale-105"
+              >
+                <Sparkles size={16} />
+                Optimizar Imágenes
+              </button>
+            </motion.div>
+          )}
 
           {/* Manifiesto Institucional de la Artista */}
           <motion.div
@@ -393,11 +708,11 @@ export default function TiendaPage() {
               </p>
 
               <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto">
-                Y de ahí nace esta playera. Hecha desde Hermosillo, Sonora, 100% algodón, hecha principalmente para representar algo. Esta no es una prenda común. Al portarla, apoyas el comercio local y el sueño de una artista independiente. Esta energía llegará a convertirse en nuevas canciones.
+                Y de ahí nace esta mercancía. Hecha desde Hermosillo, Sonora, creada principalmente para representar algo. Esta energía llegará a convertirse en nuevas canciones libres.
               </p>
 
               <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto italic text-white/90">
-                Gracias por darle play. Que la música nos siga uniendo, porque de la guerra y del amor nos curamos con canciones.
+                Gracias por apoyar. Que la música nos siga uniendo, porque de la guerra y del amor nos curamos con canciones.
               </p>
 
               <div className="pt-2">
@@ -417,10 +732,318 @@ export default function TiendaPage() {
               product={product}
               onAddToCart={addToCart}
               index={i}
+              isAdmin={isAdmin}
+              onEdit={handleOpenEditProduct}
+              onDelete={handleDeleteProduct}
             />
           ))}
         </div>
       </div>
+
+      {/* Modal: Crear / Editar Producto */}
+      <AnimatePresence>
+        {isProductModalOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isSavingProduct && setIsProductModalOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-[#0e1210] border border-amber-honey/30 rounded-[2.5rem] p-6 sm:p-8 shadow-2xl text-white z-10 max-h-[90vh] overflow-y-auto custom-scroll font-sans"
+            >
+              <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+                <div>
+                  <div className="flex items-center gap-2 text-amber-honey text-xs font-black uppercase tracking-widest mb-1">
+                    <Sparkles size={14} />
+                    <span>Panel de Administración</span>
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight">
+                    {editingProduct ? 'Editar Producto' : 'Nuevo Producto'}
+                  </h3>
+                </div>
+
+                <button
+                  onClick={() => setIsProductModalOpen(false)}
+                  disabled={isSavingProduct}
+                  className="p-2 text-white/50 hover:text-white hover:bg-white/5 rounded-full transition-colors disabled:opacity-50"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveProduct} className="space-y-5">
+                {/* Nombre y Slug SEO */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-white/70 uppercase font-black tracking-widest block">
+                      Nombre del Producto *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formName}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      placeholder="Ej: Playera Punk Tour"
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-amber-honey uppercase font-black tracking-widest block">
+                      Slug SEO Amigable (/tienda/[slug]) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formSlug}
+                      onChange={(e) => setFormSlug(slugifyText(e.target.value))}
+                      placeholder="playera-punk-tour"
+                      className="w-full bg-white/[0.04] border border-amber-honey/40 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey font-mono text-amber-honey"
+                    />
+                  </div>
+                </div>
+
+                {/* Precio, Stock y Categoría */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-white/70 uppercase font-black tracking-widest block">
+                      Precio ($ MXN) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="1"
+                      required
+                      value={formPrice}
+                      onChange={(e) => setFormPrice(e.target.value)}
+                      placeholder="550.00"
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey text-white font-mono font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-white/70 uppercase font-black tracking-widest block">
+                      Stock Disponible *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      required
+                      value={formStock}
+                      onChange={(e) => setFormStock(e.target.value)}
+                      placeholder="10"
+                      className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey text-white font-mono font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] text-white/70 uppercase font-black tracking-widest block">
+                      Categoría
+                    </label>
+                    <select
+                      value={formCategoryId}
+                      onChange={(e) => setFormCategoryId(e.target.value)}
+                      className="w-full bg-[#141a17] border border-white/10 rounded-xl px-3 py-3 text-xs outline-none focus:border-amber-honey text-white"
+                    >
+                      <option value="">Seleccionar Categoría</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Crear nueva categoría opcional */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-white/50 uppercase font-bold tracking-widest block">
+                    ¿O crear nueva categoría? (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    placeholder="Ej: Accesorios, Coleccionables"
+                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-amber-honey text-white placeholder-white/30"
+                  />
+                </div>
+
+                {/* Zona de Imagen & Optimización Automática */}
+                <div className="space-y-3 bg-white/[0.02] border border-white/10 rounded-2xl p-4 sm:p-5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] text-amber-honey uppercase font-black tracking-widest flex items-center gap-1.5">
+                      <ImageIcon size={14} /> Imagen del Producto
+                    </label>
+                    <span className="text-[9px] font-mono text-white/40 uppercase">
+                      Compresión WebP automática
+                    </span>
+                  </div>
+
+                  {/* Dropzone interactiva */}
+                  <div
+                    onClick={() => productImageInputRef.current?.click()}
+                    className="border-2 border-dashed border-white/15 hover:border-amber-honey/60 rounded-xl p-5 text-center cursor-pointer transition-all bg-black/30 hover:bg-black/50 flex flex-col items-center justify-center gap-2"
+                  >
+                    <input
+                      type="file"
+                      ref={productImageInputRef}
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        if (e.target.files?.[0]) {
+                          handleImageFileSelected(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                    />
+
+                    {isOptimizingImage ? (
+                      <div className="flex flex-col items-center py-2 gap-2 text-amber-honey">
+                        <Loader2 size={24} className="animate-spin" />
+                        <span className="text-xs font-bold">Comprimiendo y optimizando a WebP...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <Upload size={22} className="text-amber-honey" />
+                        <p className="text-xs font-bold text-white">
+                          Arrastra una imagen o haz clic para subir y optimizar
+                        </p>
+                        <p className="text-[10px] text-white/40">
+                          Formatos admitidos: JPG, PNG, WebP (Se convertirá a WebP de alta fidelidad)
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Estadísticas de Optimización */}
+                  {optimizationStats && (
+                    <div className="flex items-center justify-between bg-emerald-950/30 border border-emerald-500/30 rounded-xl px-4 py-2.5 text-xs text-emerald-400">
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <CheckCircle size={14} /> Optimizada con éxito
+                      </span>
+                      <span className="font-mono text-[11px]">
+                        {formatBytes(optimizationStats.originalSize)} ➔ {formatBytes(optimizationStats.optimizedSize)}{' '}
+                        <strong className="text-white">(-{optimizationStats.reductionPercent}%)</strong>
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Previsualización y URL manual */}
+                  <div className="flex items-center gap-3 pt-2">
+                    {formImage && (
+                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black">
+                        <img src={formImage} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                    <input
+                      type="url"
+                      value={formImage}
+                      onChange={(e) => setFormImage(e.target.value)}
+                      placeholder="URL de la imagen (o generada tras optimizar)"
+                      className="flex-1 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-amber-honey text-white font-mono text-[11px]"
+                    />
+                  </div>
+                </div>
+
+                {/* Descripción Corta */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-white/70 uppercase font-black tracking-widest block">
+                    Descripción del Producto *
+                  </label>
+                  <textarea
+                    required
+                    rows={3}
+                    value={formDescription}
+                    onChange={(e) => setFormDescription(e.target.value)}
+                    placeholder="Resumen del producto, corte, materiales o detalles de arte..."
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey text-white"
+                  />
+                </div>
+
+                {/* Estado Activo */}
+                <div className="flex items-center gap-2.5 pt-1">
+                  <input
+                    type="checkbox"
+                    id="formIsActive"
+                    checked={formIsActive}
+                    onChange={(e) => setFormIsActive(e.target.checked)}
+                    className="w-4 h-4 rounded border-white/20 text-amber-honey focus:ring-amber-honey accent-amber-honey"
+                  />
+                  <label htmlFor="formIsActive" className="text-xs text-white/80 font-bold cursor-pointer">
+                    Producto visible en tienda pública (Activo)
+                  </label>
+                </div>
+
+                {/* Botones de Acción */}
+                <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setIsProductModalOpen(false)}
+                    disabled={isSavingProduct}
+                    className="flex-1 py-3.5 border border-white/10 hover:bg-white/5 text-white/70 hover:text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Cancelar
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingProduct}
+                    className="flex-1 py-3.5 bg-amber-honey hover:bg-amber-400 text-nature-night rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-honey/20 disabled:opacity-50"
+                  >
+                    {isSavingProduct ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Guardando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} />
+                        <span>{editingProduct ? 'Guardar Cambios' : 'Crear Producto'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal: Motor de Optimización Masiva de Imágenes */}
+      <AnimatePresence>
+        {isOptimizerModalOpen && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsOptimizerModalOpen(false)}
+              className="fixed inset-0 bg-black/80 backdrop-blur-md"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scroll z-10"
+            >
+              <ImageOptimizerWidget
+                defaultCategory="Productos"
+                onCancel={() => setIsOptimizerModalOpen(false)}
+                onSuccess={(metrics) => {
+                  toast.success(`Se procesaron ${metrics.processed_count} imágenes exitosamente.`);
+                  fetchProducts();
+                }}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Shopping Cart Side Drawer */}
       <AnimatePresence>

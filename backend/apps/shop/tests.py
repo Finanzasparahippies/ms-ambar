@@ -60,6 +60,50 @@ class ShopAppTests(APITestCase):
         self.assertEqual(len(response.data), 1)
         self.assertEqual(response.data[0]['name'], 'Ámbar LP')
 
+    def test_admin_create_product_with_image_url(self):
+        """Verify admin can create product providing an optimized image URL and auto slug."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('product-list')
+        data = {
+            'name': 'Playera Punk Tour',
+            'description': 'Edición especial concierto',
+            'price': 450.00,
+            'stock': 20,
+            'image': 'https://res.cloudinary.com/ms-ambar/image/upload/v123/product_opt.webp',
+            'category': self.category.id,
+            'is_active': True
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['slug'], 'playera-punk-tour')
+        self.assertEqual(response.data['image'], 'https://res.cloudinary.com/ms-ambar/image/upload/v123/product_opt.webp')
+
+    def test_product_slug_collision_resolution(self):
+        """Verify creating two products with identical names generates unique slugs."""
+        p1 = Product.objects.create(name='Poster Lunar', price=200, stock=5, category=self.category)
+        p2 = Product.objects.create(name='Poster Lunar', price=200, stock=5, category=self.category)
+        self.assertEqual(p1.slug, 'poster-lunar')
+        self.assertEqual(p2.slug, 'poster-lunar-1')
+
+    def test_admin_delete_product(self):
+        """Verify admin can delete product."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('product-detail', kwargs={'pk': self.product_active.id})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Product.objects.filter(id=self.product_active.id).exists())
+
+    def test_anonymous_cannot_create_or_delete_product(self):
+        """Verify anonymous user cannot create or delete products."""
+        url = reverse('product-list')
+        data = {'name': 'Unauthorized Item', 'price': 100, 'stock': 1}
+        response = self.client.post(url, data, format='json')
+        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+        del_url = reverse('product-detail', kwargs={'pk': self.product_active.id})
+        del_response = self.client.delete(del_url)
+        self.assertIn(del_response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
     @patch('stripe.checkout.Session.create')
     @patch('apps.shop.views.send_order_confirmation_email')
     def test_checkout_success(self, mock_email, mock_session_create):
