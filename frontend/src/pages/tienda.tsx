@@ -11,22 +11,93 @@ import {
   Minus,
   CheckCircle,
   Mail,
-  MapPin,
-  Globe,
   User,
   Phone,
   Truck,
-  ShieldCheck,
   Package,
   ShoppingBag as CartIcon
 } from 'lucide-react';
 import ThemedSection from '../components/ThemedSection';
+import ProductCard from '../components/ProductCard';
+import { Product } from '../types';
 
-const FALLBACK_PRODUCTS = [
-  { id: 1, name: 'Vinilo "Eclipse" Edición Limitada', price: 850, image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=500&q=80', category: { name: 'Música' } },
-  { id: 2, name: 'Hoodie Ms Ambar Black Onyx', price: 1200, image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&q=80', category: { name: 'Ropa' } },
-  { id: 3, name: 'T-Shirt Gira Mundial 2026', price: 550, image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80', category: { name: 'Ropa' } },
-  { id: 4, name: 'Poster Autografiado Numerado', price: 400, image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=500&q=80', category: { name: 'Arte' } },
+const FALLBACK_PRODUCTS: Product[] = [
+  {
+    id: 1,
+    name: 'Vinilo "Eclipse" Edición Limitada',
+    slug: 'vinilo-eclipse-edicion-limitada',
+    price: 850,
+    stock: 12,
+    image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=500&q=80',
+    description: 'Prensaje especial en vinilo negro de 180 gramos con insert autografiado y arte conceptual.',
+    detailed_description: 'Edición para coleccionistas masterizada a partir de las cintas análogas originales. Incluye funda protectora antiestática y libreto de 12 páginas con letras y fotografías inéditas.',
+    specifications: {
+      material: 'Vinilo virgen pesado de 180g (High Fidelity)',
+      dimensions: '12 pulgadas (31.2 x 31.2 cm)',
+      weight: '420 g',
+      origin: 'Hecho en México / Edición Sonora',
+      care_instructions: 'Almacenar en posición vertical lejos de fuentes directas de calor y luz solar.'
+    },
+    category: { name: 'Música' },
+    category_name: 'Música'
+  },
+  {
+    id: 2,
+    name: 'Hoodie Ms Ambar Black Onyx',
+    slug: 'hoodie-ms-ambar-black-onyx',
+    price: 1200,
+    stock: 8,
+    image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&q=80',
+    description: 'Sudadera premium corte oversize con bordado en relieve frontal y estampado en serigrafía.',
+    detailed_description: 'Confeccionada con felpa suave de alto gramaje para máxima durabilidad y calidez. Capucha forrada y cordones con terminales metálicas personalizadas.',
+    specifications: {
+      material: '80% Algodón Peinado, 20% Poliéster Reciclado (380 GSM)',
+      dimensions: 'Corte Oversize Unisex (S, M, L, XL)',
+      weight: '680 g',
+      origin: 'Confeccionado en Hermosillo, Sonora',
+      care_instructions: 'Lavar con agua fría, no usar blanqueador, secar a la sombra del revés.'
+    },
+    category: { name: 'Ropa' },
+    category_name: 'Ropa'
+  },
+  {
+    id: 3,
+    name: 'Playera Oficial Ms Ambar 100% Algodón',
+    slug: 'playera-oficial-ms-ambar-algodon',
+    price: 550,
+    stock: 25,
+    image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80',
+    description: 'Playera conmemorativa 100% algodón, confeccionada para apoyar el arte y la música independiente.',
+    detailed_description: 'Hecha desde Hermosillo, Sonora. Una prenda creada para representar la resistencia cultural y el sueño de seguir creando canciones libres.',
+    specifications: {
+      material: '100% Algodón Premium 240g',
+      dimensions: 'Corte Regular Unisex (XS, S, M, L, XL)',
+      weight: '220 g',
+      origin: 'Hermosillo, Sonora, México',
+      care_instructions: 'Lavar a mano o máquina en ciclo delicado, planchar por el reverso del estampado.'
+    },
+    category: { name: 'Ropa' },
+    category_name: 'Ropa'
+  },
+  {
+    id: 4,
+    name: 'Poster Autografiado y Numerado',
+    slug: 'poster-autografiado-numerado',
+    price: 400,
+    stock: 15,
+    image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=500&q=80',
+    description: 'Impresión litográfica en papel de bellas artes de 300g, firmada individualmente por Ms. Ambar.',
+    detailed_description: 'Tiraje estrictamente numerado de 100 ejemplares con certificado de autenticidad en sello seco.',
+    specifications: {
+      material: 'Papel Art Print Texturado 300g libre de ácido',
+      dimensions: '50 x 70 cm (Medida estándar para enmarcar)',
+      weight: '150 g',
+      origin: 'Edición limitada de taller artístico',
+      care_instructions: 'Manipular por los bordes. Enmarcar con cristal UV para proteger los pigmentos.'
+    },
+    category: { name: 'Arte' },
+    category_name: 'Arte'
+  }
 ];
 
 const MEXICAN_STATES = [
@@ -48,11 +119,11 @@ interface ShippingRate {
 }
 
 export default function TiendaPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [cart, setCart] = useState<{ product: any; quantity: number }[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [cart, setCart] = useState<{ product: Product; quantity: number }[]>([]);
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'success'>('cart');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   // Formulario de Envío
@@ -69,7 +140,7 @@ export default function TiendaPage() {
   // Cotizador de Envíos
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
   const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
-  const [quotingShipping, setQuotingShipping] = useState(false);
+  const [quotingShipping, setQuotingShipping] = useState<boolean>(false);
   const [orderResult, setOrderResult] = useState<any>(null);
 
   useEffect(() => {
@@ -120,7 +191,7 @@ export default function TiendaPage() {
       try {
         const lookupRes = await api.get(`/shop/shipping/postal-code/${cp}/`);
         if (lookupRes.data?.valid && lookupRes.data?.state_name) {
-          const matchedState = MEXICAN_STATES.find(s =>
+          const matchedState = MEXICAN_STATES.find((s) =>
             s.toLowerCase().includes(lookupRes.data.state_name.toLowerCase()) ||
             lookupRes.data.state_name.toLowerCase().includes(s.toLowerCase())
           );
@@ -158,15 +229,16 @@ export default function TiendaPage() {
     }
   };
 
-  const addToCart = (product: any) => {
+  const addToCart = (product: Product, quantityToAdd: number = 1) => {
+    const qty = Math.max(1, quantityToAdd);
     setCart((prevCart) => {
       const existing = prevCart.find((item) => item.product.id === product.id);
       if (existing) {
         return prevCart.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.product.id === product.id ? { ...item, quantity: item.quantity + qty } : item
         );
       }
-      return [...prevCart, { product, quantity: 1 }];
+      return [...prevCart, { product, quantity: qty }];
     });
     setIsCartOpen(true);
     setCheckoutStep('cart');
@@ -190,7 +262,10 @@ export default function TiendaPage() {
     setCart((prevCart) => prevCart.filter((item) => item.product.id !== productId));
   };
 
-  const cartSubtotal = cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const cartSubtotal = cart.reduce(
+    (total, item) => total + (typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price as string) || 0) * item.quantity,
+    0
+  );
   const shippingCost = selectedRate ? selectedRate.total_price : 150;
   const orderTotal = cartSubtotal + (cart.length > 0 ? shippingCost : 0);
   const cartItemsCount = cart.reduce((total, item) => total + item.quantity, 0);
@@ -225,6 +300,7 @@ export default function TiendaPage() {
         country,
         shipping_rate_id: selectedRate?.id || 'rate_std_fallback',
         shipping_amount: selectedRate?.total_price || 150.0,
+        shipping_provider: selectedRate?.provider || 'Estándar Nacional',
         items: itemsPayload
       });
 
@@ -272,6 +348,7 @@ export default function TiendaPage() {
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsCartOpen(true)}
           className="fixed bottom-8 right-8 z-[90] w-16 h-16 bg-amber-honey rounded-full flex items-center justify-center text-nature-night shadow-2xl shadow-amber-honey/40 border border-amber-honey/20"
+          aria-label="Abrir carrito"
         >
           <CartIcon size={24} />
           <span className="absolute -top-1 -right-1 w-6 h-6 bg-white border border-nature-night text-nature-night rounded-full text-[10px] font-black flex items-center justify-center">
@@ -280,64 +357,63 @@ export default function TiendaPage() {
         </motion.button>
       )}
 
-      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-20 pt-6">
-        {/* Encabezado */}
-        <header className="mb-16 md:mb-20 text-center">
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pb-24 pt-6">
+        {/* Encabezado y Manifiesto Artístico */}
+        <header className="mb-16 md:mb-20 text-center max-w-4xl mx-auto">
           <motion.h1
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter"
+            className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter mb-8"
           >
             TIEN<span className="text-amber-honey text-glow">DA</span>
           </motion.h1>
-          <p className="opacity-60 mt-3 text-[11px] font-bold uppercase tracking-[0.4em] text-white">
-            Mercancía Exclusiva & Envios a todo México
-          </p>
+
+          {/* Manifiesto Institucional de la Artista */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.5 }}
+            className="relative p-6 sm:p-9 md:p-10 rounded-[2.5rem] bg-white/[0.02] border border-white/10 hover:border-amber-honey/30 transition-all backdrop-blur-md shadow-2xl"
+          >
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 rounded-full bg-[#080c0a] border border-amber-honey/40 text-[9px] font-black uppercase tracking-[0.25em] text-amber-honey shadow-lg">
+              Manifiesto de la Artista
+            </div>
+
+            <div className="text-center space-y-4 text-white/90">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-wider text-amber-honey text-glow">
+                « ¡Qué acto más punk que consumir arte! »
+              </h2>
+
+              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto">
+                Nadie me dijo que dedicarse a hacer canciones también significaba aprender a hacer tantas otras cosas… Mientras intento escribir la siguiente canción, encontrar un nuevo concepto y descubrir cómo trascender entre tanta música y tantas cosas bellas que existen en el mundo… también estoy pensando en cómo seguir sosteniendo este sueño.
+              </p>
+
+              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto">
+                Y de ahí nace esta playera. Hecha desde Hermosillo, Sonora, 100% algodón, hecha principalmente para representar algo. Esta no es una prenda común. Al portarla, apoyas el comercio local y el sueño de una artista independiente. Esta energía llegará a convertirse en nuevas canciones.
+              </p>
+
+              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto italic text-white/90">
+                Gracias por darle play. Que la música nos siga uniendo, porque de la guerra y del amor nos curamos con canciones.
+              </p>
+
+              <div className="pt-2">
+                <span className="inline-block text-xs sm:text-sm font-black uppercase tracking-[0.25em] text-amber-honey border-b border-amber-honey/30 pb-1">
+                  — Ms. Ambar
+                </span>
+              </div>
+            </div>
+          </motion.div>
         </header>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
           {products.map((product, i) => (
-            <motion.div
+            <ProductCard
               key={product.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.08 }}
-              className="group cursor-pointer"
-            >
-              <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative mb-6 amber-glass border border-white/10 group-hover:border-amber-honey/30 transition-all p-3">
-                <div className="w-full h-full rounded-[2rem] overflow-hidden relative">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-90 group-hover:opacity-100"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => addToCart(product)}
-                      className="w-14 h-14 bg-amber-honey rounded-full flex items-center justify-center text-nature-night shadow-2xl shadow-amber-honey/40"
-                    >
-                      <ShoppingBag size={24} />
-                    </motion.button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-3">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-xs font-black uppercase tracking-wider group-hover:text-amber-honey transition-colors leading-tight max-w-[70%]">
-                    {product.name}
-                  </h3>
-                  <span className="font-black text-sm text-amber-honey">${product.price} MXN</span>
-                </div>
-                <span className="text-[9px] font-bold opacity-40 uppercase tracking-[0.2em]">
-                  {product.category_name || product.category?.name || 'Oficial'}
-                </span>
-              </div>
-            </motion.div>
+              product={product}
+              onAddToCart={addToCart}
+              index={i}
+            />
           ))}
         </div>
       </div>
@@ -391,7 +467,7 @@ export default function TiendaPage() {
                     ) : (
                       cart.map((item) => (
                         <div key={item.product.id} className="flex gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden group">
-                          <img src={item.product.image} className="w-16 h-16 object-cover rounded-xl shrink-0" />
+                          <img src={item.product.image} alt={item.product.name} className="w-16 h-16 object-cover rounded-xl shrink-0" />
                           <div className="flex-1 min-w-0">
                             <h4 className="text-xs font-black uppercase tracking-wider truncate mb-1 pr-4">{item.product.name}</h4>
                             <p className="text-xs text-amber-honey font-bold mb-3">${item.product.price} MXN</p>

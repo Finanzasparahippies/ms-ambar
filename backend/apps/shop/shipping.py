@@ -2,6 +2,7 @@ import os
 import re
 import logging
 import requests
+from typing import Optional, Dict, Any, List
 from django.conf import settings
 from django.core.cache import cache
 
@@ -47,7 +48,6 @@ MEXICO_STATES_ISO = {
     "ZACATECAS": "ZA",
 }
 
-# Prefijos de Código Postal para pre-detección de Entidad Federativa
 POSTAL_CODE_PREFIX_TO_STATE = {
     "0": ("Ciudad de México", "DF"),
     "1": ("Ciudad de México / EdoMex", "DF"),
@@ -61,8 +61,9 @@ POSTAL_CODE_PREFIX_TO_STATE = {
     "9": ("Yucatán / Quintana Roo / Campeche / Chiapas", "YU"),
 }
 
+
 def normalize_mexican_state(state_name: str) -> str:
-    """Normaliza el nombre de un estado mexicano a su código de 2 letras."""
+    """Normaliza el nombre de un estado mexicano a su código de 2 letras ISO."""
     if not state_name:
         return "SO"
     
@@ -79,15 +80,12 @@ def normalize_mexican_state(state_name: str) -> str:
 
 
 def validate_postal_code(postal_code: str) -> bool:
-    """Valida que un código postal mexicano contenga exactamente 5 dígitos."""
+    """Valida que un código postal mexicano contenga exactamente 5 dígitos numéricos."""
     return bool(postal_code and re.match(r'^\d{5}$', str(postal_code).strip()))
 
 
 def lookup_postal_code(postal_code: str) -> dict:
-    """
-    Lookup rápido para código postal de 5 dígitos.
-    Retorna información base de estado y sugerencia de zona.
-    """
+    """Lookup rápido para autocompletado y validación de código postal mexicano."""
     clean_cp = str(postal_code).strip()
     if not validate_postal_code(clean_cp):
         return {"valid": False, "error": "El código postal debe tener exactamente 5 dígitos numéricos."}
@@ -104,15 +102,164 @@ def lookup_postal_code(postal_code: str) -> dict:
     }
 
 
-def get_skydropx_api_key() -> str:
-    """Obtiene la clave de Skydropx priorizando la cuenta propia del artista."""
-    custom_key = os.environ.get("AMBAR_OWN_SKYDROPX_KEY", "")
-    nectar_key = os.environ.get("NECTAR_LABS_SKYDROPX_KEY", "")
-    return custom_key if custom_key else nectar_key
+class SkydropxClient:
+    """
+    Cliente oficial y desacoplado para la API de Skydropx v1.
+    Soporta:
+    - POST /v1/quotations (Cotizaciones en tiempo real)
+    - POST /v1/shipments (Creación de envíos y generación de tarifas)
+    - POST /v1/labels (Emisión de guías PDF y números de tracking)
+    - GET /v1/shipments/{id} (Consulta de estado)
+    - GET /v1/postal_codes/{zip} (Validación de cobertura)
+    """
+
+    def __init__(self, api_key: Optional[str] = None, api_secret: Optional[str] = None):
+        custom_key = os.environ.get("AMBAR_OWN_SKYDROPX_KEY", "")
+        nectar_key = os.environ.get("NECTAR_LABS_SKYDROPX_API_KEY", "") or getattr(settings, "SKYDROPX_API_KEY", "")
+        self.api_key = api_key or custom_key or nectar_key
+        self.api_secret = api_secret or os.environ.get("NECTAR_LABS_SKYDROPX_API_SECRET", "") or getattr(settings, "SKYDROPX_API_SECRET", "")
+        self.base_url = getattr(settings, "SKYDROPX_API_URL", "https://api.skydropx.com/v1")
+        self.timeout = 4.0
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.api_key and self.api_key != "mock_key" and not getattr(settings, "TESTING", False))
+
+    def _headers(self) -> Dict[str, str]:
+        headers = {
+            "Authorization": f"Token token={self.api_key}",
+            "Content-Type": "application/json"
+        }
+        if self.api_secret:
+            headers["X-API-Secret"] = self.api_secret
+        return headers
+
+    def quote_rates(self, origin_zip: str, dest_zip: str, weight_kg: float = 1.0) -> List[Dict[str, Any]]:
+        """
+        POST /v1/quotations: Cotización de tarifas multi-carrier.
+        """
+        if not self.is_configured:
+            return get_fallback_rates()
+
+        payload = {
+            "address_from": {
+                "country": "MX",
+                "zip": str(origin_zip)
+            },
+            "address_to": {
+                "country": "MX",
+                "zip": str(dest_zip)
+            },
+            "parcels": [
+                {
+                    "weight": float(weight_kg),
+                    "height": 15,
+                    "width": 25,
+                    "length": 35
+                }
+            ]
+        }
+
+        try:
+            url = f"{self.base_url}/quotations"
+            response = requests.post(url, json=payload, headers=self._headers(), timeout=self.timeout)
+
+            if response.status_code in (200, 201):
+                data = response.json()
+                raw_rates = data.get("data", []) or data.get("rates", [])
+                rates = []
+                for r in raw_rates:
+                    attr = r.get("attributes", r)
+                    rates.append({
+                        "id": str(r.get("id", attr.get("id", ""))),
+                        "provider": attr.get("provider", "Paquetería Nacional"),
+                        "service_level_name": attr.get("service_level_name", "Servicio Regular"),
+                        "total_price": float(attr.get("total_price", attr.get("amount", 150.0))),
+                        "currency": "MXN",
+                        "days": f"{attr.get('days', '3-5')} días hábiles",
+                        "is_fallback": False
+                    })
+                if rates:
+                    rates.sort(key=lambda x: x["total_price"])
+                    return rates
+            logger.warning(f"[SkydropxClient] Quotation response ({response.status_code}): {response.text}")
+        except requests.exceptions.Timeout:
+            logger.warning(f"[SkydropxClient] Timeout cotizando para CP {dest_zip}")
+        except Exception as e:
+            logger.error(f"[SkydropxClient] Error cotizando con Skydropx: {e}")
+
+        return get_fallback_rates()
+
+    def create_shipment(self, origin_address: dict, destination_address: dict, parcel: Optional[dict] = None) -> Optional[dict]:
+        """
+        POST /v1/shipments: Crea un shipment formal y genera rates utilizables para emisión.
+        """
+        if not self.is_configured:
+            return None
+
+        payload = {
+            "address_inform": origin_address,
+            "address_to": destination_address,
+            "parcel": parcel or {
+                "weight": 1,
+                "height": 15,
+                "width": 25,
+                "length": 35
+            }
+        }
+
+        try:
+            url = f"{self.base_url}/shipments"
+            response = requests.post(url, json=payload, headers=self._headers(), timeout=5.0)
+            if response.status_code in (200, 201):
+                return response.json()
+            logger.error(f"[SkydropxClient] Error creating shipment ({response.status_code}): {response.text}")
+        except Exception as e:
+            logger.error(f"[SkydropxClient] Error in create_shipment: {e}")
+        return None
+
+    def generate_label(self, rate_id: str) -> Optional[dict]:
+        """
+        POST /v1/labels: Emite la guía oficial y adquiere el número de rastreo.
+        """
+        if not self.is_configured:
+            return None
+
+        payload = {
+            "rate_id": rate_id,
+            "generate_label": True,
+            "label_format": "pdf"
+        }
+
+        try:
+            url = f"{self.base_url}/labels"
+            response = requests.post(url, json=payload, headers=self._headers(), timeout=5.0)
+            if response.status_code in (200, 201):
+                return response.json()
+            logger.error(f"[SkydropxClient] Error generating label for rate {rate_id} ({response.status_code}): {response.text}")
+        except Exception as e:
+            logger.error(f"[SkydropxClient] Error in generate_label: {e}")
+        return None
+
+    def get_shipment_status(self, shipment_id: str) -> Optional[dict]:
+        """
+        GET /v1/shipments/{id}: Consulta el estado de un envío registrado.
+        """
+        if not self.is_configured:
+            return None
+
+        try:
+            url = f"{self.base_url}/shipments/{shipment_id}"
+            response = requests.get(url, headers=self._headers(), timeout=self.timeout)
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            logger.error(f"[SkydropxClient] Error fetching shipment status: {e}")
+        return None
 
 
 def get_fallback_rates() -> list:
-    """Retorna tarifas planas de respaldo cuando la API externa no responde."""
+    """Tarifas planas de contingencia garantizadas ($150 MXN Estándar / $220 MXN Express)."""
     return [
         {
             "id": "rate_std_fallback",
@@ -137,100 +284,28 @@ def get_fallback_rates() -> list:
 
 def quote_shipping_rates(origin_zip: str, dest_zip: str, weight_kg: float = 1.0) -> list:
     """
-    Cotiza tarifas de envío con Skydropx con resiliencia activa:
-    - Timeout estricto de 4.0s
-    - Caché por pares de CP (TTL 1 hora)
-    - Fallback garantizado a tarifa plana ($150 MXN) si Skydropx está caído o sin credenciales
+    Cotiza tarifas de envío con caché y resiliencia activa.
     """
     if not validate_postal_code(origin_zip) or not validate_postal_code(dest_zip):
-        logger.warning(f"[Logística/Quote] CP inválido: origen={origin_zip}, destino={dest_zip}")
         return get_fallback_rates()
 
     cache_key = f"shipping_quote_{origin_zip}_{dest_zip}_{int(weight_kg)}"
-    cached_rates = cache.get(cache_key)
-    if cached_rates:
-        logger.info(f"[Logística/Cache] Cotización recuperada de caché para {origin_zip} -> {dest_zip}")
-        return cached_rates
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
 
-    api_key = get_skydropx_api_key()
-    if not api_key or api_key == "mock_key" or getattr(settings, "TESTING", False):
-        logger.info(f"[Logística/Mock] Retornando tarifas de contingencia por modo local/mock.")
-        fallback = get_fallback_rates()
-        cache.set(cache_key, fallback, timeout=3600)
-        return fallback
-
-    headers = {
-        "Authorization": f"Token token={api_key}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "address_from": {
-            "country": "MX",
-            "zip": str(origin_zip)
-        },
-        "address_to": {
-            "country": "MX",
-            "zip": str(dest_zip)
-        },
-        "parcels": [
-            {
-                "weight": float(weight_kg),
-                "height": 15,
-                "width": 25,
-                "length": 35
-            }
-        ]
-    }
-
-    try:
-        response = requests.post(
-            "https://api.skydropx.com/v1/quotations",
-            json=payload,
-            headers=headers,
-            timeout=4.0
-        )
-
-        if response.status_code in (200, 201):
-            data = response.json()
-            rates = []
-            raw_rates = data.get("data", []) or data.get("rates", [])
-            for r in raw_rates:
-                attr = r.get("attributes", r)
-                rates.append({
-                    "id": str(r.get("id", attr.get("id", ""))),
-                    "provider": attr.get("provider", "Paquetería Nacional"),
-                    "service_level_name": attr.get("service_level_name", "Servicio Regular"),
-                    "total_price": float(attr.get("total_price", attr.get("amount", 150.0))),
-                    "currency": "MXN",
-                    "days": f"{attr.get('days', '3-5')} días hábiles",
-                    "is_fallback": False
-                })
-            
-            if rates:
-                # Ordenar por precio ascendente
-                rates.sort(key=lambda x: x["total_price"])
-                cache.set(cache_key, rates, timeout=3600)
-                return rates
-
-        logger.warning(f"[Logística/Skydropx] Respuesta no exitosa ({response.status_code}): {response.text}")
-    except requests.exceptions.Timeout:
-        logger.warning(f"[Logística/Timeout] Skydropx tardó más de 4s en responder para CP {dest_zip}. Activando tarifa plana de respaldo.")
-    except Exception as e:
-        logger.error(f"[Logística/Error] Fallo al consultar cotizador de Skydropx: {e}")
-
-    # Retornar tarifa plana de respaldo
-    fallback = get_fallback_rates()
-    cache.set(cache_key, fallback, timeout=1800)
-    return fallback
+    client = SkydropxClient()
+    rates = client.quote_rates(origin_zip, dest_zip, weight_kg)
+    cache.set(cache_key, rates, timeout=3600)
+    return rates
 
 
-def generate_shipping_label(order):
+def generate_shipping_label(order) -> bool:
     """
-    Genera la guía de paquetería para la orden confirmada.
-    Fallback simulado y robusto en caso de entorno de pruebas o fallo externo.
+    Despachador logístico para emisión de guías tras el pago exitoso.
+    Consume directamente order.selected_rate_id si fue persistido en la orden.
     """
-    api_key = get_skydropx_api_key()
+    client = SkydropxClient()
 
     origin_address = {
         "name": os.environ.get("SHIPPING_ORIGIN_NAME", "Almacén Ms Ambar"),
@@ -254,59 +329,50 @@ def generate_shipping_label(order):
         "country": "MX"
     }
 
-    # Fallback Simulado por seguridad en Local o Pruebas
-    if not api_key or api_key == "mock_key" or getattr(settings, "TESTING", False):
+    # Modo Mock / Testing
+    if not client.is_configured:
         logger.info(f"[Logística/Mock] Generación de guía simulada para Pedido #{order.id}.")
         order.tracking_number = f"TRACK-AMBAR-{order.id}MX"
         order.tracking_url = f"https://track.skydropx.com/?q=TRACK-AMBAR-{order.id}MX"
         order.shipping_label_pdf = f"https://labels.skydropx.com/sample_{order.id}.pdf"
-        order.shipping_provider = "FedEx Express (Simulado)"
+        order.shipping_provider = order.shipping_provider or "FedEx Express (Simulado)"
         order.save()
         return True
 
-    # Conexión Real con Skydropx API
-    try:
-        headers = {
-            "Authorization": f"Token token={api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        payload = {
-            "address_inform": origin_address,
-            "address_to": destination_address,
-            "parcel": {
-                "weight": 1,
-                "height": 15,
-                "width": 25,
-                "length": 35
-            }
-        }
-
-        response = requests.post("https://api.skydropx.com/v1/shipments", json=payload, headers=headers, timeout=5.0)
-        if response.status_code != 201:
-            raise Exception(f"Skydropx Shipment Error: {response.text}")
-        
-        shipment_data = response.json()
-        best_rate = shipment_data['data']['attributes']['rates'][0]
-        
-        label_payload = {"generate_label": True, "rate_id": best_rate['id']}
-        label_response = requests.post("https://api.skydropx.com/v1/labels", json=label_payload, headers=headers, timeout=5.0)
-        
-        if label_response.status_code == 201:
-            label_data = label_response.json()
-            order.tracking_number = label_data['data']['attributes']['tracking_number']
-            order.tracking_url = label_data['data']['attributes']['tracking_url']
-            order.shipping_label_pdf = label_data['data']['attributes']['label_url']
-            order.shipping_provider = best_rate.get('provider', 'Paquetería')
+    # 1. Intentar emitir directamente con el selected_rate_id si es una tasa real
+    if order.selected_rate_id and not order.selected_rate_id.startswith("rate_"):
+        label_res = client.generate_label(order.selected_rate_id)
+        if label_res and 'data' in label_res:
+            attr = label_res['data']['attributes']
+            order.tracking_number = attr.get('tracking_number')
+            order.tracking_url = attr.get('tracking_url')
+            order.shipping_label_pdf = attr.get('label_url')
             order.save()
+            logger.info(f"[Logística] Guía emitida con éxito para Pedido #{order.id} usando rate {order.selected_rate_id}")
             return True
-        else:
-            raise Exception(f"Skydropx Label Error: {label_response.text}")
-            
-    except Exception as e:
-        logger.error(f"[Logística/Error] Error al emitir guía para Pedido #{order.id}: {e}")
-        # Asignar datos de contingencia para no detener el despacho
-        order.tracking_number = f"TRACK-PENDING-{order.id}"
-        order.shipping_provider = "Paquetería Nacional (En Proceso de Despacho)"
-        order.save()
-        return False
+
+    # 2. Si no hay selected_rate_id o fue un fallback, crear shipment y emitir
+    shipment_res = client.create_shipment(origin_address, destination_address)
+    if shipment_res and 'data' in shipment_res:
+        try:
+            rates = shipment_res['data']['attributes'].get('rates', [])
+            if rates:
+                best_rate = rates[0]
+                rate_id = best_rate['id']
+                label_res = client.generate_label(rate_id)
+                if label_res and 'data' in label_res:
+                    attr = label_res['data']['attributes']
+                    order.tracking_number = attr.get('tracking_number')
+                    order.tracking_url = attr.get('tracking_url')
+                    order.shipping_label_pdf = attr.get('label_url')
+                    order.shipping_provider = best_rate.get('provider', order.shipping_provider)
+                    order.save()
+                    return True
+        except Exception as e:
+            logger.error(f"[Logística] Error procesando tasas del shipment para Pedido #{order.id}: {e}")
+
+    # Fallback de orden procesada
+    order.tracking_number = f"TRACK-PENDING-{order.id}"
+    order.shipping_provider = order.shipping_provider or "Paquetería Nacional (En Despacho)"
+    order.save()
+    return False

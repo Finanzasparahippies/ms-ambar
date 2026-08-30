@@ -4,6 +4,7 @@ from .views import (
     CategoryViewSet, 
     ProductViewSet, 
     stripe_webhook, 
+    skydropx_webhook,
     ShopCheckoutView, 
     ShippingQuoteView, 
     PostalCodeLookupView
@@ -16,6 +17,7 @@ router.register('products', ProductViewSet)
 urlpatterns = [
     path('', include(router.urls)),
     path('webhook/', stripe_webhook, name='stripe-webhook'),
+    path('webhook/skydropx/', skydropx_webhook, name='skydropx-webhook'),
     path('checkout/', ShopCheckoutView.as_view(), name='shop-checkout'),
     path('shipping/quote/', ShippingQuoteView.as_view(), name='shipping-quote'),
     path('shipping/postal-code/<str:postal_code>/', PostalCodeLookupView.as_view(), name='postal-code-lookup'),

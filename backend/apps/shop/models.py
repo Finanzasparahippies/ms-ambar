@@ -124,7 +124,9 @@ class Order(models.Model):
     postal_code = models.CharField(max_length=10, default="", verbose_name="Código Postal")
     country = models.CharField(max_length=100, default="", verbose_name="País")
 
-    # Datos de la Guía Automatizada
+    # Datos de la Guía Automatizada y Logística
+    selected_rate_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID de tarifa seleccionado en Skydropx")
+    shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Costo de envío cotizado")
     shipping_provider = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: FedEx, DHL")
     tracking_number = models.CharField(max_length=100, blank=True, null=True)
     tracking_url = models.URLField(max_length=500, blank=True, null=True)

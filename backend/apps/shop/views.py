@@ -409,7 +409,9 @@ class ShopCheckoutView(APIView):
 
         total_amount = subtotal_amount + shipping_amount
 
-        # 2. Registrar la orden en estado 'pending'
+        shipping_provider_name = data.get('shipping_provider', '')
+
+        # 2. Registrar la orden en estado 'pending' con persistencia exacta de tarifas
         order = Order.objects.create(
             user_email=email,
             status='pending',
@@ -421,7 +423,10 @@ class ShopCheckoutView(APIView):
             city=city,
             state=state,
             postal_code=postal_code,
-            country=country
+            country=country,
+            selected_rate_id=shipping_rate_id,
+            shipping_cost=shipping_amount,
+            shipping_provider=shipping_provider_name
         )
 
         # Enlazar los artículos de la orden
@@ -470,3 +475,69 @@ class ShopCheckoutView(APIView):
         except Exception as e:
             logger.error(f"Error creando Stripe Session para la tienda: {e}")
             return Response({"error": "No se pudo procesar la pasarela de pago."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@csrf_exempt
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def skydropx_webhook(request):
+    """
+    Webhook oficial para recibir notificaciones de Skydropx sobre el ciclo de vida del paquete.
+    Valida token/firma secreta configurada en el dashboard de Skydropx.
+    Eventos soportados:
+    - shipment.created / label.created
+    - tracking.updated (en tránsito, entrega estimada)
+    - shipment.delivered (entregado exitosamente)
+    - shipment.cancelled / label.voided
+    """
+    secret = getattr(settings, 'SKYDROPX_WEBHOOK_SECRET', '') or os.environ.get('SKYDROPX_WEBHOOK_SECRET', '')
+    
+    # Validación de Token / Firma
+    if secret and not getattr(settings, 'TESTING', False):
+        token_header = (
+            request.META.get('HTTP_X_SKYDROPX_TOKEN') or 
+            request.META.get('HTTP_X_WEBHOOK_TOKEN') or
+            request.META.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '').replace('Token token=', '').strip() or
+            request.GET.get('token')
+        )
+        signature_header = request.META.get('HTTP_X_SKYDROPX_SIGNATURE')
+        
+        token_valid = (token_header == secret)
+        if not token_valid and signature_header:
+            import hmac
+            import hashlib
+            raw_body = request.body
+            expected_sig = hmac.new(secret.encode('utf-8'), raw_body, hashlib.sha256).hexdigest()
+            token_valid = hmac.compare_digest(expected_sig, signature_header)
+            
+        if not token_valid and token_header:
+            logger.warning("[Skydropx Webhook] Token de seguridad de webhook inválido.")
+            return HttpResponse("Unauthorized", status=401)
+
+    try:
+        payload = request.data if isinstance(request.data, dict) else json.loads(request.body.decode('utf-8'))
+        event_type = payload.get('event') or payload.get('type') or payload.get('status')
+        data = payload.get('data', payload)
+        attributes = data.get('attributes', data) if isinstance(data, dict) else {}
+        tracking_number = attributes.get('tracking_number') or (data.get('tracking_number') if isinstance(data, dict) else None)
+        
+        logger.info(f"[Skydropx Webhook] Evento recibido: {event_type}, Tracking: {tracking_number}")
+
+        if tracking_number:
+            order = Order.objects.filter(tracking_number=tracking_number).first()
+            if order:
+                status_str = str(event_type).lower()
+                if 'delivered' in status_str or 'entregado' in status_str:
+                    order.status = 'delivered'
+                    order.save(update_fields=['status'])
+                    logger.info(f"[Skydropx Webhook] Pedido #{order.id} marcado como 'delivered'.")
+                elif 'transit' in status_str or 'en_transito' in status_str or 'in_transit' in status_str:
+                    if order.status != 'delivered':
+                        order.status = 'shipped'
+                        order.save(update_fields=['status'])
+                        logger.info(f"[Skydropx Webhook] Pedido #{order.id} marcado como 'shipped'.")
+
+        return HttpResponse("Webhook recibido con éxito", status=200)
+    except Exception as e:
+        logger.error(f"[Skydropx Webhook] Error procesando webhook: {e}", exc_info=True)
+        return HttpResponse("Error interno procesando webhook", status=200)

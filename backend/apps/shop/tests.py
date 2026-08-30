@@ -128,6 +128,38 @@ class ShopAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(response.data['valid'])
 
+    def test_skydropx_webhook_delivered(self):
+        """Verify Skydropx webhook updates order status to delivered."""
+        order = Order.objects.create(
+            user_email='buyer@example.com',
+            status='shipped',
+            total_amount=1350.00,
+            full_name='Test Buyer',
+            tracking_number='TRACK-TEST-123'
+        )
+        url = reverse('skydropx-webhook')
+        payload = {
+            'event': 'shipment.delivered',
+            'data': {
+                'tracking_number': 'TRACK-TEST-123',
+                'attributes': {
+                    'tracking_number': 'TRACK-TEST-123'
+                }
+            }
+        }
+        response = self.client.post(url, payload, format='json', HTTP_X_SKYDROPX_TOKEN='kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'delivered')
+
+    @override_settings(TESTING=False, SKYDROPX_WEBHOOK_SECRET='kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ')
+    def test_skydropx_webhook_invalid_token(self):
+        """Verify Skydropx webhook rejects requests with invalid token."""
+        url = reverse('skydropx-webhook')
+        payload = {'event': 'shipment.delivered'}
+        response = self.client.post(url, payload, format='json', HTTP_X_SKYDROPX_TOKEN='token_invalido')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
     def test_checkout_insufficient_stock(self):
         """Verify checkout fails if stock is insufficient."""
         url = reverse('shop-checkout')
