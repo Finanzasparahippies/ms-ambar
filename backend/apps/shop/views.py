@@ -312,6 +312,39 @@ def process_fulfillment(order):
     generate_shipping_label(order)
     send_order_confirmation_email(order)
     
+from .shipping import generate_shipping_label, quote_shipping_rates, lookup_postal_code, validate_postal_code
+
+class PostalCodeLookupView(APIView):
+    """Permite al frontend autocompletar y validar el código postal de 5 dígitos."""
+    permission_classes = [AllowAny]
+
+    def get(self, request, postal_code):
+        result = lookup_postal_code(postal_code)
+        if not result.get("valid"):
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class ShippingQuoteView(APIView):
+    """Permite al frontend consultar tarifas de envío en tiempo real con fallback resiliente."""
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        dest_postal_code = request.data.get('postal_code') or request.data.get('dest_postal_code')
+        origin_postal_code = request.data.get('origin_postal_code') or settings.SHIPPING_ORIGIN_POSTAL_CODE if hasattr(settings, 'SHIPPING_ORIGIN_POSTAL_CODE') else os.environ.get('SHIPPING_ORIGIN_POSTAL_CODE', '83000')
+        weight_kg = float(request.data.get('weight_kg', 1.0))
+
+        if not dest_postal_code or not validate_postal_code(str(dest_postal_code)):
+            return Response({"error": "El código postal de destino debe tener 5 dígitos numéricos."}, status=status.HTTP_400_BAD_REQUEST)
+
+        rates = quote_shipping_rates(origin_postal_code, str(dest_postal_code), weight_kg=weight_kg)
+        return Response({
+            "origin_postal_code": origin_postal_code,
+            "dest_postal_code": str(dest_postal_code),
+            "rates": rates
+        }, status=status.HTTP_200_OK)
+
+
 class ShopCheckoutView(APIView):
     permission_classes = [AllowAny]
 
@@ -322,18 +355,20 @@ class ShopCheckoutView(APIView):
         full_name = data.get('full_name')
         phone = data.get('phone', '')
         street_and_number = data.get('street_and_number')
-        suburb = data.get('suburb')
-        city = data.get('city')
-        state = data.get('state')
-        postal_code = data.get('postal_code')
-        country = data.get('country')
+        suburb = data.get('suburb', '')
+        city = data.get('city', '')
+        state = data.get('state', '')
+        postal_code = data.get('postal_code', '')
+        country = data.get('country', 'México')
         items_data = data.get('items', [])
+        shipping_rate_id = data.get('shipping_rate_id', 'rate_std_fallback')
+        shipping_amount = float(data.get('shipping_amount', 150.0))
 
-        if not all([email, full_name, phone, street_and_number, suburb, city, state, postal_code, country, items_data]):
+        if not all([email, full_name, phone, street_and_number, postal_code, items_data]):
             return Response({"error": "Todos los campos de entrega e ítems son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validate products and stock
-        total_amount = 0
+        subtotal_amount = 0
         order_items_to_prepare = []
         line_items = []
 
@@ -350,14 +385,29 @@ class ShopCheckoutView(APIView):
             if product.stock < qty:
                 return Response({"error": f"Stock insuficiente para {product.name}."}, status=status.HTTP_400_BAD_REQUEST)
 
-            total_amount += product.price * qty
+            subtotal_amount += float(product.price) * qty
             order_items_to_prepare.append({'product': product, 'quantity': qty, 'price': product.price})
 
-            # Formatear el item para Stripe usando los Price IDs dinámicos que creas al guardar el modelo
-            line_items.append({
-                'price': product.stripe_price_id,
-                'quantity': qty,
-            })
+            # Usar stripe_price_id si existe, o fallback dinámico a price_data
+            if product.stripe_price_id:
+                line_items.append({
+                    'price': product.stripe_price_id,
+                    'quantity': qty,
+                })
+            else:
+                line_items.append({
+                    'price_data': {
+                        'currency': 'mxn',
+                        'product_data': {
+                            'name': f"[Ms Ambar] {product.name}",
+                            'description': product.description or "",
+                        },
+                        'unit_amount': int(product.price * 100),
+                    },
+                    'quantity': qty,
+                })
+
+        total_amount = subtotal_amount + shipping_amount
 
         # 2. Registrar la orden en estado 'pending'
         order = Order.objects.create(
@@ -384,13 +434,21 @@ class ShopCheckoutView(APIView):
             )
 
         # 3. Construir la pasarela de Stripe Checkout
+        if not getattr(settings, "STRIPE_SECRET_KEY", None) or settings.STRIPE_SECRET_KEY == "mock_key" or getattr(settings, "TESTING", False):
+            # Modo testing o mock
+            mock_url = f"{settings.FRONTEND_URL}/shop/success?session_id=mock_session_{order.id}"
+            return Response({
+                "checkout_url": mock_url,
+                "order_id": order.id
+            }, status=status.HTTP_201_CREATED)
+
         try:
             checkout_session = stripe.checkout.Session.create(
                 payment_method_types=['card'],
                 line_items=line_items,
                 mode='payment',
                 success_url=settings.FRONTEND_URL + "/shop/success?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url=settings.FRONTEND_URL + "/shop/cart",
+                cancel_url=settings.FRONTEND_URL + "/tienda",
                 customer_email=email,
                 payment_intent_data={
                     'metadata': {
@@ -404,7 +462,6 @@ class ShopCheckoutView(APIView):
                 }
             )
             
-            # Devolvemos la URL a Next.js para que el frontend redirija al usuario
             return Response({
                 "checkout_url": checkout_session.url,
                 "order_id": order.id

@@ -99,6 +99,7 @@ const Navbar = () => {
     { name: 'Accesos', href: '/comprar-boletos' },
     { name: 'Galería', href: '/galeria' },
     { name: 'Música', href: '/musica' },
+    { name: 'Tienda', href: '/tienda' },
     { name: 'Ambar te escribe', href: '/ambar-te-escribe' },
     { name: 'Contacto', href: '/contacto' },
   ];

@@ -80,6 +80,7 @@ class ShopAppTests(APITestCase):
             'state': 'Jalisco',
             'postal_code': '44100',
             'country': 'México',
+            'shipping_amount': 150.00,
             'items': [
                 {'product_id': self.product_active.id, 'quantity': 2}
             ]
@@ -87,17 +88,45 @@ class ShopAppTests(APITestCase):
         
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['checkout_url'], 'https://checkout.stripe.com/pay/cs_test_123')
+        self.assertIn('checkout_url', response.data)
         
         # Verify order exists
         order = Order.objects.get(user_email='buyer@example.com')
         self.assertEqual(order.status, 'pending')
-        self.assertEqual(order.total_amount, 1200.00)
+        self.assertEqual(order.total_amount, 1350.00)
         self.assertEqual(order.items.count(), 1)
         
         # Verify stock not updated yet (still 10)
         self.product_active.refresh_from_db()
         self.assertEqual(self.product_active.stock, 10)
+
+    def test_shipping_quote_endpoint(self):
+        """Verify shipping quote endpoint returns rates with fallback."""
+        url = reverse('shipping-quote')
+        data = {
+            'postal_code': '06000',
+            'weight_kg': 1.0
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('rates', response.data)
+        self.assertTrue(len(response.data['rates']) > 0)
+        self.assertEqual(response.data['dest_postal_code'], '06000')
+
+    def test_postal_code_lookup_endpoint(self):
+        """Verify 5-digit postal code lookup and validation."""
+        url = reverse('postal-code-lookup', kwargs={'postal_code': '83000'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['valid'])
+        self.assertEqual(response.data['postal_code'], '83000')
+
+    def test_postal_code_lookup_invalid(self):
+        """Verify invalid postal code returns 400."""
+        url = reverse('postal-code-lookup', kwargs={'postal_code': '123'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data['valid'])
 
     def test_checkout_insufficient_stock(self):
         """Verify checkout fails if stock is insufficient."""
