@@ -514,7 +514,7 @@ export default function TiendaPage() {
             TIEN<span className="text-amber-honey text-glow">DA</span>
           </motion.h1>
 
-          <p className="opacity-50 uppercase tracking-[0.4em] text-[10px] md:text-xs font-black mb-8">
+          <p className="text-neutral-400 uppercase tracking-[0.4em] text-[10px] md:text-xs font-black mb-8">
             Catálogo Oficial & Mercancía Exclusiva
           </p>
 
@@ -554,20 +554,20 @@ export default function TiendaPage() {
               Manifiesto de la Artista
             </div>
 
-            <div className="text-center space-y-4 text-white/90">
+            <div className="text-center space-y-4 text-white">
               <h2 className="text-lg sm:text-xl md:text-2xl font-black uppercase tracking-wider text-amber-honey text-glow">
                 « ¡Qué acto más punk que consumir arte! »
               </h2>
 
-              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto">
+              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-neutral-200 max-w-2xl mx-auto">
                 Nadie me dijo que dedicarse a hacer canciones también significaba aprender a hacer tantas otras cosas… Mientras intento escribir la siguiente canción, encontrar un nuevo concepto y descubrir cómo trascender entre tanta música y tantas cosas bellas que existen en el mundo… también estoy pensando en cómo seguir sosteniendo este sueño.
               </p>
 
-              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto">
+              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-neutral-200 max-w-2xl mx-auto">
                 Y de ahí nace esta mercancía. Hecha desde Hermosillo, Sonora, creada principalmente para representar algo. Esta energía llegará a convertirse en nuevas canciones libres.
               </p>
 
-              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-white/80 max-w-2xl mx-auto italic text-white/90">
+              <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-neutral-200 max-w-2xl mx-auto italic">
                 Gracias por apoyar. Que la música nos siga uniendo, porque de la guerra y del amor nos curamos con canciones.
               </p>
 
@@ -643,10 +643,10 @@ export default function TiendaPage() {
             {/* Drawer Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
+              animate={{ opacity: 0.7 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsCartOpen(false)}
-              className="fixed inset-0 bg-black z-[95]"
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[95]"
             />
 
             {/* Slide-out Panel */}
@@ -655,19 +655,19 @@ export default function TiendaPage() {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#0a0d0c] border-l border-white/10 z-[100] p-6 md:p-8 flex flex-col justify-between overflow-y-auto font-sans text-white shadow-2xl"
+              className="fixed right-0 top-0 bottom-0 w-full max-w-lg bg-[#0c100e] border-l border-white/15 z-[100] p-6 md:p-8 flex flex-col justify-between overflow-y-auto font-sans !text-white shadow-2xl"
             >
               {/* Header */}
-              <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-5">
+              <div className="flex items-center justify-between border-b border-white/15 pb-4 mb-5">
                 <div>
-                  <h3 className="text-lg font-black uppercase tracking-wider">Tu Carrito</h3>
-                  <p className="text-[10px] text-white/50 uppercase tracking-widest font-bold">
+                  <h3 className="text-lg font-black uppercase tracking-wider !text-white">Tu Carrito</h3>
+                  <p className="text-[10px] text-neutral-300 uppercase tracking-widest font-bold">
                     {checkoutStep === 'cart' ? 'Resumen de Selección' : 'Datos de Envío y Facturación'}
                   </p>
                 </div>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="p-2 hover:bg-white/5 rounded-full text-white/60 hover:text-white transition-colors"
+                  className="p-2 hover:bg-white/10 rounded-full text-neutral-300 hover:text-white transition-colors"
                 >
                   <X size={20} />
                 </button>
@@ -679,28 +679,28 @@ export default function TiendaPage() {
                   <div className="space-y-4">
                     {cart.length === 0 ? (
                       <div className="text-center py-16 flex flex-col items-center gap-4">
-                        <ShoppingBag size={48} className="text-white/20" />
-                        <p className="text-sm text-white/40 font-bold uppercase tracking-widest">El carrito está vacío</p>
+                        <ShoppingBag size={48} className="text-neutral-500" />
+                        <p className="text-sm text-neutral-300 font-bold uppercase tracking-widest">El carrito está vacío</p>
                       </div>
                     ) : (
                       cart.map((item) => (
-                        <div key={item.product.id} className="flex gap-4 p-4 bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden group">
+                        <div key={item.product.id} className="flex gap-4 p-4 bg-[#141a17] border border-white/15 rounded-2xl relative overflow-hidden group shadow-md">
                           <img src={item.product.image} alt={item.product.name} className="w-16 h-16 object-cover rounded-xl shrink-0" />
                           <div className="flex-1 min-w-0">
-                            <h4 className="text-xs font-black uppercase tracking-wider truncate mb-1 pr-4">{item.product.name}</h4>
-                            <p className="text-xs text-amber-honey font-bold mb-3">${item.product.price} MXN</p>
+                            <h4 className="text-xs font-black uppercase tracking-wider truncate mb-1 pr-4 !text-white">{item.product.name}</h4>
+                            <p className="text-xs text-amber-300 font-black mb-3">${item.product.price} MXN</p>
 
                             <div className="flex items-center gap-3">
                               <button
                                 onClick={() => updateQuantity(item.product.id, -1)}
-                                className="w-7 h-7 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                                className="w-7 h-7 bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg flex items-center justify-center text-white transition-colors font-bold"
                               >
                                 <Minus size={12} />
                               </button>
-                              <span className="text-xs font-black">{item.quantity}</span>
+                              <span className="text-xs font-mono font-black text-white">{item.quantity}</span>
                               <button
                                 onClick={() => updateQuantity(item.product.id, 1)}
-                                className="w-7 h-7 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center text-white/60 hover:text-white transition-colors"
+                                className="w-7 h-7 bg-white/10 hover:bg-white/20 border border-white/15 rounded-lg flex items-center justify-center text-white transition-colors font-bold"
                               >
                                 <Plus size={12} />
                               </button>
@@ -709,7 +709,7 @@ export default function TiendaPage() {
 
                           <button
                             onClick={() => removeFromCart(item.product.id)}
-                            className="absolute top-4 right-4 text-white/30 hover:text-red-400 transition-colors"
+                            className="absolute top-4 right-4 text-neutral-400 hover:text-red-400 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -730,31 +730,31 @@ export default function TiendaPage() {
                     {/* Email y Nombre */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Correo Electrónico</label>
+                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">Correo Electrónico</label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-3.5 h-3.5" />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5" />
                           <input
                             type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="tu@correo.com"
-                            className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-9 pr-3 py-3 text-xs outline-none focus:border-amber-honey transition-all"
+                            className="w-full bg-[#121614] border border-white/20 rounded-xl pl-9 pr-3 py-3 text-xs text-white placeholder-neutral-500 outline-none focus:border-amber-honey transition-all"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Nombre Completo</label>
+                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">Nombre Completo</label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-3.5 h-3.5" />
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5" />
                           <input
                             type="text"
                             required
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                             placeholder="Nombre y Apellidos"
-                            className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-9 pr-3 py-3 text-xs outline-none focus:border-amber-honey transition-all"
+                            className="w-full bg-[#121614] border border-white/20 rounded-xl pl-9 pr-3 py-3 text-xs text-white placeholder-neutral-500 outline-none focus:border-amber-honey transition-all"
                           />
                         </div>
                       </div>
@@ -763,27 +763,27 @@ export default function TiendaPage() {
                     {/* Teléfono y Código Postal */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Teléfono (WhatsApp)</label>
+                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">Teléfono (WhatsApp)</label>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-3.5 h-3.5" />
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5" />
                           <input
                             type="tel"
                             required
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             placeholder="10 dígitos"
-                            className="w-full bg-white/[0.03] border border-white/10 rounded-xl pl-9 pr-3 py-3 text-xs outline-none focus:border-amber-honey transition-all"
+                            className="w-full bg-[#121614] border border-white/20 rounded-xl pl-9 pr-3 py-3 text-xs text-white placeholder-neutral-500 outline-none focus:border-amber-honey transition-all"
                           />
                         </div>
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] text-amber-honey uppercase tracking-widest font-bold block pl-1 flex items-center justify-between">
+                        <label className="text-[9px] text-amber-300 uppercase tracking-widest font-bold block pl-1 flex items-center justify-between">
                           <span>Código Postal (5 Dígitos)</span>
                           {quotingShipping && <span className="text-[8px] animate-pulse">Cotizando...</span>}
                         </label>
                         <div className="relative">
-                          <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 w-3.5 h-3.5" />
+                          <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400 w-3.5 h-3.5" />
                           <input
                             type="text"
                             required
@@ -791,7 +791,7 @@ export default function TiendaPage() {
                             value={postalCode}
                             onChange={(e) => setPostalCode(e.target.value.replace(/\D/g, ''))}
                             placeholder="Ej. 83000"
-                            className="w-full bg-white/[0.03] border border-amber-honey/40 rounded-xl pl-9 pr-3 py-3 text-xs outline-none focus:border-amber-honey transition-all font-mono font-bold"
+                            className="w-full bg-[#121614] border border-amber-honey/50 rounded-xl pl-9 pr-3 py-3 text-xs text-white placeholder-neutral-500 outline-none focus:border-amber-honey transition-all font-mono font-bold"
                           />
                         </div>
                       </div>
@@ -800,8 +800,8 @@ export default function TiendaPage() {
                     {/* Selector de Tarifas de Envío */}
                     {shippingRates.length > 0 && (
                       <div className="space-y-2 pt-2">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1 flex items-center gap-1.5">
-                          <Truck size={12} className="text-amber-honey" /> Paquetería y Método de Envío
+                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1 flex items-center gap-1.5">
+                          <Truck size={12} className="text-amber-400" /> Paquetería y Método de Envío
                         </label>
                         <div className="space-y-2">
                           {shippingRates.map((rate) => (
@@ -809,15 +809,15 @@ export default function TiendaPage() {
                               key={rate.id}
                               onClick={() => setSelectedRate(rate)}
                               className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${selectedRate?.id === rate.id
-                                ? 'border-amber-honey bg-amber-honey/10 text-white'
-                                : 'border-white/10 bg-white/[0.02] text-white/60 hover:border-white/20'
+                                ? 'border-purple-500 bg-purple-950/40 text-white shadow-lg shadow-purple-950/30'
+                                : 'border-white/15 bg-white/[0.04] text-neutral-300 hover:border-white/30'
                                 }`}
                             >
                               <div>
-                                <p className="font-extrabold uppercase text-[11px]">{rate.provider}</p>
-                                <p className="text-[9px] opacity-70">{rate.service_level_name} • {rate.days}</p>
+                                <p className="font-extrabold uppercase text-[11px] text-white">{rate.provider}</p>
+                                <p className="text-[9px] text-neutral-300">{rate.service_level_name} • {rate.days}</p>
                               </div>
-                              <span className="font-black text-amber-honey">${rate.total_price} MXN</span>
+                              <span className="font-black text-amber-300">${rate.total_price} MXN</span>
                             </div>
                           ))}
                         </div>
@@ -827,11 +827,11 @@ export default function TiendaPage() {
                     {/* Estado y Ciudad */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Estado</label>
+                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">Estado</label>
                         <select
                           value={state}
                           onChange={(e) => setState(e.target.value)}
-                          className="w-full bg-[#121614] border border-white/10 rounded-xl px-3 py-3 text-xs outline-none focus:border-amber-honey text-white"
+                          className="w-full bg-[#121614] border border-white/20 rounded-xl px-3 py-3 text-xs outline-none focus:border-amber-honey text-white"
                         >
                           {MEXICAN_STATES.map((st) => (
                             <option key={st} value={st}>{st}</option>
@@ -840,40 +840,40 @@ export default function TiendaPage() {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Ciudad / Municipio</label>
+                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">Ciudad / Municipio</label>
                         <input
                           type="text"
                           required
                           value={city}
                           onChange={(e) => setCity(e.target.value)}
                           placeholder="Ciudad"
-                          className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-3 text-xs outline-none focus:border-amber-honey"
+                          className="w-full bg-[#121614] border border-white/20 rounded-xl px-3 py-3 text-xs text-white placeholder-neutral-500 outline-none focus:border-amber-honey"
                         />
                       </div>
                     </div>
 
                     {/* Colonia y Dirección */}
                     <div className="space-y-1">
-                      <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Colonia / Asentamiento</label>
+                      <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">Colonia / Asentamiento</label>
                       <input
                         type="text"
                         required
                         value={suburb}
                         onChange={(e) => setSuburb(e.target.value)}
                         placeholder="Colonia o Fraccionamiento"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-3 text-xs outline-none focus:border-amber-honey"
+                        className="w-full bg-[#121614] border border-white/20 rounded-xl px-3 py-3 text-xs text-white placeholder-neutral-500 outline-none focus:border-amber-honey"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block pl-1">Calle, Número Exterior e Interior</label>
+                      <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">Calle, Número Exterior e Interior</label>
                       <input
                         type="text"
                         required
                         value={streetAndNumber}
                         onChange={(e) => setStreetAndNumber(e.target.value)}
                         placeholder="Av. Hidalgo #123 Int 4"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-3 text-xs outline-none focus:border-amber-honey"
+                        className="w-full bg-[#121614] border border-white/20 rounded-xl px-3 py-3 text-xs text-white placeholder-neutral-500 outline-none focus:border-amber-honey"
                       />
                     </div>
 
@@ -884,10 +884,10 @@ export default function TiendaPage() {
                         whileTap={{ scale: 0.99 }}
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-nature-night font-black uppercase tracking-widest text-[10px] py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-honey/20 disabled:opacity-50"
+                        className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-900/40 border border-purple-400/40 disabled:opacity-50 transition-all"
                       >
                         {loading ? (
-                          <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         ) : (
                           <>Proceder al Pago Seguro (${orderTotal} MXN) <ArrowRight size={14} /></>
                         )}
@@ -896,7 +896,7 @@ export default function TiendaPage() {
                       <button
                         type="button"
                         onClick={() => setCheckoutStep('cart')}
-                        className="w-full border border-white/10 hover:bg-white/5 text-white/60 hover:text-white transition-all font-bold uppercase tracking-widest text-[9px] py-3 rounded-xl"
+                        className="w-full border border-white/20 hover:bg-white/10 text-neutral-200 hover:text-white transition-all font-bold uppercase tracking-widest text-[9px] py-3 rounded-xl"
                       >
                         Volver al Carrito
                       </button>
@@ -913,21 +913,21 @@ export default function TiendaPage() {
                     <div className="p-4 bg-green-500/10 border border-green-500/30 rounded-full text-green-400 animate-bounce">
                       <CheckCircle size={36} />
                     </div>
-                    <h3 className="text-lg font-black uppercase tracking-wider">¡Pedido Confirmado!</h3>
-                    <p className="text-xs text-white/60 leading-relaxed px-4">
+                    <h3 className="text-lg font-black uppercase tracking-wider !text-white">¡Pedido Confirmado!</h3>
+                    <p className="text-xs text-neutral-300 leading-relaxed px-4">
                       Tu orden ha sido registrada. Recibirás tu guía de rastreo y confirmación vía correo electrónico.
                     </p>
 
-                    <div className="w-full p-4 bg-white/[0.02] border border-white/5 rounded-2xl text-left space-y-2 mt-4">
-                      <div className="flex justify-between text-[10px] uppercase font-bold text-white/40">
+                    <div className="w-full p-4 bg-[#141a17] border border-white/15 rounded-2xl text-left space-y-2 mt-4">
+                      <div className="flex justify-between text-[10px] uppercase font-bold text-neutral-400">
                         <span>Orden ID:</span>
                         <span className="text-white font-mono">#{orderResult?.order_id}</span>
                       </div>
-                      <div className="flex justify-between text-[10px] uppercase font-bold text-white/40">
+                      <div className="flex justify-between text-[10px] uppercase font-bold text-neutral-400">
                         <span>Total:</span>
-                        <span className="text-amber-honey">${orderResult?.total_amount} MXN</span>
+                        <span className="text-amber-300 font-black">${orderResult?.total_amount} MXN</span>
                       </div>
-                      <div className="flex justify-between text-[10px] uppercase font-bold text-white/40">
+                      <div className="flex justify-between text-[10px] uppercase font-bold text-neutral-400">
                         <span>Estado:</span>
                         <span className="text-green-400 font-extrabold uppercase tracking-widest">{orderResult?.status}</span>
                       </div>
@@ -938,7 +938,7 @@ export default function TiendaPage() {
                         setIsCartOpen(false);
                         setCheckoutStep('cart');
                       }}
-                      className="w-full bg-white text-black font-black uppercase tracking-widest text-[9px] py-3.5 rounded-xl mt-4"
+                      className="w-full bg-white text-black font-black uppercase tracking-widest text-[9px] py-3.5 rounded-xl mt-4 hover:bg-neutral-200 transition-colors"
                     >
                       Continuar en la Tienda
                     </button>
@@ -948,17 +948,17 @@ export default function TiendaPage() {
 
               {/* Cart Footer */}
               {checkoutStep === 'cart' && cart.length > 0 && (
-                <div className="border-t border-white/10 pt-4 mt-4 space-y-3">
+                <div className="border-t border-white/15 pt-4 mt-4 space-y-3">
                   <div className="flex justify-between items-center text-sm font-black uppercase tracking-wider pl-1">
-                    <span>Subtotal:</span>
-                    <span className="text-amber-honey text-glow text-base">${cartSubtotal} MXN</span>
+                    <span className="text-neutral-200">Subtotal:</span>
+                    <span className="text-amber-300 text-glow text-base font-black">${cartSubtotal} MXN</span>
                   </div>
 
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setCheckoutStep('shipping')}
-                    className="w-full bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-nature-night font-black uppercase tracking-widest text-[10px] py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-amber-honey/20"
+                    className="w-full bg-purple-700 hover:bg-purple-600 active:bg-purple-800 text-white font-black uppercase tracking-widest text-[10px] py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-900/40 border border-purple-400/40 transition-all"
                   >
                     Proceder al Envío <ArrowRight size={14} />
                   </motion.button>

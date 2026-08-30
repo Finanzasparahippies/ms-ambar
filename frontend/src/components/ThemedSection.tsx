@@ -70,14 +70,20 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
   else if (spec.card_style === 'rounded-lg') radiusClass = 'rounded-lg';
   else if (spec.card_style === 'rounded-none') radiusClass = 'rounded-none';
 
+  const isFooter = sectionKey === 'footer';
+  const effectiveAnimation = isFooter ? 'none' : (spec.animation_preset || 'none');
+  const safeTextColor = textColor || '#F4F6F0';
+  const safeHeadingColor = headingColor || '#FFFFFF';
+
   const combinedStyle: React.CSSProperties = {
     backgroundColor: bgColor,
     backgroundImage: bgGradient || undefined,
     boxShadow: cardBoxShadow || undefined,
-    color: textColor,
+    color: safeTextColor,
     borderColor: borderColor,
     borderWidth: borderWidth,
     borderStyle: borderStylePreset === 'glass' ? 'solid' : borderStylePreset,
+    ...(isFooter ? { transform: 'none', animation: 'none' } : {}),
     ...customVars as any
   };
 
@@ -86,10 +92,10 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
       id={id}
       data-section-key={sectionKey}
       data-section-shape={spec.particle_shape}
-      data-section-animation={spec.animation_preset || 'none'}
+      data-section-animation={effectiveAnimation}
       data-section-image-filter={spec.image_filter || 'none'}
       style={combinedStyle}
-      className={`relative transition-colors duration-300 ${radiusClass} ${className}`}
+      className={`relative transition-colors duration-300 ${radiusClass} ${isFooter ? 'isolation-auto !transform-none !animate-none' : ''} ${className}`}
     >
       {spec.image_filter && spec.image_filter !== 'none' && (
         <style

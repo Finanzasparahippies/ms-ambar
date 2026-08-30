@@ -51,48 +51,48 @@ const Layout = ({ children }: LayoutProps) => {
         {children}
       </main>
 
-      {/* Footer (Nature inspired) */}
-      <ThemedSection sectionKey="footer" className="relative z-10 py-12 px-6 mt-12 border-t border-amber-honey/20 dark:border-amber-honey/25 bg-[#0c0f0d] rounded-t-[2.5rem] md:rounded-t-[4rem] md:py-20 md:px-10 md:mt-20 md:bg-white/10 md:dark:bg-[#0c0f0d]/95 md:backdrop-blur-xl shadow-xl dark:shadow-2xl dark:shadow-black">
+      {/* Footer (Nature inspired - Static & Stable) */}
+      <ThemedSection sectionKey="footer" className="relative z-20 py-12 px-6 mt-16 border-t border-amber-honey/20 bg-[#0c0f0d] rounded-t-[2.5rem] md:rounded-t-[3.5rem] md:py-16 md:px-10 md:mt-24 shadow-2xl">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-4 gap-12">
           <div className="col-span-2">
             <Link href="/" className="inline-block mb-6">
               <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-10 w-auto object-contain hover:opacity-80 transition-opacity duration-300" />
             </Link>
-            <p className="opacity-50 text-sm max-w-sm leading-relaxed">
+            <p className="text-neutral-400 text-sm max-w-sm leading-relaxed">
               Cantautora sonorense; artista independiente de México para el mundo.
             </p>
           </div>
           <div>
             <h4 className="text-xs font-black uppercase tracking-widest mb-6 text-amber-honey">Navegación</h4>
-            <ul className="space-y-4 text-xs font-bold opacity-60">
-              <li><a href="/" className="hover:text-amber-honey">Inicio</a></li>
-              <li><a href="/comprar-boletos" className="hover:text-amber-honey">Accesos</a></li>
-              <li><a href="/musica" className="hover:text-amber-honey">Música</a></li>
-              <li><a href="/tienda" className="hover:text-amber-honey">Tienda</a></li>
-              <li><a href="/galeria" className="hover:text-amber-honey">Galería</a></li>
-              <li><a href="/ambar-te-escribe" className="hover:text-amber-honey">Ambar Te escribe</a></li>
-              <li><a href="/contacto" className="hover:text-amber-honey">Contacto</a></li>
+            <ul className="space-y-4 text-xs font-bold text-neutral-300">
+              <li><a href="/" className="hover:text-amber-honey transition-colors">Inicio</a></li>
+              <li><a href="/comprar-boletos" className="hover:text-amber-honey transition-colors">Accesos</a></li>
+              <li><a href="/musica" className="hover:text-amber-honey transition-colors">Música</a></li>
+              <li><a href="/tienda" className="hover:text-amber-honey transition-colors">Tienda</a></li>
+              <li><a href="/galeria" className="hover:text-amber-honey transition-colors">Galería</a></li>
+              <li><a href="/ambar-te-escribe" className="hover:text-amber-honey transition-colors">Ambar Te escribe</a></li>
+              <li><a href="/contacto" className="hover:text-amber-honey transition-colors">Contacto</a></li>
             </ul>
           </div>
           <div>
             <h4 className="text-xs font-black uppercase tracking-widest mb-6 text-amber-honey">Contacto</h4>
-            <ul className="space-y-4 text-xs font-bold opacity-60">
-              <li>promociones@msambar.com</li>
-              <li>@ms.ambarc</li>
+            <ul className="space-y-4 text-xs font-bold text-neutral-300">
+              <li className="hover:text-amber-honey transition-colors">promociones@msambar.com</li>
+              <li className="hover:text-amber-honey transition-colors">@ms.ambarc</li>
             </ul>
           </div>
         </div>
-        <div className="max-w-[1200px] mx-auto mt-10 md:mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-[#F4F6F0]/40 font-black gap-4">
+        <div className="max-w-[1200px] mx-auto mt-10 md:mt-16 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase tracking-widest text-neutral-400 font-black gap-4">
           <span>&copy; {new Date().getFullYear()} Ms Ambar</span>
           <span className="flex flex-wrap items-center justify-center gap-1.5">
             <span>Hecho en colaboración para Ms Ambar en México</span>
-            <span className="opacity-30">•</span>
+            <span className="opacity-40">•</span>
             <span>Desarrollado por</span>
             <a
               href="https://nectarlabs.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[#F4F6F0]/80 hover:text-amber-honey transition-all duration-300 font-black tracking-normal group"
+              className="inline-flex items-center gap-1 text-white hover:text-amber-honey transition-all duration-300 font-black tracking-normal group"
             >
               <svg className="w-3.5 h-3.5 fill-current text-amber-honey group-hover:scale-110 transition-transform duration-300" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />

@@ -214,16 +214,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div className="flex-1 flex flex-col justify-between px-1">
         <div>
           <div className="flex justify-between items-start gap-2 mb-1.5">
-            <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-white transition-colors duration-300 group-hover:text-amber-honey leading-snug line-clamp-2">
+            <h3 className="text-sm md:text-base font-black uppercase tracking-wider !text-white transition-colors duration-300 group-hover:!text-amber-honey leading-snug line-clamp-2">
               {product.name}
             </h3>
-            <span className="shrink-0 font-black text-sm md:text-base text-amber-honey text-glow">
+            <span className="shrink-0 font-black text-sm md:text-base text-amber-300 drop-shadow-md">
               ${product.price} MXN
             </span>
           </div>
 
           {product.description && (
-            <p className="text-xs text-white/70 line-clamp-2 mb-3 leading-relaxed">
+            <p className="text-xs text-neutral-300 line-clamp-2 mb-3 leading-relaxed">
               {product.description}
             </p>
           )}
@@ -235,16 +235,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               type="button"
               onClick={() => setShowSpecs((prev) => !prev)}
-              className="w-full py-2 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 hover:border-amber-honey/40 text-white flex items-center justify-between text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+              className="w-full py-2 px-3 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/20 hover:border-amber-honey/50 text-white flex items-center justify-between text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
               aria-expanded={showSpecs}
             >
-              <span className="flex items-center gap-1.5">
-                <Info size={13} className="text-amber-honey" />
+              <span className="flex items-center gap-1.5 text-white">
+                <Info size={13} className="text-amber-400" />
                 Especificaciones Técnicas
               </span>
               <ChevronDown
                 size={14}
-                className={`transition-transform duration-300 text-white/70 ${showSpecs ? 'rotate-180 text-amber-honey' : ''}`}
+                className={`transition-transform duration-300 text-neutral-300 ${showSpecs ? 'rotate-180 text-amber-400' : ''}`}
               />
             </button>
 
@@ -258,17 +258,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   transition={{ duration: 0.25, ease: 'easeInOut' }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-2 p-3.5 bg-black/60 border border-white/15 rounded-xl space-y-2.5 text-[11px] text-white/90 shadow-inner">
+                  <div className="mt-2 p-3.5 bg-black/80 border border-white/20 rounded-xl space-y-2.5 text-[11px] text-neutral-200 shadow-inner">
                     {product.detailed_description && (
-                      <p className="text-[10px] text-white/80 italic pb-2 border-b border-white/10 leading-relaxed">
+                      <p className="text-[10px] text-neutral-300 italic pb-2 border-b border-white/10 leading-relaxed">
                         {product.detailed_description}
                       </p>
                     )}
 
                     {resolvedSpecs.material && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/50 uppercase tracking-widest font-bold flex items-center gap-1">
-                          <Layers size={11} className="text-amber-honey" /> Material
+                        <span className="text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1">
+                          <Layers size={11} className="text-amber-400" /> Material
                         </span>
                         <span className="font-semibold text-white">{resolvedSpecs.material}</span>
                       </div>
@@ -276,31 +276,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
                     {resolvedSpecs.dimensions && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/50 uppercase tracking-widest font-bold">Dimensiones</span>
+                        <span className="text-neutral-400 uppercase tracking-widest font-bold">Dimensiones</span>
                         <span className="font-semibold text-white">{resolvedSpecs.dimensions}</span>
                       </div>
                     )}
 
                     {resolvedSpecs.weight && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/50 uppercase tracking-widest font-bold">Peso</span>
+                        <span className="text-neutral-400 uppercase tracking-widest font-bold">Peso</span>
                         <span className="font-semibold text-white">{resolvedSpecs.weight}</span>
                       </div>
                     )}
 
                     {resolvedSpecs.origin && (
                       <div className="flex justify-between items-center text-[10px]">
-                        <span className="text-white/50 uppercase tracking-widest font-bold">Origen</span>
+                        <span className="text-neutral-400 uppercase tracking-widest font-bold">Origen</span>
                         <span className="font-semibold text-white">{resolvedSpecs.origin}</span>
                       </div>
                     )}
 
                     {resolvedSpecs.care_instructions && (
                       <div className="pt-1.5 border-t border-white/10">
-                        <span className="block text-[9px] text-white/50 uppercase tracking-widest font-bold mb-0.5">
+                        <span className="block text-[9px] text-neutral-400 uppercase tracking-widest font-bold mb-0.5">
                           Cuidados
                         </span>
-                        <span className="text-[10px] text-white/90 leading-tight block">
+                        <span className="text-[10px] text-neutral-200 leading-tight block">
                           {resolvedSpecs.care_instructions}
                         </span>
                       </div>
@@ -309,7 +309,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     {resolvedSpecs.details &&
                       Object.entries(resolvedSpecs.details).map(([key, val]) => (
                         <div key={key} className="flex justify-between items-center text-[10px]">
-                          <span className="text-white/50 uppercase tracking-widest font-bold">{key}</span>
+                          <span className="text-neutral-400 uppercase tracking-widest font-bold">{key}</span>
                           <span className="font-semibold text-white">{val}</span>
                         </div>
                       ))}
@@ -323,12 +323,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Action Bar: Interactive Quantity Controls & Add to Cart */}
         <div className="pt-2.5 flex items-center gap-2 border-t border-white/10">
           {/* Quantity Stepper */}
-          <div className="flex items-center bg-white/[0.08] border border-white/20 rounded-xl p-1 shrink-0 shadow-sm">
+          <div className="flex items-center bg-white/[0.10] border border-white/25 rounded-xl p-1 shrink-0 shadow-sm">
             <button
               type="button"
               onClick={handleDecrement}
               disabled={quantity <= 1}
-              className="w-7 h-7 rounded-lg bg-white/[0.12] hover:bg-white/[0.24] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white font-bold transition-all border border-white/10"
+              className="w-7 h-7 rounded-lg bg-white/[0.15] hover:bg-white/[0.28] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white font-bold transition-all border border-white/15"
               aria-label="Disminuir cantidad"
             >
               <Minus size={12} />
@@ -339,21 +339,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               type="button"
               onClick={handleIncrement}
-              className="w-7 h-7 rounded-lg bg-white/[0.12] hover:bg-white/[0.24] active:scale-95 flex items-center justify-center text-white font-bold transition-all border border-white/10"
+              className="w-7 h-7 rounded-lg bg-white/[0.15] hover:bg-white/[0.28] active:scale-95 flex items-center justify-center text-white font-bold transition-all border border-white/15"
               aria-label="Aumentar cantidad"
             >
               <Plus size={12} />
             </button>
           </div>
 
-          {/* Add to Cart Button (High Contrast Gold) */}
+          {/* Add to Cart Button (MS Ambar Institutional Purple) */}
           <motion.button
             whileTap={{ scale: 0.96 }}
             onClick={handleAddToCart}
             className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-lg ${
               isAdded
-                ? 'bg-green-500 text-black border border-green-400 shadow-green-500/30'
-                : 'bg-amber-honey hover:bg-amber-400 text-black border border-amber-honey/60 shadow-amber-honey/25 hover:scale-[1.02]'
+                ? 'bg-emerald-600 text-white border border-emerald-400 shadow-emerald-600/40'
+                : 'bg-[#7B2CBF] hover:bg-[#9D4EDD] active:bg-[#6A1FB0] text-white border border-purple-400/40 shadow-purple-950/60 shadow-lg hover:scale-[1.02]'
             }`}
           >
             {isAdded ? (
