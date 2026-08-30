@@ -5,6 +5,8 @@ import {
   Plus,
   Minus,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Info,
   Layers,
   Sparkles,
@@ -34,6 +36,29 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [quantity, setQuantity] = useState<number>(1);
   const [showSpecs, setShowSpecs] = useState<boolean>(false);
   const [isAdded, setIsAdded] = useState<boolean>(false);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+
+  const productImages: string[] = React.useMemo(() => {
+    if (product.images && product.images.length > 0) {
+      const extracted = product.images
+        .map((img) => (typeof img === 'string' ? img : img.image))
+        .filter(Boolean);
+      if (extracted.length > 0) return extracted;
+    }
+    return [product.image || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80'];
+  }, [product.images, product.image]);
+
+  const activeImage = productImages[activeImageIndex] || productImages[0];
+
+  const handleNextImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIndex((prev) => (prev + 1) % productImages.length);
+  };
+
+  const handlePrevImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActiveImageIndex((prev) => (prev - 1 + productImages.length) % productImages.length);
+  };
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -85,17 +110,55 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       transition={{ delay: index * 0.07, duration: 0.4 }}
       className="group relative flex flex-col bg-white/[0.02] hover:bg-white/[0.04] border border-white/10 hover:border-amber-honey/40 rounded-[2rem] p-4 transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-amber-honey/10"
     >
-      {/* Visual Media Container */}
-      <div className="aspect-[4/5] w-full rounded-[1.6rem] overflow-hidden relative mb-4 bg-nature-night/60 border border-white/5">
+      {/* Visual Media Container with Multi-Image Carousel */}
+      <div className="aspect-[4/5] w-full rounded-[1.6rem] overflow-hidden relative mb-4 bg-nature-night/60 border border-white/5 group/image">
         <img
-          src={product.image || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80'}
+          key={activeImage}
+          src={activeImage}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 opacity-90 group-hover:opacity-100"
           loading="lazy"
         />
 
+        {/* Carousel Navigation Arrows if multiple images */}
+        {productImages.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={handlePrevImage}
+              className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-amber-honey border border-white/10 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md"
+              aria-label="Imagen anterior"
+            >
+              <ChevronLeft size={14} />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleNextImage}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/60 hover:bg-black/90 text-white/80 hover:text-amber-honey border border-white/10 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md"
+              aria-label="Siguiente imagen"
+            >
+              <ChevronRight size={14} />
+            </button>
+
+            {/* Indicator Dots */}
+            <div className="absolute bottom-2.5 left-0 right-0 flex items-center justify-center gap-1.5 z-10 pointer-events-none">
+              {productImages.map((_, dotIdx) => (
+                <div
+                  key={dotIdx}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
+                    dotIdx === activeImageIndex
+                      ? 'w-4 bg-amber-honey shadow-sm shadow-amber-honey/50'
+                      : 'w-1.5 bg-white/40'
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
         {/* Category & Badge Overlay */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
           <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.18em] bg-black/60 backdrop-blur-md border border-white/10 text-white/90">
             {categoryLabel}
           </span>
@@ -108,7 +171,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Admin Quick Action Controls */}
         {isAdmin && (
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             {onEdit && (
               <button
                 type="button"

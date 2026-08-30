@@ -1,16 +1,23 @@
 from django.contrib import admin
-from .models import Category, Product, Order, OrderItem, Expense
+from .models import Category, Product, ProductImage, Order, OrderItem, Expense
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
 
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+    fields = ('image', 'is_primary', 'order', 'alt_text')
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = ('name', 'price', 'stock', 'category', 'is_active')
     list_filter = ('category', 'is_active')
+    search_fields = ('name', 'description', 'detailed_description')
     prepopulated_fields = {'slug': ('name',)}
+    inlines = [ProductImageInline]
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem

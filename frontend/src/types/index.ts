@@ -183,6 +183,15 @@ export interface ProductSpecification {
   details?: Record<string, string>;
 }
 
+export interface ProductImage {
+  id?: number;
+  image: string;
+  alt_text?: string;
+  is_primary?: boolean;
+  order?: number;
+  created_at?: string;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -196,6 +205,7 @@ export interface Product {
   category_name?: string;
   is_active: boolean;
   image?: string;
+  images?: (string | ProductImage)[];
 }
 
 export interface Category {

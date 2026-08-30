@@ -12,12 +12,12 @@ from .shipping import generate_shipping_label
 logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from apps.tickets.models import Ticket, Event, Seat
-from .models import Category, Product, Order, OrderItem
-from .serializers import CategorySerializer, ProductSerializer, OrderSerializer
+from .models import Category, Product, ProductImage, Order, OrderItem
+from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, OrderSerializer
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -33,15 +33,75 @@ class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all().order_by('-id')
+    queryset = Product.objects.all().prefetch_related('images').select_related('category').order_by('-id')
     serializer_class = ProductSerializer
     permission_classes = [IsAdminOrReadOnly]
 
     def get_queryset(self):
+        qs = Product.objects.prefetch_related('images').select_related('category').order_by('-id')
         user = self.request.user
         if user and user.is_authenticated and (user.is_staff or user.is_superuser):
-            return Product.objects.all().order_by('-id')
-        return Product.objects.filter(is_active=True).order_by('-id')
+            return qs
+        return qs.filter(is_active=True)
+
+    @action(detail=True, methods=['POST'], permission_classes=[permissions.IsAdminUser])
+    def upload_images(self, request, pk=None):
+        """Añade una o múltiples imágenes a la galería del producto."""
+        product = self.get_object()
+        images_urls = request.data.get('images', [])
+        if isinstance(images_urls, str):
+            images_urls = [images_urls]
+        
+        created_imgs = []
+        current_count = product.images.count()
+        with transaction.atomic():
+            for idx, url in enumerate(images_urls):
+                if url:
+                    img_obj = ProductImage.objects.create(
+                        product=product,
+                        image=url,
+                        is_primary=(current_count == 0 and idx == 0),
+                        order=current_count + idx
+                    )
+                    created_imgs.append(img_obj)
+            if not product.image and created_imgs:
+                product.image = created_imgs[0].image
+                product.save(update_fields=['image'])
+
+        return Response(ProductSerializer(product).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['POST'], permission_classes=[permissions.IsAdminUser])
+    def set_primary_image(self, request, pk=None):
+        """Define una imagen específica como la portada del producto."""
+        product = self.get_object()
+        image_id = request.data.get('image_id')
+        try:
+            target_image = product.images.get(id=image_id)
+            target_image.is_primary = True
+            target_image.save()
+            return Response(ProductSerializer(product).data, status=status.HTTP_200_OK)
+        except ProductImage.DoesNotExist:
+            return Response({'error': 'Imagen no encontrada para este producto.'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['DELETE'], url_path='delete_image/(?P<image_id>[^/.]+)', permission_classes=[permissions.IsAdminUser])
+    def delete_image(self, request, pk=None, image_id=None):
+        """Elimina una imagen de la galería."""
+        product = self.get_object()
+        try:
+            target_image = product.images.get(id=image_id)
+            was_primary = target_image.is_primary
+            target_image.delete()
+            if was_primary:
+                new_primary = product.images.first()
+                if new_primary:
+                    new_primary.is_primary = True
+                    new_primary.save()
+                else:
+                    product.image = None
+                    product.save(update_fields=['image'])
+            return Response(ProductSerializer(product).data, status=status.HTTP_200_OK)
+        except ProductImage.DoesNotExist:
+            return Response({'error': 'Imagen no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
 
 @csrf_exempt
 @api_view(['POST'])

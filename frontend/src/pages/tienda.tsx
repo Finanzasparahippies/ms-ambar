@@ -24,14 +24,17 @@ import {
   Check,
   Tag,
   Sliders,
-  AlertCircle
+  AlertCircle,
+  Star,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import Swal from 'sweetalert2';
 import ThemedSection from '../components/ThemedSection';
 import ProductCard from '../components/ProductCard';
 import ImageOptimizerWidget, { OptimizationMetrics } from '../components/ImageOptimizerWidget';
-import { Product, Category } from '../types';
+import { Product, Category, ProductSpecification } from '../types';
 
 const FALLBACK_PRODUCTS: Product[] = [
   {
@@ -42,6 +45,11 @@ const FALLBACK_PRODUCTS: Product[] = [
     stock: 12,
     is_active: true,
     image: 'https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=500&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1603048588665-791ca8aea617?w=500&q=80',
+      'https://images.unsplash.com/photo-1539185441755-769473a23570?w=500&q=80',
+      'https://images.unsplash.com/photo-1542208998-f6dbbb27a72f?w=500&q=80'
+    ],
     description: 'Prensaje especial en vinilo negro de 180 gramos con insert autografiado y arte conceptual.',
     detailed_description: 'Edición para coleccionistas masterizada a partir de las cintas análogas originales. Incluye funda protectora antiestática y libreto de 12 páginas con letras y fotografías inéditas.',
     specifications: {
@@ -62,6 +70,11 @@ const FALLBACK_PRODUCTS: Product[] = [
     stock: 8,
     is_active: true,
     image: 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500&q=80',
+      'https://images.unsplash.com/photo-1578768079052-aa76e520036c?w=500&q=80',
+      'https://images.unsplash.com/photo-1509967419530-da38b4704bc6?w=500&q=80'
+    ],
     description: 'Sudadera premium corte oversize con bordado en relieve frontal y estampado en serigrafía.',
     detailed_description: 'Confeccionada con felpa suave de alto gramaje para máxima durabilidad y calidez. Capucha forrada y cordones con terminales metálicas personalizadas.',
     specifications: {
@@ -82,6 +95,10 @@ const FALLBACK_PRODUCTS: Product[] = [
     stock: 25,
     is_active: true,
     image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80',
+      'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500&q=80'
+    ],
     description: 'Playera conmemorativa 100% algodón, confeccionada para apoyar el arte y la música independiente.',
     detailed_description: 'Hecha desde Hermosillo, Sonora. Una prenda creada para representar la resistencia cultural y el sueño de seguir creando canciones libres.',
     specifications: {
@@ -102,6 +119,10 @@ const FALLBACK_PRODUCTS: Product[] = [
     stock: 15,
     is_active: true,
     image: 'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=500&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1582555172866-f73bb12a2ab3?w=500&q=80',
+      'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=500&q=80'
+    ],
     description: 'Impresión litográfica en papel de bellas artes de 300g, firmada individualmente por Ms. Ambar.',
     detailed_description: 'Tiraje estrictamente numerado de 100 ejemplares con certificado de autenticidad en sello seco.',
     specifications: {
@@ -171,7 +192,15 @@ export default function TiendaPage() {
   const [newCategoryName, setNewCategoryName] = useState<string>('');
   const [formDescription, setFormDescription] = useState<string>('');
   const [formDetailedDescription, setFormDetailedDescription] = useState<string>('');
+  const [formMaterial, setFormMaterial] = useState<string>('');
+  const [formDimensions, setFormDimensions] = useState<string>('');
+  const [formWeight, setFormWeight] = useState<string>('');
+  const [formOrigin, setFormOrigin] = useState<string>('');
+  const [formCareInstructions, setFormCareInstructions] = useState<string>('');
   const [formImage, setFormImage] = useState<string>('');
+  const [formImages, setFormImages] = useState<string[]>([]);
+  const [manualImageUrl, setManualImageUrl] = useState<string>('');
+  const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
   const [formIsActive, setFormIsActive] = useState<boolean>(true);
   const [isSavingProduct, setIsSavingProduct] = useState<boolean>(false);
 
@@ -332,7 +361,14 @@ export default function TiendaPage() {
     setNewCategoryName('');
     setFormDescription('');
     setFormDetailedDescription('');
+    setFormMaterial('');
+    setFormDimensions('');
+    setFormWeight('');
+    setFormOrigin('');
+    setFormCareInstructions('');
     setFormImage('');
+    setFormImages([]);
+    setManualImageUrl('');
     setFormIsActive(true);
     setOptimizationStats(null);
     setIsProductModalOpen(true);
@@ -355,7 +391,23 @@ export default function TiendaPage() {
     setNewCategoryName('');
     setFormDescription(product.description || '');
     setFormDetailedDescription(product.detailed_description || '');
-    setFormImage(product.image || '');
+    setFormMaterial(product.specifications?.material || '');
+    setFormDimensions(product.specifications?.dimensions || '');
+    setFormWeight(product.specifications?.weight || '');
+    setFormOrigin(product.specifications?.origin || '');
+    setFormCareInstructions(product.specifications?.care_instructions || '');
+
+    // Cargar galería de imágenes
+    let imgs: string[] = [];
+    if (product.images && product.images.length > 0) {
+      imgs = product.images.map(img => (typeof img === 'string' ? img : img.image)).filter(Boolean);
+    }
+    if (imgs.length === 0 && product.image) {
+      imgs = [product.image];
+    }
+    setFormImages(imgs);
+    setFormImage(imgs[0] || product.image || '');
+    setManualImageUrl('');
     setFormIsActive(product.is_active ?? true);
     setOptimizationStats(null);
     setIsProductModalOpen(true);
@@ -369,18 +421,20 @@ export default function TiendaPage() {
     }
   };
 
-  // Optimización de Imagen directa para el Producto (Pillow -> WebP -> Cloudinary)
-  const handleImageFileSelected = async (file: File) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      toast.error('Por favor selecciona un archivo de imagen válido (JPG, PNG, WebP).');
+  // Optimización de Lote de Imágenes (Pillow -> WebP -> Cloudinary)
+  const handleImageFilesSelected = async (files: FileList | File[]) => {
+    const fileList = Array.from(files).filter(f => f.type.startsWith('image/'));
+    if (fileList.length === 0) {
+      toast.error('Por favor selecciona archivos de imagen válidos (JPG, PNG, WebP).');
       return;
     }
 
     setIsOptimizingImage(true);
     setOptimizationStats(null);
     const formData = new FormData();
-    formData.append('files', file);
+    fileList.forEach(file => {
+      formData.append('files', file);
+    });
     formData.append('quality', '80');
     formData.append('max_size', '1440');
     formData.append('to_webp', 'true');
@@ -392,24 +446,79 @@ export default function TiendaPage() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      const result = res.data?.results?.[0];
-      if (result && result.status === 'success' && result.url) {
-        setFormImage(result.url);
+      const results = res.data?.results || [];
+      const newUrls: string[] = [];
+      let totalOrig = 0;
+      let totalOpt = 0;
+
+      results.forEach(r => {
+        if (r.status === 'success' && r.url) {
+          newUrls.push(r.url);
+          totalOrig += r.original_size || 0;
+          totalOpt += r.optimized_size || 0;
+        }
+      });
+
+      if (newUrls.length > 0) {
+        setFormImages(prev => [...prev, ...newUrls]);
+        if (!formImage) setFormImage(newUrls[0]);
+        const reduction = totalOrig > 0 ? Math.round(((totalOrig - totalOpt) / totalOrig) * 100) : 0;
         setOptimizationStats({
-          originalSize: result.original_size,
-          optimizedSize: result.optimized_size,
-          reductionPercent: result.reduction_percent
+          originalSize: totalOrig,
+          optimizedSize: totalOpt,
+          reductionPercent: reduction
         });
-        toast.success(`Imagen optimizada a WebP (-${result.reduction_percent}% de peso).`);
+        toast.success(`${newUrls.length} ${newUrls.length === 1 ? 'imagen optimizada' : 'imágenes optimizadas'} a WebP (-${reduction}% de peso).`);
       } else {
-        toast.error(result?.error || 'No se pudo optimizar la imagen.');
+        toast.error('No se pudo procesar ninguna imagen.');
       }
     } catch (err: any) {
-      console.error('Error optimizando imagen de producto:', err);
-      toast.error('Error durante la compresión de la imagen.');
+      console.error('Error optimizando imágenes de producto:', err);
+      toast.error('Error durante la compresión de las imágenes.');
     } finally {
       setIsOptimizingImage(false);
     }
+  };
+
+  // Definir como portada (mueve la imagen al índice 0)
+  const handleSetPrimaryImage = (index: number) => {
+    if (index === 0) return;
+    setFormImages(prev => {
+      const updated = [...prev];
+      const [target] = updated.splice(index, 1);
+      updated.unshift(target);
+      return updated;
+    });
+    toast.success('Imagen establecida como portada principal.');
+  };
+
+  // Eliminar imagen de la lista
+  const handleRemoveImage = (index: number) => {
+    setFormImages(prev => prev.filter((_, idx) => idx !== index));
+  };
+
+  // Reordenar imagen (hacia izquierda o derecha)
+  const handleMoveImage = (fromIdx: number, toIdx: number) => {
+    if (toIdx < 0 || toIdx >= formImages.length) return;
+    setFormImages(prev => {
+      const updated = [...prev];
+      const [item] = updated.splice(fromIdx, 1);
+      updated.splice(toIdx, 0, item);
+      return updated;
+    });
+  };
+
+  // Agregar imagen por URL manual
+  const handleAddManualUrl = () => {
+    const trimmed = manualImageUrl.trim();
+    if (!trimmed) return;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      toast.error('Ingresa una URL válida (http:// o https://).');
+      return;
+    }
+    setFormImages(prev => [...prev, trimmed]);
+    setManualImageUrl('');
+    toast.success('Imagen añadida a la galería.');
   };
 
   // Guardar / Actualizar Producto con Revalidación Reactiva Inmediata
@@ -448,6 +557,17 @@ export default function TiendaPage() {
         }
       }
 
+      const specifications: ProductSpecification = {
+        material: formMaterial.trim() || undefined,
+        dimensions: formDimensions.trim() || undefined,
+        weight: formWeight.trim() || undefined,
+        origin: formOrigin.trim() || undefined,
+        care_instructions: formCareInstructions.trim() || undefined
+      };
+      const hasSpecs = Object.values(specifications).some(Boolean);
+
+      const primaryImg = formImages[0] || formImage.trim() || undefined;
+
       const payload = {
         name: formName.trim(),
         slug: formSlug.trim() || slugifyText(formName),
@@ -456,7 +576,9 @@ export default function TiendaPage() {
         category: finalCategoryId,
         description: formDescription.trim(),
         detailed_description: formDetailedDescription.trim() || undefined,
-        image: formImage.trim() || undefined,
+        specifications: hasSpecs ? specifications : {},
+        image: primaryImg,
+        uploaded_images: formImages,
         is_active: formIsActive
       };
 
@@ -874,29 +996,49 @@ export default function TiendaPage() {
                   />
                 </div>
 
-                {/* Zona de Imagen & Optimización Automática */}
+                {/* Zona de Galería de Imágenes Múltiples & Optimización Automática */}
                 <div className="space-y-3 bg-white/[0.02] border border-white/10 rounded-2xl p-4 sm:p-5">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] text-amber-honey uppercase font-black tracking-widest flex items-center gap-1.5">
-                      <ImageIcon size={14} /> Imagen del Producto
+                      <ImageIcon size={14} /> Galería de Imágenes ({formImages.length})
                     </label>
                     <span className="text-[9px] font-mono text-white/40 uppercase">
-                      Compresión WebP automática
+                      Pillow WebP • Múltiples Archivos
                     </span>
                   </div>
 
-                  {/* Dropzone interactiva */}
+                  {/* Dropzone interactiva con soporte Drag & Drop Múltiple */}
                   <div
                     onClick={() => productImageInputRef.current?.click()}
-                    className="border-2 border-dashed border-white/15 hover:border-amber-honey/60 rounded-xl p-5 text-center cursor-pointer transition-all bg-black/30 hover:bg-black/50 flex flex-col items-center justify-center gap-2"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingOver(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      setIsDraggingOver(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      setIsDraggingOver(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        handleImageFilesSelected(e.dataTransfer.files);
+                      }
+                    }}
+                    className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                      isDraggingOver
+                        ? 'border-amber-honey bg-amber-honey/10 scale-[1.01]'
+                        : 'border-white/15 hover:border-amber-honey/60 bg-black/30 hover:bg-black/50'
+                    }`}
                   >
                     <input
                       type="file"
                       ref={productImageInputRef}
+                      multiple
                       accept="image/jpeg,image/png,image/webp"
                       onChange={(e) => {
-                        if (e.target.files?.[0]) {
-                          handleImageFileSelected(e.target.files[0]);
+                        if (e.target.files && e.target.files.length > 0) {
+                          handleImageFilesSelected(e.target.files);
                         }
                       }}
                       className="hidden"
@@ -905,16 +1047,16 @@ export default function TiendaPage() {
                     {isOptimizingImage ? (
                       <div className="flex flex-col items-center py-2 gap-2 text-amber-honey">
                         <Loader2 size={24} className="animate-spin" />
-                        <span className="text-xs font-bold">Comprimiendo y optimizando a WebP...</span>
+                        <span className="text-xs font-bold">Procesando y optimizando lote a WebP...</span>
                       </div>
                     ) : (
                       <>
                         <Upload size={22} className="text-amber-honey" />
                         <p className="text-xs font-bold text-white">
-                          Arrastra una imagen o haz clic para subir y optimizar
+                          Arrastra múltiples imágenes o haz clic para subir
                         </p>
                         <p className="text-[10px] text-white/40">
-                          Formatos admitidos: JPG, PNG, WebP (Se convertirá a WebP de alta fidelidad)
+                          Formatos admitidos: JPG, PNG, WebP (Se convertirán a WebP y se alojarán en Cloudinary)
                         </p>
                       </>
                     )}
@@ -924,7 +1066,7 @@ export default function TiendaPage() {
                   {optimizationStats && (
                     <div className="flex items-center justify-between bg-emerald-950/30 border border-emerald-500/30 rounded-xl px-4 py-2.5 text-xs text-emerald-400">
                       <span className="flex items-center gap-1.5 font-bold">
-                        <CheckCircle size={14} /> Optimizada con éxito
+                        <CheckCircle size={14} /> Lote optimizado con éxito
                       </span>
                       <span className="font-mono text-[11px]">
                         {formatBytes(optimizationStats.originalSize)} ➔ {formatBytes(optimizationStats.optimizedSize)}{' '}
@@ -933,36 +1075,217 @@ export default function TiendaPage() {
                     </div>
                   )}
 
-                  {/* Previsualización y URL manual */}
-                  <div className="flex items-center gap-3 pt-2">
-                    {formImage && (
-                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/20 shrink-0 bg-black">
-                        <img src={formImage} alt="Preview" className="w-full h-full object-cover" />
+                  {/* Lista de Miniaturas (Thumbnails) con Gestión de Portada y Reordenamiento */}
+                  {formImages.length > 0 && (
+                    <div className="pt-2 space-y-2">
+                      <span className="text-[9px] uppercase tracking-widest text-white/50 font-bold block">
+                        Fotos en la galería (La primera es la foto de Portada):
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {formImages.map((imgUrl, imgIdx) => (
+                          <div
+                            key={`${imgUrl}-${imgIdx}`}
+                            className={`group relative rounded-xl overflow-hidden border bg-black/60 transition-all ${
+                              imgIdx === 0
+                                ? 'border-amber-honey ring-2 ring-amber-honey/30'
+                                : 'border-white/10 hover:border-white/30'
+                            }`}
+                          >
+                            <div className="aspect-square w-full">
+                              <img
+                                src={imgUrl}
+                                alt={`Foto ${imgIdx + 1}`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+
+                            {/* Badge de Posición / Portada */}
+                            <div className="absolute top-1.5 left-1.5 flex items-center gap-1 z-10">
+                              {imgIdx === 0 ? (
+                                <span className="px-1.5 py-0.5 rounded-md bg-amber-honey text-nature-night text-[8px] font-black uppercase tracking-wider shadow-md flex items-center gap-1">
+                                  <Star size={9} className="fill-current" /> Portada
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded-md bg-black/70 backdrop-blur-md text-white/70 text-[8px] font-bold">
+                                  #{imgIdx + 1}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Botón Eliminar */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(imgIdx)}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 hover:bg-red-600 text-white/70 hover:text-white border border-white/10 flex items-center justify-center transition-all opacity-80 sm:opacity-0 group-hover:opacity-100 z-10"
+                              title="Eliminar de la galería"
+                            >
+                              <Trash2 size={11} />
+                            </button>
+
+                            {/* Barra de Acciones de Reordenamiento y Portada */}
+                            <div className="p-1.5 bg-black/80 border-t border-white/5 flex items-center justify-between text-[10px]">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={imgIdx === 0}
+                                  onClick={() => handleMoveImage(imgIdx, imgIdx - 1)}
+                                  className="w-5 h-5 rounded bg-white/5 hover:bg-white/15 disabled:opacity-20 flex items-center justify-center text-white transition-all"
+                                  title="Mover a la izquierda"
+                                >
+                                  <ChevronLeft size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={imgIdx === formImages.length - 1}
+                                  onClick={() => handleMoveImage(imgIdx, imgIdx + 1)}
+                                  className="w-5 h-5 rounded bg-white/5 hover:bg-white/15 disabled:opacity-20 flex items-center justify-center text-white transition-all"
+                                  title="Mover a la derecha"
+                                >
+                                  <ChevronRight size={12} />
+                                </button>
+                              </div>
+
+                              {imgIdx !== 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetPrimaryImage(imgIdx)}
+                                  className="text-[9px] text-amber-honey hover:underline font-bold flex items-center gap-0.5"
+                                >
+                                  <Star size={10} /> Portada
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                    <input
-                      type="url"
-                      value={formImage}
-                      onChange={(e) => setFormImage(e.target.value)}
-                      placeholder="URL de la imagen (o generada tras optimizar)"
-                      className="flex-1 bg-white/[0.04] border border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-amber-honey text-white font-mono text-[11px]"
-                    />
+                    </div>
+                  )}
+
+                  {/* Añadir imagen individual por URL */}
+                  <div className="pt-2">
+                    <label className="text-[9px] text-white/40 uppercase tracking-widest font-bold block mb-1">
+                      O agregar por URL directa:
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="url"
+                        value={manualImageUrl}
+                        onChange={(e) => setManualImageUrl(e.target.value)}
+                        placeholder="https://images.unsplash.com/... o URL de Cloudinary"
+                        className="flex-1 bg-white/[0.04] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-white font-mono text-[11px]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddManualUrl}
+                        className="px-3 py-2 bg-white/10 hover:bg-amber-honey hover:text-black rounded-xl text-xs font-bold transition-all shrink-0"
+                      >
+                        + Agregar
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Descripción Corta */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] text-white/70 uppercase font-black tracking-widest block">
-                    Descripción del Producto *
+                    Descripción Corta del Producto *
                   </label>
                   <textarea
                     required
-                    rows={3}
+                    rows={2}
                     value={formDescription}
                     onChange={(e) => setFormDescription(e.target.value)}
                     placeholder="Resumen del producto, corte, materiales o detalles de arte..."
                     className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey text-white"
                   />
+                </div>
+
+                {/* Descripción Detallada (Ficha Técnica / Storytelling) */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-amber-honey uppercase font-black tracking-widest block">
+                    Descripción Detallada / Ficha Extendida
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formDetailedDescription}
+                    onChange={(e) => setFormDetailedDescription(e.target.value)}
+                    placeholder="Detalles sobre confección, acabados, historia de la prenda o proceso artesanal..."
+                    className="w-full bg-white/[0.04] border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey text-white"
+                  />
+                </div>
+
+                {/* Especificaciones Técnicas Estructuradas */}
+                <div className="space-y-3 bg-white/[0.02] border border-white/10 rounded-2xl p-4 sm:p-5">
+                  <label className="text-[10px] text-amber-honey uppercase font-black tracking-widest flex items-center gap-1.5">
+                    <Sliders size={14} /> Especificaciones Técnicas (Opcionales)
+                  </label>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block">
+                        Material / Composición
+                      </label>
+                      <input
+                        type="text"
+                        value={formMaterial}
+                        onChange={(e) => setFormMaterial(e.target.value)}
+                        placeholder="Ej: 80% Algodón, 20% Poliéster (380 GSM)"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block">
+                        Dimensiones / Tallas
+                      </label>
+                      <input
+                        type="text"
+                        value={formDimensions}
+                        onChange={(e) => setFormDimensions(e.target.value)}
+                        placeholder="Ej: Corte Oversize Unisex (S, M, L, XL)"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block">
+                        Peso Estimado
+                      </label>
+                      <input
+                        type="text"
+                        value={formWeight}
+                        onChange={(e) => setFormWeight(e.target.value)}
+                        placeholder="Ej: 680 g"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-white"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block">
+                        Origen / Fabricación
+                      </label>
+                      <input
+                        type="text"
+                        value={formOrigin}
+                        onChange={(e) => setFormOrigin(e.target.value)}
+                        placeholder="Ej: Confeccionado en Hermosillo, Sonora"
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 pt-1">
+                    <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block">
+                      Instrucciones de Cuidado
+                    </label>
+                    <input
+                      type="text"
+                      value={formCareInstructions}
+                      onChange={(e) => setFormCareInstructions(e.target.value)}
+                      placeholder="Ej: Lavar con agua fría, no usar blanqueador, secar a la sombra."
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-white"
+                    />
+                  </div>
                 </div>
 
                 {/* Estado Activo */}
