@@ -33,6 +33,7 @@ import {
   Link2,
   List,
   ListOrdered,
+  Loader2,
   Mail,
   MapPin,
   Maximize2,
@@ -51,6 +52,7 @@ import {
   Sliders,
   Smartphone,
   Smile,
+  Sparkles,
   Tablet,
   Target,
   Ticket,
@@ -70,6 +72,7 @@ import { useRouter } from 'next/router';
 import React, { useEffect, useState, useCallback } from 'react';
 import CouponManager from '../../components/CouponManager';
 import ThemeManager from '../../components/ThemeManager';
+import ImageOptimizerWidget from '../../components/ImageOptimizerWidget';
 import { AdsPerformanceWidget } from '../../components/dashboard/AdsPerformanceWidget';
 import { CrossAnalyticsChart } from '../../components/dashboard/CrossAnalyticsChart';
 import api from '../../lib/api';
@@ -771,6 +774,7 @@ export default function AdminDashboard() {
   // Modals & Active Edit Forms
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isCatalogOptimizerModalOpen, setIsCatalogOptimizerModalOpen] = useState(false);
 
   // Product Form Fields
   const [prodId, setProdId] = useState<number | null>(null);
@@ -783,6 +787,13 @@ export default function AdminDashboard() {
   const [prodIsActive, setProdIsActive] = useState(true);
   const [prodImageFile, setProdImageFile] = useState<File | null>(null);
   const [prodImagePreview, setProdImagePreview] = useState<string | null>(null);
+  const [prodImageUrl, setProdImageUrl] = useState<string>('');
+  const [isOptimizingProdImage, setIsOptimizingProdImage] = useState<boolean>(false);
+  const [prodOptStats, setProdOptStats] = useState<{
+    originalSize: number;
+    optimizedSize: number;
+    reductionPercent: number;
+  } | null>(null);
 
   // Category Form Fields
   const [catId, setCatId] = useState<number | null>(null);
@@ -2271,6 +2282,8 @@ export default function AdminDashboard() {
     setProdIsActive(true);
     setProdImageFile(null);
     setProdImagePreview(null);
+    setProdImageUrl('');
+    setProdOptStats(null);
     setCatalogErrorMsg(null);
     setCatalogSuccessMsg(null);
     setIsProductModalOpen(true);
@@ -2287,9 +2300,55 @@ export default function AdminDashboard() {
     setProdIsActive(product.is_active !== false);
     setProdImageFile(null);
     setProdImagePreview(product.image || null);
+    setProdImageUrl(product.image || '');
+    setProdOptStats(null);
     setCatalogErrorMsg(null);
     setCatalogSuccessMsg(null);
     setIsProductModalOpen(true);
+  };
+
+  const handleProdImageFileSelected = async (file: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showToast('Por favor selecciona un archivo de imagen válido (JPG, PNG, WebP).', 'error');
+      return;
+    }
+
+    setIsOptimizingProdImage(true);
+    setProdOptStats(null);
+    const formData = new FormData();
+    formData.append('files', file);
+    formData.append('quality', '80');
+    formData.append('max_size', '1440');
+    formData.append('to_webp', 'true');
+    formData.append('save_to_gallery', 'false');
+    formData.append('category', 'Productos');
+
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = { 'Content-Type': 'multipart/form-data' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    try {
+      const res = await axios.post(`${API_URL}/gallery/items/optimize_images/`, formData, { headers });
+      const result = res.data?.results?.[0];
+      if (result && result.status === 'success' && result.url) {
+        setProdImageUrl(result.url);
+        setProdImagePreview(result.url);
+        setProdOptStats({
+          originalSize: result.original_size,
+          optimizedSize: result.optimized_size,
+          reductionPercent: result.reduction_percent
+        });
+        showToast(`Imagen optimizada a WebP (-${result.reduction_percent}% de peso).`, 'success');
+      } else {
+        showToast(result?.error || 'No se pudo optimizar la imagen.', 'error');
+      }
+    } catch (err: any) {
+      console.error('Error optimizando imagen de producto:', err);
+      showToast('Error durante la compresión de la imagen.', 'error');
+    } finally {
+      setIsOptimizingProdImage(false);
+    }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
@@ -2299,28 +2358,32 @@ export default function AdminDashboard() {
     setCatalogSuccessMsg(null);
 
     const token = localStorage.getItem('token');
-    const headers = {
-      Authorization: `Bearer ${token}`
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
     };
 
-    const formData = new FormData();
-    formData.append('name', prodName);
-    if (prodSlug) formData.append('slug', prodSlug);
-    formData.append('description', prodDesc);
-    formData.append('price', prodPrice);
-    formData.append('stock', prodStock);
-    if (prodCategory) formData.append('category', prodCategory);
-    formData.append('is_active', String(prodIsActive));
-    if (prodImageFile) {
-      formData.append('image', prodImageFile);
+    const payload: Record<string, any> = {
+      name: prodName,
+      description: prodDesc,
+      price: parseFloat(prodPrice),
+      stock: parseInt(prodStock, 10),
+      category: prodCategory ? parseInt(prodCategory, 10) : null,
+      is_active: prodIsActive,
+    };
+    if (prodSlug.trim()) {
+      payload.slug = prodSlug.trim();
+    }
+    if (prodImageUrl.trim()) {
+      payload.image = prodImageUrl.trim();
     }
 
     try {
       if (prodId) {
-        await axios.patch(`${API_URL}/shop/products/${prodId}/`, formData, { headers });
+        await axios.patch(`${API_URL}/shop/products/${prodId}/`, payload, { headers });
         setCatalogSuccessMsg('¡Producto actualizado con éxito!');
       } else {
-        await axios.post(`${API_URL}/shop/products/`, formData, { headers });
+        await axios.post(`${API_URL}/shop/products/`, payload, { headers });
         setCatalogSuccessMsg('¡Producto creado con éxito!');
       }
       setIsProductModalOpen(false);
@@ -4639,12 +4702,20 @@ export default function AdminDashboard() {
                     </div>
 
                     {catalogSubTab === 'products' ? (
-                      <button
-                        onClick={openProductCreateModal}
-                        className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] px-5 py-3 rounded-xl transition-all shadow-[0_2px_15px_rgba(245,158,11,0.15)]"
-                      >
-                        <PlusCircle size={14} /> Agregar Producto
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => setIsCatalogOptimizerModalOpen(true)}
+                          className="flex items-center gap-2 bg-white/5 border border-amber-honey/30 hover:border-amber-honey hover:bg-amber-honey/10 text-amber-honey font-black uppercase tracking-widest text-[9px] px-4 py-3 rounded-xl transition-all shadow-md"
+                        >
+                          <Sparkles size={14} /> Optimizar Imágenes
+                        </button>
+                        <button
+                          onClick={openProductCreateModal}
+                          className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-black uppercase tracking-widest text-[9px] px-5 py-3 rounded-xl transition-all shadow-[0_2px_15px_rgba(245,158,11,0.15)]"
+                        >
+                          <PlusCircle size={14} /> Agregar Producto
+                        </button>
+                      </div>
                     ) : (
                       <button
                         onClick={openCategoryCreateModal}
@@ -4859,29 +4930,45 @@ export default function AdminDashboard() {
 
                           {/* Image Upload */}
                           <div className="space-y-2">
-                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-bold block pl-1">Imagen del Producto</label>
-                            <div className="flex gap-4 items-center bg-white/5 border border-white/10 p-4 rounded-xl">
-                              <div className="w-16 h-16 bg-white/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10">
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-bold block pl-1">
+                              Imagen del Producto (Pillow / WebP Optimizado)
+                            </label>
+                            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-white/5 border border-white/10 p-4 rounded-xl">
+                              <div className="w-20 h-20 bg-white/5 rounded-xl overflow-hidden flex items-center justify-center shrink-0 border border-white/10 relative">
                                 {prodImagePreview ? (
                                   <img src={prodImagePreview} alt="Preview" className="w-full h-full object-cover" />
                                 ) : (
                                   <ShoppingBag size={24} className="text-[#F4F6F0]/10" />
                                 )}
+                                {isOptimizingProdImage && (
+                                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                    <Loader2 size={18} className="animate-spin text-amber-honey" />
+                                  </div>
+                                )}
                               </div>
-                              <div className="space-y-1 flex-1">
+                              <div className="space-y-2 flex-1 w-full">
                                 <input
                                   type="file"
-                                  accept="image/*"
+                                  accept="image/jpeg,image/png,image/webp"
+                                  disabled={isOptimizingProdImage}
                                   onChange={(e) => {
                                     const file = e.target.files?.[0];
                                     if (file) {
-                                      setProdImageFile(file);
-                                      setProdImagePreview(URL.createObjectURL(file));
+                                      handleProdImageFileSelected(file);
                                     }
                                   }}
-                                  className="text-[10px] text-[#F4F6F0]/60 file:bg-white/5 file:border-0 file:rounded-lg file:text-[#F4F6F0] file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-white/10"
+                                  className="text-[10px] text-[#F4F6F0]/60 file:bg-amber-honey/20 file:border file:border-amber-honey/30 file:rounded-lg file:text-amber-honey file:px-3 file:py-1.5 file:text-[9px] file:uppercase file:font-black file:tracking-widest file:mr-3 cursor-pointer hover:file:bg-amber-honey/30 disabled:opacity-50"
                                 />
-                                <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold">Formatos recomendados: JPG, PNG o WebP. Máx 5MB.</p>
+                                {prodOptStats && (
+                                  <div className="flex items-center gap-2 text-[10px] font-mono text-emerald-400 bg-emerald-950/20 border border-emerald-500/30 px-3 py-1.5 rounded-lg">
+                                    <span>✓ Optimizado a WebP</span>
+                                    <span className="text-white/40">|</span>
+                                    <span>Ahorro: -{prodOptStats.reductionPercent}%</span>
+                                  </div>
+                                )}
+                                <p className="text-[8px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold">
+                                  Compresión automática a WebP en servidor (Cloudinary). Máx 35MB.
+                                </p>
                               </div>
                             </div>
                           </div>
@@ -4965,27 +5052,25 @@ export default function AdminDashboard() {
                         </h3>
 
                         <form onSubmit={handleCategorySubmit} className="space-y-4">
-                          {/* Name */}
                           <div className="space-y-1">
-                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-bold block pl-1">Nombre de la Categoría</label>
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-bold block pl-1">Nombre</label>
                             <input
                               type="text"
                               required
                               value={catName}
                               onChange={(e) => setCatName(e.target.value)}
-                              placeholder="Ej: Accesorios"
+                              placeholder="Ej: Accesorios, Remeras..."
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold text-white placeholder-white/30"
                             />
                           </div>
 
-                          {/* Slug */}
                           <div className="space-y-1">
-                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-bold block pl-1">Slug Personalizado (Opcional)</label>
+                            <label className="text-[9px] text-[#F4F6F0]/60 uppercase tracking-widest font-bold block pl-1">Slug (Identificador URL)</label>
                             <input
                               type="text"
                               value={catSlug}
                               onChange={(e) => setCatSlug(e.target.value)}
-                              placeholder="Ej: accesorios-indumentaria"
+                              placeholder="ej-accesorios-2026"
                               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs outline-none focus:border-amber-honey transition-all font-semibold font-mono text-white placeholder-white/30"
                             />
                           </div>
@@ -5008,6 +5093,30 @@ export default function AdminDashboard() {
                             </button>
                           </div>
                         </form>
+                      </motion.div>
+                    </div>
+                  )}
+
+                  {/* CATALOG OPTIMIZER MODAL OVERLAY */}
+                  {isCatalogOptimizerModalOpen && (
+                    <div
+                      onClick={() => setIsCatalogOptimizerModalOpen(false)}
+                      className="fixed inset-0 bg-[#0B0F0D]/80 z-[130] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm"
+                    >
+                      <motion.div
+                        onClick={e => e.stopPropagation()}
+                        initial={{ scale: 0.95, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="max-w-4xl w-full max-h-[90vh] overflow-y-auto custom-scroll"
+                      >
+                        <ImageOptimizerWidget
+                          defaultCategory="Productos"
+                          onCancel={() => setIsCatalogOptimizerModalOpen(false)}
+                          onSuccess={(metrics) => {
+                            showToast(`Se procesaron ${metrics.processed_count} imágenes exitosamente.`, 'success');
+                            fetchDashboardData();
+                          }}
+                        />
                       </motion.div>
                     </div>
                   )}

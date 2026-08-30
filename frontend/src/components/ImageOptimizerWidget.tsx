@@ -69,6 +69,7 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
   // Execution state
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [currentBatchStatus, setCurrentBatchStatus] = useState<string>('');
   const [metrics, setMetrics] = useState<OptimizationMetrics | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -222,6 +223,8 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
     try {
       for (let bIndex = 0; bIndex < fileBatches.length; bIndex++) {
         const batch = fileBatches[bIndex];
+        const currentProcessed = Math.min((bIndex + 1) * BATCH_SIZE, totalFiles);
+        setCurrentBatchStatus(`Procesando lote ${bIndex + 1} de ${fileBatches.length} (archivos ${bIndex * BATCH_SIZE + 1}-${currentProcessed} de ${totalFiles})...`);
         const formData = new FormData();
         batch.forEach(file => {
           formData.append('files', file);
@@ -319,7 +322,9 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
         {onCancel && (
           <button
             onClick={onCancel}
-            className="self-end sm:self-center p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/50 hover:bg-slate-800 transition-colors"
+            disabled={isProcessing}
+            title={isProcessing ? "Procesamiento en curso..." : "Cerrar"}
+            className="self-end sm:self-center p-2 text-slate-400 hover:text-white rounded-full bg-slate-800/50 hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <X size={20} />
           </button>
@@ -556,8 +561,8 @@ export const ImageOptimizerWidget: React.FC<ImageOptimizerWidgetProps> = ({
         <div className="bg-[#181824] border border-amber-400/30 rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-amber-400">
             <span className="flex items-center gap-2">
-              <Loader2 size={16} className="animate-spin" />
-              Procesando y comprimiendo con Pillow en servidor...
+              <Loader2 size={16} className="animate-spin shrink-0" />
+              <span>{currentBatchStatus || 'Procesando y comprimiendo con Pillow en servidor...'}</span>
             </span>
             <span className="font-mono">{uploadProgress}%</span>
           </div>
