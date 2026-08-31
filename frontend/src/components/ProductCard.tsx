@@ -350,7 +350,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Add to Cart Button (High Visibility Gold/Amber Gradient) */}
           <motion.button
-            whileHover={{ scale: 1.02, brightness: 1.05 }}
+            whileHover={{ scale: 1.02, filter: "brightness(1.05)" }}
             whileTap={{ scale: 0.95 }}
             onClick={handleAddToCart}
             className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-lg ${
