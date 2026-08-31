@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import * as React from 'react';
 import Navbar from './Navbar';
 import ThemedSection from './ThemedSection';
+import CartDrawer from './CartDrawer';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -33,6 +34,7 @@ const Layout = ({ children }: LayoutProps) => {
         <main className="relative z-10 min-h-screen">
           {children}
         </main>
+        <CartDrawer />
       </ThemedSection>
     );
   }
@@ -40,6 +42,7 @@ const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="min-h-screen selection:bg-amber-honey/30 overflow-x-hidden font-outfit relative">
       <Navbar />
+      <CartDrawer />
 
       {/* Decorative Nature Elements (Static Background) */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">

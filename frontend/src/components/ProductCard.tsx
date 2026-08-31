@@ -18,7 +18,7 @@ import { Product } from '../types';
 
 interface ProductCardProps {
   product: Product;
-  onAddToCart: (product: Product, quantity: number) => void;
+  onAddToCart: (product: Product, quantity: number, sourceElement?: HTMLElement | null) => void;
   index?: number;
   isAdmin?: boolean;
   onEdit?: (product: Product) => void;
@@ -37,6 +37,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [showSpecs, setShowSpecs] = useState<boolean>(false);
   const [isAdded, setIsAdded] = useState<boolean>(false);
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const imageRef = React.useRef<HTMLImageElement>(null);
 
   const productImages: string[] = React.useMemo(() => {
     if (product.images && product.images.length > 0) {
@@ -77,7 +78,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddToCart(product, quantity);
+    onAddToCart(product, quantity, imageRef.current);
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -119,6 +120,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Visual Media Container with Multi-Image Carousel */}
       <div className="aspect-[4/5] w-full rounded-[1.6rem] overflow-hidden relative mb-4 bg-nature-night/60 border border-white/5 group/image">
         <img
+          ref={imageRef}
           key={activeImage}
           src={activeImage}
           alt={product.name}
@@ -346,14 +348,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </button>
           </div>
 
-          {/* Add to Cart Button (MS Ambar Institutional Purple) */}
+          {/* Add to Cart Button (High Visibility Gold/Amber Gradient) */}
           <motion.button
-            whileTap={{ scale: 0.96 }}
+            whileHover={{ scale: 1.02, brightness: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleAddToCart}
             className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-lg ${
               isAdded
-                ? 'bg-emerald-600 text-white border border-emerald-400 shadow-emerald-600/40'
-                : 'bg-[#7B2CBF] hover:bg-[#9D4EDD] active:bg-[#6A1FB0] text-white border border-purple-400/40 shadow-purple-950/60 shadow-lg hover:scale-[1.02]'
+                ? 'bg-emerald-500 text-white border border-emerald-300 shadow-emerald-500/30'
+                : 'bg-gradient-to-r from-amber-400 via-amber-honey to-amber-500 hover:brightness-110 active:scale-95 text-nature-night border border-amber-300/80 shadow-amber-honey/25 hover:shadow-amber-honey/40'
             }`}
           >
             {isAdded ? (

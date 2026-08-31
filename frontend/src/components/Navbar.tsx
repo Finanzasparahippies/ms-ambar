@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Camera, Layers, LogOut, Menu, Shield, X } from 'lucide-react';
+import { Camera, Layers, LogOut, Menu, Shield, ShoppingBag, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
+import { useCart } from '../context/CartContext';
 
 /** Decodes a JWT payload client-side (no signature verification). */
 function decodeJwt(token: string): Record<string, any> | null {
@@ -22,6 +23,7 @@ const Navbar = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
   const router = useRouter();
+  const { cartItemsCount, openCart, isCartBouncing } = useCart();
 
   useEffect(() => {
     // Force dark theme
@@ -138,7 +140,43 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
-          <div className="h-6 w-px bg-white/10 mx-2" />
+
+          {/* Cart Trigger Button Desktop */}
+          <motion.button
+            id="navbar-cart-icon"
+            onClick={openCart}
+            animate={
+              isCartBouncing
+                ? {
+                    scale: [1, 1.35, 0.9, 1.15, 1],
+                    rotate: [0, -10, 10, -5, 0],
+                  }
+                : { scale: 1, rotate: 0 }
+            }
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.92 }}
+            className={`relative p-2.5 rounded-full border transition-all flex items-center justify-center ${
+              cartItemsCount > 0
+                ? 'bg-amber-honey/15 border-amber-honey text-amber-honey shadow-lg shadow-amber-honey/20'
+                : 'bg-white/5 border-white/10 text-white hover:text-amber-honey hover:border-amber-honey/40'
+            }`}
+            title="Ver Bolsa de Compras"
+            aria-label="Ver Bolsa de Compras"
+          >
+            <ShoppingBag size={17} className="stroke-[2.2]" />
+            {cartItemsCount > 0 && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1.5 -right-1.5 min-w-[19px] h-[19px] px-1 bg-gradient-to-r from-amber-400 to-amber-500 text-nature-night text-[9px] font-black rounded-full flex items-center justify-center border border-amber-200 shadow-md shadow-amber-500/40"
+              >
+                {cartItemsCount}
+              </motion.span>
+            )}
+          </motion.button>
+
+          <div className="h-6 w-px bg-white/10 mx-1" />
 
           {/* Dynamic Authentication Controls */}
           {isAuthenticated ? (
@@ -198,7 +236,36 @@ const Navbar = () => {
         </div>
 
         {/* Mobile controls */}
-        <div className="flex md:hidden items-center gap-4">
+        <div className="flex md:hidden items-center gap-3">
+          {/* Mobile Cart Trigger */}
+          <motion.button
+            id="mobile-navbar-cart-icon"
+            onClick={openCart}
+            animate={
+              isCartBouncing
+                ? {
+                    scale: [1, 1.35, 0.9, 1.15, 1],
+                    rotate: [0, -10, 10, -5, 0],
+                  }
+                : { scale: 1, rotate: 0 }
+            }
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+            whileTap={{ scale: 0.9 }}
+            className={`relative p-2 rounded-full border transition-all flex items-center justify-center ${
+              cartItemsCount > 0
+                ? 'bg-amber-honey/15 border-amber-honey text-amber-honey shadow-md shadow-amber-honey/20'
+                : 'bg-white/5 border-white/10 text-white hover:text-amber-honey'
+            }`}
+            aria-label="Bolsa de compras"
+          >
+            <ShoppingBag size={18} />
+            {cartItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-0.5 bg-gradient-to-r from-amber-400 to-amber-500 text-nature-night text-[8px] font-black rounded-full flex items-center justify-center border border-amber-200">
+                {cartItemsCount}
+              </span>
+            )}
+          </motion.button>
+
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="text-white hover:text-amber-honey p-1 transition-colors outline-none"

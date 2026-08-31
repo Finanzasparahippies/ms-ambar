@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import TiendaPage from '../pages/tienda';
 import { ProductCard } from '../components/ProductCard';
 import ImageOptimizerWidget from '../components/ImageOptimizerWidget';
+import { CartProvider } from '../context/CartContext';
 
 jest.mock('axios');
 jest.mock('sweetalert2');
@@ -93,7 +94,11 @@ describe('Tienda Page Admin & Image Optimizer Tests', () => {
     localStorage.setItem('token', fakeToken);
 
     await act(async () => {
-      render(<TiendaPage />);
+      render(
+        <CartProvider>
+          <TiendaPage />
+        </CartProvider>
+      );
     });
 
     await waitFor(() => {
