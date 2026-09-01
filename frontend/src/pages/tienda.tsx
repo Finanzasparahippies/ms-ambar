@@ -313,7 +313,7 @@ export default function TiendaPage() {
             >
               <button
                 onClick={handleOpenAddProduct}
-                className="bg-amber-honey text-black hover:bg-amber-400 font-black px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 shadow-xl shadow-amber-honey/25 border border-amber-honey/50"
+                className="bg-amber-honey text-bg-amber-400 hover:bg-amber-400 font-black px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 shadow-xl shadow-amber-honey/25 border border-amber-honey/50"
               >
                 <Plus size={16} />
                 Agregar Producto
@@ -354,7 +354,7 @@ export default function TiendaPage() {
               </p>
 
               <p className="text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed text-neutral-200 max-w-2xl mx-auto italic">
-                Gracias por apoyar. Que la música nos siga uniendo, porque de la guerra y del amor nos curamos con canciones.
+                Gracias por darle play. Que la música nos siga uniendo, porque de la guerra y del amor nos curamos con canciones.
               </p>
 
               <div className="pt-2">
