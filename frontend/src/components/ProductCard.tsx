@@ -154,11 +154,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {productImages.map((_, dotIdx) => (
                 <div
                   key={dotIdx}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    dotIdx === activeImageIndex
-                      ? 'w-4 bg-amber-honey shadow-sm shadow-amber-honey/50'
-                      : 'w-1.5 bg-white/60'
-                  }`}
+                  className={`h-1.5 rounded-full transition-all duration-300 ${dotIdx === activeImageIndex
+                    ? 'w-4 bg-amber-honey shadow-sm shadow-amber-honey/50'
+                    : 'w-1.5 bg-white/60'
+                    }`}
                 />
               ))}
             </div>
@@ -353,11 +352,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             whileHover={{ scale: 1.02, filter: "brightness(1.05)" }}
             whileTap={{ scale: 0.95 }}
             onClick={handleAddToCart}
-            className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-lg ${
-              isAdded
-                ? 'bg-emerald-500 text-white border border-emerald-300 shadow-emerald-500/30'
-                : 'bg-gradient-to-r from-amber-400 via-amber-honey to-amber-500 hover:brightness-110 active:scale-95 text-nature-night border border-amber-300/80 shadow-amber-honey/25 hover:shadow-amber-honey/40'
-            }`}
+            className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-lg ${isAdded
+              ? 'bg-emerald-500 text-white border border-emerald-300 shadow-emerald-500/30'
+              : 'bg-gradient-to-r from-amber-400 via-amber-honey to-amber-500 hover:brightness-110 active:scale-95 text-black transition-colors duration-200 border border-amber-300/80 shadow-amber-honey/25 hover:shadow-amber-honey/40'
+              }`}
           >
             {isAdded ? (
               <>

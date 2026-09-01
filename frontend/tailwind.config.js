@@ -1,3 +1,5 @@
+const withAlpha = (variableName) => `rgb(var(${variableName}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -12,25 +14,29 @@ module.exports = {
         serif: ['var(--theme-heading-font)', '"Cormorant Garamond"', 'Georgia', 'serif'],
       },
       colors: {
-        primary: 'var(--primary-color, #E5A93B)',
-        secondary: 'var(--secondary-color, #22A6B7)',
-        accent: 'var(--accent-color, #9F2B00)',
-        card: 'var(--card-bg, #0c0f0d)',
+        primary: withAlpha('--color-primary-rgb'),
+        secondary: withAlpha('--color-secondary-rgb'),
+        accent: withAlpha('--color-accent-rgb'),
+        card: withAlpha('--color-card-rgb'),
+        corporate: {
+          purple: withAlpha('--color-purple-rgb'),
+          honey: withAlpha('--color-honey-rgb'),
+        },
         amber: {
-          honey: 'rgb(var(--amber-primary) / <alpha-value>)',
-          cognac: 'var(--accent-color, #9F2B00)',
+          honey: withAlpha('--color-honey-rgb'),
+          cognac: withAlpha('--color-accent-rgb'),
           cherry: '#700101',
-          butterscotch: 'var(--secondary-color, #22A6B7)',
+          butterscotch: withAlpha('--color-secondary-rgb'),
         },
         nature: {
-          sky: 'rgb(var(--sky-accent) / <alpha-value>)',
+          sky: withAlpha('--color-secondary-rgb'),
           earth: '#8B4513',
-          night: 'var(--background-start, #080c0a)',
-          stars: 'rgb(var(--foreground-rgb) / <alpha-value>)',
+          night: withAlpha('--color-bg-start-rgb'),
+          stars: withAlpha('--color-text-rgb'),
         },
         forest: {
-          green: 'var(--card-bg, #0c0f0d)',
-          muted: 'var(--background-end, #040605)',
+          green: withAlpha('--color-card-rgb'),
+          muted: withAlpha('--color-bg-end-rgb'),
         }
       },
     },

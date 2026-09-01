@@ -313,7 +313,7 @@ export default function TiendaPage() {
             >
               <button
                 onClick={handleOpenAddProduct}
-                className="bg-amber-honey text-bg-amber-400 hover:bg-amber-400 font-black px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 shadow-xl shadow-amber-honey/25 border border-amber-honey/50"
+                className="bg-amber-honey text-black hover:text-black hover:bg-amber-400 font-black px-6 py-3 rounded-full text-xs uppercase tracking-[0.2em] flex items-center gap-2 transition-all hover:scale-105 shadow-xl shadow-amber-honey/25 border border-amber-honey/50"
               >
                 <Plus size={16} />
                 Agregar Producto

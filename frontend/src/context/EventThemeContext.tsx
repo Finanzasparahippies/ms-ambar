@@ -190,19 +190,20 @@ const EventThemeContext = createContext<EventThemeContextType>({
 
 export const useEventTheme = () => useContext(EventThemeContext);
 
-// Convert hex to RGB triplet string "r, g, b"
-function hexToRgbTriplet(hex: string): string {
-  if (!hex) return '229, 169, 59';
-  let cleanHex = hex.replace('#', '');
+// Convert hex to RGB channels string "r g b" (Space-separated for Tailwind CSS v3 / CSS Color Level 4)
+export function hexToRgbChannels(hex?: string, fallback = '229 169 59'): string {
+  if (!hex || typeof hex !== 'string') return fallback;
+  let cleanHex = hex.replace('#', '').trim();
   if (cleanHex.length === 3) {
     cleanHex = cleanHex.split('').map(c => c + c).join('');
   }
-  if (cleanHex.length !== 6) return '229, 169, 59';
+  if (cleanHex.length !== 6) return fallback;
   const num = parseInt(cleanHex, 16);
+  if (isNaN(num)) return fallback;
   const r = (num >> 16) & 255;
   const g = (num >> 8) & 255;
   const b = num & 255;
-  return `${r}, ${g}, ${b}`;
+  return `${r} ${g} ${b}`;
 }
 
 export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -213,18 +214,36 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     if (typeof window === 'undefined') return;
 
     const root = document.documentElement;
+    const primaryRgb = hexToRgbChannels(cfg.primaryColor, '229 169 59');
+    const secondaryRgb = hexToRgbChannels(cfg.secondaryColor, '34 166 179');
+    const accentRgb = hexToRgbChannels(cfg.accentColor, '159 43 0');
+    const bgStartRgb = hexToRgbChannels(cfg.backgroundStart, '8 12 10');
+    const bgEndRgb = hexToRgbChannels(cfg.backgroundEnd, '4 6 5');
+    const cardRgb = hexToRgbChannels(cfg.cardBackground, '12 15 13');
+    const textRgb = hexToRgbChannels(cfg.textColor, '244 246 240');
 
-    // Set CSS variables
+    // Canonical RGB Channels for Tailwind CSS v3 & Alpha Modifiers
+    root.style.setProperty('--color-primary-rgb', primaryRgb);
+    root.style.setProperty('--color-secondary-rgb', secondaryRgb);
+    root.style.setProperty('--color-accent-rgb', accentRgb);
+    root.style.setProperty('--color-honey-rgb', primaryRgb);
+    root.style.setProperty('--color-purple-rgb', '139 92 246');
+    root.style.setProperty('--color-bg-start-rgb', bgStartRgb);
+    root.style.setProperty('--color-bg-end-rgb', bgEndRgb);
+    root.style.setProperty('--color-card-rgb', cardRgb);
+    root.style.setProperty('--color-text-rgb', textRgb);
+
+    // Direct CSS Variables & Legacy Bridges
     root.style.setProperty('--amber-primary-hex', cfg.primaryColor);
-    root.style.setProperty('--amber-primary', hexToRgbTriplet(cfg.primaryColor));
-    root.style.setProperty('--sky-accent', hexToRgbTriplet(cfg.secondaryColor));
+    root.style.setProperty('--amber-primary', primaryRgb);
+    root.style.setProperty('--sky-accent', secondaryRgb);
+    root.style.setProperty('--foreground-rgb', textRgb);
     root.style.setProperty('--primary-color', cfg.primaryColor);
     root.style.setProperty('--secondary-color', cfg.secondaryColor);
     root.style.setProperty('--background-start', cfg.backgroundStart);
     root.style.setProperty('--background-end', cfg.backgroundEnd);
     root.style.setProperty('--accent-color', cfg.accentColor);
     root.style.setProperty('--card-bg', cfg.cardBackground);
-    root.style.setProperty('--foreground-rgb', hexToRgbTriplet(cfg.textColor));
     root.style.setProperty('--text-color', cfg.textColor);
     root.style.setProperty('--heading-color', cfg.headingColor || cfg.primaryColor);
     root.style.setProperty('--subtitle-color', cfg.subtitleColor || cfg.textColor);
@@ -238,7 +257,7 @@ export const EventThemeContextProvider: React.FC<{ children: React.ReactNode }> 
     root.style.setProperty('--card-focus-ring', cfg.cardFocusRing || cfg.secondaryColor);
     root.style.setProperty('--element-hover-color', cfg.elementHoverColor || '#FFC048');
     root.style.setProperty('--element-focus-ring', cfg.elementFocusRing || cfg.primaryColor);
-    root.style.setProperty('--border-color', cfg.borderColor || `rgba(${hexToRgbTriplet(cfg.primaryColor)}, 0.25)`);
+    root.style.setProperty('--border-color', cfg.borderColor || `rgb(${primaryRgb} / 0.25)`);
 
     // Inyección de Propiedades Avanzadas (Degradados, Sombras y Bordes con Anti-XSS Sanitizer)
     root.style.setProperty('--theme-bg-gradient', sanitizeCssProperty(cfg.backgroundGradient, ''));
@@ -519,6 +538,10 @@ export const useSectionTheme = (sectionKey: string) => {
     const buttonText = sec.button_text || theme.buttonText || theme.backgroundStart;
 
     // Scope Prefixed CSS Variables
+    const primaryRgb = hexToRgbChannels(accentColor || headingColor || theme.primaryColor, '229 169 59');
+    const textRgb = hexToRgbChannels(textColor, '244 246 240');
+    const cardRgb = hexToRgbChannels(cardBg, '12 15 13');
+
     const style = {
       backgroundColor: bgColor,
       backgroundImage: bgGradient || undefined,
@@ -541,6 +564,9 @@ export const useSectionTheme = (sectionKey: string) => {
       [`--sec-${sectionKey}-border-style`]: borderStylePreset,
       [`--sec-${sectionKey}-button-bg`]: buttonBg,
       [`--sec-${sectionKey}-button-text`]: buttonText,
+      [`--sec-${sectionKey}-primary-rgb`]: primaryRgb,
+      [`--sec-${sectionKey}-text-rgb`]: textRgb,
+      [`--sec-${sectionKey}-card-rgb`]: cardRgb,
     } as React.CSSProperties;
 
     return {

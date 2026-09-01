@@ -229,5 +229,35 @@ describe('EventThemeContext Unit Tests', () => {
     // Verificar que se haya sincronizado a nivel de variables de sesión o configuración
     expect(localStorage.getItem('theme')).toBe('dark'); // El Navbar u otros cargadores lo setean
   });
+
+  test('debe inyectar canales RGB canónicos separados por espacios para Tailwind y CSS Color Level 4', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        primary_color: '#E5A93B',
+        secondary_color: '#22A6B7',
+        accent_color: '#9F2B00',
+        card_background: '#0c0f0d',
+        text_color: '#F4F6F0',
+      },
+    });
+
+    render(
+      <EventThemeContextProvider>
+        <TestComponent />
+      </EventThemeContextProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('primary-color')).toHaveTextContent('#E5A93B');
+    });
+
+    const rootStyle = document.documentElement.style;
+    expect(rootStyle.getPropertyValue('--color-primary-rgb')).toBe('229 169 59');
+    expect(rootStyle.getPropertyValue('--color-honey-rgb')).toBe('229 169 59');
+    expect(rootStyle.getPropertyValue('--color-secondary-rgb')).toBe('34 166 179');
+    expect(rootStyle.getPropertyValue('--color-accent-rgb')).toBe('159 43 0');
+    expect(rootStyle.getPropertyValue('--color-card-rgb')).toBe('12 15 13');
+    expect(rootStyle.getPropertyValue('--color-text-rgb')).toBe('244 246 240');
+  });
 });
 
