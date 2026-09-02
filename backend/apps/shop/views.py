@@ -330,12 +330,10 @@ def handle_successful_payment(session):
                             product.stock = max(0, product.stock - item.quantity)
                             product.save()
 
-                        # Encadenar la logística y el correo
-                        if getattr(settings, 'TESTING', False):
-                            process_fulfillment(order)
-                        else:
-                            transaction.on_commit(lambda: process_fulfillment(order))
-                        logger.info(f"Pedido #{order.id} pagado con éxito.")
+                        # Ejecutar logística y despacho de confirmación
+                        process_fulfillment(order)
+                        logger.info(f"Pedido #{order.id} pagado con éxito y despachado.")
+
 
                     else:
                         logger.info(f"Pedido #{order.id} ya se encontraba procesado (status={order.status}). Ignorando duplicados.")
@@ -421,11 +419,9 @@ class OrderBySessionView(APIView):
                                 prod = Product.objects.select_for_update().get(id=item.product.id)
                                 prod.stock = max(0, prod.stock - item.quantity)
                                 prod.save()
-                            if getattr(settings, 'TESTING', False):
-                                process_fulfillment(locked_order)
-                            else:
-                                transaction.on_commit(lambda: process_fulfillment(locked_order))
+                            process_fulfillment(locked_order)
                     order.refresh_from_db()
+
 
             except Exception as e:
                 logger.warning(f"Error procesando mock session en OrderBySessionView: {e}")

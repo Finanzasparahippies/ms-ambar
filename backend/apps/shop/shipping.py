@@ -303,6 +303,75 @@ class SkydropxClient:
 
         return result
 
+    def probe_all_gateways(self, dest_zip: str = "83100") -> List[Dict[str, Any]]:
+        """
+        Sondea todos los gateways conocidos de Skydropx (Classic, Pro Sandbox, Pro Prod)
+        con múltiples esquemas de autenticación para descubrir automáticamente el endpoint funcional.
+        """
+        gateways = [
+            ("https://api.skydropx.com/v1", "Token token=", "Classic (Producción / Test Account)"),
+            ("https://sb-pro.skydropx.com/api/v1", "Token token=", "Pro Sandbox (Token Scheme)"),
+            ("https://sb-pro.skydropx.com/api/v1", "Bearer ", "Pro Sandbox (Bearer Scheme)"),
+            ("https://pro.skydropx.com/api/v1", "Token token=", "Pro Production (Token Scheme)"),
+            ("https://pro.skydropx.com/api/v1", "Bearer ", "Pro Production (Bearer Scheme)"),
+            ("https://api-demo.skydropx.com/v1", "Token token=", "Legacy Demo (Deprecated)"),
+        ]
+
+        probes = []
+        origin = get_origin_address()
+        payload = {
+            "address_from": {"country": "MX", "zip": str(origin["zip_code"])},
+            "address_to": {"country": "MX", "zip": str(dest_zip)},
+            "parcels": [{"weight": 1.0, "height": 15, "width": 25, "length": 35}]
+        }
+
+        for base_url, auth_prefix, label in gateways:
+            import time
+            auth_val = f"{auth_prefix}{self.api_key}" if not self.api_key.startswith("Bearer ") and auth_prefix == "Token token=" else (f"Bearer {self.api_key}" if auth_prefix == "Bearer " else self.api_key)
+            headers = {
+                "Authorization": auth_val,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "Mozilla/5.0 (compatible; MsAmbarLogistics/1.0; +https://msambar.com)"
+            }
+            if self.api_secret:
+                headers["X-API-Secret"] = self.api_secret
+                headers["X-Partner-Id"] = self.api_secret
+
+            url = f"{base_url}/quotations"
+            start_time = time.time()
+            probe_res = {
+                "label": label,
+                "base_url": base_url,
+                "auth_scheme": auth_prefix.strip(),
+                "status_code": None,
+                "latency_ms": 0,
+                "success": False,
+                "carriers_count": 0,
+                "summary": ""
+            }
+
+            try:
+                resp = requests.post(url, json=payload, headers=headers, timeout=3.5)
+                probe_res["latency_ms"] = int((time.time() - start_time) * 1000)
+                probe_res["status_code"] = resp.status_code
+                if resp.status_code in (200, 201):
+                    probe_res["success"] = True
+                    d = resp.json()
+                    raw = d.get("data", []) or d.get("rates", [])
+                    probe_res["carriers_count"] = len(raw)
+                    probe_res["summary"] = f"OK ({len(raw)} tarifas obtenidas)"
+                else:
+                    probe_res["summary"] = f"HTTP {resp.status_code} ({resp.text[:80]}...)"
+            except Exception as ex:
+                probe_res["latency_ms"] = int((time.time() - start_time) * 1000)
+                probe_res["summary"] = f"Error de conexión: {str(ex)[:80]}"
+
+            probes.append(probe_res)
+
+        return probes
+
+
 
 
     def quote_rates(self, origin_zip: str, dest_zip: str, weight_kg: float = 1.0) -> List[Dict[str, Any]]:
