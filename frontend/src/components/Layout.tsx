@@ -55,7 +55,7 @@ const Layout = ({ children }: LayoutProps) => {
       </main>
 
       {/* Footer (Nature inspired - Static & Stable) */}
-      <ThemedSection sectionKey="footer" className="relative z-20 py-12 px-6 mt-16 border-t border-amber-honey/20 bg-[#0c0f0d] rounded-t-[2.5rem] md:rounded-t-[3.5rem] md:py-16 md:px-10 md:mt-24 shadow-2xl">
+      <ThemedSection sectionKey="footer" className="relative z-10 py-12 px-6 mt-16 border-t border-amber-honey/20 bg-[#0c0f0d] rounded-t-[2.5rem] md:rounded-t-[3.5rem] md:py-16 md:px-10 md:mt-24 shadow-2xl">
         <div className="max-w-[1200px] mx-auto grid md:grid-cols-4 gap-12">
           <div className="col-span-2">
             <Link href="/" className="inline-block mb-6">

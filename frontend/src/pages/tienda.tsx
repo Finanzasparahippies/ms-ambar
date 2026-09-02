@@ -317,25 +317,6 @@ export default function TiendaPage() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
       <div className="absolute top-64 right-[-10%] w-[450px] h-[350px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
       <div className="absolute top-96 left-[-10%] w-[450px] h-[350px] bg-purple-900/10 rounded-full blur-[130px] pointer-events-none -z-10" />
-
-      {/* Floating Cart Button */}
-      {cartItemsCount > 0 && (
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.92 }}
-          onClick={openCart}
-          className="fixed bottom-8 right-8 z-[90] w-16 h-16 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-full flex items-center justify-center text-white shadow-2xl shadow-purple-600/40 border border-purple-400/40 hover:brightness-110 transition-all duration-300"
-          aria-label="Abrir carrito"
-        >
-          <CartIcon size={24} className="stroke-[2.2]" />
-          <span className="absolute -top-1 -right-1 w-6 h-6 bg-amber-400 text-black rounded-full text-[11px] font-black flex items-center justify-center shadow-md">
-            {cartItemsCount}
-          </span>
-        </motion.button>
-      )}
-
       <div className="max-w-[1400px] mx-auto px-6 md:px-10 pt-28 md:pt-36 pb-24">
         {/* Encabezado Principal y Branding */}
         <header className="mb-12 text-center max-w-4xl mx-auto relative">
