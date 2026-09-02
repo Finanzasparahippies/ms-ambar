@@ -352,12 +352,15 @@ def send_order_confirmation_email(order):
     try:
         # Precompute subtotal for each order item for rendering
         items = list(order.items.all())
+        subtotal_items = 0
         for item in items:
             item.subtotal = item.price * item.quantity
+            subtotal_items += item.subtotal
 
         context = {
             'order': order,
             'items': items,
+            'subtotal_items': subtotal_items,
             'frontend_url': settings.FRONTEND_URL,
         }
         subject = f"🛒 Confirmación de Pedido #{order.id} - Ms Ambar"
@@ -365,6 +368,8 @@ def send_order_confirmation_email(order):
         text_content = (
             f"¡Gracias por tu compra, {order.full_name}!\n\n"
             f"Hemos recibido tu pago para el pedido #{order.id}.\n"
+            f"Subtotal Artículos: ${subtotal_items} MXN\n"
+            f"Envío ({order.shipping_provider or 'Nacional'}): ${order.shipping_cost} MXN\n"
             f"Monto Total: ${order.total_amount} MXN\n\n"
             f"Dirección de Envío:\n"
             f"{order.address}\n"
