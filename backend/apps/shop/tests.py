@@ -431,3 +431,63 @@ class ShopAppTests(APITestCase):
         self.assertEqual(event.stripe_product_id, 'prod_event_mg_123')
         self.assertEqual(event.stripe_price_id, 'price_event_mg_123')
 
+    def test_order_by_session_mock_idempotency(self):
+        """Verify OrderBySessionView retrieves and confirms mock session idempotently."""
+        order = Order.objects.create(
+            user_email='fan@msambar.com',
+            status='pending',
+            total_amount=750.00,
+            full_name='Ana Martinez',
+            phone='6621234567',
+            street_and_number='Calle Rosales 45',
+            suburb='Centenario',
+            city='Hermosillo',
+            state='Sonora',
+            postal_code='83000',
+            country='México',
+            shipping_cost=150.00
+        )
+        OrderItem.objects.create(order=order, product=self.product_active, quantity=1, price=600.00)
+        initial_stock = self.product_active.stock
+
+        mock_session_id = f"mock_session_{order.id}"
+        url = reverse('order-by-session') + f"?session_id={mock_session_id}"
+
+        # Primera llamada (debe confirmar orden y descontar stock)
+        response1 = self.client.get(url)
+        self.assertEqual(response1.status_code, status.HTTP_200_OK)
+        self.assertEqual(response1.data['id'], order.id)
+        self.assertEqual(response1.data['status'], 'paid')
+        self.assertIsNotNone(response1.data['tracking_number'])
+
+        self.product_active.refresh_from_db()
+        self.assertEqual(self.product_active.stock, initial_stock - 1)
+
+        # Segunda llamada (idempotente: no descuenta stock de nuevo)
+        response2 = self.client.get(url)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        self.product_active.refresh_from_db()
+        self.assertEqual(self.product_active.stock, initial_stock - 1)
+
+    def test_order_download_label_generates_pdf(self):
+        """Verify OrderDownloadLabelView generates and returns sample PDF."""
+        order = Order.objects.create(
+            user_email='pdf_fan@msambar.com',
+            status='paid',
+            total_amount=750.00,
+            full_name='Rodrigo Morales',
+            phone='6629876543',
+            street_and_number='Blvd. Hidalgo 100',
+            suburb='Centro',
+            city='Hermosillo',
+            state='Sonora',
+            postal_code='83000',
+            country='México',
+            shipping_cost=150.00
+        )
+        url = reverse('order-download-label', kwargs={'pk': order.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+

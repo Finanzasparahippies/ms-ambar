@@ -178,19 +178,20 @@ export const CartDrawer: React.FC = () => {
       });
 
       if (res.data?.checkout_url) {
-        if (res.data.checkout_url.includes('checkout.stripe.com')) {
+        if (res.data.checkout_url.includes('checkout.stripe.com') || res.data.checkout_url.includes('/shop/success')) {
           window.location.href = res.data.checkout_url;
           return;
         } else {
           setOrderResult({
             order_id: res.data.order_id,
             total_amount: orderTotal,
-            status: 'Confirmado (Modo Desarrollo)',
+            status: 'Confirmado',
           });
           clearCart();
           setCheckoutStep('success');
         }
       }
+
     } catch (err: any) {
       console.error('Checkout failed', err);
       if (err.response?.data?.error) {

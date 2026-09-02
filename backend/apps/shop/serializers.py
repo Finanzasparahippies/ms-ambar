@@ -141,12 +141,32 @@ class ProductSerializer(serializers.ModelSerializer):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.ReadOnlyField(source='product.name')
+    product_image = serializers.SerializerMethodField()
+
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'price']
+        fields = ['id', 'product', 'product_name', 'product_image', 'quantity', 'price']
+
+    def get_product_image(self, obj):
+        if obj.product and obj.product.image:
+            val = obj.product.image
+            if isinstance(val, str):
+                return val
+            try:
+                return val.url
+            except Exception:
+                return str(val)
+        return None
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+
     class Meta:
         model = Order
-        fields = ['id', 'user_email', 'status', 'total_amount', 'items', 'created_at', 'full_name', 'address', 'city', 'country']
+        fields = [
+            'id', 'user_email', 'status', 'total_amount', 'items', 'created_at',
+            'full_name', 'phone', 'street_and_number', 'suburb', 'city', 'state',
+            'postal_code', 'country', 'address', 'selected_rate_id', 'shipping_cost',
+            'shipping_provider', 'tracking_number', 'tracking_url', 'shipping_label_pdf'
+        ]
+

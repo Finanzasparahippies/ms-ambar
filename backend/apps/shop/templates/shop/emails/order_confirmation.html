@@ -78,20 +78,53 @@
   </table>
 </div>
 
-<!-- Shipping Address Card -->
+<!-- Shipping Address & Tracking Logistics Card -->
 <h3
   style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
-  Dirección de Envío</h3>
+  Detalles de Envío y Logística</h3>
 <div
-  style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 35px; font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8);">
-  <strong style="color: #ffffff; font-size: 15px; display: block; margin-bottom: 5px;">{{ order.full_name }}</strong>
-  {{ order.address }}<br>
-  {{ order.city }}, {{ order.country }}
+  style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 25px; font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8);">
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4); width: 35%;">Destinatario:</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #ffffff;">{{ order.full_name }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">Dirección:</td>
+      <td style="padding: 4px 0; color: #ffffff;">{{ order.address }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">Paquetería:</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #f59e0b;">{{ order.shipping_provider|default:"Paquetería Nacional" }}</td>
+    </tr>
+    {% if order.tracking_number %}
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">No. de Guía / Tracking:</td>
+      <td style="padding: 4px 0; font-family: monospace; font-size: 15px; font-weight: bold; color: #10b981;">{{ order.tracking_number }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  {% if order.tracking_url or order.shipping_label_pdf %}
+  <div style="margin-top: 15px; text-align: center;">
+    {% if order.tracking_url %}
+    <a href="{{ order.tracking_url }}" target="_blank"
+       style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000000; font-weight: 800; font-size: 13px; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin: 5px 6px;">
+      📦 Rastrear Envío
+    </a>
+    {% endif %}
+    {% if order.shipping_label_pdf %}
+    <a href="{{ frontend_url }}{{ order.shipping_label_pdf }}" target="_blank"
+       style="display: inline-block; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #ffffff; font-weight: bold; font-size: 13px; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin: 5px 6px;">
+      📄 Descargar Guía de Envío (PDF)
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
 <div
   style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-  Te notificaremos vía correo electrónico en cuanto tu paquete sea entregado a la paquetería de envío junto con tu
-  código de rastreo.
+  Conserva este correo para cualquier duda o seguimiento. Ante cualquier aclaración puedes responder directamente a este mensaje.
 </div>
 {% endblock %}
