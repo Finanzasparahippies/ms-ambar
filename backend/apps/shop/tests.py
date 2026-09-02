@@ -513,5 +513,24 @@ class ShopAppTests(APITestCase):
         self.assertTrue(response.data['success'])
         self.assertEqual(len(response.data['carriers_found']), 1)
 
+    def test_skydropx_client_dual_environments(self):
+        """Verify SkydropxClient resolves production and staging/sandbox URLs and keys cleanly."""
+        from apps.shop.shipping import SkydropxClient
+
+        prod_client = SkydropxClient(api_key="prod_key_123", environment="production")
+        self.assertEqual(prod_client.environment, "production")
+        self.assertEqual(prod_client.base_url, "https://api.skydropx.com/v1")
+        self.assertEqual(prod_client._headers()["Authorization"], "Token token=prod_key_123")
+
+        sandbox_client = SkydropxClient(api_key="sandbox_key_456", environment="staging")
+        self.assertEqual(sandbox_client.environment, "staging")
+        self.assertEqual(sandbox_client.base_url, "https://api-demo.skydropx.com/v1")
+        self.assertEqual(sandbox_client._headers()["Authorization"], "Token token=sandbox_key_456")
+
+        pro_client = SkydropxClient(api_key="Bearer jwt_token_abc", environment="pro_production")
+        self.assertEqual(pro_client.base_url, "https://pro.skydropx.com/api/v1")
+        self.assertEqual(pro_client._headers()["Authorization"], "Bearer jwt_token_abc")
+
+
 
 

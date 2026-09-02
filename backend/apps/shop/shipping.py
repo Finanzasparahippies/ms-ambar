@@ -248,8 +248,9 @@ class SkydropxClient:
         start_time = time.time()
         result = {
             "base_url": self.base_url,
-            "environment": getattr(settings, "SKYDROPX_ENVIRONMENT", "staging"),
+            "environment": self.environment,
             "origin_zip": origin["zip_code"],
+
             "dest_zip": str(dest_zip),
             "is_configured": self.is_configured,
             "api_key_masked": f"{self.api_key[:6]}...{self.api_key[-4:]}" if len(self.api_key) > 10 else ("Configurada" if self.api_key else "No configurada"),
