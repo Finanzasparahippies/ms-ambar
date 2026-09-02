@@ -7,7 +7,10 @@ from .views import (
     skydropx_webhook,
     ShopCheckoutView, 
     ShippingQuoteView, 
-    PostalCodeLookupView
+    PostalCodeLookupView,
+    OrderBySessionView,
+    OrderDownloadLabelView,
+    ShippingHealthCheckView
 )
 
 router = DefaultRouter()
@@ -19,6 +22,11 @@ urlpatterns = [
     path('webhook/', stripe_webhook, name='stripe-webhook'),
     path('webhook/skydropx/', skydropx_webhook, name='skydropx-webhook'),
     path('checkout/', ShopCheckoutView.as_view(), name='shop-checkout'),
+    path('orders/by_session/', OrderBySessionView.as_view(), name='order-by-session'),
+    path('orders/<int:pk>/label/', OrderDownloadLabelView.as_view(), name='order-download-label'),
     path('shipping/quote/', ShippingQuoteView.as_view(), name='shipping-quote'),
+    path('shipping/health-check/', ShippingHealthCheckView.as_view(), name='shipping-health-check'),
     path('shipping/postal-code/<str:postal_code>/', PostalCodeLookupView.as_view(), name='postal-code-lookup'),
 ]
+
+

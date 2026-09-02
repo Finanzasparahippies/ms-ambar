@@ -104,6 +104,7 @@ class ShopAppTests(APITestCase):
         del_response = self.client.delete(del_url)
         self.assertIn(del_response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_valid_key')
     @patch('stripe.checkout.Session.create')
     @patch('apps.shop.views.send_order_confirmation_email')
     def test_checkout_success(self, mock_email, mock_session_create):
@@ -143,6 +144,17 @@ class ShopAppTests(APITestCase):
         # Verify stock not updated yet (still 10)
         self.product_active.refresh_from_db()
         self.assertEqual(self.product_active.stock, 10)
+
+        # Verify stripe.checkout.Session.create arguments (shipping_options and metadata)
+        self.assertTrue(mock_session_create.called)
+        call_kwargs = mock_session_create.call_args[1]
+        self.assertIn('shipping_options', call_kwargs)
+        self.assertEqual(len(call_kwargs['shipping_options']), 1)
+        self.assertEqual(call_kwargs['shipping_options'][0]['shipping_rate_data']['fixed_amount']['amount'], 15000)
+        self.assertEqual(call_kwargs['metadata']['type'], 'shop_purchase')
+        self.assertEqual(call_kwargs['metadata']['order_id'], str(order.id))
+        self.assertEqual(call_kwargs['metadata']['shipping_amount'], '150.0')
+        self.assertEqual(call_kwargs['metadata']['rate_id'], 'rate_std_fallback')
 
     def test_shipping_quote_endpoint(self):
         """Verify shipping quote endpoint returns rates with fallback."""
@@ -430,4 +442,108 @@ class ShopAppTests(APITestCase):
         self.assertEqual(mock_price_create.call_count, 2)
         self.assertEqual(event.stripe_product_id, 'prod_event_mg_123')
         self.assertEqual(event.stripe_price_id, 'price_event_mg_123')
+
+    def test_order_by_session_mock_idempotency(self):
+        """Verify OrderBySessionView retrieves and confirms mock session idempotently."""
+        order = Order.objects.create(
+            user_email='fan@msambar.com',
+            status='pending',
+            total_amount=750.00,
+            full_name='Ana Martinez',
+            phone='6621234567',
+            street_and_number='Calle Rosales 45',
+            suburb='Centenario',
+            city='Hermosillo',
+            state='Sonora',
+            postal_code='83000',
+            country='México',
+            shipping_cost=150.00
+        )
+        OrderItem.objects.create(order=order, product=self.product_active, quantity=1, price=600.00)
+        initial_stock = self.product_active.stock
+
+        mock_session_id = f"mock_session_{order.id}"
+        url = reverse('order-by-session') + f"?session_id={mock_session_id}"
+
+        # Primera llamada (debe confirmar orden y descontar stock)
+        response1 = self.client.get(url)
+        self.assertEqual(response1.status_code, status.HTTP_200_OK)
+        self.assertEqual(response1.data['id'], order.id)
+        self.assertEqual(response1.data['status'], 'paid')
+        self.assertIsNotNone(response1.data['tracking_number'])
+
+        self.product_active.refresh_from_db()
+        self.assertEqual(self.product_active.stock, initial_stock - 1)
+
+        # Segunda llamada (idempotente: no descuenta stock de nuevo)
+        response2 = self.client.get(url)
+        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        self.product_active.refresh_from_db()
+        self.assertEqual(self.product_active.stock, initial_stock - 1)
+
+    def test_order_download_label_generates_pdf(self):
+        """Verify OrderDownloadLabelView generates and returns sample PDF."""
+        order = Order.objects.create(
+            user_email='pdf_fan@msambar.com',
+            status='paid',
+            total_amount=750.00,
+            full_name='Rodrigo Morales',
+            phone='6629876543',
+            street_and_number='Blvd. Hidalgo 100',
+            suburb='Centro',
+            city='Hermosillo',
+            state='Sonora',
+            postal_code='83000',
+            country='México',
+            shipping_cost=150.00
+        )
+        url = reverse('order-download-label', kwargs={'pk': order.id})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+    @patch('apps.shop.shipping.SkydropxClient.test_connectivity')
+    def test_shipping_health_check_endpoint(self, mock_test_conn):
+        """Verify ShippingHealthCheckView returns structured diagnostic response."""
+        mock_test_conn.return_value = {
+            "base_url": "https://api-demo.skydropx.com/v1",
+            "environment": "staging",
+            "origin_zip": "83150",
+            "dest_zip": "83100",
+            "is_configured": True,
+            "status_code": 200,
+            "latency_ms": 120,
+            "success": True,
+            "carriers_found": [
+                {"provider": "FedEx", "service": "Nacional", "total_price": 145.0, "currency": "MXN"}
+            ],
+            "error": None
+        }
+        url = reverse('shipping-health-check') + "?dest_cp=83100"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['carriers_found']), 1)
+
+    def test_skydropx_client_dual_environments(self):
+        """Verify SkydropxClient resolves production and staging/sandbox URLs and keys cleanly."""
+        from apps.shop.shipping import SkydropxClient
+
+        prod_client = SkydropxClient(api_key="prod_key_123", environment="production")
+        self.assertEqual(prod_client.environment, "production")
+        self.assertEqual(prod_client.base_url, "https://api.skydropx.com/v1")
+        self.assertEqual(prod_client._headers()["Authorization"], "Token token=prod_key_123")
+
+        sandbox_client = SkydropxClient(api_key="sandbox_key_456", environment="staging")
+        self.assertEqual(sandbox_client.environment, "staging")
+        self.assertEqual(sandbox_client.base_url, "https://sb-pro.skydropx.com/api/v1")
+        self.assertEqual(sandbox_client._headers()["Authorization"], "Token token=sandbox_key_456")
+
+        pro_client = SkydropxClient(api_key="Bearer jwt_token_abc", environment="pro_production")
+        self.assertEqual(pro_client.base_url, "https://pro.skydropx.com/api/v1")
+        self.assertEqual(pro_client._headers()["Authorization"], "Bearer jwt_token_abc")
+
+
+
+
 

@@ -10,16 +10,17 @@ interface ThemedSectionProps {
 
 function hexToRgb(hex?: string): string | undefined {
   if (!hex) return undefined;
-  let cleanHex = hex.replace('#', '');
+  let cleanHex = hex.replace('#', '').trim();
   if (cleanHex.length === 3) {
     cleanHex = cleanHex.split('').map(c => c + c).join('');
   }
   if (cleanHex.length !== 6) return undefined;
   const num = parseInt(cleanHex, 16);
+  if (isNaN(num)) return undefined;
   const r = (num >> 16) & 255;
   const g = (num >> 8) & 255;
   const b = num & 255;
-  return `${r}, ${g}, ${b}`;
+  return `${r} ${g} ${b}`;
 }
 
 export const ThemedSection: React.FC<ThemedSectionProps> = ({
@@ -42,7 +43,7 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
     [`--sec-${sectionKey}-accent`]: accentColor,
     [`--sec-${sectionKey}-card-bg`]: cardBg,
     [`--sec-${sectionKey}-shadow`]: cardBoxShadow || '',
-    [`--sec-${sectionKey}-border`]: borderColor || 'rgba(229, 169, 59, 0.25)',
+    [`--sec-${sectionKey}-border`]: borderColor || 'rgb(229 169 59 / 0.25)',
     [`--sec-${sectionKey}-border-width`]: borderWidth || '1px',
     [`--sec-${sectionKey}-border-opacity`]: String(borderOpacity ?? 0.25),
     [`--sec-${sectionKey}-border-style`]: borderStylePreset || 'solid',
@@ -55,14 +56,27 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
     '--heading-color': headingColor,
     '--button-bg': buttonBg,
     '--button-text': buttonText,
-    '--border-color': borderColor || 'rgba(229, 169, 59, 0.25)',
+    '--border-color': borderColor || 'rgb(229 169 59 / 0.25)',
   };
 
-  const rgbPrimary = hexToRgb(accentColor);
-  if (rgbPrimary) customVars['--amber-primary'] = rgbPrimary;
+  const rgbPrimary = hexToRgb(accentColor || headingColor);
+  if (rgbPrimary) {
+    customVars['--amber-primary'] = rgbPrimary;
+    customVars['--color-primary-rgb'] = rgbPrimary;
+    customVars['--color-accent-rgb'] = rgbPrimary;
+    customVars['--color-honey-rgb'] = rgbPrimary;
+  }
 
   const rgbText = hexToRgb(textColor);
-  if (rgbText) customVars['--foreground-rgb'] = rgbText;
+  if (rgbText) {
+    customVars['--foreground-rgb'] = rgbText;
+    customVars['--color-text-rgb'] = rgbText;
+  }
+
+  const rgbCard = hexToRgb(cardBg);
+  if (rgbCard) {
+    customVars['--color-card-rgb'] = rgbCard;
+  }
 
   let radiusClass = '';
   if (spec.card_style === 'rounded-full') radiusClass = 'rounded-3xl';

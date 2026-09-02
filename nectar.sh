@@ -348,8 +348,9 @@ case $COMMAND in
         ;;
     deploy-staging)
         echo "Deploying MS AMBAR Staging Environment..."
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml build "$@"
         remove_conflicting_containers ambar_staging_backend ambar_staging_frontend ambar_staging_nginx ambar_staging_autostop
-        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml up -d --build "$@"
+        $COMPOSE_BIN --env-file .env.staging -f docker-compose.staging.yml up -d "$@"
         ;;
     restart-staging)
         echo "Restarting Staging Environment..."
@@ -427,8 +428,9 @@ case $COMMAND in
         ;;
     deploy-prod)
         echo "Deploying MS AMBAR Production Environment..."
+        $COMPOSE_BIN -f docker-compose.prod.yml build "$@"
         remove_conflicting_containers ambar_backend ambar_frontend
-        $COMPOSE_BIN -f docker-compose.prod.yml up -d --build "$@"
+        $COMPOSE_BIN -f docker-compose.prod.yml up -d "$@"
         ;;
     down-prod)
         echo "Stopping Production Environment..."

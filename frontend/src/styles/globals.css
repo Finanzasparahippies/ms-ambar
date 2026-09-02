@@ -7,25 +7,41 @@ html {
 }
 
 :root {
-  /* Day Mode - Dynamic Defaults */
-  --foreground-rgb: 244, 246, 240;
-  --background-start: #080c0a;
-  --background-end: #040605;
-  --sky-accent: 34, 166, 179;
-  --amber-primary: 229, 169, 59; /* Rich golden amber */
+  /* Canonical RGB Channels (Space-separated for Tailwind CSS v3 / CSS Color Level 4) */
+  --color-primary-rgb: 229 169 59;       /* #E5A93B - Ámbar Principal */
+  --color-secondary-rgb: 34 166 179;     /* #22A6B7 - Turquesa / Cielo */
+  --color-accent-rgb: 159 43 0;          /* #9F2B00 - Cognac / Acento */
+  --color-honey-rgb: 229 169 59;         /* #E5A93B - Ámbar Honey */
+  --color-purple-rgb: 139 92 246;        /* #8B5CF6 - Morado Corporativo */
+  --color-bg-start-rgb: 8 12 10;         /* #080c0a - Fondo Inicio */
+  --color-bg-end-rgb: 4 6 5;             /* #040605 - Fondo Fin */
+  --color-card-rgb: 12 15 13;            /* #0c0f0d - Fondo Card */
+  --color-text-rgb: 244 246 240;         /* #F4F6F0 - Texto Principal */
+
+  /* Direct CSS Variables / Inline Style Fallbacks */
+  --primary-color: rgb(var(--color-primary-rgb));
+  --secondary-color: rgb(var(--color-secondary-rgb));
+  --accent-color: rgb(var(--color-accent-rgb));
+  --card-bg: rgb(var(--color-card-rgb));
+  --background-start: rgb(var(--color-bg-start-rgb));
+  --background-end: rgb(var(--color-bg-end-rgb));
+  --text-color: rgb(var(--color-text-rgb));
   --amber-primary-hex: #E5A93B;
-  --primary-color: #E5A93B;
-  --secondary-color: #22A6B7;
-  --accent-color: #9F2B00;
-  --card-bg: #0c0f0d;
+
+  /* Legacy Bridges */
+  --amber-primary: var(--color-primary-rgb);
+  --sky-accent: var(--color-secondary-rgb);
+  --foreground-rgb: var(--color-text-rgb);
   --theme-card-radius: 2rem;
   --theme-heading-font: 'Cormorant Garamond', Georgia, serif;
 }
 
 [data-theme='dark'] {
   /* Night Mode - Dynamic Overlay */
-  --foreground-rgb: 244, 246, 240;
-  --sky-accent: 159, 43, 0;
+  --color-text-rgb: 244 246 240;
+  --color-secondary-rgb: 159 43 0;
+  --foreground-rgb: var(--color-text-rgb);
+  --sky-accent: var(--color-secondary-rgb);
 }
 
 /* Global premium overrides for container cards and inputs */
@@ -38,11 +54,11 @@ html {
 .border-white\/10,
 .dark .border-white\/10,
 [data-theme='dark'] .border-white\/10 {
-  border-color: rgba(var(--amber-primary), 0.15) !important;
+  border-color: rgb(var(--color-primary-rgb) / 0.15) !important;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: rgb(var(--color-text-rgb));
   background: linear-gradient(135deg, var(--background-start), var(--background-end));
   min-height: 100vh;
   font-family: 'Outfit', 'Inter', sans-serif;
@@ -144,8 +160,8 @@ textarea::placeholder {
   50% { opacity: 0.94; transform: scale(1.015); }
 }
 @keyframes themeGlow {
-  0%, 100% { filter: drop-shadow(0 0 15px rgba(var(--amber-primary), 0.35)); }
-  50% { filter: drop-shadow(0 0 40px rgba(var(--amber-primary), 0.75)); }
+  0%, 100% { filter: drop-shadow(0 0 15px rgb(var(--color-primary-rgb) / 0.35)); }
+  50% { filter: drop-shadow(0 0 40px rgb(var(--color-primary-rgb) / 0.75)); }
 }
 @keyframes themeShimmer {
   0% { filter: brightness(1); }
@@ -162,11 +178,11 @@ textarea::placeholder {
   width: 100%;
   height: 100%;
   background-image: 
-    radial-gradient(2px 2px at 20px 30px, rgba(229, 169, 59, 0.45), rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 40px 70px, rgba(244, 246, 240, 0.5), rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 50px 160px, rgba(229, 169, 59, 0.35), rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 90px 40px, rgba(244, 246, 240, 0.55), rgba(0,0,0,0)),
-    radial-gradient(2px 2px at 130px 80px, rgba(244, 246, 240, 0.45), rgba(0,0,0,0));
+    radial-gradient(2px 2px at 20px 30px, rgb(var(--color-primary-rgb) / 0.45), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 40px 70px, rgb(var(--color-text-rgb) / 0.5), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 50px 160px, rgb(var(--color-primary-rgb) / 0.35), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 90px 40px, rgb(var(--color-text-rgb) / 0.55), rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 130px 80px, rgb(var(--color-text-rgb) / 0.45), rgba(0,0,0,0));
   background-repeat: repeat;
   background-size: 200px 200px;
   opacity: 0.18;
@@ -183,7 +199,7 @@ textarea::placeholder {
   .amber-glass {
     @apply backdrop-blur-xl shadow-xl dark:shadow-2xl dark:shadow-black transition-all duration-300;
     background-color: var(--card-bg, #0c0f0d) !important;
-    border: 1px solid rgba(var(--amber-primary), 0.25) !important;
+    border: 1px solid rgb(var(--color-primary-rgb) / 0.25) !important;
     border-radius: var(--theme-card-radius, 2rem);
   }
   
@@ -191,7 +207,7 @@ textarea::placeholder {
   .dark .amber-glass,
   div[data-theme='dark'] .amber-glass {
     background-color: var(--card-bg, #0c0f0d) !important;
-    border-color: rgba(var(--amber-primary), 0.25) !important;
+    border-color: rgb(var(--color-primary-rgb) / 0.25) !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8) !important;
   }
 
@@ -204,7 +220,7 @@ textarea::placeholder {
 
 @layer utilities {
   .text-glow {
-    text-shadow: 0 0 12px rgba(var(--amber-primary, 229, 169, 59), 0.5);
+    text-shadow: 0 0 12px rgb(var(--color-primary-rgb) / 0.5);
   }
   .text-gradient,
   .text-gradient-theme {
@@ -273,14 +289,14 @@ body.hide-navbar nav {
 
 .custom-scroll::-webkit-scrollbar-thumb,
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(229, 169, 59, 0.2) !important;
+  background: rgb(var(--color-primary-rgb) / 0.2) !important;
   border-radius: 99px;
   transition: all 0.2s ease;
 }
 
 .custom-scroll::-webkit-scrollbar-thumb:hover,
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(229, 169, 59, 0.4) !important;
+  background: rgb(var(--color-primary-rgb) / 0.4) !important;
 }
 
 /* Hide native horizontal scrollbars for menus, tabs, and carousels */

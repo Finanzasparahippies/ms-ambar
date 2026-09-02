@@ -5,19 +5,17 @@
 {% block subtitle %}Tienda Oficial{% endblock %}
 
 {% block content %}
-<h2
-  style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">
-  ¡Gracias por tu compra!</h2>
+<h2 style="color: #ffffff; font-size: 24px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em; text-align: center;">
+  ¡Gracias por tu compra!
+</h2>
 
 <p style="color: rgba(255,255,255,0.7); font-size: 15px; line-height: 1.8; margin-bottom: 30px; text-align: center;">
   Hola <strong>{{ order.full_name }}</strong>,<br><br>
-  Hemos recibido tu pago y tu pedido ya está siendo preparado. A continuación encontrarás el resumen de tu compra y los
-  detalles de envío.
+  Hemos recibido tu pago y tu pedido ya está siendo preparado. A continuación encontrarás el resumen de tu compra y los detalles de envío.
 </p>
 
 <!-- Order Metadata Card -->
-<div
-  style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px; font-size: 14px;">
+<div style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px; font-size: 14px;">
   <table style="width: 100%; border-collapse: collapse; color: rgba(255, 255, 255, 0.8);">
     <tr>
       <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4); width: 35%;">Pedido ID:</td>
@@ -29,30 +27,24 @@
     </tr>
     <tr>
       <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">Estado del Pago:</td>
-      <td
-        style="padding: 4px 0; font-weight: bold; color: #10b981; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">
-        ✓ Pagado</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #10b981; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;">
+        ✓ Pagado
+      </td>
     </tr>
   </table>
 </div>
 
 <!-- Items Table -->
-<h3
-  style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
-  Artículos</h3>
-<div
-  style="background-color: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px;">
+<h3 style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
+  Artículos
+</h3>
+<div style="background-color: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 20px; margin-bottom: 25px;">
   <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
     <thead>
       <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-        <th style="text-align: left; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal;">
-          Producto</th>
-        <th
-          style="text-align: center; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal; width: 15%;">
-          Cant.</th>
-        <th
-          style="text-align: right; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal; width: 25%;">
-          Total</th>
+        <th style="text-align: left; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal;">Producto</th>
+        <th style="text-align: center; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal; width: 15%;">Cant.</th>
+        <th style="text-align: right; padding-bottom: 10px; color: rgba(255, 255, 255, 0.4); font-weight: normal; width: 25%;">Total</th>
       </tr>
     </thead>
     <tbody>
@@ -61,37 +53,95 @@
         <td style="padding: 12px 0; color: #ffffff; font-weight: bold;">
           {{ item.product.name }}
           <br>
-          <span style="font-size: 12px; color: rgba(255, 255, 255, 0.4); font-weight: normal;">Precio unitario: ${{
-            item.price }}</span>
+          <span style="font-size: 12px; color: rgba(255, 255, 255, 0.4); font-weight: normal;">Precio unitario: ${{ item.price }}</span>
         </td>
         <td style="padding: 12px 0; text-align: center; color: rgba(255, 255, 255, 0.8);">{{ item.quantity }}</td>
         <td style="padding: 12px 0; text-align: right; color: #ffffff; font-weight: bold;">${{ item.subtotal }}</td>
       </tr>
       {% endfor %}
+      
+      <!-- Subtotal -->
+      <tr style="border-top: 1px solid rgba(255, 255, 255, 0.08);">
+        <td colspan="2" style="padding-top: 14px; padding-bottom: 4px; text-align: right; color: rgba(255, 255, 255, 0.5); font-size: 13px;">
+          Subtotal Productos:
+        </td>
+        <td style="padding-top: 14px; padding-bottom: 4px; text-align: right; color: rgba(255, 255, 255, 0.9); font-size: 14px; font-weight: bold;">
+          ${{ subtotal_items|default:order.total_amount }} MXN
+        </td>
+      </tr>
+
+      <!-- Envío -->
       <tr>
-        <td colspan="2" style="padding-top: 15px; text-align: right; color: rgba(255, 255, 255, 0.5); font-size: 13px;">
-          Total del Pedido:</td>
-        <td style="padding-top: 15px; text-align: right; color: #f59e0b; font-size: 18px; font-weight: 900;">${{
-          order.total_amount }} MXN</td>
+        <td colspan="2" style="padding-top: 4px; padding-bottom: 10px; text-align: right; color: rgba(255, 255, 255, 0.5); font-size: 13px;">
+          Costo de Envío ({{ order.shipping_provider|default:"Nacional" }}):
+        </td>
+        <td style="padding-top: 4px; padding-bottom: 10px; text-align: right; color: rgba(255, 255, 255, 0.9); font-size: 14px; font-weight: bold;">
+          {% if order.shipping_cost and order.shipping_cost > 0 %}
+            ${{ order.shipping_cost }} MXN
+          {% else %}
+            Gratis
+          {% endif %}
+        </td>
+      </tr>
+
+      <!-- Total Final -->
+      <tr style="border-top: 1px solid rgba(255, 255, 255, 0.1);">
+        <td colspan="2" style="padding-top: 14px; text-align: right; color: rgba(255, 255, 255, 0.7); font-size: 14px; font-weight: bold;">
+          Total del Pedido:
+        </td>
+        <td style="padding-top: 14px; text-align: right; color: #f59e0b; font-size: 19px; font-weight: 900;">
+          ${{ order.total_amount }} MXN
+        </td>
       </tr>
     </tbody>
   </table>
 </div>
 
-<!-- Shipping Address Card -->
-<h3
-  style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
-  Dirección de Envío</h3>
-<div
-  style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 35px; font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8);">
-  <strong style="color: #ffffff; font-size: 15px; display: block; margin-bottom: 5px;">{{ order.full_name }}</strong>
-  {{ order.address }}<br>
-  {{ order.city }}, {{ order.country }}
+<!-- Shipping Address & Tracking Logistics Card -->
+<h3 style="color: #f59e0b; font-size: 16px; font-weight: 800; margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;">
+  Detalles de Envío y Logística
+</h3>
+<div style="background-color: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 25px; margin-bottom: 25px; font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.8);">
+  <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4); width: 35%;">Destinatario:</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #ffffff;">{{ order.full_name }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">Dirección:</td>
+      <td style="padding: 4px 0; color: #ffffff;">{{ order.address }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">Paquetería:</td>
+      <td style="padding: 4px 0; font-weight: bold; color: #f59e0b;">{{ order.shipping_provider|default:"Paquetería Nacional" }}</td>
+    </tr>
+    {% if order.tracking_number %}
+    <tr>
+      <td style="padding: 4px 0; color: rgba(255, 255, 255, 0.4);">No. de Guía / Tracking:</td>
+      <td style="padding: 4px 0; font-family: monospace; font-size: 15px; font-weight: bold; color: #10b981;">{{ order.tracking_number }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  {% if order.tracking_url or order.shipping_label_pdf %}
+  <div style="margin-top: 15px; text-align: center;">
+    {% if order.tracking_url %}
+    <a href="{{ order.tracking_url }}" target="_blank"
+       style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000000; font-weight: 800; font-size: 13px; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin: 5px 6px;">
+      📦 Rastrear Envío
+    </a>
+    {% endif %}
+    {% if order.shipping_label_pdf %}
+    <a href="{{ frontend_url }}{{ order.shipping_label_pdf }}" target="_blank"
+       style="display: inline-block; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.2); color: #ffffff; font-weight: bold; font-size: 13px; text-decoration: none; padding: 10px 20px; border-radius: 12px; margin: 5px 6px;">
+      📄 Descargar Guía de Envío (PDF)
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 
-<div
-  style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
-  Te notificaremos vía correo electrónico en cuanto tu paquete sea entregado a la paquetería de envío junto con tu
-  código de rastreo.
+<div style="color: rgba(255,255,255,0.4); font-size: 12px; line-height: 1.6; text-align: center; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 20px;">
+  Conserva este correo para cualquier duda o seguimiento. Ante cualquier aclaración puedes responder directamente a este mensaje.
 </div>
 {% endblock %}

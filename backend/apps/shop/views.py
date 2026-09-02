@@ -1,13 +1,15 @@
 import stripe
 import json
+import logging
+from pathlib import Path
 from django.conf import settings
 from django.http import HttpResponse
 from django.db import transaction
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-import logging
-from .shipping import generate_shipping_label
+from .shipping import generate_shipping_label, generate_sample_shipping_label_pdf
+
 
 logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status
@@ -310,24 +312,39 @@ def handle_successful_payment(session):
         order_id = metadata.get('order_id')
         try:
             with transaction.atomic():
-                order = Order.objects.select_for_update().get(id=order_id)
-                
-                if order.status == 'pending':
-                    order.status = 'paid'
-                    order.stripe_session_id = session_id
-                    order.save()
-                    
-                    # Descontar stock
-                    for item in order.items.all():
-                        product = Product.objects.select_for_update().get(id=item.product.id)
-                        product.stock -= item.quantity
-                        product.save()
-                        
-                    # Encadenar la logística y el correo fuera del bloqueo de la base de datos
-                    transaction.on_commit(lambda: process_fulfillment(order))
-                    logger.info(f"Pedido #{order.id} pagado con éxito.")
-        except Order.DoesNotExist:
-            logger.error(f"Pedido con ID {order_id} no encontrado.")
+                order = None
+                if order_id:
+                    order = Order.objects.select_for_update().filter(id=order_id).first()
+                if not order and session_id:
+                    order = Order.objects.select_for_update().filter(stripe_session_id=session_id).first()
+
+                if order:
+                    if order.status == 'pending':
+                        order.status = 'paid'
+                        order.stripe_session_id = session_id
+                        shipping_prov_meta = metadata.get('shipping_provider')
+                        shipping_rate_meta = metadata.get('shipping_rate_id') or metadata.get('rate_id')
+                        if shipping_prov_meta and not order.shipping_provider:
+                            order.shipping_provider = shipping_prov_meta
+                        if shipping_rate_meta and not order.selected_rate_id:
+                            order.selected_rate_id = shipping_rate_meta
+                        order.save()
+
+                        # Descontar stock atómicamente
+                        for item in order.items.select_related('product').all():
+                            product = Product.objects.select_for_update().get(id=item.product.id)
+                            product.stock = max(0, product.stock - item.quantity)
+                            product.save()
+
+                        # Ejecutar logística y despacho de confirmación
+                        process_fulfillment(order)
+                        logger.info(f"Pedido #{order.id} pagado con éxito y despachado.")
+
+
+                    else:
+                        logger.info(f"Pedido #{order.id} ya se encontraba procesado (status={order.status}). Ignorando duplicados.")
+                else:
+                    logger.error(f"Pedido con ID {order_id} o sesión {session_id} no encontrado.")
         except Exception as e:
             logger.error(f"Error procesando pedido #{order_id}: {e}", exc_info=True)
 
@@ -335,12 +352,15 @@ def send_order_confirmation_email(order):
     try:
         # Precompute subtotal for each order item for rendering
         items = list(order.items.all())
+        subtotal_items = 0
         for item in items:
             item.subtotal = item.price * item.quantity
+            subtotal_items += item.subtotal
 
         context = {
             'order': order,
             'items': items,
+            'subtotal_items': subtotal_items,
             'frontend_url': settings.FRONTEND_URL,
         }
         subject = f"🛒 Confirmación de Pedido #{order.id} - Ms Ambar"
@@ -348,6 +368,8 @@ def send_order_confirmation_email(order):
         text_content = (
             f"¡Gracias por tu compra, {order.full_name}!\n\n"
             f"Hemos recibido tu pago para el pedido #{order.id}.\n"
+            f"Subtotal Artículos: ${subtotal_items} MXN\n"
+            f"Envío ({order.shipping_provider or 'Nacional'}): ${order.shipping_cost} MXN\n"
             f"Monto Total: ${order.total_amount} MXN\n\n"
             f"Dirección de Envío:\n"
             f"{order.address}\n"
@@ -372,7 +394,103 @@ def process_fulfillment(order):
     generate_shipping_label(order)
     send_order_confirmation_email(order)
     
-from .shipping import generate_shipping_label, quote_shipping_rates, lookup_postal_code, validate_postal_code
+from .shipping import generate_shipping_label, quote_shipping_rates, lookup_postal_code, validate_postal_code, generate_sample_shipping_label_pdf
+
+class OrderBySessionView(APIView):
+    """
+    Permite al frontend obtener los datos completos del pedido tras la redirección de Stripe.
+    Garantiza idempotencia absoluta y sincronización activa si el webhook experimenta demoras de red.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        session_id = request.query_params.get('session_id')
+        if not session_id:
+            return Response({'error': 'El parámetro session_id es requerido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        order = None
+
+        # 1. Búsqueda directa por stripe_session_id
+        order = Order.objects.filter(stripe_session_id=session_id).first()
+
+        # 2. Manejo de sesiones de prueba o mock_session_{order_id}
+        if not order and session_id.startswith('mock_session_'):
+            try:
+                order_id_str = session_id.replace('mock_session_', '')
+                order_id = int(order_id_str)
+                order = Order.objects.filter(id=order_id).first()
+                if order and order.status == 'pending':
+                    with transaction.atomic():
+                        locked_order = Order.objects.select_for_update().get(id=order.id)
+                        if locked_order.status == 'pending':
+                            locked_order.status = 'paid'
+                            locked_order.stripe_session_id = session_id
+                            locked_order.save()
+                            for item in locked_order.items.select_related('product').all():
+                                prod = Product.objects.select_for_update().get(id=item.product.id)
+                                prod.stock = max(0, prod.stock - item.quantity)
+                                prod.save()
+                            process_fulfillment(locked_order)
+                    order.refresh_from_db()
+
+
+            except Exception as e:
+                logger.warning(f"Error procesando mock session en OrderBySessionView: {e}")
+
+        # 3. Sincronización activa con Stripe si no se encuentra o sigue 'pending'
+        if not session_id.startswith('mock_'):
+            stripe_key = getattr(settings, 'STRIPE_SECRET_KEY', '')
+            if stripe_key and stripe_key != 'mock_key' and (not order or order.status == 'pending'):
+                try:
+                    import stripe
+                    stripe.api_key = stripe_key
+                    session = stripe.checkout.Session.retrieve(session_id)
+                    if session:
+                        order_id = session.get('metadata', {}).get('order_id')
+                        if not order and order_id:
+                            order = Order.objects.filter(id=order_id).first()
+
+                        if session.get('payment_status') == 'paid':
+                            handle_successful_payment(session)
+                            if order:
+                                order.refresh_from_db()
+                            else:
+                                order = Order.objects.filter(stripe_session_id=session_id).first()
+                except Exception as e:
+                    logger.warning(f"Error en sincronización activa de Stripe para session {session_id}: {e}")
+
+        if not order:
+            return Response({'error': 'Pedido no encontrado para la sesión proporcionada.'}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = OrderSerializer(order)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderDownloadLabelView(APIView):
+    """
+    Permite visualizar o descargar la guía de envío en PDF para un pedido específico.
+    Si la guía no existe aún en disco, la genera bajo demanda con el generador de muestra.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        try:
+            order = Order.objects.get(id=pk)
+        except Order.DoesNotExist:
+            return Response({'error': 'Pedido no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        filepath = Path(settings.MEDIA_ROOT) / 'shipping_labels' / f"guia_pedido_{order.id}.pdf"
+        if not filepath.exists():
+            generate_sample_shipping_label_pdf(order)
+
+        if filepath.exists():
+            from django.http import FileResponse
+            response = FileResponse(open(filepath, 'rb'), content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="guia_envio_pedido_{order.id}.pdf"'
+            return response
+        else:
+            return Response({'error': 'No se pudo generar la guía de envío.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 class PostalCodeLookupView(APIView):
     """Permite al frontend autocompletar y validar el código postal de 5 dígitos."""
@@ -386,6 +504,7 @@ class PostalCodeLookupView(APIView):
 
 
 class ShippingQuoteView(APIView):
+
     """Permite al frontend consultar tarifas de envío en tiempo real con fallback resiliente."""
     permission_classes = [AllowAny]
 
@@ -405,7 +524,27 @@ class ShippingQuoteView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class ShippingHealthCheckView(APIView):
+
+    """
+    Permite diagnosticar la conectividad y validación de credenciales con Skydropx Sandbox/Producción.
+    Accesible para pruebas en staging y monitoreo de infraestructura.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        dest_cp = request.query_params.get('dest_cp', '83100')
+        target_env = request.query_params.get('env')
+        from .shipping import SkydropxClient
+        client = SkydropxClient(environment=target_env)
+        diagnostic = client.test_connectivity(dest_zip=dest_cp)
+        http_status = status.HTTP_200_OK if diagnostic.get("success") else status.HTTP_200_OK
+        return Response(diagnostic, status=http_status)
+
+
+
 class ShopCheckoutView(APIView):
+
     permission_classes = [AllowAny]
 
     @transaction.atomic
@@ -509,24 +648,50 @@ class ShopCheckoutView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         try:
-            checkout_session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=line_items,
-                mode='payment',
-                success_url=settings.FRONTEND_URL + "/shop/success?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url=settings.FRONTEND_URL + "/tienda",
-                customer_email=email,
-                payment_intent_data={
-                    'metadata': {
-                        'order_id': str(order.id),
-                        'type': 'shop_purchase'
-                    }
+            shipping_options = []
+            if shipping_amount > 0:
+                provider_label = shipping_provider_name if shipping_provider_name else "Envío Estándar Nacional"
+                shipping_options.append({
+                    'shipping_rate_data': {
+                        'type': 'fixed_amount',
+                        'fixed_amount': {
+                            'amount': int(round(shipping_amount * 100)),
+                            'currency': 'mxn',
+                        },
+                        'display_name': f"Envío ({provider_label})",
+                        'delivery_estimate': {
+                            'minimum': {'unit': 'business_day', 'value': 3},
+                            'maximum': {'unit': 'business_day', 'value': 5},
+                        },
+                    },
+                })
+
+            session_metadata = {
+                'order_id': str(order.id),
+                'type': 'shop_purchase',
+                'shipping_provider': shipping_provider_name or 'Estándar Nacional',
+                'shipping_rate_id': str(shipping_rate_id or 'rate_std_fallback'),
+                'rate_id': str(shipping_rate_id or 'rate_std_fallback'),
+                'shipping_amount': str(shipping_amount),
+                'postal_code': str(postal_code),
+            }
+
+            session_kwargs = {
+                'payment_method_types': ['card'],
+                'line_items': line_items,
+                'mode': 'payment',
+                'success_url': settings.FRONTEND_URL + "/shop/success?session_id={CHECKOUT_SESSION_ID}",
+                'cancel_url': settings.FRONTEND_URL + "/tienda",
+                'customer_email': email,
+                'payment_intent_data': {
+                    'metadata': session_metadata
                 },
-                metadata={
-                    'order_id': str(order.id),
-                    'type': 'shop_purchase'
-                }
-            )
+                'metadata': session_metadata,
+            }
+            if shipping_options:
+                session_kwargs['shipping_options'] = shipping_options
+
+            checkout_session = stripe.checkout.Session.create(**session_kwargs)
             
             return Response({
                 "checkout_url": checkout_session.url,
