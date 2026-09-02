@@ -397,48 +397,68 @@ class SkydropxClient:
 
             if response.status_code in (200, 201):
                 data = response.json()
-                # Skydropx Pro retorna 'rates' en la raíz o en data.rates
-                raw_rates = data.get("rates", []) or data.get("data", [])
-                if isinstance(raw_rates, dict):
-                    raw_rates = raw_rates.get("rates", [])
+                quotation_id = data.get("id")
+                is_completed = data.get("is_completed", False)
 
-                rates = []
-                for r in raw_rates:
-                    attr = r.get("attributes", r)
-                    rate_status = attr.get("status", "approved")
-                    
-                    # Solo incluir tarifas aprobadas
-                    if rate_status and rate_status.lower() not in ["approved", "active", "completed", "success"]:
-                        continue
+                def parse_rates_from_payload(payload_dict: dict) -> List[Dict[str, Any]]:
+                    raw = payload_dict.get("rates", []) or payload_dict.get("data", [])
+                    if isinstance(raw, dict):
+                        raw = raw.get("rates", [])
+                    parsed = []
+                    for r in raw:
+                        attr = r.get("attributes", r)
+                        rate_status = attr.get("status", "approved")
+                        total_val = attr.get("total") or attr.get("total_price") or attr.get("amount")
+                        
+                        # Aceptar si tiene un monto numérico calculado y no está en error
+                        if total_val is not None and str(total_val).strip() and str(total_val) != "None":
+                            if rate_status and rate_status.lower() in ["rejected", "error", "failed", "cancelled"]:
+                                continue
 
-                    rate_id = str(r.get("id") or attr.get("id", ""))
-                    provider_name = attr.get("provider_display_name") or attr.get("provider_name") or attr.get("provider", "Paquetería Nacional")
-                    service_name = attr.get("provider_service_name") or attr.get("service_level_name") or attr.get("service_name", "Servicio Regular")
-                    
-                    try:
-                        total_price = float(attr.get("total") or attr.get("total_price") or attr.get("amount", 150.0))
-                    except (ValueError, TypeError):
-                        total_price = 150.0
+                            rate_id = str(r.get("id") or attr.get("id", ""))
+                            provider_name = attr.get("provider_display_name") or attr.get("provider_name") or attr.get("provider", "Paquetería Nacional")
+                            service_name = attr.get("provider_service_name") or attr.get("service_level_name") or attr.get("service_name", "Servicio Regular")
+                            
+                            try:
+                                total_price = float(total_val)
+                            except (ValueError, TypeError):
+                                total_price = 150.0
 
-                    days = attr.get("days", "3 a 5")
-                    days_str = f"{days} días hábiles" if str(days).isdigit() else str(days)
+                            days = attr.get("days", "3 a 5")
+                            days_str = f"{days} días hábiles" if str(days).isdigit() else str(days)
 
-                    if rate_id:
-                        rates.append({
-                            "id": rate_id,
-                            "provider": provider_name,
-                            "service_level_name": service_name,
-                            "total_price": total_price,
-                            "currency": attr.get("currency_code", "MXN"),
-                            "days": days_str,
-                            "is_fallback": False
-                        })
+                            if rate_id:
+                                parsed.append({
+                                    "id": rate_id,
+                                    "provider": provider_name,
+                                    "service_level_name": service_name,
+                                    "total_price": total_price,
+                                    "currency": attr.get("currency_code", "MXN"),
+                                    "days": days_str,
+                                    "is_fallback": False
+                                })
+                    return parsed
+
+                rates = parse_rates_from_payload(data)
+
+                # Si la cotización en Skydropx Pro es asíncrona, consultar GET /quotations/{id}
+                if quotation_id and (not is_completed or not rates):
+                    for attempt in range(6):
+                        time.sleep(0.4)
+                        get_res = self._request("GET", f"quotations/{quotation_id}")
+                        if get_res.status_code in (200, 201):
+                            get_data = get_res.json()
+                            polled_rates = parse_rates_from_payload(get_data)
+                            if polled_rates:
+                                rates = polled_rates
+                                if get_data.get("is_completed"):
+                                    break
 
                 if rates:
                     rates.sort(key=lambda x: x["total_price"])
                     return rates
                 else:
-                    logger.warning(f"[SkydropxClient] Cotización exitosa pero sin tarifas aprobadas: {data}")
+                    logger.warning(f"[SkydropxClient] Cotización exitosa pero sin tarifas listas: {data}")
             else:
                 logger.warning(f"[SkydropxClient] Quotation response ({response.status_code}): {response.text[:300]}")
         except requests.exceptions.Timeout:
@@ -487,6 +507,24 @@ class SkydropxClient:
                         tracking_number = item_attr.get("tracking_number")
                     if item_attr.get("tracking_url_provider"):
                         tracking_url = item_attr.get("tracking_url_provider")
+
+                # Si label_url aún no está listo de forma síncrona, consultar GET /shipments/{id}
+                if shipment_id and not label_url:
+                    for _ in range(4):
+                        time.sleep(0.5)
+                        get_res = self._request("GET", f"shipments/{shipment_id}")
+                        if get_res.status_code == 200:
+                            get_data = get_res.json()
+                            for item in get_data.get("included", []):
+                                item_attr = item.get("attributes", {})
+                                if item_attr.get("label_url"):
+                                    label_url = item_attr.get("label_url")
+                                if item_attr.get("tracking_number") and not tracking_number:
+                                    tracking_number = item_attr.get("tracking_number")
+                                if item_attr.get("tracking_url_provider"):
+                                    tracking_url = item_attr.get("tracking_url_provider")
+                            if label_url:
+                                break
 
                 # Fallback de tracking URL si no viene dada por el carrier
                 if tracking_number and not tracking_url:
