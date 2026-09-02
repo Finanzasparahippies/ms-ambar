@@ -477,11 +477,11 @@ SKYDROPX_API_SECRET = env("SKYDROPX_API_SECRET", default=env("NECTAR_LABS_SKYDRO
 SKYDROPX_WEBHOOK_SECRET = env("SKYDROPX_WEBHOOK_SECRET", default=env("NECTAR_LABS_SKYDROPX_WEBHOOK_SECRET", default="kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ"))
 
 
-# Resolución inteligente de endpoint: por defecto api.skydropx.com/v1 (soporta modo test/live de Skydropx)
+# Resolución inteligente de endpoint Skydropx Pro (Staging / Producción)
 DEFAULT_SKYDROPX_URL = (
     "https://sb-pro.skydropx.com/api/v1"
-    if SKYDROPX_ENVIRONMENT.lower() in ["pro_staging", "pro_sandbox"]
-    else "https://api.skydropx.com/v1"
+    if SKYDROPX_ENVIRONMENT.lower() in ["staging", "sandbox", "pro_staging", "pro_sandbox", "test"]
+    else "https://app.skydropx.com/api/v1"
 )
 SKYDROPX_API_URL = env("SKYDROPX_API_URL", default=DEFAULT_SKYDROPX_URL)
 
