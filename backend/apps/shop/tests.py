@@ -490,4 +490,28 @@ class ShopAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response['Content-Type'], 'application/pdf')
 
+    @patch('apps.shop.shipping.SkydropxClient.test_connectivity')
+    def test_shipping_health_check_endpoint(self, mock_test_conn):
+        """Verify ShippingHealthCheckView returns structured diagnostic response."""
+        mock_test_conn.return_value = {
+            "base_url": "https://api-demo.skydropx.com/v1",
+            "environment": "staging",
+            "origin_zip": "83150",
+            "dest_zip": "83100",
+            "is_configured": True,
+            "status_code": 200,
+            "latency_ms": 120,
+            "success": True,
+            "carriers_found": [
+                {"provider": "FedEx", "service": "Nacional", "total_price": 145.0, "currency": "MXN"}
+            ],
+            "error": None
+        }
+        url = reverse('shipping-health-check') + "?dest_cp=83100"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data['success'])
+        self.assertEqual(len(response.data['carriers_found']), 1)
+
+
 

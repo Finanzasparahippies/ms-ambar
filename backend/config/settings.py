@@ -473,10 +473,25 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 10000
 # Skydropx Logistics Configuration
 SKYDROPX_API_KEY = env("NECTAR_LABS_SKYDROPX_API_KEY", default=env("AMBAR_OWN_SKYDROPX_KEY", default=""))
 SKYDROPX_API_SECRET = env("NECTAR_LABS_SKYDROPX_API_SECRET", default="")
-SKYDROPX_WEBHOOK_SECRET = env("SKYDROPX_WEBHOOK_SECRET", default="kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ")
-SKYDROPX_ENVIRONMENT = env("SKYDROPX_ENVIRONMENT", default="production")
-SKYDROPX_API_URL = "https://api.skydropx.com/v1"
-SHIPPING_ORIGIN_POSTAL_CODE = env("SHIPPING_ORIGIN_POSTAL_CODE", default="83000")
+SKYDROPX_WEBHOOK_SECRET = env("SKYDROPX_WEBHOOK_SECRET", default=env("NECTAR_LABS_SKYDROPX_WEBHOOK_SECRET", default="kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ"))
+SKYDROPX_ENVIRONMENT = env("SKYDROPX_ENVIRONMENT", default="staging")
+
+# Resolución inteligente de endpoint: si es staging/sandbox usa api-demo.skydropx.com por defecto salvo que se pase SKYDROPX_API_URL explícito
+DEFAULT_SKYDROPX_URL = (
+    "https://api-demo.skydropx.com/v1" 
+    if SKYDROPX_ENVIRONMENT.lower() in ["staging", "sandbox", "demo"] 
+    else "https://api.skydropx.com/v1"
+)
+SKYDROPX_API_URL = env("SKYDROPX_API_URL", default=DEFAULT_SKYDROPX_URL)
+
+SHIPPING_ORIGIN_NAME = env("SHIPPING_ORIGIN_NAME", default="Almacén Oficial Ms Ambar")
+SHIPPING_ORIGIN_PHONE = env("SHIPPING_ORIGIN_PHONE", default="6622140000")
+SHIPPING_ORIGIN_STREET = env("SHIPPING_ORIGIN_STREET", default="Blvd. Kino 456")
+SHIPPING_ORIGIN_SUBURB = env("SHIPPING_ORIGIN_SUBURB", default="Pitic")
+SHIPPING_ORIGIN_CITY = env("SHIPPING_ORIGIN_CITY", default="Hermosillo")
+SHIPPING_ORIGIN_STATE = env("SHIPPING_ORIGIN_STATE", default="SO")
+SHIPPING_ORIGIN_POSTAL_CODE = env("SHIPPING_ORIGIN_POSTAL_CODE", default="83150")
+
 
 
 

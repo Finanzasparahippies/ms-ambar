@@ -509,7 +509,27 @@ class ShippingQuoteView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class ShippingHealthCheckView(APIView):
+
+    """
+    Permite diagnosticar la conectividad y validación de credenciales con Skydropx Sandbox/Producción.
+    Accesible para pruebas en staging y monitoreo de infraestructura.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        dest_cp = request.query_params.get('dest_cp', '83100')
+        target_env = request.query_params.get('env')
+        from .shipping import SkydropxClient
+        client = SkydropxClient(environment=target_env)
+        diagnostic = client.test_connectivity(dest_zip=dest_cp)
+        http_status = status.HTTP_200_OK if diagnostic.get("success") else status.HTTP_200_OK
+        return Response(diagnostic, status=http_status)
+
+
+
 class ShopCheckoutView(APIView):
+
     permission_classes = [AllowAny]
 
     @transaction.atomic
