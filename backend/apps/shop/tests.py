@@ -524,12 +524,13 @@ class ShopAppTests(APITestCase):
 
         sandbox_client = SkydropxClient(api_key="sandbox_key_456", environment="staging")
         self.assertEqual(sandbox_client.environment, "staging")
-        self.assertEqual(sandbox_client.base_url, "https://api-demo.skydropx.com/v1")
+        self.assertEqual(sandbox_client.base_url, "https://sb-pro.skydropx.com/api/v1")
         self.assertEqual(sandbox_client._headers()["Authorization"], "Token token=sandbox_key_456")
 
         pro_client = SkydropxClient(api_key="Bearer jwt_token_abc", environment="pro_production")
         self.assertEqual(pro_client.base_url, "https://pro.skydropx.com/api/v1")
         self.assertEqual(pro_client._headers()["Authorization"], "Bearer jwt_token_abc")
+
 
 
 

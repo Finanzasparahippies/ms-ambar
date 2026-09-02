@@ -308,16 +308,67 @@ class SkydropxClient:
         Sondea todos los gateways conocidos de Skydropx (Classic, Pro Sandbox, Pro Prod)
         con múltiples esquemas de autenticación para descubrir automáticamente el endpoint funcional.
         """
+        import base64
+        basic_b64 = base64.b64encode(f"{self.api_key}:{self.api_secret}".encode()).decode() if self.api_secret else ""
+        
         gateways = [
-            ("https://api.skydropx.com/v1", "Token token=", "Classic (Producción / Test Account)"),
-            ("https://sb-pro.skydropx.com/api/v1", "Token token=", "Pro Sandbox (Token Scheme)"),
-            ("https://sb-pro.skydropx.com/api/v1", "Bearer ", "Pro Sandbox (Bearer Scheme)"),
-            ("https://pro.skydropx.com/api/v1", "Token token=", "Pro Production (Token Scheme)"),
-            ("https://pro.skydropx.com/api/v1", "Bearer ", "Pro Production (Bearer Scheme)"),
-            ("https://api-demo.skydropx.com/v1", "Token token=", "Legacy Demo (Deprecated)"),
+            ("https://sb-pro.skydropx.com/api/v1/quotations", {"Authorization": f"Bearer {self.api_key}"}, "Pro Sandbox (Bearer API-Key)"),
+            ("https://sb-pro.skydropx.com/api/v1/quotations", {"Authorization": f"Token token={self.api_key}"}, "Pro Sandbox (Token token=)"),
+            ("https://sb-pro.skydropx.com/api/v1/quotations", {"Authorization": f"Basic {basic_b64}"} if basic_b64 else {}, "Pro Sandbox (Basic Auth)"),
+            ("https://sb-pro.skydropx.com/api/v1/quotations", {"X-API-KEY": self.api_key, "X-API-SECRET": self.api_secret}, "Pro Sandbox (X-API-KEY Headers)"),
+            ("https://sb-pro.skydropx.com/api/v1/quotations", {"X-Api-Key": self.api_key, "X-Api-Secret": self.api_secret}, "Pro Sandbox (X-Api-Key Headers)"),
+            ("https://sb-pro.skydropx.com/api/v1/rates", {"Authorization": f"Bearer {self.api_key}"}, "Pro Sandbox (/rates endpoint Bearer)"),
+            ("https://sb-pro.skydropx.com/api/v1/rates", {"Authorization": f"Token token={self.api_key}"}, "Pro Sandbox (/rates endpoint Token)"),
+            ("https://pro.skydropx.com/api/v1/quotations", {"Authorization": f"Bearer {self.api_key}"}, "Pro Prod (Bearer API-Key)"),
+            ("https://pro.skydropx.com/api/v1/quotations", {"Authorization": f"Token token={self.api_key}"}, "Pro Prod (Token token=)"),
+            ("https://api.skydropx.com/v1/quotations", {"Authorization": f"Token token={self.api_key}"}, "Classic (Token token=)"),
         ]
 
+        # Comprobar si existe OAuth2 Token Endpoint
+        oauth_endpoints = [
+            "https://sb-pro.skydropx.com/oauth/token",
+            "https://sb-pro.skydropx.com/api/v1/oauth/token",
+            "https://pro.skydropx.com/oauth/token",
+        ]
         probes = []
+
+        for oauth_url in oauth_endpoints:
+            import time
+            start_time = time.time()
+            try:
+                r = requests.post(oauth_url, json={
+                    "grant_type": "client_credentials",
+                    "client_id": self.api_key,
+                    "client_secret": self.api_secret
+                }, timeout=3.0)
+                lat = int((time.time() - start_time) * 1000)
+                if r.status_code == 200:
+                    data = r.json()
+                    tok = data.get("access_token")
+                    probes.append({
+                        "label": f"OAuth2 Token ({oauth_url.split('/')[2]})",
+                        "base_url": oauth_url,
+                        "auth_scheme": "OAuth2 Client Credentials",
+                        "status_code": 200,
+                        "latency_ms": lat,
+                        "success": True,
+                        "carriers_count": 0,
+                        "summary": f"SUCCESS (Obtained Token: {tok[:10]}...)"
+                    })
+                else:
+                    probes.append({
+                        "label": f"OAuth2 Token ({oauth_url.split('/')[2]})",
+                        "base_url": oauth_url,
+                        "auth_scheme": "OAuth2 Client Credentials",
+                        "status_code": r.status_code,
+                        "latency_ms": lat,
+                        "success": False,
+                        "carriers_count": 0,
+                        "summary": f"HTTP {r.status_code} ({r.text[:60]})"
+                    })
+            except Exception as e:
+                pass
+
         origin = get_origin_address()
         payload = {
             "address_from": {"country": "MX", "zip": str(origin["zip_code"])},
@@ -325,25 +376,22 @@ class SkydropxClient:
             "parcels": [{"weight": 1.0, "height": 15, "width": 25, "length": 35}]
         }
 
-        for base_url, auth_prefix, label in gateways:
+        for target_url, custom_headers, label in gateways:
+            if not custom_headers:
+                continue
             import time
-            auth_val = f"{auth_prefix}{self.api_key}" if not self.api_key.startswith("Bearer ") and auth_prefix == "Token token=" else (f"Bearer {self.api_key}" if auth_prefix == "Bearer " else self.api_key)
             headers = {
-                "Authorization": auth_val,
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "User-Agent": "Mozilla/5.0 (compatible; MsAmbarLogistics/1.0; +https://msambar.com)"
             }
-            if self.api_secret:
-                headers["X-API-Secret"] = self.api_secret
-                headers["X-Partner-Id"] = self.api_secret
+            headers.update(custom_headers)
 
-            url = f"{base_url}/quotations"
             start_time = time.time()
             probe_res = {
                 "label": label,
-                "base_url": base_url,
-                "auth_scheme": auth_prefix.strip(),
+                "base_url": target_url,
+                "auth_scheme": list(custom_headers.keys())[0] if custom_headers else "",
                 "status_code": None,
                 "latency_ms": 0,
                 "success": False,
@@ -352,7 +400,7 @@ class SkydropxClient:
             }
 
             try:
-                resp = requests.post(url, json=payload, headers=headers, timeout=3.5)
+                resp = requests.post(target_url, json=payload, headers=headers, timeout=3.5)
                 probe_res["latency_ms"] = int((time.time() - start_time) * 1000)
                 probe_res["status_code"] = resp.status_code
                 if resp.status_code in (200, 201):
@@ -370,6 +418,7 @@ class SkydropxClient:
             probes.append(probe_res)
 
         return probes
+
 
 
 
