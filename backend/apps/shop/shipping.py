@@ -122,11 +122,10 @@ def get_origin_address() -> Dict[str, str]:
 SKYDROPX_ENV_URLS = {
     "production": "https://api.skydropx.com/v1",
     "prod": "https://api.skydropx.com/v1",
-    "staging": "https://api-demo.skydropx.com/v1",
-    "sandbox": "https://api-demo.skydropx.com/v1",
     "demo": "https://api-demo.skydropx.com/v1",
     "pro_production": "https://pro.skydropx.com/api/v1",
-    "pro_sandbox": "https://sb-pro.skydropx.com/api/v1",
+    "staging": "https://sb-pro.skydropx.com/api/v1",
+    "sandbox": "https://sb-pro.skydropx.com/api/v1",
 }
 
 

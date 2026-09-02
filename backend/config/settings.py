@@ -477,13 +477,14 @@ SKYDROPX_API_SECRET = env("SKYDROPX_API_SECRET", default=env("NECTAR_LABS_SKYDRO
 SKYDROPX_WEBHOOK_SECRET = env("SKYDROPX_WEBHOOK_SECRET", default=env("NECTAR_LABS_SKYDROPX_WEBHOOK_SECRET", default="kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ"))
 
 
-# Resolución inteligente de endpoint: si es staging/sandbox usa api-demo.skydropx.com por defecto salvo que se pase SKYDROPX_API_URL explícito
+# Resolución inteligente de endpoint: por defecto api.skydropx.com/v1 (soporta modo test/live de Skydropx)
 DEFAULT_SKYDROPX_URL = (
-    "https://api-demo.skydropx.com/v1" 
-    if SKYDROPX_ENVIRONMENT.lower() in ["staging", "sandbox", "demo"] 
+    "https://sb-pro.skydropx.com/api/v1"
+    if SKYDROPX_ENVIRONMENT.lower() in ["pro_staging", "pro_sandbox"]
     else "https://api.skydropx.com/v1"
 )
 SKYDROPX_API_URL = env("SKYDROPX_API_URL", default=DEFAULT_SKYDROPX_URL)
+
 
 SHIPPING_ORIGIN_NAME = env("SHIPPING_ORIGIN_NAME", default="Almacén Oficial Ms Ambar")
 SHIPPING_ORIGIN_PHONE = env("SHIPPING_ORIGIN_PHONE", default="6622140000")
