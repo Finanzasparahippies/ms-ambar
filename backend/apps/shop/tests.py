@@ -104,6 +104,7 @@ class ShopAppTests(APITestCase):
         del_response = self.client.delete(del_url)
         self.assertIn(del_response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_valid_key')
     @patch('stripe.checkout.Session.create')
     @patch('apps.shop.views.send_order_confirmation_email')
     def test_checkout_success(self, mock_email, mock_session_create):
