@@ -28,15 +28,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    command: sh -c "npm run build && npm run start"
+    command: npm run dev
     volumes:
       - ./frontend:/app:Z
       - /app/node_modules
-      - /app/.next
     env_file:
       - .env.staging
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3080/api}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://staging.msambar.com/api}
+      - WATCHPACK_POLLING=true
     restart: always
     networks:
       - default
