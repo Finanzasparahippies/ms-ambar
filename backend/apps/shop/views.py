@@ -322,6 +322,12 @@ def handle_successful_payment(session):
                     if order.status == 'pending':
                         order.status = 'paid'
                         order.stripe_session_id = session_id
+                        shipping_prov_meta = metadata.get('shipping_provider')
+                        shipping_rate_meta = metadata.get('shipping_rate_id') or metadata.get('rate_id')
+                        if shipping_prov_meta and not order.shipping_provider:
+                            order.shipping_provider = shipping_prov_meta
+                        if shipping_rate_meta and not order.selected_rate_id:
+                            order.selected_rate_id = shipping_rate_meta
                         order.save()
 
                         # Descontar stock atómicamente
@@ -636,24 +642,50 @@ class ShopCheckoutView(APIView):
             }, status=status.HTTP_201_CREATED)
 
         try:
-            checkout_session = stripe.checkout.Session.create(
-                payment_method_types=['card'],
-                line_items=line_items,
-                mode='payment',
-                success_url=settings.FRONTEND_URL + "/shop/success?session_id={CHECKOUT_SESSION_ID}",
-                cancel_url=settings.FRONTEND_URL + "/tienda",
-                customer_email=email,
-                payment_intent_data={
-                    'metadata': {
-                        'order_id': str(order.id),
-                        'type': 'shop_purchase'
-                    }
+            shipping_options = []
+            if shipping_amount > 0:
+                provider_label = shipping_provider_name if shipping_provider_name else "Envío Estándar Nacional"
+                shipping_options.append({
+                    'shipping_rate_data': {
+                        'type': 'fixed_amount',
+                        'fixed_amount': {
+                            'amount': int(round(shipping_amount * 100)),
+                            'currency': 'mxn',
+                        },
+                        'display_name': f"Envío ({provider_label})",
+                        'delivery_estimate': {
+                            'minimum': {'unit': 'business_day', 'value': 3},
+                            'maximum': {'unit': 'business_day', 'value': 5},
+                        },
+                    },
+                })
+
+            session_metadata = {
+                'order_id': str(order.id),
+                'type': 'shop_purchase',
+                'shipping_provider': shipping_provider_name or 'Estándar Nacional',
+                'shipping_rate_id': str(shipping_rate_id or 'rate_std_fallback'),
+                'rate_id': str(shipping_rate_id or 'rate_std_fallback'),
+                'shipping_amount': str(shipping_amount),
+                'postal_code': str(postal_code),
+            }
+
+            session_kwargs = {
+                'payment_method_types': ['card'],
+                'line_items': line_items,
+                'mode': 'payment',
+                'success_url': settings.FRONTEND_URL + "/shop/success?session_id={CHECKOUT_SESSION_ID}",
+                'cancel_url': settings.FRONTEND_URL + "/tienda",
+                'customer_email': email,
+                'payment_intent_data': {
+                    'metadata': session_metadata
                 },
-                metadata={
-                    'order_id': str(order.id),
-                    'type': 'shop_purchase'
-                }
-            )
+                'metadata': session_metadata,
+            }
+            if shipping_options:
+                session_kwargs['shipping_options'] = shipping_options
+
+            checkout_session = stripe.checkout.Session.create(**session_kwargs)
             
             return Response({
                 "checkout_url": checkout_session.url,

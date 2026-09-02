@@ -190,6 +190,8 @@ class SkydropxClient:
         # Resolución dinámica de la URL base
         if base_url:
             resolved_url = base_url
+        elif environment and environment.lower().strip() in SKYDROPX_ENV_URLS:
+            resolved_url = SKYDROPX_ENV_URLS[environment.lower().strip()]
         elif os.environ.get("SKYDROPX_API_URL"):
             resolved_url = os.environ.get("SKYDROPX_API_URL")
         elif hasattr(settings, "SKYDROPX_API_URL") and getattr(settings, "SKYDROPX_ENVIRONMENT", "staging") == self.environment:

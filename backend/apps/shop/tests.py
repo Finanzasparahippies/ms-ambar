@@ -144,6 +144,17 @@ class ShopAppTests(APITestCase):
         self.product_active.refresh_from_db()
         self.assertEqual(self.product_active.stock, 10)
 
+        # Verify stripe.checkout.Session.create arguments (shipping_options and metadata)
+        self.assertTrue(mock_session_create.called)
+        call_kwargs = mock_session_create.call_args[1]
+        self.assertIn('shipping_options', call_kwargs)
+        self.assertEqual(len(call_kwargs['shipping_options']), 1)
+        self.assertEqual(call_kwargs['shipping_options'][0]['shipping_rate_data']['fixed_amount']['amount'], 15000)
+        self.assertEqual(call_kwargs['metadata']['type'], 'shop_purchase')
+        self.assertEqual(call_kwargs['metadata']['order_id'], str(order.id))
+        self.assertEqual(call_kwargs['metadata']['shipping_amount'], '150.0')
+        self.assertEqual(call_kwargs['metadata']['rate_id'], 'rate_std_fallback')
+
     def test_shipping_quote_endpoint(self):
         """Verify shipping quote endpoint returns rates with fallback."""
         url = reverse('shipping-quote')
