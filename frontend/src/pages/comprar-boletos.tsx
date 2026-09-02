@@ -1,4 +1,3 @@
-import api from '../lib/api';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Calendar, CalendarX,
@@ -11,13 +10,17 @@ import {
   Ticket, Users,
   X
 } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import dynamic from 'next/dynamic';
 import React, { useEffect, useMemo, useState } from 'react';
 import ThemedSection from '../components/ThemedSection';
 import TourTimeline from '../components/TourTimeline';
+import { useEventTheme } from '../context/EventThemeContext';
+import api from '../lib/api';
+import { showAlert } from '../lib/notifications';
+import { cn, getApiUrl } from '../lib/utils';
 
 const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
   ssr: false,
@@ -30,9 +33,6 @@ const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
     </div>
   ),
 });
-import { useEventTheme } from '../context/EventThemeContext';
-import { showAlert } from '../lib/notifications';
-import { cn, getApiUrl } from '../lib/utils';
 
 // ── Stripe Fee Mirror (same formula as backend fees.py) ──────────────────────
 // Incluye el 16% de IVA trasladado por Stripe sobre su propia comisión bancaria (3.6% * 1.16 = 4.176%, $3.00 * 1.16 = $3.48 MXN)
@@ -66,21 +66,21 @@ const PriceBreakdown = ({ baseTotal, label = 'Subtotal boletos' }: { baseTotal: 
   return (
     <div className="pt-4 border-t border-slate-200/80 dark:border-white/10 space-y-3 mt-4">
       {/* Subtotal line */}
-      <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 dark:text-slate-300">
-        <span className="uppercase tracking-widest text-[9px] font-black text-slate-400 dark:text-slate-400">{label}</span>
+      <div className="flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-300">
+        <span className="uppercase tracking-widest text-xs font-black text-slate-400 dark:text-slate-400">{label}</span>
         <span className="font-extrabold font-mono text-slate-900 dark:text-slate-100">
-          ${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[9px] text-slate-400">MXN</span>
+          ${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs text-slate-400">MXN</span>
         </span>
       </div>
 
       {/* Service Fee line */}
-      <div className="flex items-center justify-between text-[11px] font-bold text-amber-600 dark:text-amber-400">
-        <span className="inline-flex items-center gap-1.5 uppercase tracking-widest text-[9px] font-black">
+      <div className="flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+        <span className="inline-flex items-center gap-1.5 uppercase tracking-widest text-xs font-black">
           <Info size={12} className="text-amber-500 shrink-0" />
           Cargo de servicio
         </span>
         <span className="font-extrabold font-mono text-amber-600 dark:text-amber-400">
-          +${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[9px] opacity-75">MXN</span>
+          +${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs opacity-75">MXN</span>
         </span>
       </div>
 
@@ -88,7 +88,7 @@ const PriceBreakdown = ({ baseTotal, label = 'Subtotal boletos' }: { baseTotal: 
       <div className="mt-3 p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-amber-600/10 border border-amber-500/30 dark:border-amber-400/30 flex items-center justify-between shadow-sm relative overflow-hidden group">
         <div className="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-400/10 rounded-full blur-xl pointer-events-none group-hover:bg-amber-400/20 transition-all" />
         <div className="space-y-0.5 relative z-10">
-          <span className="text-[9px] uppercase font-black tracking-[0.25em] text-amber-700 dark:text-amber-300 block">
+          <span className="text-xs uppercase font-black tracking-[0.25em] text-amber-700 dark:text-amber-300 block">
             Total a Pagar
           </span>
           <div className="flex items-baseline gap-1.5">
@@ -106,16 +106,16 @@ const PriceBreakdown = ({ baseTotal, label = 'Subtotal boletos' }: { baseTotal: 
 
       {/* Transparencia Tarifaria Notice */}
       <div className="p-3.5 rounded-xl bg-amber-500/10 dark:bg-amber-400/[0.06] border border-amber-500/25 dark:border-amber-400/25 space-y-1.5">
-        <div className="flex items-center justify-between text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider">
+        <div className="flex items-center justify-between text-amber-700 dark:text-amber-300 text-xs font-black uppercase tracking-wider">
           <span className="flex items-center gap-1.5">
             <ShieldCheck size={14} className="text-amber-500 shrink-0" />
             Transparencia Tarifaria
           </span>
-          <span className="text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+          <span className="text-xs font-extrabold uppercase px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
             Stripe MX
           </span>
         </div>
-        <p className="text-[9.5px] text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
+        <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
           El subtotal de tus accesos (<strong className="font-mono text-slate-900 dark:text-white">${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) va íntegramente al artista. El cargo de servicio (<strong className="font-mono text-amber-600 dark:text-amber-400">${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) cubre el procesamiento seguro con cifrado bancario Stripe (3.6% + $3.00 MXN).
         </p>
       </div>
@@ -637,7 +637,7 @@ const TourPage = () => {
                   >
                     {currentEvent ? currentEvent.title : 'Selecciona un Concierto...'}
                   </motion.h2>
-                  <div className="flex flex-wrap items-center gap-2 xs:gap-3 text-[10px] xs:text-xs uppercase tracking-widest font-black mt-2.5">
+                  <div className="flex flex-wrap items-center gap-2 xs:gap-3 text-xs uppercase tracking-widest font-black mt-2.5">
                     <div className="flex items-center gap-1.5 bg-nature-night/5 dark:bg-white/5 border border-nature-night/10 dark:border-white/10 px-3 py-1.5 xs:px-4 xs:py-2 rounded-full">
                       <MapPin size={12} className="text-amber-honey shrink-0" />
                       <span className="truncate max-w-[140px] xs:max-w-none">{currentEvent?.theater_name || (isMeetGreet ? 'Meet & Greet' : 'Cargando Recinto...')}</span>
@@ -653,7 +653,7 @@ const TourPage = () => {
                   <div className="flex flex-col items-start md:items-end gap-1.5 p-3 xs:p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
                     <div className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-honey">Disponibilidad en Vivo</span>
+                      <span className="text-xs font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-honey">Disponibilidad en Vivo</span>
                     </div>
                     <p className="text-lg xs:text-xl font-black uppercase text-nature-night dark:text-white leading-none">
                       {availableSeatsCount} <span className="text-xs text-nature-night/50 dark:text-white/50 font-semibold">/ {totalSeatsCount} Butacas</span>
@@ -668,7 +668,7 @@ const TourPage = () => {
                   <div className="flex flex-col items-start md:items-end gap-1.5 p-3 xs:p-4 rounded-2xl bg-amber-honey/10 border border-amber-honey/20 shrink-0">
                     <div className="flex items-center gap-2">
                       <Star size={14} className="text-amber-honey fill-current animate-pulse" />
-                      <span className="text-[9px] xs:text-[10px] font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-honey">Pases de Convivencia</span>
+                      <span className="text-xs font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-honey">Pases de Convivencia</span>
                     </div>
                     <p className="text-lg xs:text-xl font-black uppercase text-nature-night dark:text-white leading-none">
                       {currentEvent?.mg_available || 0} <span className="text-xs text-nature-night/50 dark:text-white/50 font-semibold">Disponibles</span>
@@ -680,7 +680,7 @@ const TourPage = () => {
               {isCurrentEventPast && (
                 <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 px-4 py-2 rounded-full w-fit">
                   <CalendarX size={14} className="text-amber-600 dark:text-amber-400" />
-                  <span className="text-[8px] xs:text-[9px] font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-600 dark:text-amber-400">Evento Concluido (Modo Informativo)</span>
+                  <span className="text-xs font-black uppercase tracking-[0.15em] xs:tracking-[0.2em] text-amber-600 dark:text-amber-400">Evento Concluido (Modo Informativo)</span>
                 </div>
               )}
             </div>
@@ -690,7 +690,7 @@ const TourPage = () => {
               <div className="space-y-4">
                 {(currentEvent?.allow_numbered_tickets === false && currentEvent?.allow_seatless_tickets === false) ? (
                   <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-amber-honey/10 text-center space-y-3 shadow-2xl">
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey block">Aviso de Taquilla</span>
+                    <span className="text-xs font-black uppercase tracking-[0.3em] text-amber-honey block">Aviso de Taquilla</span>
                     <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight text-nature-night dark:text-white">
                       Venta Inhabilitada Temporálmente
                     </h3>
@@ -705,7 +705,7 @@ const TourPage = () => {
                         <button
                           onClick={() => setTicketMode('seat')}
                           className={cn(
-                            "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
+                            "flex-1 py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
                             ticketMode === 'seat'
                               ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
                               : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
@@ -720,7 +720,7 @@ const TourPage = () => {
                             setSelectedSeats([]);
                           }}
                           className={cn(
-                            "flex-1 py-2.5 px-3 rounded-xl text-[9px] xs:text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
+                            "flex-1 py-2.5 px-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 text-center leading-tight",
                             ticketMode === 'seatless'
                               ? "bg-amber-honey text-black shadow-lg shadow-amber-honey/20"
                               : "text-nature-night/60 dark:text-white/60 hover:text-nature-night dark:hover:text-white"
@@ -734,7 +734,7 @@ const TourPage = () => {
 
                     {ticketMode === 'seat' ? (
                       <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                        <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-[9px] xs:text-[10px] font-black uppercase tracking-wider text-white/70">
+                        <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-xs font-black uppercase tracking-wider text-white/70">
                           <div className="flex flex-wrap items-center gap-4">
                             <span className="flex items-center gap-1.5">
                               <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
@@ -783,7 +783,7 @@ const TourPage = () => {
                           <Users size={32} />
                         </div>
                         <div className="space-y-2">
-                          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Entrada Libre Sin Límite</span>
+                          <span className="text-xs font-black uppercase tracking-[0.3em] text-amber-honey">Entrada Libre Sin Límite</span>
                           <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-nature-night dark:text-white">
                             Boleto General (Sin Asiento Reservado)
                           </h3>
@@ -828,7 +828,7 @@ const TourPage = () => {
                 <p className="text-xs leading-relaxed opacity-80">
                   Vive una experiencia cercana y exclusiva con Ms Ambar. Este pase especial te permite compartir momentos únicos, firmar autógrafos y tomarse fotografías oficiales.
                 </p>
-                <ul className="space-y-2.5 text-[10px] font-bold uppercase tracking-wider opacity-75">
+                <ul className="space-y-2.5 text-xs font-bold uppercase tracking-wider opacity-75">
                   <li className="flex items-center gap-2">
                     <CheckCircle size={14} className="text-amber-honey" />
                     Acceso exclusivo al venue de convivencia
@@ -852,10 +852,10 @@ const TourPage = () => {
               <div className="text-center mb-6 border-b border-slate-100 dark:border-white/10 pb-5 relative z-10">
                 <div className="inline-flex items-center gap-2 bg-amber-400/10 border border-amber-400/30 px-3.5 py-1 rounded-full text-amber-600 dark:text-amber-400 mb-2">
                   <Ticket size={14} className="shrink-0" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.25em]">Néctar Gateway</span>
+                  <span className="text-xs font-black uppercase tracking-[0.25em]">Néctar Gateway</span>
                 </div>
                 <h3 className="text-xl md:text-2xl font-black uppercase tracking-wider text-slate-900 dark:text-white">Reserva Digital</h3>
-                <p className="text-[9px] uppercase tracking-[0.3em] text-slate-400 dark:text-slate-400 font-bold mt-0.5">Transacción Encriptada 256-bit</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400 dark:text-slate-400 font-bold mt-0.5">Transacción Encriptada 256-bit</p>
               </div>
 
               {isCurrentEventPast ? (
@@ -872,7 +872,7 @@ const TourPage = () => {
                 <>
                   {isMeetGreet && (
                     <div className="mb-6 p-4 xs:p-5 rounded-[2rem] bg-gradient-to-br from-amber-500/10 via-amber-400/5 to-transparent border border-amber-500/20 text-center space-y-4 shadow-sm">
-                      <p className="text-[10px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-[0.2em]">Cantidad de Boletos M&G</p>
+                      <p className="text-xs font-black uppercase text-amber-600 dark:text-amber-400 tracking-[0.2em]">Cantidad de Boletos M&G</p>
                       <div className="flex items-center justify-center gap-6">
                         <button
                           onClick={() => setMgQuantity(Math.max(1, mgQuantity - 1))}
@@ -889,7 +889,7 @@ const TourPage = () => {
                         </button>
                       </div>
                       <div className="space-y-0.5 pt-1">
-                        <p className="text-[9px] font-bold uppercase text-slate-400 tracking-widest">Precio Unitario</p>
+                        <p className="text-xs font-bold uppercase text-slate-400 tracking-widest">Precio Unitario</p>
                         <p className="text-xl font-black font-mono text-amber-600 dark:text-amber-400">${Number(currentEvent?.mg_price || 0).toLocaleString()} MXN</p>
                       </div>
                     </div>
@@ -936,7 +936,7 @@ const TourPage = () => {
                                 Experiencia Meet & Greet
                               </h4>
                               {wantsMG && (
-                                <span className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 shrink-0">
+                                <span className="bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-xs font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1 shrink-0">
                                   <CheckCircle size={10} className="text-amber-500" /> Añadido
                                 </span>
                               )}
@@ -949,9 +949,9 @@ const TourPage = () => {
                             "text-xs font-black font-mono tracking-wide whitespace-nowrap px-2.5 py-1 rounded-lg transition-colors",
                             wantsMG ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30" : "text-amber-600 dark:text-amber-400"
                           )}>
-                            +${Number(currentEvent?.mg_price || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-[9px]">MXN</span>
+                            +${Number(currentEvent?.mg_price || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-xs">MXN</span>
                           </span>
-                          <span className="text-[8px] font-bold uppercase tracking-widest block text-slate-400 mt-0.5">
+                          <span className="text-xs font-bold uppercase tracking-widest block text-slate-400 mt-0.5">
                             Tarifa Base
                           </span>
                         </div>
@@ -964,7 +964,7 @@ const TourPage = () => {
                     {isMeetGreet ? (
                       <div className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10">
                         <div>
-                          <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Meet & Greet</p>
+                          <p className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Meet & Greet</p>
                           <p className="text-xs font-bold text-slate-800 dark:text-white">{mgQuantity} Pase(s) de Convivencia</p>
                         </div>
                         <span className="font-black font-mono text-xs text-slate-900 dark:text-white">${(mgQuantity * Number(currentEvent?.mg_price || 0)).toLocaleString()} MXN</span>
@@ -972,7 +972,7 @@ const TourPage = () => {
                     ) : ticketMode === 'seatless' ? (
                       <div className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10">
                         <div>
-                          <p className="text-[9px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Zona General</p>
+                          <p className="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">Zona General</p>
                           <p className="text-xs font-bold text-slate-800 dark:text-white">{seatlessQuantity} Boleto(s) Sin Asiento</p>
                         </div>
                         <span className="font-black font-mono text-xs text-slate-900 dark:text-white">${(seatlessQuantity * getEffectiveSeatlessPrice()).toLocaleString()} MXN</span>
@@ -993,7 +993,7 @@ const TourPage = () => {
                                   {seat.row}{seat.number}
                                 </div>
                                 <div className="min-w-0">
-                                  <span className="inline-block text-[8px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mb-0.5">
+                                  <span className="inline-block text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mb-0.5">
                                     {seat.category || 'Reservado'}
                                   </span>
                                   <p className="text-xs font-bold text-slate-800 dark:text-white truncate">
@@ -1003,7 +1003,7 @@ const TourPage = () => {
                               </div>
                               <div className="flex items-center gap-2.5 shrink-0">
                                 <span className="font-black font-mono text-xs text-slate-900 dark:text-white">
-                                  ${getSeatBasePrice(seat).toLocaleString()} <span className="text-[9px] text-slate-400">MXN</span>
+                                  ${getSeatBasePrice(seat).toLocaleString()} <span className="text-xs text-slate-400">MXN</span>
                                 </span>
                                 <button
                                   type="button"
@@ -1021,7 +1021,7 @@ const TourPage = () => {
                         {selectedSeats.length === 0 && (
                           <div className="py-8 text-center border border-dashed border-slate-200 dark:border-white/15 rounded-2xl bg-slate-50/50 dark:bg-white/[0.01]">
                             <Ticket className="mx-auto mb-2 text-slate-300 dark:text-slate-600" size={26} />
-                            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Toca un asiento en el mapa interactivo</p>
+                            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Toca un asiento en el mapa interactivo</p>
                           </div>
                         )}
                       </>
@@ -1035,7 +1035,7 @@ const TourPage = () => {
                     <div className="pt-4 border-t border-slate-200/80 dark:border-white/10 mb-4">
                       <div className="flex justify-between items-end">
                         <div>
-                          <p className="text-[9px] uppercase font-bold text-slate-400 tracking-[0.25em] mb-1">Total (Pase VIP Gratuito)</p>
+                          <p className="text-xs uppercase font-bold text-slate-400 tracking-[0.25em] mb-1">Total (Pase VIP Gratuito)</p>
                           <p className="text-3xl font-black font-mono leading-none text-emerald-500">$0 MXN</p>
                         </div>
                         <Sparkles size={20} className="text-amber-500 mb-1 animate-pulse" />
@@ -1077,11 +1077,11 @@ const TourPage = () => {
                 <div className="w-full flex flex-wrap items-center justify-between gap-3 z-20 mb-4 px-2">
                   <div className="flex items-center gap-2 bg-amber-honey/10 border border-amber-honey/30 px-4 py-2 rounded-full backdrop-blur-md">
                     <Sparkles size={14} className="text-amber-honey animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Flyer Oficial del Evento</span>
+                    <span className="text-xs font-black uppercase tracking-[0.25em] text-amber-honey">Flyer Oficial del Evento</span>
                   </div>
                   <button
                     onClick={() => setIsFlyerModalOpen(true)}
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[10px] font-black uppercase tracking-wider px-4 py-2 rounded-full transition-all backdrop-blur-md shadow-lg hover:border-amber-honey/50"
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-black uppercase tracking-wider px-4 py-2 rounded-full transition-all backdrop-blur-md shadow-lg hover:border-amber-honey/50"
                   >
                     <Maximize2 size={13} className="text-amber-honey" />
                     <span>Pantalla Completa</span>
@@ -1108,7 +1108,7 @@ const TourPage = () => {
                 {/* Footer caption */}
                 <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-2 z-20 mt-6 pt-4 border-t border-white/10 px-2">
                   <div>
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-amber-honey">Arte Oficial</span>
+                    <span className="text-xs font-black uppercase tracking-[0.3em] text-amber-honey">Arte Oficial</span>
                     <h3 className="text-xl md:text-2xl font-black text-white uppercase italic">{currentEvent.title}</h3>
                   </div>
                   <p className="text-xs text-white/60 font-medium">
@@ -1126,11 +1126,11 @@ const TourPage = () => {
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-nature-night/95 dark:bg-[#0B0F0D]/95 backdrop-blur-xl border-t border-white/10 p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           <div className="max-w-md mx-auto flex items-center justify-between gap-4">
             <div>
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-honey">
                 {isMeetGreet ? `${mgQuantity} Pase(s)` : `${selectedSeats.length} Seleccionado(s)`}
               </p>
               <p className="text-2xl font-black text-white leading-none mt-0.5">
-                ${Math.ceil(checkoutTotal).toLocaleString('es-MX')} <span className="text-[10px] font-bold text-white/50">MXN</span>
+                ${Math.ceil(checkoutTotal).toLocaleString('es-MX')} <span className="text-xs font-bold text-white/50">MXN</span>
               </p>
             </div>
             <button
@@ -1165,26 +1165,26 @@ const TourPage = () => {
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 pb-4 pt-1">
                 <div className="flex items-center gap-2">
                   <span className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black",
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-black",
                     !checkoutSuccess ? "bg-amber-400 text-slate-950" : "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400"
                   )}>1</span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">Datos</span>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">Datos</span>
                 </div>
                 <div className="h-[2px] w-8 bg-slate-200 dark:bg-white/10" />
                 <div className="flex items-center gap-2">
                   <span className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black",
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-black",
                     isSubmitting ? "bg-amber-400 text-slate-950 animate-pulse" : (checkoutSuccess ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" : "bg-slate-200 dark:bg-white/10 text-slate-400")
                   )}>2</span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">Pago</span>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-200">Pago</span>
                 </div>
                 <div className="h-[2px] w-8 bg-slate-200 dark:bg-white/10" />
                 <div className="flex items-center gap-2">
                   <span className={cn(
-                    "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black",
+                    "w-6 h-6 rounded-full flex items-center justify-center text-xs font-black",
                     checkoutSuccess ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/30" : "bg-slate-200 dark:bg-white/10 text-slate-400"
                   )}>3</span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Activado</span>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Activado</span>
                 </div>
               </div>
 
@@ -1208,7 +1208,7 @@ const TourPage = () => {
                     <CheckCircle size={32} />
                   </div>
                   <div className="space-y-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-widest">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-widest">
                       <ShieldCheck size={12} /> Accesos Activados y Asientos Bloqueados
                     </div>
                     <h3 className="text-2xl font-black uppercase tracking-wider text-slate-900 dark:text-white">¡Adquisición Confirmada!</h3>
@@ -1221,7 +1221,7 @@ const TourPage = () => {
                     const { base_price: costoNetoBoleto, service_fee: comisionPlataforma } = calculateTotalWithFee(totalCargado);
                     if (totalCargado <= 0) return null;
                     return (
-                      <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 p-4 rounded-2xl text-left space-y-1.5 text-[11px]">
+                      <div className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 p-4 rounded-2xl text-left space-y-1.5 text-xs">
                         <div className="flex justify-between text-slate-500 dark:text-slate-400">
                           <span>Costo del Boleto ({createdTickets.length} accesos):</span>
                           <span className="font-semibold text-slate-900 dark:text-white">${costoNetoBoleto.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
@@ -1239,17 +1239,17 @@ const TourPage = () => {
                   })()}
 
                   <div className="bg-slate-50 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200 dark:border-white/10 text-left space-y-3">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Tus Boletos Digitales Activados</h4>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Tus Boletos Digitales Activados</h4>
                     <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
                       {createdTickets.map((t, idx) => (
                         <div key={t.id} className="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10">
                           <div>
                             <p className="text-xs font-bold text-slate-800 dark:text-white">Boleto #{idx + 1} ({t.seat_display})</p>
-                            <span className="text-[8px] font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Estado: Activo • Listo para QR</span>
+                            <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Estado: Activo • Listo para QR</span>
                           </div>
                           <Link
                             href={`/tickets/${t.token}`}
-                            className="text-[9px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-slate-900 transition-colors border border-amber-400/30 px-3 py-1.5 rounded-lg bg-amber-400/10"
+                            className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-slate-900 transition-colors border border-amber-400/30 px-3 py-1.5 rounded-lg bg-amber-400/10"
                             target="_blank"
                           >
                             Ver Boleto
@@ -1269,7 +1269,7 @@ const TourPage = () => {
                       setPhone('');
                       fetchSeats();
                     }}
-                    className="w-full py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 hover:scale-[1.01] transition-all shadow-md active:scale-95"
+                    className="w-full py-4 rounded-xl text-xs font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 hover:scale-[1.01] transition-all shadow-md active:scale-95"
                   >
                     Finalizar y Volver
                   </button>

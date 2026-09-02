@@ -238,7 +238,7 @@ export default function ShopSuccessPage() {
                 {order.tracking_number && (
                   <div className="bg-black/40 border border-white/10 rounded-2xl p-3 sm:px-5 flex items-center justify-between gap-4">
                     <div>
-                      <div className="text-[11px] uppercase tracking-wider text-gray-400">Número de Guía / Tracking</div>
+                      <div className="text-xs uppercase tracking-wider text-gray-400">Número de Guía / Tracking</div>
                       <div className="font-mono text-base font-bold text-emerald-400 tracking-wider">
                         {order.tracking_number}
                       </div>

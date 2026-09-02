@@ -314,17 +314,17 @@ export default function TiendaPage() {
       <Toaster position="bottom-right" />
 
       {/* Ambient Lighting & Luxury Violet / Obsidian Mesh Background */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
-      <div className="absolute top-64 right-[-10%] w-[450px] h-[350px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
-      <div className="absolute top-96 left-[-10%] w-[450px] h-[350px] bg-purple-900/10 rounded-full blur-[130px] pointer-events-none -z-10" />
-      <div className="max-w-[1400px] mx-auto px-6 md:px-10 pt-28 md:pt-36 pb-24">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[43.75rem] h-[25rem] bg-purple-600/10 rounded-full blur-[140px] pointer-events-none -z-10" />
+      <div className="absolute top-64 right-[-10%] w-[28.125rem] h-[21.875rem] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none -z-10" />
+      <div className="absolute top-96 left-[-10%] w-[28.125rem] h-[21.875rem] bg-purple-900/10 rounded-full blur-[130px] pointer-events-none -z-10" />
+      <div className="max-w-[87.5rem] mx-auto px-6 md:px-10 pt-28 md:pt-36 pb-24">
         {/* Encabezado Principal y Branding */}
         <header className="mb-12 text-center max-w-4xl mx-auto relative">
           {/* Top Boutique Pill Badge */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/40 border border-purple-500/30 text-purple-300 text-[10px] md:text-xs font-black uppercase tracking-[0.25em] mb-4 shadow-[0_0_20px_rgba(139,92,246,0.15)] backdrop-blur-md"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-950/40 border border-purple-500/30 text-purple-300 text-xs font-black uppercase tracking-[0.25em] mb-4 shadow-[0_0_20px_rgba(139,92,246,0.15)] backdrop-blur-md"
           >
             <Sparkles size={13} className="text-purple-400 animate-pulse" />
             <span>Boutique Oficial & Arte Conceptual</span>
@@ -340,7 +340,7 @@ export default function TiendaPage() {
             <span className="bg-gradient-to-r from-purple-400 via-violet-300 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(139,92,246,0.4)]">TIENDA</span>
           </motion.h1>
 
-          <p className="text-neutral-400 uppercase tracking-[0.35em] text-[10px] md:text-xs font-semibold mb-8 max-w-xl mx-auto">
+          <p className="text-neutral-400 uppercase tracking-[0.35em] text-xs font-semibold mb-8 max-w-xl mx-auto">
             Colección Oficial de Ms Ambar
           </p>
 
@@ -376,8 +376,8 @@ export default function TiendaPage() {
                 <Truck size={18} />
               </div>
               <div>
-                <h4 className="text-[11px] font-black uppercase tracking-wider text-white">Envíos Seguros</h4>
-                <p className="text-[10px] text-neutral-400">A Todo México</p>
+                <h4 className="text-xs font-black uppercase tracking-wider text-white">Envíos Seguros</h4>
+                <p className="text-xs text-neutral-400">A Todo México</p>
               </div>
             </div>
 
@@ -386,8 +386,8 @@ export default function TiendaPage() {
                 <Disc size={18} />
               </div>
               <div>
-                <h4 className="text-[11px] font-black uppercase tracking-wider text-white">100% Auténtico</h4>
-                <p className="text-[10px] text-neutral-400">Ediciones limitadas</p>
+                <h4 className="text-xs font-black uppercase tracking-wider text-white">100% Auténtico</h4>
+                <p className="text-xs text-neutral-400">Ediciones limitadas</p>
               </div>
             </div>
 
@@ -396,8 +396,8 @@ export default function TiendaPage() {
                 <ShieldCheck size={18} />
               </div>
               <div>
-                <h4 className="text-[11px] font-black uppercase tracking-wider text-white">Compra Segura</h4>
-                <p className="text-[10px] text-neutral-400">Cifrado de alta fidelidad</p>
+                <h4 className="text-xs font-black uppercase tracking-wider text-white">Compra Segura</h4>
+                <p className="text-xs text-neutral-400">Cifrado de alta fidelidad</p>
               </div>
             </div>
 
@@ -406,8 +406,8 @@ export default function TiendaPage() {
                 <Sparkles size={18} />
               </div>
               <div>
-                <h4 className="text-[11px] font-black uppercase tracking-wider text-white">Música Libre</h4>
-                <p className="text-[10px] text-neutral-400">Apoyo directo a la artista</p>
+                <h4 className="text-xs font-black uppercase tracking-wider text-white">Música Libre</h4>
+                <p className="text-xs text-neutral-400">Apoyo directo a la artista</p>
               </div>
             </div>
           </div>
@@ -425,7 +425,7 @@ export default function TiendaPage() {
                   <Quote size={18} />
                 </div>
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-purple-300 block">
+                  <span className="text-xs font-black uppercase tracking-[0.25em] text-purple-300 block">
                     Manifiesto de la Artista
                   </span>
                   <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-white">
@@ -437,7 +437,7 @@ export default function TiendaPage() {
               <button
                 type="button"
                 onClick={() => setIsManifestoExpanded((prev) => !prev)}
-                className="self-start sm:self-auto px-4 py-1.5 rounded-full bg-white/[0.05] hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 text-neutral-300 hover:text-white text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all"
+                className="self-start sm:self-auto px-4 py-1.5 rounded-full bg-white/[0.05] hover:bg-purple-600/20 border border-white/10 hover:border-purple-500/40 text-neutral-300 hover:text-white text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all"
               >
                 <span>{isManifestoExpanded ? 'Menos' : 'Leer Manifiesto'}</span>
                 <ChevronDown
@@ -499,7 +499,7 @@ export default function TiendaPage() {
                   >
                     <span>{cat}</span>
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-black/40 text-purple-200' : 'bg-white/[0.08] text-neutral-400'
+                      className={`text-xs px-1.5 py-0.5 rounded-full ${isSelected ? 'bg-black/40 text-purple-200' : 'bg-white/[0.08] text-neutral-400'
                         }`}
                     >
                       {count}
@@ -560,7 +560,7 @@ export default function TiendaPage() {
                   setSelectedCategory('Todos');
                   setSearchQuery('');
                 }}
-                className="text-purple-400 hover:text-purple-300 font-bold uppercase tracking-wider text-[10px] flex items-center gap-1 transition-colors"
+                className="text-purple-400 hover:text-purple-300 font-bold uppercase tracking-wider text-xs flex items-center gap-1 transition-colors"
               >
                 <X size={12} />
                 Limpiar filtros

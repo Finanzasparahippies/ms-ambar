@@ -219,7 +219,7 @@ export const CartDrawer: React.FC = () => {
           aria-label="Abrir bolsa de compras"
         >
           <ShoppingBag size={24} className="stroke-[2.2] group-hover:scale-105 transition-transform" />
-          <span className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 bg-amber-400 text-black rounded-full text-[11px] font-black flex items-center justify-center shadow-md border border-amber-200">
+          <span className="absolute -top-1 -right-1 min-w-[1.375rem] h-[1.375rem] px-1 bg-amber-400 text-black rounded-full text-xs font-black flex items-center justify-center shadow-md border border-amber-200">
             {cartItemsCount}
           </span>
         </motion.button>
@@ -261,7 +261,7 @@ export const CartDrawer: React.FC = () => {
                       <h3 id="cart-drawer-title" className="text-lg font-black uppercase tracking-wider text-white drop-shadow-sm flex items-center gap-2">
                         Tu Carrito
                       </h3>
-                      <p className="text-[10px] text-purple-300/80 uppercase tracking-widest font-bold mt-0.5">
+                      <p className="text-xs text-purple-300/80 uppercase tracking-widest font-bold mt-0.5">
                         {checkoutStep === 'cart' ? 'Resumen de Selección' : checkoutStep === 'shipping' ? 'Datos de Envío y Facturación' : 'Confirmación de Orden'}
                       </p>
                     </div>
@@ -314,7 +314,7 @@ export const CartDrawer: React.FC = () => {
                                   {item.product.name}
                                 </h4>
                                 <p className="text-xs text-amber-300 font-black mb-3">
-                                  ${item.product.price} <span className="text-[10px] text-neutral-400 font-semibold">MXN</span>
+                                  ${item.product.price} <span className="text-xs text-neutral-400 font-semibold">MXN</span>
                                 </p>
 
                                 <div className="flex items-center gap-2">
@@ -368,7 +368,7 @@ export const CartDrawer: React.FC = () => {
                       {/* Email y Nombre */}
                       <div className="grid grid-cols-1 gap-3">
                         <div className="space-y-1">
-                          <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                          <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
                             Correo Electrónico *
                           </label>
                           <div className="relative">
@@ -385,7 +385,7 @@ export const CartDrawer: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                          <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
                             Nombre Completo *
                           </label>
                           <div className="relative">
@@ -405,7 +405,7 @@ export const CartDrawer: React.FC = () => {
                       {/* Teléfono y Código Postal */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                          <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
                             WhatsApp / Teléfono *
                           </label>
                           <div className="relative">
@@ -422,9 +422,9 @@ export const CartDrawer: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[9px] text-purple-300 uppercase tracking-widest font-bold block pl-1 flex items-center justify-between">
+                          <label className="text-xs text-purple-300 uppercase tracking-widest font-bold block pl-1 flex items-center justify-between">
                             <span>Código Postal *</span>
-                            {quotingShipping && <span className="text-[8px] animate-pulse text-purple-400">Cotizando...</span>}
+                            {quotingShipping ? <span className="text-xs animate-pulse text-purple-400">Cotizando...</span> : null}
                           </label>
                           <div className="relative">
                             <Package className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400/80 w-3.5 h-3.5" />
@@ -444,7 +444,7 @@ export const CartDrawer: React.FC = () => {
                       {/* Selector de Tarifas de Envío */}
                       {shippingRates.length > 0 && (
                         <div className="space-y-2 pt-2">
-                          <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1 flex items-center gap-1.5">
+                          <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1 flex items-center gap-1.5">
                             <Truck size={12} className="text-purple-400" /> Paquetería y Método de Envío
                           </label>
                           <div className="space-y-2">
@@ -459,8 +459,8 @@ export const CartDrawer: React.FC = () => {
                                 }`}
                               >
                                 <div>
-                                  <p className="font-extrabold uppercase text-[11px] text-white">{rate.provider}</p>
-                                  <p className="text-[9px] text-neutral-400">
+                                  <p className="font-extrabold uppercase text-xs text-white">{rate.provider}</p>
+                                  <p className="text-xs text-neutral-400">
                                     {rate.service_level_name} • {rate.days}
                                   </p>
                                 </div>
@@ -474,7 +474,7 @@ export const CartDrawer: React.FC = () => {
                       {/* Estado y Ciudad */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                          <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                          <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
                             Estado *
                           </label>
                           <select
@@ -491,7 +491,7 @@ export const CartDrawer: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                          <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
                             Ciudad / Municipio *
                           </label>
                           <input
@@ -507,7 +507,7 @@ export const CartDrawer: React.FC = () => {
 
                       {/* Colonia y Dirección */}
                       <div className="space-y-1">
-                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                        <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
                           Colonia / Asentamiento *
                         </label>
                         <input
@@ -521,7 +521,7 @@ export const CartDrawer: React.FC = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[9px] text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                        <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
                           Calle y Número Exterior / Interior *
                         </label>
                         <input
@@ -541,7 +541,7 @@ export const CartDrawer: React.FC = () => {
                           whileTap={{ scale: 0.99 }}
                           type="submit"
                           disabled={loading}
-                          className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-[11px] py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 disabled:opacity-50 transition-all"
+                          className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 disabled:opacity-50 transition-all"
                         >
                           {loading ? (
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -555,7 +555,7 @@ export const CartDrawer: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setCheckoutStep('cart')}
-                          className="w-full border border-white/15 hover:bg-purple-950/30 hover:border-purple-500/30 text-neutral-300 hover:text-white transition-all font-bold uppercase tracking-widest text-[9px] py-3 rounded-xl"
+                          className="w-full border border-white/15 hover:bg-purple-950/30 hover:border-purple-500/30 text-neutral-300 hover:text-white transition-all font-bold uppercase tracking-widest text-xs py-3 rounded-xl"
                         >
                           Volver al Carrito
                         </button>
@@ -578,15 +578,15 @@ export const CartDrawer: React.FC = () => {
                       </p>
 
                       <div className="w-full p-4 bg-[#0E1310] border border-purple-500/20 rounded-2xl text-left space-y-2.5 mt-4 shadow-xl">
-                        <div className="flex justify-between text-[10px] uppercase font-bold text-neutral-400">
+                        <div className="flex justify-between text-xs uppercase font-bold text-neutral-400">
                           <span>Orden ID:</span>
                           <span className="text-white font-mono">#{orderResult?.order_id}</span>
                         </div>
-                        <div className="flex justify-between text-[10px] uppercase font-bold text-neutral-400">
+                        <div className="flex justify-between text-xs uppercase font-bold text-neutral-400">
                           <span>Total:</span>
                           <span className="text-amber-300 font-black">${orderResult?.total_amount} MXN</span>
                         </div>
-                        <div className="flex justify-between text-[10px] uppercase font-bold text-neutral-400">
+                        <div className="flex justify-between text-xs uppercase font-bold text-neutral-400">
                           <span>Estado:</span>
                           <span className="text-emerald-400 font-extrabold uppercase tracking-widest">
                             {orderResult?.status}
@@ -600,7 +600,7 @@ export const CartDrawer: React.FC = () => {
                           closeCart();
                           setCheckoutStep('cart');
                         }}
-                        className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white font-black uppercase tracking-widest text-[9px] py-3.5 rounded-xl mt-4 hover:brightness-110 border border-purple-400/40 shadow-lg shadow-purple-600/30 transition-all"
+                        className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white font-black uppercase tracking-widest text-xs py-3.5 rounded-xl mt-4 hover:brightness-110 border border-purple-400/40 shadow-lg shadow-purple-600/30 transition-all"
                       >
                         Continuar en la Tienda
                       </button>
@@ -620,7 +620,7 @@ export const CartDrawer: React.FC = () => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setCheckoutStep('shipping')}
-                      className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-[11px] py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 transition-all"
+                      className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 transition-all"
                     >
                       Proceder al Envío <ArrowRight size={15} />
                     </motion.button>

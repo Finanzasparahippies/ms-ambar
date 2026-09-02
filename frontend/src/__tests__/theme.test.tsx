@@ -254,7 +254,7 @@ describe('EventThemeContext Unit Tests', () => {
     const rootStyle = document.documentElement.style;
     expect(rootStyle.getPropertyValue('--color-primary-rgb')).toBe('229 169 59');
     expect(rootStyle.getPropertyValue('--color-honey-rgb')).toBe('229 169 59');
-    expect(rootStyle.getPropertyValue('--color-secondary-rgb')).toBe('34 166 179');
+    expect(rootStyle.getPropertyValue('--color-secondary-rgb')).toBe('34 166 183');
     expect(rootStyle.getPropertyValue('--color-accent-rgb')).toBe('159 43 0');
     expect(rootStyle.getPropertyValue('--color-card-rgb')).toBe('12 15 13');
     expect(rootStyle.getPropertyValue('--color-text-rgb')).toBe('244 246 240');

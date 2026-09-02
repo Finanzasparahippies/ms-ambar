@@ -167,11 +167,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Category & Stock Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
-          <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-[0.2em] bg-black/75 backdrop-blur-md border border-purple-500/30 text-purple-200 shadow-md">
+          <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.2em] bg-black/75 backdrop-blur-md border border-purple-500/30 text-purple-200 shadow-md">
             {categoryLabel}
           </span>
           {typeof product.stock === 'number' && product.stock <= 5 && product.stock > 0 && (
-            <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/20 backdrop-blur-md border border-amber-500/50 text-amber-300 shadow-md flex items-center gap-1">
+            <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 backdrop-blur-md border border-amber-500/50 text-amber-300 shadow-md flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
               ¡Últimas {product.stock}!
             </span>
@@ -224,7 +224,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <span className="font-black text-sm md:text-base text-amber-300 drop-shadow-md">
                 ${product.price}
               </span>
-              <span className="block text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
+              <span className="block text-xs font-bold text-neutral-400 uppercase tracking-widest">
                 MXN
               </span>
             </div>
@@ -243,7 +243,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <button
               type="button"
               onClick={() => setShowSpecs((prev) => !prev)}
-              className="w-full py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-purple-950/30 border border-white/10 hover:border-purple-500/30 text-neutral-300 hover:text-white flex items-center justify-between text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+              className="w-full py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-purple-950/30 border border-white/10 hover:border-purple-500/30 text-neutral-300 hover:text-white flex items-center justify-between text-xs font-black uppercase tracking-wider transition-all shadow-sm"
               aria-expanded={showSpecs}
             >
               <span className="flex items-center gap-1.5">
@@ -266,15 +266,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   transition={{ duration: 0.25, ease: 'easeInOut' }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-2 p-3.5 bg-black/90 border border-purple-500/20 rounded-xl space-y-2.5 text-[11px] text-neutral-200 shadow-inner backdrop-blur-md">
+                  <div className="mt-2 p-3.5 bg-black/90 border border-purple-500/20 rounded-xl space-y-2.5 text-xs text-neutral-200 shadow-inner backdrop-blur-md">
                     {product.detailed_description && (
-                      <p className="text-[10px] text-neutral-300/90 italic pb-2 border-b border-white/10 leading-relaxed font-light">
+                      <p className="text-xs text-neutral-300/90 italic pb-2 border-b border-white/10 leading-relaxed font-light">
                         {product.detailed_description}
                       </p>
                     )}
 
                     {resolvedSpecs.material && (
-                      <div className="flex justify-between items-center text-[10px]">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1">
                           <Layers size={11} className="text-purple-400" /> Material
                         </span>
@@ -283,21 +283,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     )}
 
                     {resolvedSpecs.dimensions && (
-                      <div className="flex justify-between items-center text-[10px]">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-neutral-400 uppercase tracking-widest font-bold">Dimensiones</span>
                         <span className="font-semibold text-white">{resolvedSpecs.dimensions}</span>
                       </div>
                     )}
 
                     {resolvedSpecs.weight && (
-                      <div className="flex justify-between items-center text-[10px]">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-neutral-400 uppercase tracking-widest font-bold">Peso</span>
                         <span className="font-semibold text-white">{resolvedSpecs.weight}</span>
                       </div>
                     )}
 
                     {resolvedSpecs.origin && (
-                      <div className="flex justify-between items-center text-[10px]">
+                      <div className="flex justify-between items-center text-xs">
                         <span className="text-neutral-400 uppercase tracking-widest font-bold">Origen</span>
                         <span className="font-semibold text-white">{resolvedSpecs.origin}</span>
                       </div>
@@ -305,10 +305,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
                     {resolvedSpecs.care_instructions && (
                       <div className="pt-1.5 border-t border-white/10">
-                        <span className="block text-[9px] text-neutral-400 uppercase tracking-widest font-bold mb-0.5">
+                        <span className="block text-xs text-neutral-400 uppercase tracking-widest font-bold mb-0.5">
                           Cuidados
                         </span>
-                        <span className="text-[10px] text-neutral-200/90 leading-tight block">
+                        <span className="text-xs text-neutral-200/90 leading-tight block">
                           {resolvedSpecs.care_instructions}
                         </span>
                       </div>
@@ -316,7 +316,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
                     {resolvedSpecs.details &&
                       Object.entries(resolvedSpecs.details).map(([key, val]) => (
-                        <div key={key} className="flex justify-between items-center text-[10px]">
+                        <div key={key} className="flex justify-between items-center text-xs">
                           <span className="text-neutral-400 uppercase tracking-widest font-bold">{key}</span>
                           <span className="font-semibold text-white">{val}</span>
                         </div>
@@ -359,7 +359,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             whileHover={{ scale: 1.02, filter: "brightness(1.08)" }}
             whileTap={{ scale: 0.96 }}
             onClick={handleAddToCart}
-            className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-[11px] flex items-center justify-center gap-1.5 transition-all shadow-lg ${
+            className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg ${
               isAdded
                 ? 'bg-emerald-500 text-white border border-emerald-400 shadow-emerald-500/30'
                 : 'bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white border border-purple-400/40 shadow-purple-600/30 hover:shadow-purple-600/50'
