@@ -356,7 +356,7 @@ export default function TiendaPage() {
             transition={{ duration: 0.5 }}
             className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-black tracking-tighter uppercase italic leading-none mb-3"
           >
-            TIEN<span className="bg-gradient-to-r from-purple-400 via-violet-300 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(139,92,246,0.4)]">DA</span>
+            <span className="bg-gradient-to-r from-purple-400 via-violet-300 to-indigo-300 bg-clip-text text-transparent drop-shadow-[0_0_35px_rgba(139,92,246,0.4)]">TIENDA</span>
           </motion.h1>
 
           <p className="text-neutral-400 uppercase tracking-[0.35em] text-[10px] md:text-xs font-semibold mb-8 max-w-xl mx-auto">
