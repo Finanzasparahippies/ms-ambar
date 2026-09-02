@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  font-size: 100%; /* WCAG 1.4.4 Resize Text: respeta preferencias del navegador */
+}
+
 :root {
   /* Day Mode - Dynamic Defaults */
   --foreground-rgb: 244, 246, 240;

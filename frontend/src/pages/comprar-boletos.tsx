@@ -22,9 +22,9 @@ import TourTimeline from '../components/TourTimeline';
 const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
   ssr: false,
   loading: () => (
-    <div className="h-[480px] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10">
+    <div className="h-[30rem] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10">
       <div className="w-8 h-8 rounded-full border-2 border-t-amber-honey border-amber-honey/20 animate-spin" />
-      <span className="text-[10px] uppercase font-bold tracking-widest text-amber-honey">
+      <span className="text-xs uppercase font-bold tracking-widest text-amber-honey">
         Cargando Mapa de Asientos...
       </span>
     </div>
@@ -578,7 +578,7 @@ const TourPage = () => {
       </Head>
 
       {/* ─── Header Section ─── */}
-      <ThemedSection sectionKey="tickets_page" className="pt-6 pb-8 max-w-[1600px] mx-auto px-3 sm:px-6 md:px-10 text-center relative z-10">
+      <ThemedSection sectionKey="tickets_page" className="pt-6 pb-8 max-w-[100rem] mx-auto px-3 sm:px-6 md:px-10 text-center relative z-10">
         <div className="absolute top-[-10%] left-[-15%] w-[45%] h-[45%] bg-amber-honey/5 blur-[120px] rounded-full pointer-events-none animate-pulse" />
         <div className="max-w-4xl mx-auto space-y-3 sm:space-y-4">
           <motion.div
@@ -587,7 +587,7 @@ const TourPage = () => {
             className="flex items-center justify-center gap-1.5 bg-amber-honey/10 border border-amber-honey/20 px-3 py-1.5 xs:px-4 xs:py-2 rounded-full w-fit mx-auto"
           >
             <Sparkles size={12} className="text-amber-honey animate-spin" />
-            <span className="text-[8px] xs:text-[9px] font-black uppercase tracking-[0.2em] xs:tracking-[0.25em] text-amber-honey">Reserva Oficial</span>
+            <span className="text-xs font-black uppercase tracking-[0.2em] xs:tracking-[0.25em] text-amber-honey">Reserva Oficial</span>
           </motion.div>
 
           <motion.h1
@@ -601,7 +601,7 @@ const TourPage = () => {
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-[10px] xs:text-xs md:text-sm uppercase tracking-[0.25em] xs:tracking-[0.35em] max-w-2xl mx-auto leading-relaxed text-[var(--subtitle-color,#F4F6F0)] opacity-90 px-2"
+            className="text-xs md:text-sm uppercase tracking-[0.25em] xs:tracking-[0.35em] max-w-2xl mx-auto leading-relaxed text-[var(--subtitle-color,#F4F6F0)] opacity-90 px-2"
           >
             {pageSubtitle}
           </motion.p>
@@ -609,7 +609,7 @@ const TourPage = () => {
       </ThemedSection>
 
       {/* ─── Main Reservation Section ─── */}
-      <ThemedSection sectionKey="seating_map" className="max-w-[1600px] mx-auto px-2 xs:px-4 sm:px-6 lg:px-10 relative z-30">
+      <ThemedSection sectionKey="seating_map" className="max-w-[100rem] mx-auto px-2 xs:px-4 sm:px-6 lg:px-10 relative z-30">
         <TourTimeline
           events={events}
           onEventSelect={(event) => {
@@ -743,25 +743,25 @@ const TourPage = () => {
                               <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
                             </span>
                           </div>
-                          <span className="text-[9px] tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
+                          <span className="text-xs tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
                             Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
                           </span>
                         </div>
 
                         {isLoading ? (
-                          <div className="h-[480px] lg:h-[580px] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
+                          <div className="h-[30rem] lg:h-[36.25rem] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
                             <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
                             <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
                           </div>
                         ) : (
                           <div className={cn(
-                            "h-[400px] xs:h-[480px] lg:h-[580px] relative w-full overflow-hidden",
+                            "h-[25rem] xs:h-[30rem] lg:h-[36.25rem] relative w-full overflow-hidden",
                             isCurrentEventPast && "pointer-events-none opacity-85"
                           )}>
                             {isCurrentEventPast && (
                               <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
                                 <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
-                                  <p className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
+                                  <p className="text-xs font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
                                   <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
                                 </div>
                               </div>
@@ -1414,8 +1414,8 @@ const TourPage = () => {
 
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="w-full py-4.5 rounded-2xl text-xs font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950 shadow-xl shadow-amber-500/20 disabled:opacity-40 transition-all flex items-center justify-center gap-2.5 hover:scale-[1.01] active:scale-95"
+                    disabled={isSubmitting || checkoutSuccess}
+                    className="w-full py-4.5 rounded-2xl text-xs font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950 shadow-xl shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2.5 hover:scale-[1.01] active:scale-95"
                   >
                     <ShieldCheck size={18} className="shrink-0" />
                     {isSubmitting
@@ -1425,7 +1425,7 @@ const TourPage = () => {
                         : 'Confirmar y Pagar Boletos'
                       )
                     }
-                    {!isSubmitting && <Sparkles size={16} className="shrink-0 animate-pulse" />}
+                    {!isSubmitting ? <Sparkles size={16} className="shrink-0 animate-pulse" /> : null}
                   </button>
                 </form>
               )}

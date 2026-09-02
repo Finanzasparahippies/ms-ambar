@@ -489,8 +489,12 @@ class SESIdentityVerificationViewSet(viewsets.ModelViewSet):
         if message_type == 'SubscriptionConfirmation':
             subscribe_url = data.get('SubscribeURL')
             if subscribe_url:
-                requests.get(subscribe_url)
-                logger.info("SNS Subscription confirmed successfully.")
+                try:
+                    requests.get(subscribe_url, timeout=5.0)
+                    logger.info("SNS Subscription confirmed successfully.")
+                except requests.exceptions.RequestException as e:
+                    logger.warning(f"Failed to confirm SNS subscription: {e}")
+                    return Response("Failed to confirm subscription", status=status.HTTP_502_BAD_GATEWAY)
                 return Response("Subscribed", status=status.HTTP_200_OK)
 
         # 2. Process delivery notification

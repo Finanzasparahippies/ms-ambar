@@ -33,6 +33,32 @@ module.exports = {
           muted: 'var(--background-end, #040605)',
         }
       },
+      // Escala Tipográfica Estricta en rem (1rem = 16px base)
+      fontSize: {
+        'xs':   ['0.75rem',  { lineHeight: '1rem' }],     // 12px / 16px
+        'sm':   ['0.875rem', { lineHeight: '1.25rem' }],  // 14px / 20px
+        'base': ['1rem',     { lineHeight: '1.5rem' }],   // 16px / 24px
+        'lg':   ['1.125rem', { lineHeight: '1.75rem' }],  // 18px / 28px
+        'xl':   ['1.25rem',  { lineHeight: '1.75rem' }],  // 20px / 28px
+        '2xl':  ['1.5rem',   { lineHeight: '2rem' }],     // 24px / 32px
+        '3xl':  ['1.875rem', { lineHeight: '2.25rem' }],  // 30px / 36px
+        '4xl':  ['2.25rem',  { lineHeight: '2.5rem' }],   // 36px / 40px
+      },
+      // Micro-UI en px (bordes y divisores estrictos)
+      borderWidth: {
+        DEFAULT: '1px',
+        '0': '0',
+        '1': '1px',
+        '2': '2px',
+      },
+      // Contenedores estructurales en rem
+      maxWidth: {
+        'prose': '65ch',
+        'screen-sm': '40rem',   // 640px
+        'screen-md': '48rem',   // 768px
+        'screen-lg': '64rem',   // 1024px
+        'screen-xl': '80rem',   // 1280px
+      }
     },
   },
   plugins: [],

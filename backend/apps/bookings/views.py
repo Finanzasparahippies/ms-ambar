@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import transaction
 from .models import BookingInquiry, BookingContract
 from .serializers import BookingInquirySerializer, BookingContractSerializer
 from .utils import generate_booking_contract_pdf, send_booking_contract_emails
@@ -18,13 +19,14 @@ class BookingInquiryViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]
 
     def perform_create(self, serializer):
-        inquiry = serializer.save()
-        
-        # Automatically generate a booking contract proposal with a base fee (e.g. 25,000.00 MXN)
-        contract = BookingContract.objects.create(
-            inquiry=inquiry,
-            fee=25000.00
-        )
+        with transaction.atomic():
+            inquiry = serializer.save()
+            
+            # Automatically generate a booking contract proposal with a base fee (e.g. 25,000.00 MXN)
+            contract = BookingContract.objects.create(
+                inquiry=inquiry,
+                fee=25000.00
+            )
         
         # Generate proposal PDF and send out emails
         if generate_booking_contract_pdf(contract):

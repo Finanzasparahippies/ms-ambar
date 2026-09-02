@@ -472,31 +472,32 @@ class ShopCheckoutView(APIView):
         shipping_provider_name = data.get('shipping_provider', '')
 
         # 2. Registrar la orden en estado 'pending' con persistencia exacta de tarifas
-        order = Order.objects.create(
-            user_email=email,
-            status='pending',
-            total_amount=total_amount,
-            full_name=full_name,
-            phone=phone,
-            street_and_number=street_and_number,
-            suburb=suburb,
-            city=city,
-            state=state,
-            postal_code=postal_code,
-            country=country,
-            selected_rate_id=shipping_rate_id,
-            shipping_cost=shipping_amount,
-            shipping_provider=shipping_provider_name
-        )
-
-        # Enlazar los artículos de la orden
-        for item_data in order_items_to_prepare:
-            OrderItem.objects.create(
-                order=order,
-                product=item_data['product'],
-                quantity=item_data['quantity'],
-                price=item_data['price']
+        with transaction.atomic():
+            order = Order.objects.create(
+                user_email=email,
+                status='pending',
+                total_amount=total_amount,
+                full_name=full_name,
+                phone=phone,
+                street_and_number=street_and_number,
+                suburb=suburb,
+                city=city,
+                state=state,
+                postal_code=postal_code,
+                country=country,
+                selected_rate_id=shipping_rate_id,
+                shipping_cost=shipping_amount,
+                shipping_provider=shipping_provider_name
             )
+
+            # Enlazar los artículos de la orden
+            for item_data in order_items_to_prepare:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item_data['product'],
+                    quantity=item_data['quantity'],
+                    price=item_data['price']
+                )
 
         # 3. Construir la pasarela de Stripe Checkout
         if not getattr(settings, "STRIPE_SECRET_KEY", None) or settings.STRIPE_SECRET_KEY == "mock_key" or getattr(settings, "TESTING", False):

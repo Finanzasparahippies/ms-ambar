@@ -192,7 +192,7 @@ const BookingSignaturePage = () => {
   if (loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#06070b] text-white">
       <div className="w-12 h-12 border-4 border-amber-honey border-t-transparent rounded-full animate-spin mb-4"></div>
-      <p className="text-amber-honey font-black text-[10px] uppercase tracking-widest animate-pulse">Cargando Contrato Artístico...</p>
+      <p className="text-amber-honey font-black text-xs uppercase tracking-widest animate-pulse">Cargando Contrato Artístico...</p>
     </div>
   );
 
@@ -202,7 +202,7 @@ const BookingSignaturePage = () => {
         <AlertTriangle size={32} />
         <p className="font-bold text-sm uppercase tracking-wide">{error}</p>
       </div>
-      <Link href="/contacto" className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey hover:underline flex items-center gap-2">
+      <Link href="/contacto" className="text-xs font-black uppercase tracking-[0.3em] text-amber-honey hover:underline flex items-center gap-2">
         <ArrowLeft size={12} /> Regresar a Solicitudes
       </Link>
     </div>
@@ -222,7 +222,7 @@ const BookingSignaturePage = () => {
           : 'Tu firma fue recibida con éxito. Representación técnica revisará y cerrará el acuerdo a la brevedad.'
         }
       </p>
-      <p className="text-amber-honey font-black uppercase tracking-widest text-[9px] mt-8 animate-pulse">
+      <p className="text-amber-honey font-black uppercase tracking-widest text-xs mt-8 animate-pulse">
         Redirigiendo...
       </p>
     </div>
@@ -248,7 +248,7 @@ const BookingSignaturePage = () => {
             <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase bg-gradient-to-r from-white via-white to-white/60 bg-clip-text text-transparent">
               Acuerdo de <span className="text-amber-honey italic">Presentación</span>
             </h1>
-            <p className="text-white/40 text-[9px] uppercase tracking-[0.3em] font-black mt-2">
+            <p className="text-white/40 text-xs uppercase tracking-[0.3em] font-black mt-2">
               Ms Ambar • Contrato de Booking #{contract.id}
             </p>
           </div>
@@ -259,33 +259,33 @@ const BookingSignaturePage = () => {
           <div className="absolute top-0 right-0 w-40 h-40 bg-amber-honey/5 rounded-full blur-3xl pointer-events-none" />
 
           <div className="space-y-6 border-r border-white/5 pr-8">
-            <h3 className="text-amber-honey font-black uppercase text-[10px] tracking-[0.2em]">Especificaciones</h3>
+            <h3 className="text-amber-honey font-black uppercase text-xs tracking-[0.2em]">Especificaciones</h3>
 
             <div className="space-y-1">
-              <p className="text-[8px] text-white/40 uppercase font-black tracking-widest">Organizador / Empresa</p>
+              <p className="text-xs text-white/40 uppercase font-black tracking-widest">Organizador / Empresa</p>
               <p className="text-lg font-black">{inquiry.name} {inquiry.company ? `(${inquiry.company})` : ''}</p>
             </div>
 
             <div className="space-y-1">
-              <p className="text-[8px] text-white/40 uppercase font-black tracking-widest">Foro / Venue</p>
+              <p className="text-xs text-white/40 uppercase font-black tracking-widest">Foro / Venue</p>
               <p className="text-lg font-black text-amber-honey capitalize">{inquiry.venue_type === 'festival' ? 'Festival' : inquiry.venue_type === 'theater' ? 'Teatro' : inquiry.venue_type === 'club' ? 'Club' : inquiry.venue_type === 'private' ? 'Evento Privado' : 'Otro'}</p>
             </div>
 
             <div className="space-y-1">
-              <p className="text-[8px] text-white/40 uppercase font-black tracking-widest">Fecha Convenida</p>
+              <p className="text-xs text-white/40 uppercase font-black tracking-widest">Fecha Convenida</p>
               <p className="text-base font-bold flex items-center gap-2"><Calendar size={14} className="text-amber-honey" /> {dateStr}</p>
             </div>
           </div>
 
           <div className="space-y-6 flex flex-col justify-between">
             <div>
-              <h3 className="text-amber-honey font-black uppercase text-[10px] tracking-[0.2em] mb-4">Honorarios Propuestos</h3>
+              <h3 className="text-amber-honey font-black uppercase text-xs tracking-[0.2em] mb-4">Honorarios Propuestos</h3>
               <p className="text-4xl font-black text-white">${parseFloat(contract.fee).toLocaleString('es-MX', { minimumFractionDigits: 2 })} <span className="text-xs text-white/40 font-bold">MXN</span></p>
-              <p className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-2">Esquema 50/50 base (anticipo y liquidación)</p>
+              <p className="text-xs text-white/40 font-bold uppercase tracking-widest mt-2">Esquema 50/50 base (anticipo y liquidación)</p>
             </div>
 
             <div className="border-t border-white/5 pt-4">
-              <p className="text-[8px] text-white/40 uppercase font-black tracking-widest mb-1">Contacto del Promotor</p>
+              <p className="text-xs text-white/40 uppercase font-black tracking-widest mb-1">Contacto del Promotor</p>
               <p className="text-xs text-white/70 font-semibold">{inquiry.email}</p>
               <p className="text-xs text-white/70 font-semibold">{inquiry.phone}</p>
             </div>
@@ -294,7 +294,7 @@ const BookingSignaturePage = () => {
 
         {/* Clauses Summary */}
         <div className="bg-white/[0.01] border border-white/5 rounded-[2.5rem] p-8 mb-12 space-y-6">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Cláusulas de Cumplimiento</h3>
+          <h3 className="text-xs font-black uppercase tracking-[0.2em] text-white/40">Cláusulas de Cumplimiento</h3>
           <ul className="space-y-4 text-xs text-white/60 leading-relaxed list-decimal pl-4">
             <li><strong>Show en Vivo:</strong> Presentación artística con set en vivo de 90 minutos de duración.</li>
             <li><strong>Rider Técnico:</strong> El promotor se obliga a suministrar el equipo de audio e iluminación según los requerimientos del rider.</li>
@@ -309,7 +309,7 @@ const BookingSignaturePage = () => {
             <h2 className="text-2xl font-black uppercase tracking-tight">
               {isManager ? 'Firma de Management (Ms Ambar)' : 'Firma Digital de Aceptación'}
             </h2>
-            <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest mt-1">
+            <p className="text-xs text-white/40 font-bold uppercase tracking-widest mt-1">
               {isManager
                 ? 'Estampa la firma digital autorizada para cerrar el contrato'
                 : 'Usa tu cursor, trackpad o pantalla táctil para dibujar tu firma sobre el lienzo'
@@ -333,7 +333,7 @@ const BookingSignaturePage = () => {
 
               {/* Background Guide Line */}
               <div className="absolute left-10 right-10 bottom-16 border-b border-dashed border-white/10 pointer-events-none" />
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-black uppercase tracking-widest opacity-25 flex items-center gap-1.5 pointer-events-none select-none">
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-xs font-black uppercase tracking-widest opacity-25 flex items-center gap-1.5 pointer-events-none select-none">
                 <PenTool size={10} /> Área de Firma
               </div>
             </div>
@@ -341,15 +341,18 @@ const BookingSignaturePage = () => {
 
           <div className="flex flex-col md:flex-row gap-4 justify-center pt-4">
             <button
+              type="button"
               onClick={clearCanvas}
-              className="px-8 py-4 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all active:scale-95 flex items-center gap-2"
+              disabled={saving || success}
+              className="px-8 py-4 bg-white/5 border border-white/10 rounded-full text-xs font-black uppercase tracking-widest hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
               Limpiar Lienzo
             </button>
             <button
+              type="button"
               onClick={handleSignSubmit}
-              disabled={saving || !hasSigned}
-              className="px-12 py-4 bg-amber-honey text-nature-night rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:scale-100 disabled:hover:scale-100 flex items-center gap-2"
+              disabled={saving || success || !hasSigned}
+              className="px-12 py-4 bg-amber-honey text-nature-night rounded-full text-xs font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:scale-100 disabled:hover:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {saving ? 'Cerrando Contrato...' : isManager ? 'Cerrar y Certificar Contrato' : 'Firmar Contrato y Reservar'}
             </button>

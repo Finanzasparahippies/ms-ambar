@@ -25,6 +25,7 @@ import ThemedSection from '../components/ThemedSection';
 import { useSectionTheme } from '../context/EventThemeContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const SKELETON_CARD_HEIGHTS = ['26.25rem', '18.75rem'] as const;
 
 interface GalleryItem {
   id: number;
@@ -542,7 +543,7 @@ export default function GalleryPage() {
               <div
                 key={i}
                 className="break-inside-avoid mb-6 w-full rounded-[2.5rem] bg-nature-night/40 border border-white/5 animate-pulse flex flex-col justify-end p-8"
-                style={{ height: i % 2 === 0 ? '420px' : '300px' }}
+                style={{ height: SKELETON_CARD_HEIGHTS[i % 2] }}
               >
                 <div className="w-1/3 h-4 bg-white/10 rounded-full mb-3" />
                 <div className="w-2/3 h-7 bg-white/10 rounded-full mb-2" />
@@ -1024,7 +1025,7 @@ export default function GalleryPage() {
                 {/* Progress bar */}
                 {uploadLoading && uploadSource === 'cloudinary' && (
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-amber-400">
                       <span>Subiendo a Cloudinary...</span>
                       <span>{uploadProgress}%</span>
                     </div>
