@@ -468,19 +468,61 @@ class SkydropxClient:
 
         return get_fallback_rates()
 
-    def create_shipment_from_rate(self, rate_id: str, printing_format: str = "standard") -> Optional[Dict[str, Any]]:
+    def create_shipment_from_rate(
+        self, 
+        rate_id: str, 
+        address_from: Optional[dict] = None,
+        address_to: Optional[dict] = None,
+        printing_format: str = "standard"
+    ) -> Optional[Dict[str, Any]]:
         """
         POST /api/v1/shipments: Crea el envío a partir del rate_id y descuenta el costo de la guía de los créditos de Skydropx.
+        Requiere rate_id, address_from, address_to y packages.
         """
         if not self.is_configured or not rate_id:
             return None
+
+        origin = address_from or get_origin_address()
+        dest = address_to or {}
+
+        from_payload = {
+            "name": origin.get("name") or "Almacén Oficial Ms Ambar",
+            "company": origin.get("company") or "Ms Ambar",
+            "phone": str(origin.get("phone") or "6622140000")[:10],
+            "email": origin.get("email") or getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com"),
+            "street1": origin.get("street") or origin.get("street1") or "Blvd. Kino 456",
+            "reference": origin.get("reference") or "Almacén Principal Ms Ambar",
+            "tax_id_number": origin.get("tax_id_number") or "XAXX010101000"
+        }
+
+        to_payload = {
+            "name": dest.get("name") or dest.get("full_name") or "Cliente Ms Ambar",
+            "company": dest.get("company") or "Particular",
+            "phone": str(dest.get("phone") or "6620000000")[:10],
+            "email": dest.get("email") or dest.get("user_email") or "cliente@msambar.com",
+            "street1": dest.get("street") or dest.get("street1") or dest.get("street_and_number") or "Domicilio Conocido",
+            "reference": dest.get("reference") or f"Col. {dest.get('suburb', 'Centro')}".strip() or "Entrega a domicilio",
+            "tax_id_number": dest.get("tax_id_number") or "XAXX010101000"
+        }
+
+        packages_payload = [
+            {
+                "package_number": 1,
+                "package_protected": False,
+                "declared_value": 100.0,
+                "consignment_note": "53102400"
+            }
+        ]
 
         payload = {
             "shipment": {
                 "rate_id": rate_id,
                 "printing_format": printing_format,
                 "sync_label_creation": True,
-                "unique_shipment": True
+                "unique_shipment": True,
+                "address_from": from_payload,
+                "address_to": to_payload,
+                "packages": packages_payload
             }
         }
 
@@ -573,7 +615,11 @@ class SkydropxClient:
         valid_rates = [r for r in rates if not r.get("is_fallback") and r.get("id")]
         if valid_rates:
             best_rate = valid_rates[0]
-            return self.create_shipment_from_rate(best_rate["id"])
+            return self.create_shipment_from_rate(
+                best_rate["id"],
+                address_from=origin_address,
+                address_to=destination_address
+            )
 
         return None
 
@@ -908,7 +954,11 @@ def generate_shipping_label(order) -> bool:
     # 1. Intentar emitir directamente con el selected_rate_id si es un UUID real de Skydropx
     if order.selected_rate_id and not order.selected_rate_id.startswith("rate_"):
         logger.info(f"[Logística] Creando envío en Skydropx usando selected_rate_id: {order.selected_rate_id}")
-        shipment_result = client.create_shipment_from_rate(order.selected_rate_id)
+        shipment_result = client.create_shipment_from_rate(
+            order.selected_rate_id,
+            address_from=origin_address,
+            address_to=destination_address
+        )
 
     # 2. Si no había selected_rate_id o falló, crear envío cotizando en vivo
     if not shipment_result:
