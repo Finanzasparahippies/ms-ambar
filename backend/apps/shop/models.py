@@ -164,6 +164,7 @@ class Order(models.Model):
     country = models.CharField(max_length=100, default="", verbose_name="País")
 
     # Datos de la Guía Automatizada y Logística
+    shipping_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del envío en Skydropx")
     selected_rate_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID de tarifa seleccionado en Skydropx")
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Costo de envío cotizado")
     shipping_provider = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: FedEx, DHL")

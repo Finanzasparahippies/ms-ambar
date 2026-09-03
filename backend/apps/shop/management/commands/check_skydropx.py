@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from apps.shop.shipping import SkydropxClient, get_origin_address
+from apps.shop.shipping import SkydropxClient, get_origin_address, SKYDROPX_MIN_BALANCE_ALERT
 import json
 
 class Command(BaseCommand):
@@ -25,11 +25,17 @@ class Command(BaseCommand):
             action='store_true',
             help='Sondea automáticamente todos los gateways y esquemas de autenticación de Skydropx.'
         )
+        parser.add_argument(
+            '--test-shipment',
+            action='store_true',
+            help='Intenta emitir una guía de prueba en vivo/sandbox con la mejor tarifa cotizada para validar el endpoint POST /shipments.'
+        )
 
     def handle(self, *args, **options):
         dest_cp = options['dest_cp']
         target_env = options['env']
         do_probe = options['probe']
+        do_test_shipment = options['test_shipment']
         client = SkydropxClient(environment=target_env)
         origin = get_origin_address()
 
@@ -64,7 +70,15 @@ class Command(BaseCommand):
         self.stdout.write(f"• Código HTTP:           {result['status_code']}")
 
         if result.get("credits_balance"):
-            self.stdout.write(f"• Saldo / Créditos:      {result['credits_balance']}")
+            cred = result["credits_balance"]
+            self.stdout.write(f"• Saldo / Créditos:      {cred}")
+            # Alerta proactiva en consola
+            if isinstance(cred, dict):
+                bal = cred.get("balance") or cred.get("amount") or cred.get("credits")
+                if bal is not None and float(bal) < SKYDROPX_MIN_BALANCE_ALERT:
+                    self.stdout.write(self.style.ERROR(
+                        f"⚠️ ALERTA DE SALDO: Cartera por debajo del umbral mínimo (${bal} < ${SKYDROPX_MIN_BALANCE_ALERT} MXN). Recargar saldo."
+                    ))
 
         if result['success']:
             self.stdout.write(self.style.SUCCESS(f"\n✅ CONEXIÓN EXITOSA CON SKYDROPX PRO ({len(result['carriers_found'])} transportistas encontrados):"))
@@ -72,6 +86,39 @@ class Command(BaseCommand):
                 self.stdout.write(
                     f"   [{idx}] {c['provider']} ({c['service_level_name']}) -> ${c['total_price']} {c['currency']} (Entrega: {c['days']})"
                 )
+
+            # Prueba de emisión de guía si se especificó el flag
+            if do_test_shipment and result['carriers_found']:
+                best_rate = result['carriers_found'][0]
+                self.stdout.write(self.style.NOTICE(
+                    f"\n📦 Probando emisión de guía con tarifa {best_rate['provider']} ({best_rate['id']})..."
+                ))
+                test_dest = {
+                    "name": "Cliente de Prueba Staging",
+                    "phone": "6621234567",
+                    "email": "test-staging@msambar.com",
+                    "street": "Calle Morelos 100",
+                    "suburb": "Centro",
+                    "city": "Hermosillo",
+                    "state": "SO",
+                    "postal_code": dest_cp,
+                    "country": "MX"
+                }
+                shipment_res = client.create_shipment_from_rate(
+                    best_rate["id"],
+                    address_from=origin,
+                    address_to=test_dest
+                )
+                if shipment_res and shipment_res.get("success"):
+                    self.stdout.write(self.style.SUCCESS(
+                        f"🎉 Guía emitida exitosamente: ID {shipment_res['shipment_id']} | "
+                        f"Tracking: {shipment_res['tracking_number']} | URL: {shipment_res.get('label_url')}"
+                    ))
+                else:
+                    self.stdout.write(self.style.ERROR(
+                        f"❌ Error emitiendo guía en Skydropx: {shipment_res}"
+                    ))
+
             self.stdout.write(self.style.SUCCESS("\n🎉 Tu integración con Skydropx Pro está lista, cotizando y apta para emitir guías descontando saldo.\n"))
         else:
             self.stdout.write(self.style.ERROR(f"\n❌ FALLÓ LA COMUNICACIÓN CON SKYDROPX ({result['base_url']}):"))

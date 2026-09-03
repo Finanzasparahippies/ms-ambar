@@ -208,6 +208,77 @@ class ShopAppTests(APITestCase):
         order.refresh_from_db()
         self.assertEqual(order.status, 'delivered')
 
+    def test_skydropx_webhook_monotonic_ordering(self):
+        """Verify out-of-order events (e.g. in_transit arriving after delivered) do not downgrade status."""
+        order = Order.objects.create(
+            user_email='buyer@example.com',
+            status='paid',
+            total_amount=1350.00,
+            full_name='Test Buyer',
+            tracking_number='TRACK-MONOTONIC-123'
+        )
+        url = reverse('skydropx-webhook')
+
+        # 1. Evento entregado llega primero
+        payload_delivered = {
+            'event': 'shipment.delivered',
+            'data': {
+                'tracking_number': 'TRACK-MONOTONIC-123',
+                'attributes': {'status': 'delivered', 'tracking_number': 'TRACK-MONOTONIC-123'}
+            }
+        }
+        res1 = self.client.post(url, payload_delivered, format='json', HTTP_X_SKYDROPX_TOKEN='kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ')
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'delivered')
+
+        # 2. Evento tardío 'in_transit' llega después: Debe ser ignorado por orden monótono
+        payload_delayed = {
+            'event': 'tracking.updated',
+            'data': {
+                'tracking_number': 'TRACK-MONOTONIC-123',
+                'attributes': {'status': 'in_transit', 'tracking_number': 'TRACK-MONOTONIC-123'}
+            }
+        }
+        res2 = self.client.post(url, payload_delayed, format='json', HTTP_X_SKYDROPX_TOKEN='kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        # El estado PERMANECE en 'delivered'
+        self.assertEqual(order.status, 'delivered')
+
+    def test_skydropx_webhook_lookup_by_shipping_id(self):
+        """Verify Skydropx webhook matches order via shipping_id when tracking_number is updated."""
+        order = Order.objects.create(
+            user_email='buyer@example.com',
+            status='paid',
+            total_amount=950.00,
+            full_name='Buyer ShippingID',
+            shipping_id='SHIP-UUID-777'
+        )
+        url = reverse('skydropx-webhook')
+        payload = {
+            'event': 'shipment.in_transit',
+            'data': {
+                'id': 'SHIP-UUID-777',
+                'attributes': {
+                    'status': 'in_transit',
+                    'tracking_number': 'TRACK-REAL-888'
+                }
+            }
+        }
+        response = self.client.post(url, payload, format='json', HTTP_X_SKYDROPX_TOKEN='kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'shipped')
+        self.assertEqual(order.tracking_number, 'TRACK-REAL-888')
+
+    def test_skydropx_wallet_balance_critical_alert(self):
+        """Verify check_wallet_balance_alert triggers an ERROR log when balance is below threshold."""
+        from apps.shop.shipping import check_wallet_balance_alert
+        with self.assertLogs('apps', level='ERROR') as cm:
+            check_wallet_balance_alert(150.0, currency='MXN')
+        self.assertTrue(any('[SKYDROPX_WALLET_CRITICAL]' in record.getMessage() for record in cm.records))
+
     @override_settings(TESTING=False, SKYDROPX_WEBHOOK_SECRET='kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ')
     def test_skydropx_webhook_invalid_token(self):
         """Verify Skydropx webhook rejects requests with invalid token."""

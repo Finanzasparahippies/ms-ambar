@@ -142,6 +142,24 @@ SKYDROPX_OAUTH_URLS = {
 }
 
 
+SKYDROPX_MIN_BALANCE_ALERT = float(getattr(settings, "SKYDROPX_MIN_BALANCE_ALERT", 500.0))
+
+
+def check_wallet_balance_alert(balance_amount: Optional[float], currency: str = "MXN") -> None:
+    """Dispara un log de nivel ERROR proactivo si los créditos bajan del umbral de seguridad."""
+    if balance_amount is not None:
+        try:
+            numeric_balance = float(balance_amount)
+            if numeric_balance < SKYDROPX_MIN_BALANCE_ALERT:
+                logger.error(
+                    f"[SKYDROPX_WALLET_CRITICAL] Saldo en cartera de Skydropx crítico: ${numeric_balance:.2f} {currency} "
+                    f"(umbral de alerta: ${SKYDROPX_MIN_BALANCE_ALERT:.2f} {currency}). "
+                    f"Recargue saldo inmediatamente en https://app.skydropx.com/ para prevenir la acumulación de guías de contingencia."
+                )
+        except (ValueError, TypeError):
+            pass
+
+
 class SkydropxClient:
     """
     Cliente oficial para Skydropx Pro API (Staging & Producción).
@@ -325,6 +343,13 @@ class SkydropxClient:
             if response.status_code in (200, 201):
                 data = response.json()
                 credits_info = data.get("data", data)
+                
+                # Evaluación proactiva de umbral de saldo en cartera
+                if isinstance(credits_info, dict):
+                    balance_val = credits_info.get("balance") or credits_info.get("amount") or credits_info.get("credits")
+                    curr = credits_info.get("currency") or credits_info.get("currency_code", "MXN")
+                    check_wallet_balance_alert(balance_val, currency=curr)
+
                 return {
                     "success": True,
                     "status_code": response.status_code,
@@ -492,9 +517,15 @@ class SkydropxClient:
             "email": origin.get("email") or getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com"),
             "street1": origin.get("street") or origin.get("street1") or "Blvd. Kino 456",
             "reference": origin.get("reference") or "Almacén Principal Ms Ambar",
+            "country_code": "MX",
+            "postal_code": str(origin.get("zip_code") or origin.get("postal_code") or "83150").strip(),
+            "area_level1": normalize_mexican_state(origin.get("state") or "SO"),
+            "area_level2": origin.get("city") or "Hermosillo",
+            "area_level3": origin.get("suburb") or "Pitic",
             "tax_id_number": origin.get("tax_id_number") or "XAXX010101000"
         }
 
+        dest_state = normalize_mexican_state(dest.get("state") or "SO")
         to_payload = {
             "name": dest.get("name") or dest.get("full_name") or "Cliente Ms Ambar",
             "company": dest.get("company") or "Particular",
@@ -502,6 +533,11 @@ class SkydropxClient:
             "email": dest.get("email") or dest.get("user_email") or "cliente@msambar.com",
             "street1": dest.get("street") or dest.get("street1") or dest.get("street_and_number") or "Domicilio Conocido",
             "reference": dest.get("reference") or f"Col. {dest.get('suburb', 'Centro')}".strip() or "Entrega a domicilio",
+            "country_code": "MX",
+            "postal_code": str(dest.get("zip_code") or dest.get("postal_code") or "83000").strip(),
+            "area_level1": dest_state,
+            "area_level2": dest.get("city") or "Hermosillo",
+            "area_level3": dest.get("suburb") or "Centro",
             "tax_id_number": dest.get("tax_id_number") or "XAXX010101000"
         }
 
@@ -514,82 +550,107 @@ class SkydropxClient:
             }
         ]
 
-        payload = {
-            "shipment": {
-                "rate_id": rate_id,
-                "printing_format": printing_format,
-                "sync_label_creation": True,
-                "unique_shipment": True,
-                "address_from": from_payload,
-                "address_to": to_payload,
-                "packages": packages_payload
-            }
+        # 1. Payload de raíz directa (estándar Skydropx Pro)
+        payload_root = {
+            "rate_id": rate_id,
+            "printing_format": printing_format,
+            "sync_label_creation": True,
+            "unique_shipment": True,
+            "address_from": from_payload,
+            "address_to": to_payload,
+            "packages": packages_payload
         }
 
-        try:
-            response = self._request("POST", "shipments", json_data=payload)
-            if response.status_code in (200, 201):
-                data = response.json()
-                shipment_data = data.get("data", {})
-                attributes = shipment_data.get("attributes", {})
-                included = data.get("included", [])
+        # 2. Payload alternativo encapsulado bajo "shipment"
+        payload_wrapped = {
+            "shipment": payload_root
+        }
 
-                shipment_id = shipment_data.get("id") or attributes.get("id")
-                carrier_name = attributes.get("carrier_name", "Paquetería")
-                tracking_number = attributes.get("master_tracking_number")
-                label_url = None
-                tracking_url = None
+        response = None
+        for candidate_payload in [payload_root, payload_wrapped]:
+            try:
+                response = self._request("POST", "shipments", json_data=candidate_payload)
+                if response.status_code in (200, 201):
+                    break
+                elif response.status_code == 402 or (response.status_code == 422 and any(k in response.text.lower() for k in ["balance", "saldo", "insufficient", "fondos"])):
+                    logger.critical(
+                        f"[SKYDROPX_INSUFFICIENT_FUNDS] Cartera de Skydropx sin saldo suficiente para emitir guía (rate_id: {rate_id}). "
+                        f"Respuesta HTTP {response.status_code}: {response.text[:300]}. Recargue inmediatamente para evitar guías de contingencia."
+                    )
+                    break
+            except Exception as e:
+                logger.error(f"[SkydropxClient] Excepción contactando POST /shipments: {e}")
 
-                # Extraer información de tracking y label_url del bloque 'included'
-                for item in included:
-                    item_attr = item.get("attributes", {})
-                    if item_attr.get("label_url"):
-                        label_url = item_attr.get("label_url")
-                    if item_attr.get("tracking_number") and not tracking_number:
-                        tracking_number = item_attr.get("tracking_number")
-                    if item_attr.get("tracking_url_provider"):
-                        tracking_url = item_attr.get("tracking_url_provider")
-
-                # Si label_url aún no está listo de forma síncrona, consultar GET /shipments/{id}
-                if shipment_id and not label_url:
-                    for _ in range(4):
-                        time.sleep(0.5)
-                        get_res = self._request("GET", f"shipments/{shipment_id}")
-                        if get_res.status_code == 200:
-                            get_data = get_res.json()
-                            for item in get_data.get("included", []):
-                                item_attr = item.get("attributes", {})
-                                if item_attr.get("label_url"):
-                                    label_url = item_attr.get("label_url")
-                                if item_attr.get("tracking_number") and not tracking_number:
-                                    tracking_number = item_attr.get("tracking_number")
-                                if item_attr.get("tracking_url_provider"):
-                                    tracking_url = item_attr.get("tracking_url_provider")
-                            if label_url:
-                                break
-
-                # Fallback de tracking URL si no viene dada por el carrier
-                if tracking_number and not tracking_url:
-                    tracking_url = f"https://track.skydropx.com/?q={tracking_number}"
-
-                logger.info(
-                    f"[SkydropxClient] Envío creado con éxito. ID: {shipment_id}, "
-                    f"Carrier: {carrier_name}, Tracking: {tracking_number}, Costo descontado: ${attributes.get('total', 'N/A')}"
-                )
-
-                return {
-                    "success": True,
-                    "shipment_id": shipment_id,
-                    "carrier_name": carrier_name,
-                    "tracking_number": tracking_number,
-                    "tracking_url": tracking_url,
-                    "label_url": label_url,
-                    "total_cost": attributes.get("total"),
-                    "payment_status": attributes.get("payment_status", "paid"),
-                    "raw": data
-                }
-            else:
+        if not response or response.status_code not in (200, 201):
+            if response:
                 logger.error(f"[SkydropxClient] Error creating shipment ({response.status_code}): {response.text[:400]}")
+            return None
+
+        try:
+            data = response.json()
+            shipment_data = data.get("data", {})
+            attributes = shipment_data.get("attributes", {})
+            included = data.get("included", [])
+
+            shipment_id = shipment_data.get("id") or attributes.get("id") or data.get("id")
+            carrier_name = attributes.get("carrier_name") or data.get("carrier_name", "Paquetería")
+            tracking_number = attributes.get("master_tracking_number") or attributes.get("tracking_number") or data.get("tracking_number")
+            label_url = None
+            tracking_url = None
+
+            # Inspección y alerta proactiva de saldo remanente
+            remaining_balance = attributes.get("balance") or data.get("remaining_balance")
+            if remaining_balance is not None:
+                check_wallet_balance_alert(remaining_balance)
+
+            # Extraer información de tracking y label_url del bloque 'included'
+            for item in included:
+                item_attr = item.get("attributes", {})
+                if item_attr.get("label_url"):
+                    label_url = item_attr.get("label_url")
+                if item_attr.get("tracking_number") and not tracking_number:
+                    tracking_number = item_attr.get("tracking_number")
+                if item_attr.get("tracking_url_provider"):
+                    tracking_url = item_attr.get("tracking_url_provider")
+
+            # Si label_url aún no está listo de forma síncrona, consultar GET /shipments/{id}
+            if shipment_id and not label_url:
+                for _ in range(4):
+                    time.sleep(0.5)
+                    get_res = self._request("GET", f"shipments/{shipment_id}")
+                    if get_res.status_code == 200:
+                        get_data = get_res.json()
+                        for item in get_data.get("included", []):
+                            item_attr = item.get("attributes", {})
+                            if item_attr.get("label_url"):
+                                label_url = item_attr.get("label_url")
+                            if item_attr.get("tracking_number") and not tracking_number:
+                                tracking_number = item_attr.get("tracking_number")
+                            if item_attr.get("tracking_url_provider"):
+                                tracking_url = item_attr.get("tracking_url_provider")
+                        if label_url:
+                            break
+
+            # Fallback de tracking URL si no viene dada por el carrier
+            if tracking_number and not tracking_url:
+                tracking_url = f"https://track.skydropx.com/?q={tracking_number}"
+
+            logger.info(
+                f"[SkydropxClient] Envío creado con éxito. ID: {shipment_id}, "
+                f"Carrier: {carrier_name}, Tracking: {tracking_number}, Costo descontado: ${attributes.get('total', 'N/A')}"
+            )
+
+            return {
+                "success": True,
+                "shipment_id": shipment_id,
+                "carrier_name": carrier_name,
+                "tracking_number": tracking_number,
+                "tracking_url": tracking_url,
+                "label_url": label_url,
+                "total_cost": attributes.get("total"),
+                "payment_status": attributes.get("payment_status", "paid"),
+                "raw": data
+            }
         except Exception as e:
             logger.error(f"[SkydropxClient] Exception in create_shipment_from_rate: {e}")
 
@@ -930,12 +991,17 @@ def generate_shipping_label(order) -> bool:
     destination_address = {
         "name": order.full_name,
         "phone": order.phone or "6620000000",
+        "email": order.user_email or "cliente@msambar.com",
         "street": order.street_and_number,
+        "street1": order.street_and_number,
+        "street_and_number": order.street_and_number,
         "suburb": order.suburb or "Centro",
-        "city": order.city or "Ciudad",
-        "state": normalize_mexican_state(order.state),
+        "city": order.city or "Hermosillo",
+        "state": normalize_mexican_state(order.state or "SO"),
         "zip_code": order.postal_code or "83000",
-        "country": "MX"
+        "postal_code": order.postal_code or "83000",
+        "country": "MX",
+        "country_code": "MX"
     }
 
     # Modo Mock / Testing directo
@@ -967,6 +1033,7 @@ def generate_shipping_label(order) -> bool:
 
     # 3. Si Skydropx emitió la guía y descontó el costo con éxito
     if shipment_result and shipment_result.get("success"):
+        order.shipping_id = str(shipment_result.get("shipment_id") or "")
         order.tracking_number = shipment_result.get("tracking_number") or f"TRACK-AMBAR-{order.id}MX"
         order.tracking_url = shipment_result.get("tracking_url") or f"https://track.skydropx.com/?q={order.tracking_number}"
         order.shipping_provider = shipment_result.get("carrier_name") or order.shipping_provider

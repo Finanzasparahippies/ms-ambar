@@ -5,6 +5,7 @@ from pathlib import Path
 from django.conf import settings
 from django.http import HttpResponse
 from django.db import transaction
+from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
@@ -703,18 +704,30 @@ class ShopCheckoutView(APIView):
             return Response({"error": "No se pudo procesar la pasarela de pago."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# Jerarquía monótona de ciclo de vida de paquetería y pedidos
+ORDER_SHIPPING_STATUS_RANK = {
+    'pending': 10,
+    'paid': 20,
+    'shipped': 30,
+    'in_transit': 30,
+    'out_for_delivery': 35,
+    'delivered': 40,
+    'cancelled': 99,
+}
+
+
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def skydropx_webhook(request):
     """
     Webhook oficial para recibir notificaciones de Skydropx sobre el ciclo de vida del paquete.
-    Valida token/firma secreta configurada en el dashboard de Skydropx.
-    Eventos soportados:
-    - shipment.created / label.created
-    - tracking.updated (en tránsito, entrega estimada)
-    - shipment.delivered (entregado exitosamente)
-    - shipment.cancelled / label.voided
+    Implementa:
+    1. Autenticación por token o firma HMAC (SKYDROPX_WEBHOOK_SECRET).
+    2. Identificación dual por tracking_number o shipping_id.
+    3. Validación monótona de estados: previene que eventos asíncronos tardíos/desordenados
+       (ej. in_transit posterior a delivered) degraden o sobreescriban estados terminales.
+    4. Idempotencia ante reenvíos de la misma notificación.
     """
     secret = getattr(settings, 'SKYDROPX_WEBHOOK_SECRET', '') or os.environ.get('SKYDROPX_WEBHOOK_SECRET', '')
     
@@ -742,26 +755,89 @@ def skydropx_webhook(request):
 
     try:
         payload = request.data if isinstance(request.data, dict) else json.loads(request.body.decode('utf-8'))
-        event_type = payload.get('event') or payload.get('type') or payload.get('status')
+        event_type = payload.get('event') or payload.get('type') or payload.get('status') or ""
         data = payload.get('data', payload)
         attributes = data.get('attributes', data) if isinstance(data, dict) else {}
-        tracking_number = attributes.get('tracking_number') or (data.get('tracking_number') if isinstance(data, dict) else None)
         
-        logger.info(f"[Skydropx Webhook] Evento recibido: {event_type}, Tracking: {tracking_number}")
+        tracking_number = (
+            attributes.get('tracking_number') or 
+            attributes.get('master_tracking_number') or
+            (data.get('tracking_number') if isinstance(data, dict) else None) or 
+            payload.get('tracking_number')
+        )
+        shipment_id = str(
+            (data.get('id') if isinstance(data, dict) else None) or 
+            attributes.get('id') or 
+            payload.get('shipment_id') or 
+            payload.get('id') or 
+            ""
+        ).strip()
+        
+        logger.info(f"[Skydropx Webhook] Evento: '{event_type}', Tracking: '{tracking_number}', ShipmentID: '{shipment_id}'")
 
+        if not tracking_number and not shipment_id:
+            logger.warning(f"[Skydropx Webhook] Payload omitido: No se detectó tracking_number ni shipment_id. Payload: {str(payload)[:200]}")
+            return HttpResponse("Webhook recibido (sin identificador de envío)", status=200)
+
+        # Búsqueda resiliente por tracking_number o shipping_id
+        lookup = Q()
         if tracking_number:
-            order = Order.objects.filter(tracking_number=tracking_number).first()
-            if order:
-                status_str = str(event_type).lower()
-                if 'delivered' in status_str or 'entregado' in status_str:
-                    order.status = 'delivered'
-                    order.save(update_fields=['status'])
-                    logger.info(f"[Skydropx Webhook] Pedido #{order.id} marcado como 'delivered'.")
-                elif 'transit' in status_str or 'en_transito' in status_str or 'in_transit' in status_str:
-                    if order.status != 'delivered':
-                        order.status = 'shipped'
-                        order.save(update_fields=['status'])
-                        logger.info(f"[Skydropx Webhook] Pedido #{order.id} marcado como 'shipped'.")
+            lookup |= Q(tracking_number=tracking_number)
+        if shipment_id:
+            lookup |= Q(shipping_id=shipment_id)
+
+        order = Order.objects.filter(lookup).first()
+        if not order:
+            logger.warning(f"[Skydropx Webhook] Ninguna orden encontrada para Tracking '{tracking_number}' / Shipment '{shipment_id}'.")
+            return HttpResponse("Webhook recibido (orden no encontrada)", status=200)
+
+        # Mapeo de evento entrante al estado canónico del sistema
+        combined_status = f"{str(event_type).lower()} {str(attributes.get('status') or data.get('status') or '').lower()}".strip()
+        target_status = None
+
+        if any(k in combined_status for k in ['delivered', 'entregado']):
+            target_status = 'delivered'
+        elif any(k in combined_status for k in ['in_transit', 'transit', 'en_transito', 'en_camino', 'out_for_delivery', 'shipped', 'recoleccion']):
+            target_status = 'shipped'
+        elif any(k in combined_status for k in ['cancelled', 'cancelado', 'voided']):
+            target_status = 'cancelled'
+
+        if not target_status:
+            logger.info(f"[Skydropx Webhook] Evento '{event_type}' no requiere cambio de estado en Pedido #{order.id}.")
+            return HttpResponse("Webhook recibido con éxito", status=200)
+
+        # Validación monótona: Previene que eventos desordenados o tardíos reviertan estados avanzados
+        current_rank = ORDER_SHIPPING_STATUS_RANK.get(order.status, 0)
+        target_rank = ORDER_SHIPPING_STATUS_RANK.get(target_status, 0)
+
+        # Protección absoluta de estados terminales
+        if order.status in ('delivered', 'cancelled') and target_status != order.status:
+            logger.warning(
+                f"[Skydropx Webhook] Evento desfasado '{event_type}' descartado para Pedido #{order.id}: "
+                f"El pedido ya se encuentra en estado terminal '{order.status}' (rank {current_rank})."
+            )
+            return HttpResponse("Evento recibido (estado terminal protegido)", status=200)
+
+        # Si el rango objetivo es menor o igual al actual, es un evento retrasado o repetido
+        if target_rank <= current_rank:
+            logger.info(
+                f"[Skydropx Webhook] Evento tardío o redundante '{event_type}' ignorado para Pedido #{order.id}: "
+                f"Estado actual '{order.status}' (rank {current_rank}) >= objetivo '{target_status}' (rank {target_rank})."
+            )
+            return HttpResponse("Evento recibido (sin cambios por orden monótono)", status=200)
+
+        # Aplicación atómica del nuevo estado ascendente
+        order.status = target_status
+        update_fields = ['status']
+        if not order.tracking_number and tracking_number:
+            order.tracking_number = tracking_number
+            update_fields.append('tracking_number')
+        if not order.shipping_id and shipment_id:
+            order.shipping_id = shipment_id
+            update_fields.append('shipping_id')
+
+        order.save(update_fields=update_fields)
+        logger.info(f"[Skydropx Webhook] ✅ Pedido #{order.id} actualizado monótonamente a '{target_status}' (rank {target_rank}).")
 
         return HttpResponse("Webhook recibido con éxito", status=200)
     except Exception as e:
