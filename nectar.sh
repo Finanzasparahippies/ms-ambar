@@ -197,6 +197,9 @@ show_help() {
     echo "  shell-staging           - Open backend python shell in staging"
     echo "  collectstatic-staging   - Compile static assets in staging"
     echo "  test-staging            - Run backend tests (Staging)"
+    echo "  manage-staging          - Run arbitrary manage.py command in staging (e.g. check_skydropx)"
+    echo "  check-skydropx-staging  - Run Skydropx connectivity diagnostics in staging"
+    echo "  reconcile-shipping-staging - Run shipping reconciliation in staging"
     echo "  pycheck-staging         - Run Python syntax check (Staging)"
     echo "  test-frontend-staging   - Run Jest unit tests in Staging frontend"
     echo "  typecheck-staging       - Run TypeScript type-check in Staging frontend"
@@ -388,6 +391,24 @@ case $COMMAND in
         ;;
     test-staging)
         run_django_cmd_staging test "$@"
+        ;;
+    manage-staging)
+        run_django_cmd_staging "$@"
+        ;;
+    check_skydropx-staging|check-skydropx-staging)
+        run_django_cmd_staging check_skydropx "$@"
+        ;;
+    reconcile_shipping-staging|reconcile-shipping-staging)
+        run_django_cmd_staging reconcile_shipping "$@"
+        ;;
+    manage|manage-dev)
+        run_django_cmd_dev "$@"
+        ;;
+    check_skydropx|check-skydropx)
+        run_django_cmd_dev check_skydropx "$@"
+        ;;
+    reconcile_shipping|reconcile-shipping)
+        run_django_cmd_dev reconcile_shipping "$@"
         ;;
     test-frontend-staging)
         echo "Running Jest unit tests in Staging Frontend..."

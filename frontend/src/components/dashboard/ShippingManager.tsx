@@ -703,7 +703,9 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                       </td>
                       <td className="p-4">
                         <span className="text-amber-honey font-bold uppercase">{ev.event_type}</span>
-                        <span className="block text-[10px] text-[#F4F6F0]/40">{ev.endpoint}</span>
+                        <span className="block text-[10px] text-[#F4F6F0]/40">
+                          {ev.shipment_id ? `Envío: ${ev.shipment_id}` : (ev.idempotency_key ? `Key: ${ev.idempotency_key}` : 'Direct API')}
+                        </span>
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
