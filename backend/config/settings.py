@@ -475,7 +475,11 @@ SKYDROPX_ENVIRONMENT = env("SKYDROPX_ENVIRONMENT", default="staging")
 SKYDROPX_API_KEY = env("SKYDROPX_API_KEY", default=env("NECTAR_LABS_SKYDROPX_API_KEY", default=env("AMBAR_OWN_SKYDROPX_KEY", default="")))
 SKYDROPX_API_SECRET = env("SKYDROPX_API_SECRET", default=env("NECTAR_LABS_SKYDROPX_API_SECRET", default=""))
 SKYDROPX_WEBHOOK_SECRET = env("SKYDROPX_WEBHOOK_SECRET", default=env("NECTAR_LABS_SKYDROPX_WEBHOOK_SECRET", default="kPxZv17KoHJYNGZgsIxRFHWFw50knp0YdGlD6hmpgGQ"))
+SKYDROPX_AUTO_ADVANCE = env.bool("SKYDROPX_AUTO_ADVANCE", default=False)
 
+if ENVIRONMENT.lower() in ["production", "prod"] and SKYDROPX_AUTO_ADVANCE:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured("CRITICAL SECURITY: SKYDROPX_AUTO_ADVANCE no puede estar habilitado en entorno de producción.")
 
 # Resolución inteligente de endpoint Skydropx Pro (Staging / Producción)
 DEFAULT_SKYDROPX_URL = (
@@ -485,7 +489,6 @@ DEFAULT_SKYDROPX_URL = (
 )
 SKYDROPX_API_URL = env("SKYDROPX_API_URL", default=DEFAULT_SKYDROPX_URL)
 
-
 SHIPPING_ORIGIN_NAME = env("SHIPPING_ORIGIN_NAME", default="Almacén Oficial Ms Ambar")
 SHIPPING_ORIGIN_PHONE = env("SHIPPING_ORIGIN_PHONE", default="6622140000")
 SHIPPING_ORIGIN_STREET = env("SHIPPING_ORIGIN_STREET", default="Blvd. Kino 456")
@@ -493,6 +496,7 @@ SHIPPING_ORIGIN_SUBURB = env("SHIPPING_ORIGIN_SUBURB", default="Pitic")
 SHIPPING_ORIGIN_CITY = env("SHIPPING_ORIGIN_CITY", default="Hermosillo")
 SHIPPING_ORIGIN_STATE = env("SHIPPING_ORIGIN_STATE", default="SO")
 SHIPPING_ORIGIN_POSTAL_CODE = env("SHIPPING_ORIGIN_POSTAL_CODE", default="83150")
+
 
 
 

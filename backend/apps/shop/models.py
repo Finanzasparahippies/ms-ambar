@@ -164,11 +164,50 @@ class Order(models.Model):
     country = models.CharField(max_length=100, default="", verbose_name="País")
 
     # Datos de la Guía Automatizada y Logística
-    shipping_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del envío en Skydropx")
+    SHIPPING_STATUS_CHOICES = [
+        ('pending', 'Pendiente'),
+        ('requested', 'Solicitado'),
+        ('processing', 'Procesando (HTTP 202)'),
+        ('created', 'Creado (Tracking Asignado)'),
+        ('label_pending', 'Guía Pendiente de Render'),
+        ('completed', 'Completado (Guía Lista)'),
+        ('failed', 'Fallido'),
+        ('reconciliation_required', 'Requiere Reconciliación'),
+        ('cancelled', 'Cancelado'),
+    ]
+
+    shipping_status = models.CharField(
+        max_length=30, 
+        choices=SHIPPING_STATUS_CHOICES, 
+        default='pending',
+        db_index=True,
+        help_text="Estado granular de emisión y ciclo de vida de la guía en Skydropx"
+    )
+    shipping_attempt_id = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        db_index=True,
+        help_text="Clave de idempotencia y correlación única para el intento de emisión"
+    )
+    skydropx_shipment_id = models.CharField(
+        max_length=255, 
+        blank=True, 
+        null=True, 
+        db_index=True,
+        help_text="ID oficial del shipment en Skydropx"
+    )
+    shipping_error = models.TextField(
+        blank=True, 
+        null=True,
+        help_text="Detalle del último error o advertencia logística"
+    )
+
+    shipping_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del envío en Skydropx (compatibilidad)")
     selected_rate_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID de tarifa seleccionado en Skydropx")
     shipping_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Costo de envío cotizado")
     shipping_provider = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: FedEx, DHL")
-    tracking_number = models.CharField(max_length=100, blank=True, null=True)
+    tracking_number = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     tracking_url = models.URLField(max_length=500, blank=True, null=True)
     shipping_label_pdf = models.URLField(max_length=500, blank=True, null=True)
 
@@ -207,3 +246,121 @@ class StripeEvent(models.Model):
 
     def __str__(self):
         return self.event_id
+
+
+class ShopShippingConfig(models.Model):
+    """
+    Configuración global de logística para la tienda Ms Ambar (Patrón Singleton).
+    Permite seleccionar el método de despacho desde el Django Admin y el Dashboard del frontend.
+    """
+    METHOD_CHOICES = [
+        ('quotation', 'Cotización en Tiempo Real (Multi-Carrier con rate_id)'),
+        ('direct_rate', 'Envío Directo sin Cotizar (rate/shipments/)'),
+    ]
+
+    method_mode = models.CharField(
+        max_length=30,
+        choices=METHOD_CHOICES,
+        default='quotation',
+        help_text="Método logístico activo para el checkout y emisión en Skydropx"
+    )
+    default_carrier = models.CharField(
+        max_length=50,
+        default='fedex',
+        help_text="Carrier predeterminado para envíos directos sin cotizar (ej. fedex, dhl, estafeta)"
+    )
+    default_service = models.CharField(
+        max_length=50,
+        default='standard_overnight',
+        help_text="Código de servicio predeterminado del carrier (ej. standard_overnight, express)"
+    )
+    allow_customer_carrier_selection = models.BooleanField(
+        default=True,
+        help_text="Permite al comprador elegir la tarifa y transportista en el checkout si está en modo cotización"
+    )
+    auto_advance_sandbox = models.BooleanField(
+        default=False,
+        help_text="Habilita auto_advance: true en Sandbox para simular avance de tracking automático por minuto"
+    )
+    min_balance_alert = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=500.00,
+        help_text="Umbral de saldo en pesos para emitir alertas de recarga preventiva"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuración de Envíos"
+        verbose_name_plural = "Configuración de Envíos"
+
+    def __str__(self):
+        return f"Configuración de Envíos: {self.get_method_mode_display()}"
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj
+
+
+class ShippingEvent(models.Model):
+    """
+    Registro append-only de auditoría forense para cada interacción con la API de Skydropx.
+    Registra Correlation ID, balances de cartera antes y después, y estados HTTP.
+    """
+    EVENT_TYPES = [
+        ('QUOTE_REQUESTED', 'Cotización Solicitada'),
+        ('QUOTE_RECEIVED', 'Cotización Recibida'),
+        ('SHIPMENT_REQUESTED', 'Emisión Solicitada'),
+        ('SHIPMENT_ACCEPTED_202', 'Emisión Aceptada (HTTP 202)'),
+        ('SHIPMENT_CREATED_SYNC', 'Emisión Inmediata (HTTP 200/201)'),
+        ('POLLING_ATTEMPT', 'Intento de Polling'),
+        ('LABEL_AVAILABLE', 'Guía PDF Disponible'),
+        ('TRACKING_UPDATED', 'Tracking Actualizado'),
+        ('SHIPMENT_CANCELLED', 'Envío Cancelado'),
+        ('SHIPMENT_FAILED', 'Emisión Fallida'),
+        ('RECONCILIATION_STARTED', 'Reconciliación Iniciada'),
+        ('RECONCILIATION_COMPLETED', 'Reconciliación Finalizada'),
+        ('WEBHOOK_PROCESSED', 'Webhook Procesado'),
+    ]
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='shipping_events', null=True, blank=True)
+    shipment_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPES, db_index=True)
+    correlation_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    idempotency_key = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    http_status = models.IntegerField(null=True, blank=True)
+    request_payload_hash = models.CharField(max_length=64, blank=True, null=True)
+    response_payload = models.JSONField(null=True, blank=True)
+    balance_before = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    balance_after = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Evento de Auditoría de Envío"
+        verbose_name_plural = "Auditoría de Envíos"
+
+    def __str__(self):
+        return f"[{self.created_at.strftime('%Y-%m-%d %H:%M:%S')}] {self.event_type} - Order #{self.order_id or 'N/A'}"
+
+
+class SkydropxWebhookEvent(models.Model):
+    """
+    Tabla de deduplicación estricta para webhooks entrantes de Skydropx.
+    Evita procesar eventos duplicados garantizando idempotencia.
+    """
+    event_id = models.CharField(max_length=255, unique=True, db_index=True)
+    tracking_number = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    event_type = models.CharField(max_length=100, blank=True, null=True)
+    payload = models.JSONField(default=dict)
+    processed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-processed_at']
+        verbose_name = "Evento Webhook de Skydropx"
+        verbose_name_plural = "Webhooks Skydropx"
+
+    def __str__(self):
+        return f"Webhook {self.event_id} ({self.event_type})"
+
