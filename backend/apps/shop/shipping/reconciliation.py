@@ -65,9 +65,9 @@ def reconcile_order_shipping(order: Any) -> Dict[str, Any]:
 
     # 2. Si no hay shipment_id, verificar si se creó en auditoría ShippingEvent
     from apps.shop.models import ShippingEvent
-    recent_events = ShippingEvent.objects.filter(order=order, status_code__in=[200, 201, 202]).order_by("-created_at")
+    recent_events = ShippingEvent.objects.filter(order=order, http_status__in=[200, 201, 202]).order_by("-created_at")
     for ev in recent_events:
-        resp = ev.response_body or {}
+        resp = ev.response_payload or {}
         data = resp.get("data", {})
         attrs = data.get("attributes", data)
         candidate_id = str(data.get("id") or attrs.get("id") or resp.get("id") or "")

@@ -23,7 +23,8 @@ def _record_shipping_event(
     balance_before: Optional[float] = None,
     balance_after: Optional[float] = None,
     error_message: str = "",
-    correlation_id: str = ""
+    correlation_id: str = "",
+    shipment_id: Optional[str] = None
 ):
     """Registra de forma inmutable un evento en la tabla de auditoría ShippingEvent."""
     try:
@@ -32,19 +33,34 @@ def _record_shipping_event(
         request_hash = hashlib.sha256(payload_str.encode("utf-8")).hexdigest()
 
         resp_dict = response_body if isinstance(response_body, dict) else {"raw": str(response_body)}
+        
+        # Extraer shipment_id si no vino explícito
+        extracted_shipment_id = shipment_id or getattr(order, 'skydropx_shipment_id', None)
+        if not extracted_shipment_id and isinstance(resp_dict, dict):
+            extracted_shipment_id = resp_dict.get('id') or resp_dict.get('data', {}).get('id')
+
+        # Normalizar event_type si viene en minúsculas
+        event_type_upper = str(event_type).upper()
+        if "FROM_RATE" in event_type_upper:
+            event_type_key = "SHIPMENT_ACCEPTED_202" if status_code == 202 else ("SHIPMENT_CREATED_SYNC" if status_code in (200, 201) else "SHIPMENT_FAILED")
+        elif "CANCEL" in event_type_upper:
+            event_type_key = "SHIPMENT_CANCELLED"
+        elif "RATE_SHIPMENT" in event_type_upper:
+            event_type_key = "SHIPMENT_ACCEPTED_202" if status_code == 202 else ("SHIPMENT_CREATED_SYNC" if status_code in (200, 201) else "SHIPMENT_FAILED")
+        else:
+            event_type_key = event_type_upper
 
         ShippingEvent.objects.create(
             order=order,
-            event_type=event_type,
-            endpoint=endpoint,
-            request_hash=request_hash,
-            payload=payload,
-            status_code=status_code,
-            response_body=resp_dict,
+            shipment_id=str(extracted_shipment_id) if extracted_shipment_id else None,
+            event_type=event_type_key,
+            correlation_id=correlation_id or getattr(order, 'shipping_attempt_id', None),
+            idempotency_key=getattr(order, 'shipping_attempt_id', None),
+            http_status=status_code,
+            request_payload_hash=request_hash,
+            response_payload=resp_dict,
             balance_before=balance_before,
-            balance_after=balance_after,
-            error_message=error_message,
-            correlation_id=correlation_id
+            balance_after=balance_after
         )
     except Exception as e:
         logger.warning(f"[Audit] No se pudo persistir ShippingEvent para Pedido {getattr(order, 'id', None)}: {e}")

@@ -71,10 +71,10 @@ class ShopShippingConfigAdmin(admin.ModelAdmin):
 
 @admin.register(ShippingEvent)
 class ShippingEventAdmin(admin.ModelAdmin):
-    list_display = ('id', 'order', 'event_type', 'endpoint', 'status_code', 'balance_before', 'balance_after', 'created_at')
-    list_filter = ('event_type', 'status_code', 'created_at')
-    search_fields = ('order__id', 'correlation_id', 'request_hash', 'endpoint')
-    readonly_fields = ('order', 'event_type', 'endpoint', 'request_hash', 'payload', 'status_code', 'response_body', 'balance_before', 'balance_after', 'error_message', 'correlation_id', 'created_at')
+    list_display = ('id', 'order', 'shipment_id', 'event_type', 'http_status', 'balance_before', 'balance_after', 'created_at')
+    list_filter = ('event_type', 'http_status', 'created_at')
+    search_fields = ('order__id', 'correlation_id', 'request_payload_hash', 'shipment_id')
+    readonly_fields = ('order', 'shipment_id', 'event_type', 'correlation_id', 'idempotency_key', 'http_status', 'request_payload_hash', 'response_payload', 'balance_before', 'balance_after', 'created_at')
 
     def has_add_permission(self, request):
         return False

@@ -118,16 +118,15 @@ export interface ShopShippingConfig {
 export interface ShippingEvent {
   id: number;
   order: number | null;
+  shipment_id: string | null;
   event_type: string;
-  endpoint: string;
-  request_hash: string;
-  payload: any;
-  status_code: number;
-  response_body: any;
+  correlation_id: string | null;
+  idempotency_key: string | null;
+  http_status: number | null;
+  request_payload_hash: string;
+  response_payload: any;
   balance_before: number | null;
   balance_after: number | null;
-  error_message: string;
-  correlation_id: string;
   created_at: string;
 }
 

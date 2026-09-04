@@ -707,11 +707,11 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                       </td>
                       <td className="p-4">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          ev.status_code >= 200 && ev.status_code < 300
+                          ev.http_status && ev.http_status >= 200 && ev.http_status < 300
                             ? 'bg-emerald-500/20 text-emerald-400'
                             : 'bg-red-500/20 text-red-400'
                         }`}>
-                          {ev.status_code}
+                          {ev.http_status || 'N/A'}
                         </span>
                       </td>
                       <td className="p-4">

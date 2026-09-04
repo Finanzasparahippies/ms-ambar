@@ -189,9 +189,9 @@ class ShippingEventSerializer(serializers.ModelSerializer):
         from .models import ShippingEvent
         model = ShippingEvent
         fields = [
-            'id', 'order', 'event_type', 'endpoint', 'request_hash',
-            'payload', 'status_code', 'response_body', 'balance_before',
-            'balance_after', 'error_message', 'correlation_id', 'created_at'
+            'id', 'order', 'shipment_id', 'event_type', 'correlation_id',
+            'idempotency_key', 'http_status', 'request_payload_hash',
+            'response_payload', 'balance_before', 'balance_after', 'created_at'
         ]
         read_only_fields = fields
 
