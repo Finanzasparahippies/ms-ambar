@@ -75,6 +75,7 @@ import ThemeManager from '../../components/ThemeManager';
 import ImageOptimizerWidget from '../../components/ImageOptimizerWidget';
 import { AdsPerformanceWidget } from '../../components/dashboard/AdsPerformanceWidget';
 import { CrossAnalyticsChart } from '../../components/dashboard/CrossAnalyticsChart';
+import ShippingManager from '../../components/dashboard/ShippingManager';
 import api from '../../lib/api';
 import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import { cn, getApiUrl } from '../../lib/utils';
@@ -322,7 +323,7 @@ export default function AdminDashboard() {
   };
 
   // Dashboard Navigation State
-  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme' | 'music'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'orders' | 'shipping' | 'expenses' | 'catalog' | 'theaters' | 'contracts' | 'campaigns' | 'events' | 'coupons' | 'theme' | 'music'>('summary');
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [contracts, setContracts] = useState<BookingContract[]>([]);
   const [orderFilter, setOrderFilter] = useState<'all' | 'paid' | 'shipped' | 'delivered'>('all');
@@ -3012,6 +3013,15 @@ export default function AdminDashboard() {
                 </span>
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('shipping')}
+              className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'shipping'
+                ? 'bg-amber-honey text-[#1E2B22] shadow-md shadow-amber-honey/10'
+                : 'text-[#F4F6F0]/60 hover:text-[#F4F6F0] hover:bg-white/5'
+                }`}
+            >
+              🚚 Logística Skydropx
+            </button>
             {isSuperuser && (
               <button
                 onClick={() => setActiveTab('expenses')}
@@ -3105,6 +3115,26 @@ export default function AdminDashboard() {
           {/* Main Administrative Views Context */}
           <div className="relative z-10">
             <AnimatePresence>
+
+              {/* TAB: LOGÍSTICA & GESTIÓN SKYDROPX */}
+              {activeTab === 'shipping' && (
+                <motion.div
+                  key="shipping-tab"
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ShippingManager
+                    orders={orders}
+                    onRefreshOrders={() => {
+                      api.get('/shop/orders/').then(res => {
+                        if (Array.isArray(res.data)) setOrders(res.data);
+                      }).catch(() => {});
+                    }}
+                  />
+                </motion.div>
+              )}
 
               {/* TAB: MÚSICA & CONFIGURACIÓN DE APIS */}
               {activeTab === 'music' && (

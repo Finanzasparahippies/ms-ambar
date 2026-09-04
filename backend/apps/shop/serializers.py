@@ -167,6 +167,31 @@ class OrderSerializer(serializers.ModelSerializer):
             'id', 'user_email', 'status', 'total_amount', 'items', 'created_at',
             'full_name', 'phone', 'street_and_number', 'suburb', 'city', 'state',
             'postal_code', 'country', 'address', 'selected_rate_id', 'shipping_cost',
-            'shipping_provider', 'tracking_number', 'tracking_url', 'shipping_label_pdf'
+            'shipping_provider', 'tracking_number', 'tracking_url', 'shipping_label_pdf',
+            'shipping_status', 'shipping_attempt_id', 'skydropx_shipment_id', 'shipping_error'
         ]
+
+
+class ShopShippingConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import ShopShippingConfig
+        model = ShopShippingConfig
+        fields = [
+            'id', 'method_mode', 'default_carrier', 'default_service',
+            'allow_customer_carrier_selection', 'auto_advance_sandbox',
+            'min_balance_alert', 'updated_at'
+        ]
+        read_only_fields = ['id', 'updated_at']
+
+
+class ShippingEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import ShippingEvent
+        model = ShippingEvent
+        fields = [
+            'id', 'order', 'event_type', 'endpoint', 'request_hash',
+            'payload', 'status_code', 'response_body', 'balance_before',
+            'balance_after', 'error_message', 'correlation_id', 'created_at'
+        ]
+        read_only_fields = fields
 

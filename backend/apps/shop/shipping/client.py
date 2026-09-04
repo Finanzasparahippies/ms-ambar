@@ -257,3 +257,25 @@ class SkydropxClient:
             result["credits_balance"] = credits_res.get("credits")
 
         return result
+
+    def probe_all_gateways(self, dest_zip: str = "83100") -> List[Dict[str, Any]]:
+        """Sondea los endpoints conocidos de Skydropx para diagnóstico de conectividad."""
+        gateways = [
+            {"label": "Sandbox / Staging (Pro)", "url": "https://sb-pro.skydropx.com/api/v1"},
+            {"label": "Producción (Pro)", "url": "https://app.skydropx.com/api/v1"},
+        ]
+        results = []
+        for gw in gateways:
+            t0 = time.time()
+            probe_client = SkydropxClient(base_url=gw["url"], environment=self.environment)
+            res = probe_client.test_connectivity(dest_zip=dest_zip)
+            elapsed = int((time.time() - t0) * 1000)
+            summary = "OK" if res["success"] else (res.get("error") or "Fallo")
+            results.append({
+                "label": gw["label"],
+                "status_code": res.get("status_code"),
+                "latency_ms": elapsed,
+                "success": res["success"],
+                "summary": str(summary)[:60]
+            })
+        return results

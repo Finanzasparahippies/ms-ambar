@@ -10,7 +10,11 @@ from .views import (
     PostalCodeLookupView,
     OrderBySessionView,
     OrderDownloadLabelView,
-    ShippingHealthCheckView
+    ShippingHealthCheckView,
+    ShopShippingConfigView,
+    ShippingReconcileView,
+    ShippingEventsListView,
+    ShippingCatalogsView
 )
 
 router = DefaultRouter()
@@ -27,6 +31,10 @@ urlpatterns = [
     path('shipping/quote/', ShippingQuoteView.as_view(), name='shipping-quote'),
     path('shipping/health-check/', ShippingHealthCheckView.as_view(), name='shipping-health-check'),
     path('shipping/postal-code/<str:postal_code>/', PostalCodeLookupView.as_view(), name='postal-code-lookup'),
+    path('shipping/config/', ShopShippingConfigView.as_view(), name='shipping-config'),
+    path('shipping/reconcile/', ShippingReconcileView.as_view(), name='shipping-reconcile'),
+    path('shipping/events/', ShippingEventsListView.as_view(), name='shipping-events'),
+    path('shipping/catalogs/', ShippingCatalogsView.as_view(), name='shipping-catalogs'),
 ]
 
 

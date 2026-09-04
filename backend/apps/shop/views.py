@@ -391,8 +391,21 @@ def send_order_confirmation_email(order):
         logger.error(f"Error sending order confirmation email for order {order.id}: {e}", exc_info=True)
 
 def process_fulfillment(order):
-    """Ejecuta la automatización de la guía e inyecta los datos en el mail final"""
-    generate_shipping_label(order)
+    """Ejecuta la emisión idempotente de la guía e inyecta los datos en el correo de confirmación."""
+    import uuid
+    if not getattr(order, 'shipping_attempt_id', None):
+        order.shipping_attempt_id = f"att_{uuid.uuid4().hex[:12]}"
+        order.save(update_fields=['shipping_attempt_id'])
+
+    # Evitar duplicar emisiones si ya tiene guía oficial de Skydropx
+    current_status = getattr(order, 'shipping_status', 'pending')
+    tracking = getattr(order, 'tracking_number', '')
+    if current_status in ['created', 'completed'] or (tracking and not tracking.startswith('TRACK-AMBAR')):
+        logger.info(f"[Fulfillment] Pedido #{order.id} ya cuenta con guía emitida ({tracking}). Operación idempotente.")
+    else:
+        generate_shipping_label(order)
+        order.refresh_from_db()
+
     send_order_confirmation_email(order)
     
 from .shipping import generate_shipping_label, quote_shipping_rates, lookup_postal_code, validate_postal_code, generate_sample_shipping_label_pdf
@@ -755,6 +768,16 @@ def skydropx_webhook(request):
 
     try:
         payload = request.data if isinstance(request.data, dict) else json.loads(request.body.decode('utf-8'))
+        
+        # Deduplicación idempotente vía SkydropxWebhookEvent
+        from .models import SkydropxWebhookEvent
+        event_id = str(payload.get('id') or payload.get('event_id') or request.META.get('HTTP_X_SKYDROPX_EVENT_ID') or "").strip()
+        if event_id:
+            if SkydropxWebhookEvent.objects.filter(event_id=event_id).exists():
+                logger.info(f"[Skydropx Webhook] Evento ya procesado previamente (id={event_id}). Descartando.")
+                return HttpResponse("Webhook ya procesado previamente", status=200)
+            SkydropxWebhookEvent.objects.create(event_id=event_id, payload=payload)
+
         event_type = payload.get('event') or payload.get('type') or payload.get('status') or ""
         data = payload.get('data', payload)
         attributes = data.get('attributes', data) if isinstance(data, dict) else {}
@@ -779,12 +802,12 @@ def skydropx_webhook(request):
             logger.warning(f"[Skydropx Webhook] Payload omitido: No se detectó tracking_number ni shipment_id. Payload: {str(payload)[:200]}")
             return HttpResponse("Webhook recibido (sin identificador de envío)", status=200)
 
-        # Búsqueda resiliente por tracking_number o shipping_id
+        # Búsqueda resiliente por tracking_number o shipping_id / skydropx_shipment_id
         lookup = Q()
         if tracking_number:
             lookup |= Q(tracking_number=tracking_number)
         if shipment_id:
-            lookup |= Q(shipping_id=shipment_id)
+            lookup |= Q(shipping_id=shipment_id) | Q(skydropx_shipment_id=shipment_id)
 
         order = Order.objects.filter(lookup).first()
         if not order:
@@ -832,9 +855,17 @@ def skydropx_webhook(request):
         if not order.tracking_number and tracking_number:
             order.tracking_number = tracking_number
             update_fields.append('tracking_number')
-        if not order.shipping_id and shipment_id:
+        if not order.skydropx_shipment_id and shipment_id:
+            order.skydropx_shipment_id = shipment_id
             order.shipping_id = shipment_id
-            update_fields.append('shipping_id')
+            update_fields.extend(['skydropx_shipment_id', 'shipping_id'])
+
+        if target_status == 'delivered':
+            order.shipping_status = 'completed'
+            update_fields.append('shipping_status')
+        elif target_status == 'cancelled':
+            order.shipping_status = 'cancelled'
+            update_fields.append('shipping_status')
 
         order.save(update_fields=update_fields)
         logger.info(f"[Skydropx Webhook] ✅ Pedido #{order.id} actualizado monótonamente a '{target_status}' (rank {target_rank}).")
@@ -843,3 +874,112 @@ def skydropx_webhook(request):
     except Exception as e:
         logger.error(f"[Skydropx Webhook] Error procesando webhook: {e}", exc_info=True)
         return HttpResponse("Error interno procesando webhook", status=200)
+
+
+class ShopShippingConfigView(APIView):
+    """
+    Gestión centralizada de la configuración logística de Skydropx Pro.
+    Permite alternar en caliente entre Opción A (Quotation) y Opción B (Direct Rate),
+    configurar paquetería predeterminada y consultar saldo actual de la cartera.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        from .models import ShopShippingConfig
+        from .serializers import ShopShippingConfigSerializer
+        from .shipping import SkydropxClient
+
+        config = ShopShippingConfig.get_solo()
+        serializer = ShopShippingConfigSerializer(config)
+        client = SkydropxClient()
+
+        credits_info = None
+        if client.is_configured:
+            try:
+                credits_res = client.get_credits()
+                if credits_res.get("success"):
+                    credits_info = credits_res.get("credits")
+            except Exception as e:
+                logger.warning(f"[ShippingConfigView] Error obteniendo saldo: {e}")
+
+        return Response({
+            "config": serializer.data,
+            "environment": client.environment,
+            "is_configured": client.is_configured,
+            "credits": credits_info,
+            "auto_advance_sandbox_allowed": client.environment in ["staging", "sandbox", "pro_staging", "pro_sandbox"]
+        })
+
+    def put(self, request):
+        from .models import ShopShippingConfig
+        from .serializers import ShopShippingConfigSerializer
+
+        config = ShopShippingConfig.get_solo()
+        serializer = ShopShippingConfigSerializer(config, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            logger.info(f"[ShippingConfig] Configuración logística actualizada por {request.user}: {serializer.data}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ShippingReconcileView(APIView):
+    """
+    Dispara la reconciliación de guías con Skydropx.
+    Puede recibir {'order_id': 123} para una orden específica, o ejecuta
+    conciliación en lote para todas las órdenes pendientes/con error.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        from .shipping import reconcile_order_shipping, reconcile_pending_shipments
+        order_id = request.data.get('order_id')
+
+        if order_id:
+            order = Order.objects.filter(id=order_id).first()
+            if not order:
+                return Response({'error': f'Orden #{order_id} no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+            res = reconcile_order_shipping(order)
+            return Response(res, status=status.HTTP_200_OK)
+
+        results = reconcile_pending_shipments()
+        return Response({
+            "reconciled_count": len(results),
+            "results": results
+        }, status=status.HTTP_200_OK)
+
+
+class ShippingEventsListView(APIView):
+    """
+    Consulta el log de auditoría inmutable de eventos de Skydropx (ShippingEvent).
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        from .models import ShippingEvent
+        from .serializers import ShippingEventSerializer
+
+        order_id = request.query_params.get('order_id')
+        qs = ShippingEvent.objects.all().order_by('-created_at')
+        if order_id:
+            qs = qs.filter(order_id=order_id)
+
+        events = qs[:50]
+        serializer = ShippingEventSerializer(events, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ShippingCatalogsView(APIView):
+    """
+    Expone los catálogos oficiales de transportistas y servicios para la UI de configuración.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        from .shipping import get_carrier_services, get_consignment_notes, get_packagings
+
+        return Response({
+            "carrier_services": get_carrier_services(),
+            "consignment_notes": get_consignment_notes(),
+            "packagings": get_packagings(),
+        })

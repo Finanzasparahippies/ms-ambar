@@ -65,6 +65,17 @@ export interface OrderItem {
   total: number;
 }
 
+export type ShippingStatus = 
+  | 'pending'
+  | 'requested'
+  | 'processing'
+  | 'created'
+  | 'label_pending'
+  | 'completed'
+  | 'failed'
+  | 'reconciliation_required'
+  | 'cancelled';
+
 export interface Order {
   id: number;
   user_email: string;
@@ -72,10 +83,52 @@ export interface Order {
   total_amount: number;
   created_at: string;
   full_name: string;
-  address: string;
+  phone?: string;
+  street_and_number?: string;
+  suburb?: string;
   city: string;
+  state?: string;
+  postal_code?: string;
   country: string;
+  address?: string;
   items: OrderItem[];
+  selected_rate_id?: string;
+  shipping_cost?: number;
+  shipping_provider?: string;
+  tracking_number?: string;
+  tracking_url?: string;
+  shipping_label_pdf?: string;
+  shipping_status?: ShippingStatus;
+  shipping_attempt_id?: string;
+  skydropx_shipment_id?: string;
+  shipping_error?: string;
+}
+
+export interface ShopShippingConfig {
+  id?: number;
+  method_mode: 'quotation' | 'direct_rate';
+  default_carrier: string;
+  default_service: string;
+  allow_customer_carrier_selection: boolean;
+  auto_advance_sandbox: boolean;
+  min_balance_alert: number;
+  updated_at?: string;
+}
+
+export interface ShippingEvent {
+  id: number;
+  order: number | null;
+  event_type: string;
+  endpoint: string;
+  request_hash: string;
+  payload: any;
+  status_code: number;
+  response_body: any;
+  balance_before: number | null;
+  balance_after: number | null;
+  error_message: string;
+  correlation_id: string;
+  created_at: string;
 }
 
 export interface Expense {

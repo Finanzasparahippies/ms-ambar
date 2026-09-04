@@ -597,22 +597,78 @@ class ShopAppTests(APITestCase):
         self.assertEqual(len(response.data['carriers_found']), 1)
 
     def test_skydropx_client_dual_environments(self):
-        """Verify SkydropxClient resolves production and staging/sandbox URLs and keys cleanly."""
+        """Verify SkydropxClient resolves production and staging/sandbox URLs with Bearer headers cleanly."""
         from apps.shop.shipping import SkydropxClient
 
         prod_client = SkydropxClient(api_key="prod_key_123", environment="production")
         self.assertEqual(prod_client.environment, "production")
-        self.assertEqual(prod_client.base_url, "https://api.skydropx.com/v1")
-        self.assertEqual(prod_client._headers()["Authorization"], "Token token=prod_key_123")
+        self.assertEqual(prod_client.base_url, "https://app.skydropx.com/api/v1")
+        self.assertTrue(prod_client._headers()["Authorization"].startswith("Bearer "))
 
         sandbox_client = SkydropxClient(api_key="sandbox_key_456", environment="staging")
         self.assertEqual(sandbox_client.environment, "staging")
         self.assertEqual(sandbox_client.base_url, "https://sb-pro.skydropx.com/api/v1")
-        self.assertEqual(sandbox_client._headers()["Authorization"], "Token token=sandbox_key_456")
+        self.assertTrue(sandbox_client._headers()["Authorization"].startswith("Bearer "))
 
-        pro_client = SkydropxClient(api_key="Bearer jwt_token_abc", environment="pro_production")
-        self.assertEqual(pro_client.base_url, "https://pro.skydropx.com/api/v1")
-        self.assertEqual(pro_client._headers()["Authorization"], "Bearer jwt_token_abc")
+    def test_shipping_config_api_and_admin(self):
+        """Verify ShopShippingConfigView GET and PUT for changing operating method."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('shipping-config')
+
+        # GET
+        get_res = self.client.get(url)
+        self.assertEqual(get_res.status_code, status.HTTP_200_OK)
+        self.assertIn('config', get_res.data)
+        self.assertEqual(get_res.data['config']['method_mode'], 'quotation')
+
+        # PUT: Cambiar a Opción B (direct_rate)
+        put_res = self.client.put(url, {
+            'method_mode': 'direct_rate',
+            'default_carrier': 'dhl',
+            'default_service': 'express',
+            'min_balance_alert': 750.0
+        }, format='json')
+        self.assertEqual(put_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(put_res.data['method_mode'], 'direct_rate')
+        self.assertEqual(put_res.data['default_carrier'], 'dhl')
+
+    def test_shipping_reconcile_endpoint(self):
+        """Verify ShippingReconcileView handles order reconciliation."""
+        self.client.force_authenticate(user=self.admin_user)
+        order = Order.objects.create(
+            user_email='reconcile_test@msambar.com',
+            status='paid',
+            total_amount=500.0,
+            full_name='Carlos Ruiz',
+            shipping_status='reconciliation_required'
+        )
+        url = reverse('shipping-reconcile')
+        res = self.client.post(url, {'order_id': order.id}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('reconciled', res.data)
+
+    def test_skydropx_webhook_deduplication(self):
+        """Verify webhook deduplication via SkydropxWebhookEvent prevents reprocessing identical event_id."""
+        url = reverse('skydropx-webhook')
+        payload = {
+            "id": "evt_skydropx_unique_999",
+            "event": "shipment.in_transit",
+            "data": {
+                "id": "ship_123",
+                "attributes": {
+                    "tracking_number": "TRACK-TEST-DEDUP",
+                    "status": "in_transit"
+                }
+            }
+        }
+        # First delivery: 200 OK
+        res1 = self.client.post(url, payload, format='json')
+        self.assertEqual(res1.status_code, 200)
+
+        # Second delivery with same event id: recognized as already processed
+        res2 = self.client.post(url, payload, format='json')
+        self.assertEqual(res2.status_code, 200)
+        self.assertIn(b"ya procesado previamente", res2.content)
 
 
 
