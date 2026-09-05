@@ -109,16 +109,19 @@ class SkydropxClient:
     def is_configured(self) -> bool:
         return bool(self.api_key and self.api_key != "mock_key" and not getattr(settings, "TESTING", False))
 
-    def _headers(self, force_refresh: bool = False) -> Dict[str, str]:
+    def _headers(self, force_refresh: bool = False, idempotency_key: Optional[str] = None) -> Dict[str, str]:
         token = self.oauth_manager.get_access_token(force_refresh=force_refresh)
         auth_header = f"Bearer {token}" if token else f"Bearer {self.api_key}"
-        return {
+        headers = {
             "Authorization": auth_header,
             "Content-Type": "application/json",
             "Accept": "application/json",
             "User-Agent": "MsAmbarLogistics/2.1 (+https://msambar.com)",
             "X-Correlation-ID": self.correlation_id,
         }
+        if idempotency_key:
+            headers["X-Idempotency-Key"] = str(idempotency_key)
+        return headers
 
     def _request(
         self,
@@ -126,21 +129,20 @@ class SkydropxClient:
         endpoint: str,
         json_data: Optional[dict] = None,
         params: Optional[dict] = None,
-        retry_auth: bool = True
+        retry_auth: bool = True,
+        idempotency_key: Optional[str] = None
     ) -> requests.Response:
         """
-        Ejecuta petición HTTP contra Skydropx Pro asegurando trazabilidad por Correlation-ID
-        y reintento transparente si el token expiró (HTTP 401).
+        Ejecuta petición HTTP contra Skydropx Pro asegurando trazabilidad por Correlation-ID,
+        soporte de Idempotency Key y reintento transparente si el token expiró (HTTP 401).
         """
-        # Normalizar URL: asegurar que endpoints de la API preserven el trailing slash según la spec
         if endpoint.startswith("http"):
             url = endpoint
         else:
             clean_endpoint = endpoint.strip('/')
-            # Si el endpoint requiere trailing slash en la spec (como shipments/)
             url = f"{self.base_url}/{clean_endpoint}/" if endpoint.endswith('/') else f"{self.base_url}/{clean_endpoint}"
 
-        headers = self._headers()
+        headers = self._headers(idempotency_key=idempotency_key)
         res = requests.request(
             method=method,
             url=url,
@@ -154,7 +156,7 @@ class SkydropxClient:
         if res.status_code == 401 and retry_auth and self.api_secret:
             logger.info(f"[{self.correlation_id}] 401 recibido de Skydropx. Refrescando token OAuth2...")
             self.oauth_manager.invalidate_token()
-            headers = self._headers(force_refresh=True)
+            headers = self._headers(force_refresh=True, idempotency_key=idempotency_key)
             res = requests.request(
                 method=method,
                 url=url,
@@ -166,8 +168,23 @@ class SkydropxClient:
 
         return res
 
-    def request(self, method: str, endpoint: str, json_data: Optional[dict] = None, params: Optional[dict] = None, retry_auth: bool = True) -> requests.Response:
-        return self._request(method=method, endpoint=endpoint, json_data=json_data, params=params, retry_auth=retry_auth)
+    def request(
+        self, 
+        method: str, 
+        endpoint: str, 
+        json_data: Optional[dict] = None, 
+        params: Optional[dict] = None, 
+        retry_auth: bool = True,
+        idempotency_key: Optional[str] = None
+    ) -> requests.Response:
+        return self._request(
+            method=method, 
+            endpoint=endpoint, 
+            json_data=json_data, 
+            params=params, 
+            retry_auth=retry_auth,
+            idempotency_key=idempotency_key
+        )
 
     def get_shipment(self, shipment_id: str) -> Dict[str, Any]:
         """GET /api/v1/shipments/{id}: Consulta el estado detallado de un envío."""
@@ -181,7 +198,11 @@ class SkydropxClient:
             return {"success": False, "error": str(e)}
 
     def auto_advance_shipment(self, shipment_id: str) -> Dict[str, Any]:
-        """POST /api/v1/sandbox/advance o endpoint similar para sandbox."""
+        """POST /api/v1/sandbox/advance o endpoint similar para sandbox (bloqueado en producción)."""
+        if self.environment in ["production", "prod", "pro_production"] or getattr(settings, "ENVIRONMENT", "").lower() in ["production", "prod"]:
+            logger.warning("[SkydropxClient] Auto-advance bloqueado estrictamente en entorno de producción.")
+            return {"success": False, "error": "Auto-advance is strictly disabled in production environments."}
+
         clean_id = str(shipment_id).strip()
         try:
             res = self.request("POST", f"sandbox/shipments/{clean_id}/advance")

@@ -166,6 +166,7 @@ class Order(models.Model):
     # Datos de la Guía Automatizada y Logística
     SHIPPING_STATUS_CHOICES = [
         ('pending', 'Pendiente'),
+        ('creating', 'Creando (En emisión)'),
         ('requested', 'Solicitado'),
         ('processing', 'Procesando (HTTP 202)'),
         ('created', 'Creado (Tracking Asignado)'),
@@ -173,6 +174,7 @@ class Order(models.Model):
         ('completed', 'Completado (Guía Lista)'),
         ('failed', 'Fallido'),
         ('reconciliation_required', 'Requiere Reconciliación'),
+        ('unknown', 'Estado Desconocido'),
         ('cancelled', 'Cancelado'),
     ]
 
@@ -343,6 +345,35 @@ class ShippingEvent(models.Model):
 
     def __str__(self):
         return f"[{self.created_at.strftime('%Y-%m-%d %H:%M:%S')}] {self.event_type} - Order #{self.order_id or 'N/A'}"
+
+    @classmethod
+    def get_metrics(cls, hours: int = 24) -> dict:
+        """Calcula métricas clave de observabilidad para las últimas N horas."""
+        import datetime
+        from django.utils import timezone
+        since = timezone.now() - datetime.timedelta(hours=hours)
+        events = cls.objects.filter(created_at__gte=since)
+        total = events.count()
+        success = events.filter(http_status__in=[200, 201, 202]).count()
+        c_422 = events.filter(http_status=422).count()
+        c_5xx = events.filter(http_status__gte=500).count()
+
+        unreconciled_orders = Order.objects.filter(shipping_status='reconciliation_required')
+        unrec_count = unreconciled_orders.count()
+        oldest_unrec = unreconciled_orders.order_by('created_at').first()
+        oldest_age_mins = 0
+        if oldest_unrec:
+            oldest_age_mins = int((timezone.now() - oldest_unrec.created_at).total_seconds() / 60)
+
+        return {
+            "hours_window": hours,
+            "total_shipping_events": total,
+            "success_rate_percent": round((success / total * 100), 2) if total > 0 else 100.0,
+            "http_422_count": c_422,
+            "http_5xx_count": c_5xx,
+            "pending_reconciliation_orders": unrec_count,
+            "oldest_unreconciled_age_minutes": oldest_age_mins
+        }
 
 
 class SkydropxWebhookEvent(models.Model):

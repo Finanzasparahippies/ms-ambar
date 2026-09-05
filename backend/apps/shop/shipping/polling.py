@@ -3,6 +3,7 @@ import random
 import logging
 from typing import Dict, Any, Optional
 from django.conf import settings
+from .common import ShippingStatus, map_skydropx_status
 
 logger = logging.getLogger("apps")
 
@@ -41,7 +42,7 @@ def poll_shipment_resolution(
     # Auto-advance en sandbox si está explícitamente activado y no estamos en prod
     can_auto_advance = (
         auto_advance_sandbox or getattr(settings, "SKYDROPX_AUTO_ADVANCE", False)
-    ) and getattr(settings, "ENVIRONMENT", "").lower() not in ["production", "prod"]
+    ) and str(getattr(client, "environment", "")).lower() not in ["production", "prod", "pro_production"] and getattr(settings, "ENVIRONMENT", "").lower() not in ["production", "prod"]
 
     if can_auto_advance:
         try:
@@ -71,13 +72,20 @@ def poll_shipment_resolution(
             tracking_number = attrs.get("tracking_number") or attrs.get("tracking") or ""
             carrier_name = attrs.get("carrier_name") or attrs.get("carrier") or ""
 
+            mapped_status, is_known = map_skydropx_status(current_status)
+            if not is_known:
+                logger.warning(
+                    f"[Skydropx Polling] ⚠️ Código o estado externo no reconocido: '{current_status}' "
+                    f"para shipment_id {shipment_id}. Mapeado a internal_status='{mapped_status}'."
+                )
+
             logger.info(
                 f"[Skydropx Polling] Intento #{step} para {shipment_id} - "
-                f"Estado: {current_status}, Tracking: {bool(tracking_number)}, Label: {bool(label_url)}"
+                f"Estado: {current_status} (interno: {mapped_status}), Tracking: {bool(tracking_number)}, Label: {bool(label_url)}"
             )
 
             # Si ya tenemos tracking number o status completado
-            if current_status in ["completed", "delivered", "in_transit", "success"] or (tracking_number and label_url):
+            if mapped_status == ShippingStatus.COMPLETED.value or (tracking_number and label_url):
                 return {
                     "success": True,
                     "status": "completed",
@@ -89,12 +97,12 @@ def poll_shipment_resolution(
                     "raw_data": data
                 }
 
-            if current_status in ["failed", "error", "cancelled"]:
-                error_msg = attrs.get("error_message") or attrs.get("message") or "Envío falló en Skydropx"
+            if mapped_status in [ShippingStatus.FAILED.value, ShippingStatus.CANCELLED.value]:
+                error_msg = attrs.get("error_message") or attrs.get("message") or f"Envío finalizó con status: {current_status}"
                 logger.error(f"[Skydropx Polling] Envío {shipment_id} terminó con status de error: {error_msg}")
                 return {
                     "success": False,
-                    "status": "failed",
+                    "status": mapped_status,
                     "shipment_id": shipment_id,
                     "error": error_msg,
                     "raw_data": data

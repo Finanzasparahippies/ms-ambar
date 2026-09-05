@@ -2,10 +2,18 @@ import hashlib
 import json
 import logging
 import uuid
+import requests
 from typing import Optional, Dict, Any
 from django.conf import settings
+from django.db import transaction
 from .client import SkydropxClient
-from .common import get_origin_address, normalize_mexican_state
+from .common import (
+    get_origin_address, 
+    normalize_mexican_state,
+    calculate_order_package,
+    validate_shipment_payload_contract,
+    ShippingStatus
+)
 from .polling import poll_shipment_resolution
 from .labels import backup_remote_label_pdf, generate_sample_shipping_label_pdf
 from .finance import get_credits, check_wallet_balance_alert
@@ -75,9 +83,9 @@ def create_shipment_from_rate(
     printing_format: str = "standard"
 ) -> Optional[Dict[str, Any]]:
     """
-    POST /api/v1/shipments/ (Opción A):
+    POST /api/v1/shipments (Opción A):
     Crea el envío a partir del rate_id y descuenta el saldo en la cartera de Skydropx.
-    Cumple con el estándar del SAT ('4G', '53102400'), trailing slash y manejo de HTTP 202 Accepted.
+    Encapsula el payload rigurosamente bajo {"shipment": ...} conforme a la API de Skydropx Pro.
     """
     if not client.is_configured or not rate_id:
         return None
@@ -85,7 +93,7 @@ def create_shipment_from_rate(
     origin = address_from or get_origin_address()
     dest = address_to or {}
 
-    # Consultar saldo previo para auditoría
+    # Consultar saldo previo para auditoría financiera
     balance_before = None
     try:
         credits_before = client.get_credits()
@@ -125,17 +133,10 @@ def create_shipment_from_rate(
         "tax_id_number": dest.get("tax_id_number") or "XAXX010101000"
     }
 
-    packages_payload = [
-        {
-            "package_number": 1,
-            "package_protected": False,
-            "declared_value": 100.0,
-            "consignment_note": "53102400",
-            "package_type": "4G"
-        }
-    ]
+    # Paquetes calculados dinámicamente con Carta Porte y dimensiones obligatorias
+    packages_payload = calculate_order_package(order=order)
 
-    payload = {
+    shipment_data = {
         "rate_id": rate_id,
         "printing_format": printing_format,
         "sync_label_creation": True,
@@ -145,19 +146,46 @@ def create_shipment_from_rate(
         "packages": packages_payload
     }
 
-    endpoint = "shipments/"
+    is_sandbox = str(client.environment).lower() in ["staging", "sandbox", "pro_staging", "pro_sandbox", "test"]
+    is_not_prod = client.environment not in ["production", "prod", "pro_production"] and getattr(settings, "ENVIRONMENT", "").lower() not in ["production", "prod"]
+    if is_sandbox and is_not_prod and getattr(settings, "SKYDROPX_AUTO_ADVANCE", False):
+        shipment_data["auto_advance"] = True
+
+    payload = {"shipment": shipment_data}
+
+    # Validación estricta de contrato previo al despacho HTTP
+    is_valid, contract_errors = validate_shipment_payload_contract(payload)
+    if not is_valid:
+        err_desc = f"Violación de contrato de carga: {'; '.join(contract_errors)}"
+        logger.error(f"[Shipments] {err_desc}")
+        return {
+            "success": False,
+            "status_code": 400,
+            "error": err_desc
+        }
+
+    endpoint = "shipments"
     response = None
     error_msg = ""
     status_code = 0
 
     try:
-        response = client.request("POST", endpoint, json_data=payload)
+        response = client.request(
+            "POST", 
+            endpoint, 
+            json_data=payload,
+            idempotency_key=getattr(order, 'shipping_attempt_id', None)
+        )
         status_code = response.status_code
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        error_msg = f"Network timeout / connection drop: {e}"
+        logger.error(f"[Shipments] Timeout/Connection error contactando POST /{endpoint}: {e}")
+        status_code = 504
     except Exception as e:
         error_msg = str(e)
         logger.error(f"[Shipments] Excepción contactando POST /{endpoint}: {e}")
 
-    # Consultar saldo posterior para auditoría
+    # Consultar saldo posterior para auditoría financiera
     balance_after = None
     try:
         credits_after = client.get_credits()
@@ -184,10 +212,11 @@ def create_shipment_from_rate(
         balance_before=balance_before,
         balance_after=balance_after,
         error_message=error_msg or (resp_json.get("error") if status_code >= 400 else ""),
-        correlation_id=client.correlation_id
+        correlation_id=client.correlation_id,
+        shipment_id=None
     )
 
-    # Aceptar 200, 201 y 202 Accepted
+    # Aceptar 200 OK, 201 Created y 202 Accepted (asíncrono canónico)
     if status_code not in (200, 201, 202):
         logger.error(f"[Shipments] Error creating shipment from rate ({status_code}): {resp_json}")
         return {
@@ -196,16 +225,37 @@ def create_shipment_from_rate(
             "error": resp_json.get("message") or resp_json.get("error") or f"HTTP {status_code}"
         }
 
-    shipment_data = resp_json.get("data", {})
-    attrs = shipment_data.get("attributes", shipment_data)
-    shipment_id = str(shipment_data.get("id") or attrs.get("id") or resp_json.get("id") or "")
+    shipment_data_res = resp_json.get("data", {})
+    attrs = shipment_data_res.get("attributes", shipment_data_res)
+    shipment_id = str(shipment_data_res.get("id") or attrs.get("id") or resp_json.get("id") or "")
     tracking_number = attrs.get("master_tracking_number") or attrs.get("tracking_number") or resp_json.get("tracking_number") or ""
     carrier_name = attrs.get("carrier_name") or resp_json.get("carrier_name") or "Paquetería"
     label_url = attrs.get("label_url") or resp_json.get("label_url") or ""
 
-    # Si fue HTTP 202 o no tenemos tracking/etiqueta sincrónica, consultar polling
+    # Persistencia preliminar inmediata de shipment_id antes de iniciar polling
+    if order and shipment_id:
+        try:
+            order.skydropx_shipment_id = str(shipment_id)
+            order.shipping_id = str(shipment_id)
+            if tracking_number:
+                order.tracking_number = str(tracking_number)
+                order.tracking_url = f"https://track.skydropx.com/?q={tracking_number}"
+            if carrier_name:
+                order.shipping_provider = carrier_name
+            order.shipping_status = ShippingStatus.PROCESSING.value if status_code == 202 else (ShippingStatus.COMPLETED.value if label_url else ShippingStatus.CREATED.value)
+            fields = ["skydropx_shipment_id", "shipping_id", "shipping_status"]
+            if tracking_number:
+                fields.extend(["tracking_number", "tracking_url"])
+            if carrier_name:
+                fields.append("shipping_provider")
+            order.save(update_fields=list(set(fields)))
+            logger.info(f"[Shipments] Persistido inmediatamente shipment_id={shipment_id} para Pedido #{order.id} (Status={order.shipping_status})")
+        except Exception as pe:
+            logger.error(f"[Shipments] Error en persistencia preliminar en Pedido #{getattr(order, 'id', None)}: {pe}")
+
+    # Si fue HTTP 202 o no tenemos tracking/etiqueta sincrónica, consultar polling con backoff + jitter
     if status_code == 202 or not tracking_number or not label_url:
-        logger.info(f"[Shipments] Envío {shipment_id} aceptado asíncronamente (HTTP {status_code}). Iniciando polling...")
+        logger.info(f"[Shipments] Envío {shipment_id} aceptado asíncronamente (HTTP {status_code}). Iniciando polling con backoff y jitter...")
         poll_res = poll_shipment_resolution(client, shipment_id)
         if poll_res.get("success"):
             tracking_number = poll_res.get("tracking_number") or tracking_number
@@ -235,8 +285,9 @@ def create_rate_shipment(
     printing_format: str = "standard"
 ) -> Optional[Dict[str, Any]]:
     """
-    POST /api/v1/rate/shipments/ (Opción B):
+    POST /api/v1/rate/shipments (Opción B):
     Crea el envío directo con transportista/servicio predeterminado sin necesidad de cotización previa.
+    Encapsula el payload bajo {"shipment": ...}.
     """
     if not client.is_configured:
         return None
@@ -283,25 +334,12 @@ def create_rate_shipment(
         "tax_id_number": dest.get("tax_id_number") or "XAXX010101000"
     }
 
-    p = parcel or {}
-    packages_payload = [
-        {
-            "package_number": 1,
-            "package_protected": False,
-            "declared_value": float(p.get("declared_value", 100.0)),
-            "weight": float(p.get("weight", 1.0)),
-            "length": float(p.get("length", 35.0)),
-            "width": float(p.get("width", 25.0)),
-            "height": float(p.get("height", 15.0)),
-            "consignment_note": "53102400",
-            "package_type": "4G"
-        }
-    ]
+    packages_payload = calculate_order_package(order=order, parcel_override=parcel)
 
     carrier = carrier_name or "fedex"
     service = service_name or "standard"
 
-    payload = {
+    shipment_data = {
         "carrier": carrier.lower(),
         "service_name": service,
         "printing_format": printing_format,
@@ -312,14 +350,40 @@ def create_rate_shipment(
         "packages": packages_payload
     }
 
-    endpoint = "rate/shipments/"
+    is_sandbox = str(client.environment).lower() in ["staging", "sandbox", "pro_staging", "pro_sandbox", "test"]
+    is_not_prod = client.environment not in ["production", "prod", "pro_production"] and getattr(settings, "ENVIRONMENT", "").lower() not in ["production", "prod"]
+    if is_sandbox and is_not_prod and getattr(settings, "SKYDROPX_AUTO_ADVANCE", False):
+        shipment_data["auto_advance"] = True
+
+    payload = {"shipment": shipment_data}
+
+    is_valid, contract_errors = validate_shipment_payload_contract(payload)
+    if not is_valid:
+        err_desc = f"Violación de contrato de carga (direct rate): {'; '.join(contract_errors)}"
+        logger.error(f"[Shipments] {err_desc}")
+        return {
+            "success": False,
+            "status_code": 400,
+            "error": err_desc
+        }
+
+    endpoint = "rate/shipments"
     response = None
     error_msg = ""
     status_code = 0
 
     try:
-        response = client.request("POST", endpoint, json_data=payload)
+        response = client.request(
+            "POST", 
+            endpoint, 
+            json_data=payload,
+            idempotency_key=getattr(order, 'shipping_attempt_id', None)
+        )
         status_code = response.status_code
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        error_msg = f"Network timeout / connection drop: {e}"
+        logger.error(f"[Shipments] Timeout/Connection error en POST /{endpoint}: {e}")
+        status_code = 504
     except Exception as e:
         error_msg = str(e)
         logger.error(f"[Shipments] Excepción en direct shipment POST /{endpoint}: {e}")
@@ -350,7 +414,8 @@ def create_rate_shipment(
         balance_before=balance_before,
         balance_after=balance_after,
         error_message=error_msg or (resp_json.get("error") if status_code >= 400 else ""),
-        correlation_id=client.correlation_id
+        correlation_id=client.correlation_id,
+        shipment_id=None
     )
 
     if status_code not in (200, 201, 202):
@@ -361,12 +426,31 @@ def create_rate_shipment(
             "error": resp_json.get("message") or resp_json.get("error") or f"HTTP {status_code}"
         }
 
-    shipment_data = resp_json.get("data", {})
-    attrs = shipment_data.get("attributes", shipment_data)
-    shipment_id = str(shipment_data.get("id") or attrs.get("id") or resp_json.get("id") or "")
+    shipment_data_res = resp_json.get("data", {})
+    attrs = shipment_data_res.get("attributes", shipment_data_res)
+    shipment_id = str(shipment_data_res.get("id") or attrs.get("id") or resp_json.get("id") or "")
     tracking_number = attrs.get("master_tracking_number") or attrs.get("tracking_number") or resp_json.get("tracking_number") or ""
     carrier_res = attrs.get("carrier_name") or resp_json.get("carrier_name") or carrier
     label_url = attrs.get("label_url") or resp_json.get("label_url") or ""
+
+    if order and shipment_id:
+        try:
+            order.skydropx_shipment_id = str(shipment_id)
+            order.shipping_id = str(shipment_id)
+            if tracking_number:
+                order.tracking_number = str(tracking_number)
+                order.tracking_url = f"https://track.skydropx.com/?q={tracking_number}"
+            if carrier_res:
+                order.shipping_provider = carrier_res
+            order.shipping_status = ShippingStatus.PROCESSING.value if status_code == 202 else (ShippingStatus.COMPLETED.value if label_url else ShippingStatus.CREATED.value)
+            fields = ["skydropx_shipment_id", "shipping_id", "shipping_status"]
+            if tracking_number:
+                fields.extend(["tracking_number", "tracking_url"])
+            if carrier_res:
+                fields.append("shipping_provider")
+            order.save(update_fields=list(set(fields)))
+        except Exception as pe:
+            logger.error(f"[Shipments] Error en persistencia preliminar direct shipment #{shipment_id}: {pe}")
 
     if status_code == 202 or not tracking_number or not label_url:
         poll_res = poll_shipment_resolution(client, shipment_id)
@@ -389,7 +473,7 @@ def create_rate_shipment(
 
 def cancel_shipment(client: SkydropxClient, shipment_id: str, reason: str = "Cancelado por el cliente", order: Any = None) -> Dict[str, Any]:
     """POST /api/v1/shipments/{id}/cancel/: Cancela un envío y solicita reembolso de guía."""
-    endpoint = f"shipments/{shipment_id}/cancel/"
+    endpoint = f"shipments/{shipment_id}/cancel"
     payload = {"reason": reason}
     status_code = 0
     resp_json = {}
@@ -410,35 +494,46 @@ def cancel_shipment(client: SkydropxClient, shipment_id: str, reason: str = "Can
         payload=payload,
         status_code=status_code,
         response_body=resp_json,
-        correlation_id=client.correlation_id
+        correlation_id=client.correlation_id,
+        shipment_id=shipment_id
     )
     return {"success": status_code in (200, 201, 204), "status_code": status_code, "data": resp_json}
 
 
-def generate_shipping_label(order: Any) -> bool:
+def generate_shipping_label(order: Any, correlation_id: Optional[str] = None) -> bool:
     """
     Despachador logístico principal para emisión de guías tras confirmación de pago.
-    1. Valida idempotencia (no re-emite si ya cuenta con tracking real de Skydropx).
-    2. Determina el método configurado (Option A: quotation con rate_id vs Option B: direct rate shipment).
-    3. Conecta a Skydropx Pro con Correlation ID trazable.
-    4. En caso de timeout o indisponibilidad externa, marca 'reconciliation_required' sin fallar silenciosamente
-       ni regalar guías de contingencia que oculten el problema de cobro/cartera.
+    1. Bloqueo atómico select_for_update() e Idempotencia (previene dobles emisiones y race conditions).
+    2. Valida la máquina de estados ShippingStatus.
+    3. Nunca recurre a fallbacks ciegos ante timeouts de red (HTTP 504 / drop): pasa a 'reconciliation_required'.
+    4. Conecta a Skydropx Pro con Correlation ID e Idempotency Key trazables.
     """
-    correlation_id = f"shipping:order-{order.id}:attempt-{uuid.uuid4().hex[:8]}"
-    client = SkydropxClient(correlation_id=correlation_id)
+    from apps.shop.models import Order, ShopShippingConfig
 
-    # 1. Idempotencia: Verificar si ya tiene guía válida emitida
-    current_status = getattr(order, "shipping_status", "pending")
-    tracking = getattr(order, "tracking_number", "")
-    if current_status in ["created", "completed"] or (tracking and not tracking.startswith("TRACK-AMBAR")):
-        logger.info(f"[Logística] Pedido #{order.id} ya cuenta con guía emitida ({tracking}). Operación idempotente.")
-        return True
+    # 1. Bloqueo atómico y chequeo estricto de concurrencia
+    with transaction.atomic():
+        locked_order = Order.objects.select_for_update().get(id=order.id)
+        current_status = getattr(locked_order, "shipping_status", ShippingStatus.PENDING.value)
+        tracking = getattr(locked_order, "tracking_number", "")
 
-    # Asignar shipping_attempt_id y estado solicitado
-    if not getattr(order, "shipping_attempt_id", None):
-        order.shipping_attempt_id = f"att_{uuid.uuid4().hex[:12]}"
-    order.shipping_status = "requested"
-    order.save(update_fields=["shipping_attempt_id", "shipping_status"])
+        # Si ya cuenta con guía emitida o tracking real
+        if current_status in [ShippingStatus.CREATED.value, ShippingStatus.COMPLETED.value] or (tracking and not tracking.startswith("TRACK-AMBAR")):
+            logger.info(f"[Logística] Pedido #{locked_order.id} ya cuenta con guía emitida ({tracking}). Operación idempotente.")
+            return True
+
+        # Prevención de Race Condition: si otro proceso ya inició la emisión
+        if current_status == ShippingStatus.CREATING.value:
+            logger.warning(f"[Logística] Pedido #{locked_order.id} ya se encuentra en estado 'creating' por otro hilo. Abortando doble emisión.")
+            return False
+
+        # Asignar o preservar shipping_attempt_id estable
+        if not locked_order.shipping_attempt_id:
+            locked_order.shipping_attempt_id = f"att_{uuid.uuid4().hex[:12]}"
+        locked_order.shipping_status = ShippingStatus.CREATING.value
+        locked_order.save(update_fields=["shipping_attempt_id", "shipping_status"])
+
+    cid = correlation_id or f"shipping:order-{order.id}:attempt-{uuid.uuid4().hex[:8]}"
+    client = SkydropxClient(correlation_id=cid)
 
     origin_address = get_origin_address()
     destination_address = {
@@ -459,20 +554,19 @@ def generate_shipping_label(order: Any) -> bool:
 
     # Modo Mock / Testing cuando las credenciales no están configuradas
     if not client.is_configured:
-        logger.info(f"[Logística/Mock] Generación de guía simulada para Pedido #{order.id} (entorno de pruebas).")
+        logger.info(f"[Logística/Mock] Generación de guía simulada para Pedido #{order.id} (entorno sin credenciales).")
         order.tracking_number = f"TRACK-AMBAR-{order.id}MX"
         order.tracking_url = f"https://track.skydropx.com/?q={order.tracking_number}"
-        order.shipping_provider = order.shipping_provider or "Paquetería Nacional (FedEx/Estafeta)"
+        order.shipping_provider = order.shipping_provider or "Paquetería Nacional (Mock)"
         sample_pdf = generate_sample_shipping_label_pdf(order)
         order.shipping_label_pdf = sample_pdf or f"https://labels.skydropx.com/sample_{order.id}.pdf"
-        order.shipping_status = "completed"
-        order.save()
+        order.shipping_status = ShippingStatus.COMPLETED.value
+        order.save(update_fields=["tracking_number", "tracking_url", "shipping_provider", "shipping_label_pdf", "shipping_status"])
         return True
 
     # Obtener configuración logística activa
-    from apps.shop.models import ShopShippingConfig
     config = ShopShippingConfig.get_solo()
-    method_mode = config.method_mode  # 'quotation' o 'direct_rate'
+    method_mode = config.method_mode
 
     shipment_result = None
 
@@ -501,11 +595,19 @@ def generate_shipping_label(order: Any) -> bool:
                 order=order
             )
 
-        # A.2 Si no había tarifa previa o era fallback local, cotizar en vivo
+        # Regla P0 de Idempotencia: si falló por timeout de red (502/503/504), NO cotizar en vivo para no duplicar envío
+        if shipment_result and shipment_result.get("status_code") in (502, 503, 504):
+            logger.warning(f"[Logística] Incertidumbre de red en emisión para Pedido #{order.id} (HTTP {shipment_result.get('status_code')}). Transicionando a 'reconciliation_required' sin emitir duplicado.")
+            order.shipping_status = ShippingStatus.RECONCILIATION_REQUIRED.value
+            order.shipping_error = f"Incertidumbre o timeout de red con pasarela (HTTP {shipment_result.get('status_code')}); en espera de reconciliación segura."
+            order.save(update_fields=["shipping_status", "shipping_error"])
+            return False
+
+        # A.2 Si no había tarifa previa o fue rechazada por expiración (422), cotizar en vivo
         if not shipment_result or not shipment_result.get("success"):
-            logger.info(f"[Logística] Cotizando tarifa en vivo para Pedido #{order.id}")
+            logger.info(f"[Logística] Cotizando tarifa en vivo para Pedido #{order.id} (force_refresh=True)")
             from .quotations import quote_shipping_rates
-            rates = quote_shipping_rates(origin_address["zip_code"], destination_address["postal_code"])
+            rates = quote_shipping_rates(origin_address["zip_code"], destination_address["postal_code"], force_refresh=True)
             real_rates = [r for r in rates if not r.get("is_fallback") and r.get("id")]
             if real_rates:
                 chosen_rate = real_rates[0]
@@ -518,7 +620,7 @@ def generate_shipping_label(order: Any) -> bool:
                     order=order
                 )
 
-    # Procesar resultado
+    # Procesar resultado exitoso
     if shipment_result and shipment_result.get("success"):
         order.skydropx_shipment_id = str(shipment_result.get("shipment_id") or "")
         order.shipping_id = order.skydropx_shipment_id
@@ -531,25 +633,25 @@ def generate_shipping_label(order: Any) -> bool:
         if remote_label_url:
             local_url = backup_remote_label_pdf(remote_label_url, order.id)
             order.shipping_label_pdf = local_url or remote_label_url
-            order.shipping_status = "completed"
+            order.shipping_status = ShippingStatus.COMPLETED.value
         else:
-            # Si el tracking está listo pero la etiqueta sigue procesándose en el transportista
-            order.shipping_status = "label_pending" if order.tracking_number else "processing"
+            order.shipping_status = ShippingStatus.LABEL_PENDING.value if order.tracking_number else ShippingStatus.PROCESSING.value
 
-        order.save()
+        order.save(update_fields=["skydropx_shipment_id", "shipping_id", "tracking_number", "tracking_url", "shipping_provider", "shipping_error", "shipping_label_pdf", "shipping_status"])
         logger.info(
             f"[Logística] ✅ Envío registrado exitosamente para Pedido #{order.id}. "
             f"Tracking: {order.tracking_number}, Status: {order.shipping_status}"
         )
         return True
 
-    # Fallo o Timeout externo: NO generar guía falsa sin reconciliación
+    # Fallo o Incertidumbre: Transición formal a reconciliation_required sin fallos silenciosos
     err_str = (shipment_result or {}).get("error", "Error indeterminado contactando Skydropx")
     logger.error(
         f"[Logística] ❌ No se pudo emitir guía para Pedido #{order.id} en Skydropx: {err_str}. "
         f"Marcando orden como 'reconciliation_required'."
     )
-    order.shipping_status = "reconciliation_required"
+    order.shipping_status = ShippingStatus.RECONCILIATION_REQUIRED.value
     order.shipping_error = str(err_str)[:500]
     order.save(update_fields=["shipping_status", "shipping_error"])
     return False
+

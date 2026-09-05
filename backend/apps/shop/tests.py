@@ -670,7 +670,280 @@ class ShopAppTests(APITestCase):
         self.assertEqual(res2.status_code, 200)
         self.assertIn(b"ya procesado previamente", res2.content)
 
+    def test_shipment_payload_contract_validation(self):
+        """Pillar 1: Contract test validating root encapsulation, required keys, and package dimensions."""
+        from apps.shop.shipping.common import validate_shipment_payload_contract
 
+        # 1. Payload without root 'shipment' key must fail
+        invalid_payload_1 = {"rate_id": "rate_123"}
+        valid, errors = validate_shipment_payload_contract(invalid_payload_1)
+        self.assertFalse(valid)
+        self.assertTrue(any("clave raíz canónica 'shipment'" in e for e in errors))
 
+        # 2. Payload with missing required address fields must fail
+        invalid_payload_2 = {
+            "shipment": {
+                "rate_id": "rate_123",
+                "address_from": {"name": "Remitente"},  # missing phone, street1, etc.
+                "address_to": {"name": "Destinatario"},
+                "packages": [{"weight": 1.0, "consignment_note": "53102400", "package_type": "4G"}]
+            }
+        }
+        valid, errors = validate_shipment_payload_contract(invalid_payload_2)
+        self.assertFalse(valid)
+        self.assertTrue(any("address_from.street1 es requerido" in e for e in errors))
 
+        # 3. Payload with missing consignment_note or package_type must fail
+        invalid_payload_3 = {
+            "shipment": {
+                "rate_id": "rate_123",
+                "address_from": {
+                    "name": "Remitente", "phone": "6622140000", "street1": "Kino 456",
+                    "postal_code": "83150", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX"
+                },
+                "address_to": {
+                    "name": "Destinatario", "phone": "6622140000", "street1": "Juarez 123",
+                    "postal_code": "83000", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX"
+                },
+                "packages": [{"weight": 1.0, "length": 10, "width": 10, "height": 10}]  # Missing consignment_note and package_type
+            }
+        }
+        valid, errors = validate_shipment_payload_contract(invalid_payload_3)
+        self.assertFalse(valid)
+        self.assertTrue(any("consignment_note es requerido" in e for e in errors))
+        self.assertTrue(any("package_type es requerido" in e for e in errors))
 
+        # 4. Valid canonical payload must pass
+        valid_payload = {
+            "shipment": {
+                "rate_id": "rate_123",
+                "address_from": {
+                    "name": "Remitente", "phone": "6622140000", "street1": "Kino 456",
+                    "postal_code": "83150", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX"
+                },
+                "address_to": {
+                    "name": "Destinatario", "phone": "6622140000", "street1": "Juarez 123",
+                    "postal_code": "83000", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX"
+                },
+                "packages": [
+                    {
+                        "package_number": 1,
+                        "declared_value": 150.0,
+                        "weight": 1.5,
+                        "length": 30.0,
+                        "width": 20.0,
+                        "height": 10.0,
+                        "consignment_note": "53102400",
+                        "package_type": "4G"
+                    }
+                ]
+            }
+        }
+        valid, errors = validate_shipment_payload_contract(valid_payload)
+        self.assertTrue(valid)
+        self.assertEqual(len(errors), 0)
+
+    def test_dynamic_package_calculation_from_order(self):
+        """Pillar 1: Packaging calculation derives weights from product catalog without blind hardcodes."""
+        from apps.shop.shipping.common import calculate_order_package
+
+        order = Order.objects.create(
+            user_email='package_test@msambar.com',
+            status='paid',
+            total_amount=1200.0,
+            full_name='Ana Gomez',
+            street_and_number='Reforma 100',
+            postal_code='83000',
+            state='SO'
+        )
+        prod1 = Product.objects.create(name='Vinilo 1', price=600, stock=5, category=self.category, weight='500g')
+        prod2 = Product.objects.create(name='Libro', price=600, stock=5, category=self.category, weight='1.2kg')
+        OrderItem.objects.create(order=order, product=prod1, quantity=2, price=600)  # 2 * 0.5kg = 1.0kg
+        OrderItem.objects.create(order=order, product=prod2, quantity=1, price=600)  # 1 * 1.2kg = 1.2kg
+
+        packages = calculate_order_package(order=order)
+        self.assertEqual(len(packages), 1)
+        pkg = packages[0]
+        self.assertAlmostEqual(pkg['weight'], 2.2, places=2)
+        self.assertEqual(pkg['consignment_note'], '53102400')
+        self.assertEqual(pkg['package_type'], '4G')
+        self.assertEqual(pkg['declared_value'], 1200.0)
+
+    def test_concurrency_lock_and_idempotency_prevents_duplicate_dispatch(self):
+        """Pillar 2: select_for_update and 'creating'/'completed' state guards block concurrent emissions."""
+        from apps.shop.shipping.shipments import generate_shipping_label
+        from apps.shop.shipping.common import ShippingStatus
+
+        order = Order.objects.create(
+            user_email='concurrency@msambar.com',
+            status='paid',
+            total_amount=800.0,
+            full_name='Mariana Rios',
+            street_and_number='Colosio 789',
+            postal_code='83200',
+            state='Sonora',
+            shipping_status=ShippingStatus.CREATING.value
+        )
+
+        # Calling generate_shipping_label when order is currently in 'creating' must abort immediately
+        with patch('apps.shop.shipping.shipments.SkydropxClient') as mock_client:
+            result = generate_shipping_label(order)
+            self.assertFalse(result)
+            mock_client.assert_not_called()
+
+        # Calling when order is already 'completed' with tracking must return True idempotently
+        order.shipping_status = ShippingStatus.COMPLETED.value
+        order.tracking_number = 'SKY-TRACK-9999'
+        order.save()
+
+        with patch('apps.shop.shipping.shipments.SkydropxClient') as mock_client:
+            result = generate_shipping_label(order)
+            self.assertTrue(result)
+            mock_client.assert_not_called()
+
+    def test_network_timeout_transitions_to_reconciliation_required_without_blind_fallback(self):
+        """Pillar 2: Network timeout (HTTP 504) transitions strictly to 'reconciliation_required' with zero secondary fallbacks."""
+        from apps.shop.shipping.shipments import generate_shipping_label
+        from apps.shop.shipping.common import ShippingStatus
+
+        order = Order.objects.create(
+            user_email='timeout@msambar.com',
+            status='paid',
+            total_amount=950.0,
+            full_name='David Perez',
+            street_and_number='Serdan 55',
+            postal_code='83000',
+            state='SO',
+            selected_rate_id='rate_test_timeout',
+            shipping_status=ShippingStatus.PENDING.value
+        )
+
+        mock_instance = MagicMock()
+        mock_instance.is_configured = True
+        mock_instance.environment = "staging"
+        mock_instance.correlation_id = "test-corr-timeout"
+        mock_instance.get_credits.return_value = {"success": True, "credits": {"balance": 500.0}}
+
+        # Simulate network timeout (504) from Skydropx
+        with patch('apps.shop.shipping.shipments.SkydropxClient', return_value=mock_instance), \
+             patch('apps.shop.shipping.shipments.create_shipment_from_rate', return_value={"success": False, "status_code": 504, "error": "Gateway Timeout"}), \
+             patch('apps.shop.shipping.quotations.quote_shipping_rates') as mock_quote_rates:
+
+            res = generate_shipping_label(order)
+            self.assertFalse(res)
+            # Secondary live quotes must NEVER be called on timeout
+            mock_quote_rates.assert_not_called()
+
+        order.refresh_from_db()
+        self.assertEqual(order.shipping_status, ShippingStatus.RECONCILIATION_REQUIRED.value)
+        self.assertIn("reconciliación", order.shipping_error.lower())
+
+    def test_reconciliation_recognizes_order_status_paid(self):
+        """Pillar 2 & 3: Reconciliation properly recognizes Order.status == 'paid' (not 'payment_status')."""
+        from apps.shop.shipping.reconciliation import reconcile_order_shipping
+        from apps.shop.shipping.common import ShippingStatus
+
+        order = Order.objects.create(
+            user_email='paid_reconcile@msambar.com',
+            status='paid',
+            total_amount=600.0,
+            full_name='Lucia Soto',
+            street_and_number='Obregon 12',
+            postal_code='83000',
+            state='SO',
+            shipping_status=ShippingStatus.RECONCILIATION_REQUIRED.value
+        )
+
+        with patch('apps.shop.shipping.shipments.generate_shipping_label', return_value=True) as mock_gen:
+            res = reconcile_order_shipping(order, dry_run=False)
+            self.assertTrue(res['reconciled'])
+            mock_gen.assert_called_once()
+
+    def test_reconciliation_dry_run_mode_produces_no_mutations(self):
+        """Pillar 6: Dry-run reconciliation plans actions without mutating database or dispatching external orders."""
+        from apps.shop.shipping.reconciliation import reconcile_order_shipping, reconcile_pending_shipments
+        from apps.shop.shipping.common import ShippingStatus
+
+        order = Order.objects.create(
+            user_email='dryrun@msambar.com',
+            status='paid',
+            total_amount=700.0,
+            full_name='Esteban Vega',
+            street_and_number='Juarez 45',
+            postal_code='83000',
+            state='SO',
+            shipping_status=ShippingStatus.RECONCILIATION_REQUIRED.value
+        )
+
+        # Single order dry-run
+        res = reconcile_order_shipping(order, dry_run=True)
+        self.assertTrue(res['dry_run'])
+        self.assertIn("DRY-RUN", res['message'])
+
+        order.refresh_from_db()
+        self.assertEqual(order.shipping_status, ShippingStatus.RECONCILIATION_REQUIRED.value)
+        self.assertIsNone(order.tracking_number)
+
+        # Batch dry-run
+        batch_res = reconcile_pending_shipments(dry_run=True, limit=5)
+        self.assertTrue(len(batch_res) >= 1)
+        self.assertTrue(any(r.get('dry_run') for r in batch_res))
+
+    def test_auto_advance_strictly_blocked_in_production(self):
+        """Pillar 6: Auto-advance is strictly rejected in production environments."""
+        from apps.shop.shipping.client import SkydropxClient
+        from apps.shop.shipping.polling import poll_shipment_resolution
+
+        client_prod = SkydropxClient(environment="production")
+        advance_res = client_prod.auto_advance_shipment("ship_prod_123")
+        self.assertFalse(advance_res["success"])
+        self.assertIn("strictly disabled in production", advance_res["error"])
+
+        with override_settings(ENVIRONMENT="production", SKYDROPX_AUTO_ADVANCE=True):
+            client = SkydropxClient(environment="sandbox")
+            mock_advance = MagicMock()
+            client.auto_advance_shipment = mock_advance
+            client.get_shipment = MagicMock(return_value={
+                "success": True,
+                "data": {"attributes": {"status": "completed", "tracking_number": "TRACK-PROD-1", "label_url": "http://label.pdf"}}
+            })
+            poll_shipment_resolution(client, "ship_123", max_timeout=2.0, intervals=[0.1], auto_advance_sandbox=True)
+            mock_advance.assert_not_called()
+
+    def test_shipping_status_mapping_and_unknown_detection(self):
+        """Pillar 4: External response codes and statuses map to internal ShippingStatus, alerting on unknown."""
+        from apps.shop.shipping.common import map_skydropx_status, ShippingStatus
+
+        # Known statuses
+        s_comp, ok1 = map_skydropx_status("completed")
+        self.assertTrue(ok1)
+        self.assertEqual(s_comp, ShippingStatus.COMPLETED.value)
+
+        s_deliv, ok2 = map_skydropx_status("DELIVERED")
+        self.assertTrue(ok2)
+        self.assertEqual(s_deliv, ShippingStatus.COMPLETED.value)
+
+        s_fail, ok3 = map_skydropx_status("failed")
+        self.assertTrue(ok3)
+        self.assertEqual(s_fail, ShippingStatus.FAILED.value)
+
+        # Unknown / Unrecognized status
+        s_unk, ok_unk = map_skydropx_status("custom_carrier_mystery_code")
+        self.assertFalse(ok_unk)
+        self.assertEqual(s_unk, ShippingStatus.UNKNOWN.value)
+
+    def test_shipping_event_metrics_calculation(self):
+        """Pillar 5: ShippingEvent.get_metrics calculates success rates, 422 errors, and age."""
+        from apps.shop.models import ShippingEvent
+
+        ShippingEvent.objects.create(event_type="SHIPMENT_CREATED_SYNC", http_status=201)
+        ShippingEvent.objects.create(event_type="SHIPMENT_ACCEPTED_202", http_status=202)
+        ShippingEvent.objects.create(event_type="SHIPMENT_FAILED", http_status=422)
+        ShippingEvent.objects.create(event_type="SHIPMENT_FAILED", http_status=504)
+
+        metrics = ShippingEvent.get_metrics(hours=24)
+        self.assertGreaterEqual(metrics["total_shipping_events"], 4)
+        self.assertGreaterEqual(metrics["http_422_count"], 1)
+        self.assertGreaterEqual(metrics["http_5xx_count"], 1)
+        self.assertIn("success_rate_percent", metrics)
+        self.assertIn("pending_reconciliation_orders", metrics)

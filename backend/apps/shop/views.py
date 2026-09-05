@@ -390,25 +390,33 @@ def send_order_confirmation_email(order):
     except Exception as e:
         logger.error(f"Error sending order confirmation email for order {order.id}: {e}", exc_info=True)
 
-def process_fulfillment(order):
-    """Ejecuta la emisión idempotente de la guía e inyecta los datos en el correo de confirmación."""
+def process_fulfillment(order, correlation_id=None):
+    """Ejecuta la emisión idempotente de la guía e inyecta los datos en el correo de confirmación con bloqueo select_for_update()."""
     import uuid
-    if not getattr(order, 'shipping_attempt_id', None):
-        order.shipping_attempt_id = f"att_{uuid.uuid4().hex[:12]}"
-        order.save(update_fields=['shipping_attempt_id'])
+    from .shipping import ShippingStatus
 
-    # Evitar duplicar emisiones si ya tiene guía oficial de Skydropx
-    current_status = getattr(order, 'shipping_status', 'pending')
-    tracking = getattr(order, 'tracking_number', '')
-    if current_status in ['created', 'completed'] or (tracking and not tracking.startswith('TRACK-AMBAR')):
-        logger.info(f"[Fulfillment] Pedido #{order.id} ya cuenta con guía emitida ({tracking}). Operación idempotente.")
-    else:
-        generate_shipping_label(order)
+    should_generate = False
+    with transaction.atomic():
+        locked_order = Order.objects.select_for_update().get(id=order.id)
+        if not locked_order.shipping_attempt_id:
+            locked_order.shipping_attempt_id = f"att_{uuid.uuid4().hex[:12]}"
+            locked_order.save(update_fields=['shipping_attempt_id'])
+            order.shipping_attempt_id = locked_order.shipping_attempt_id
+
+        current_status = getattr(locked_order, 'shipping_status', ShippingStatus.PENDING.value)
+        tracking = getattr(locked_order, 'tracking_number', '')
+        if current_status in [ShippingStatus.CREATING.value, ShippingStatus.CREATED.value, ShippingStatus.COMPLETED.value] or (tracking and not tracking.startswith('TRACK-AMBAR')):
+            logger.info(f"[Fulfillment] Pedido #{order.id} ya cuenta con emisión en curso o completada ({current_status}, {tracking}). Operación idempotente.")
+        else:
+            should_generate = True
+
+    if should_generate:
+        generate_shipping_label(order, correlation_id=correlation_id)
         order.refresh_from_db()
 
     send_order_confirmation_email(order)
     
-from .shipping import generate_shipping_label, quote_shipping_rates, lookup_postal_code, validate_postal_code, generate_sample_shipping_label_pdf
+from .shipping import generate_shipping_label, quote_shipping_rates, lookup_postal_code, validate_postal_code, generate_sample_shipping_label_pdf, ShippingStatus
 
 class OrderBySessionView(APIView):
     """
@@ -809,66 +817,83 @@ def skydropx_webhook(request):
         if shipment_id:
             lookup |= Q(shipping_id=shipment_id) | Q(skydropx_shipment_id=shipment_id)
 
-        order = Order.objects.filter(lookup).first()
-        if not order:
-            logger.warning(f"[Skydropx Webhook] Ninguna orden encontrada para Tracking '{tracking_number}' / Shipment '{shipment_id}'.")
-            return HttpResponse("Webhook recibido (orden no encontrada)", status=200)
+        with transaction.atomic():
+            order = Order.objects.select_for_update().filter(lookup).first()
+            if not order:
+                logger.warning(f"[Skydropx Webhook] Ninguna orden encontrada para Tracking '{tracking_number}' / Shipment '{shipment_id}'.")
+                return HttpResponse("Webhook recibido (orden no encontrada)", status=200)
 
-        # Mapeo de evento entrante al estado canónico del sistema
-        combined_status = f"{str(event_type).lower()} {str(attributes.get('status') or data.get('status') or '').lower()}".strip()
-        target_status = None
+            # Mapeo de evento entrante al estado canónico del sistema
+            combined_status = f"{str(event_type).lower()} {str(attributes.get('status') or data.get('status') or '').lower()}".strip()
+            target_status = None
 
-        if any(k in combined_status for k in ['delivered', 'entregado']):
-            target_status = 'delivered'
-        elif any(k in combined_status for k in ['in_transit', 'transit', 'en_transito', 'en_camino', 'out_for_delivery', 'shipped', 'recoleccion']):
-            target_status = 'shipped'
-        elif any(k in combined_status for k in ['cancelled', 'cancelado', 'voided']):
-            target_status = 'cancelled'
+            if any(k in combined_status for k in ['delivered', 'entregado']):
+                target_status = 'delivered'
+            elif any(k in combined_status for k in ['in_transit', 'transit', 'en_transito', 'en_camino', 'out_for_delivery', 'shipped', 'recoleccion']):
+                target_status = 'shipped'
+            elif any(k in combined_status for k in ['cancelled', 'cancelado', 'voided']):
+                target_status = 'cancelled'
 
-        if not target_status:
-            logger.info(f"[Skydropx Webhook] Evento '{event_type}' no requiere cambio de estado en Pedido #{order.id}.")
-            return HttpResponse("Webhook recibido con éxito", status=200)
+            if not target_status:
+                logger.info(f"[Skydropx Webhook] Evento '{event_type}' no requiere cambio de estado en Pedido #{order.id}.")
+                return HttpResponse("Webhook recibido con éxito", status=200)
 
-        # Validación monótona: Previene que eventos desordenados o tardíos reviertan estados avanzados
-        current_rank = ORDER_SHIPPING_STATUS_RANK.get(order.status, 0)
-        target_rank = ORDER_SHIPPING_STATUS_RANK.get(target_status, 0)
+            # Validación monótona: Previene que eventos desordenados o tardíos reviertan estados avanzados
+            current_rank = ORDER_SHIPPING_STATUS_RANK.get(order.status, 0)
+            target_rank = ORDER_SHIPPING_STATUS_RANK.get(target_status, 0)
 
-        # Protección absoluta de estados terminales
-        if order.status in ('delivered', 'cancelled') and target_status != order.status:
-            logger.warning(
-                f"[Skydropx Webhook] Evento desfasado '{event_type}' descartado para Pedido #{order.id}: "
-                f"El pedido ya se encuentra en estado terminal '{order.status}' (rank {current_rank})."
-            )
-            return HttpResponse("Evento recibido (estado terminal protegido)", status=200)
+            # Protección absoluta de estados terminales
+            if order.status in ('delivered', 'cancelled') and target_status != order.status:
+                logger.warning(
+                    f"[Skydropx Webhook] Evento desfasado '{event_type}' descartado para Pedido #{order.id}: "
+                    f"El pedido ya se encuentra en estado terminal '{order.status}' (rank {current_rank})."
+                )
+                return HttpResponse("Evento recibido (estado terminal protegido)", status=200)
 
-        # Si el rango objetivo es menor o igual al actual, es un evento retrasado o repetido
-        if target_rank <= current_rank:
-            logger.info(
-                f"[Skydropx Webhook] Evento tardío o redundante '{event_type}' ignorado para Pedido #{order.id}: "
-                f"Estado actual '{order.status}' (rank {current_rank}) >= objetivo '{target_status}' (rank {target_rank})."
-            )
-            return HttpResponse("Evento recibido (sin cambios por orden monótono)", status=200)
+            # Si el rango objetivo es menor o igual al actual, es un evento retrasado o repetido
+            if target_rank <= current_rank:
+                logger.info(
+                    f"[Skydropx Webhook] Evento tardío o redundante '{event_type}' ignorado para Pedido #{order.id}: "
+                    f"Estado actual '{order.status}' (rank {current_rank}) >= objetivo '{target_status}' (rank {target_rank})."
+                )
+                return HttpResponse("Evento recibido (sin cambios por orden monótono)", status=200)
 
-        # Aplicación atómica del nuevo estado ascendente
-        order.status = target_status
-        update_fields = ['status']
-        if not order.tracking_number and tracking_number:
-            order.tracking_number = tracking_number
-            update_fields.append('tracking_number')
-        if not order.skydropx_shipment_id and shipment_id:
-            order.skydropx_shipment_id = shipment_id
-            order.shipping_id = shipment_id
-            update_fields.extend(['skydropx_shipment_id', 'shipping_id'])
+            # Aplicación atómica del nuevo estado ascendente
+            order.status = target_status
+            update_fields = ['status']
+            if not order.tracking_number and tracking_number:
+                order.tracking_number = tracking_number
+                update_fields.append('tracking_number')
+            if not order.skydropx_shipment_id and shipment_id:
+                order.skydropx_shipment_id = shipment_id
+                order.shipping_id = shipment_id
+                update_fields.extend(['skydropx_shipment_id', 'shipping_id'])
 
-        if target_status == 'delivered':
-            order.shipping_status = 'completed'
-            update_fields.append('shipping_status')
-        elif target_status == 'cancelled':
-            order.shipping_status = 'cancelled'
-            update_fields.append('shipping_status')
+            if target_status == 'delivered':
+                order.shipping_status = 'completed'
+                update_fields.append('shipping_status')
+            elif target_status == 'cancelled':
+                order.shipping_status = 'cancelled'
+                update_fields.append('shipping_status')
 
-        order.save(update_fields=update_fields)
-        logger.info(f"[Skydropx Webhook] ✅ Pedido #{order.id} actualizado monótonamente a '{target_status}' (rank {target_rank}).")
+            order.save(update_fields=update_fields)
+
+            # Registrar ShippingEvent de auditoría
+            try:
+                from .models import ShippingEvent
+                ShippingEvent.objects.create(
+                    order=order,
+                    shipment_id=shipment_id or order.skydropx_shipment_id,
+                    event_type='WEBHOOK_PROCESSED',
+                    correlation_id=request.META.get('HTTP_X_CORRELATION_ID') or f"webhook:{event_id}",
+                    idempotency_key=event_id,
+                    http_status=200,
+                    response_payload=payload
+                )
+            except Exception as ev_err:
+                logger.warning(f"[Skydropx Webhook] No se pudo persistir ShippingEvent: {ev_err}")
+
+            logger.info(f"[Skydropx Webhook] ✅ Pedido #{order.id} actualizado monótonamente a '{target_status}' (rank {target_rank}).")
 
         return HttpResponse("Webhook recibido con éxito", status=200)
     except Exception as e:
