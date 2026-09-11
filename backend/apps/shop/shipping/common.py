@@ -249,13 +249,13 @@ def calculate_order_package(
     ).lower().strip()
 
     if pkg_type == 'bag':
-        default_sat_type = "5M"  # Bolsa de polietileno / plástico SAT
+        default_sat_type = DEFAULT_PACKAGE_TYPE  # "4G" (Estándar SAT universal aceptado por Skydropx Pro API)
         default_length = getattr(cfg, 'bag_length', 30.0) if cfg else 30.0
         default_width = getattr(cfg, 'bag_width', 20.0) if cfg else 20.0
         default_height = getattr(cfg, 'bag_height', 5.0) if cfg else 5.0
         default_weight = getattr(cfg, 'bag_weight', 0.5) if cfg else 0.5
     else:
-        default_sat_type = "4G"  # Cajas de cartón SAT
+        default_sat_type = DEFAULT_PACKAGE_TYPE  # "4G" (Cajas de cartón SAT)
         default_length = getattr(cfg, 'box_length', DEFAULT_PACKAGE_LENGTH) if cfg else DEFAULT_PACKAGE_LENGTH
         default_width = getattr(cfg, 'box_width', DEFAULT_PACKAGE_WIDTH) if cfg else DEFAULT_PACKAGE_WIDTH
         default_height = getattr(cfg, 'box_height', DEFAULT_PACKAGE_HEIGHT) if cfg else DEFAULT_PACKAGE_HEIGHT
@@ -293,7 +293,14 @@ def calculate_order_package(
     final_declared = max(10.0, float(p.get("declared_value") or declared_value))
 
     consignment_note = str(p.get("consignment_note") or DEFAULT_CONSIGNMENT_NOTE).strip()
-    package_type = str(p.get("package_type") or default_sat_type).strip()
+    raw_package_type = str(p.get("package_type") or default_sat_type).strip()
+
+    # Skydropx Pro API valida estrictamente package_type contra su catálogo interno ('4G' es el estándar universal de paquetería SAT).
+    # Valores como '5M' son rechazados por Skydropx con error 422 ("El valor 5M no está incluido en la lista").
+    if raw_package_type in ("5M", "5H", "bag", "box", "") or not raw_package_type:
+        package_type = "4G"
+    else:
+        package_type = raw_package_type
 
     return [
         {

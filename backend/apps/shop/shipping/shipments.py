@@ -230,6 +230,24 @@ def create_shipment_from_rate(
         shipment_id=None
     )
 
+    # Auto-recuperación resiliente: si Skydropx rechaza el package_type con 422
+    if status_code == 422 and isinstance(resp_json, dict):
+        pkg_type_err = resp_json.get("errors", {}).get("package_type")
+        if pkg_type_err:
+            logger.warning(f"[Shipments] Skydropx rechazó package_type ({pkg_type_err}). Aplicando auto-recuperación con '4G'...")
+            packages_list = payload.get("shipment", {}).get("packages", [])
+            for pkg in packages_list:
+                pkg["package_type"] = "4G"
+            try:
+                attempt_key = f"{order.shipping_attempt_id}_ptretry" if order and getattr(order, 'shipping_attempt_id', None) else None
+                retry_res = client.request("POST", endpoint, json_data=payload, idempotency_key=attempt_key)
+                if retry_res.status_code in (200, 201, 202):
+                    logger.info(f"[Shipments] Auto-recuperación de package_type exitosa (HTTP {retry_res.status_code}).")
+                    status_code = retry_res.status_code
+                    resp_json = retry_res.json()
+            except Exception as retry_e:
+                logger.error(f"[Shipments] Error en reintento de auto-recuperación de package_type: {retry_e}")
+
     # Aceptar 200 OK, 201 Created y 202 Accepted (asíncrono canónico)
     if status_code not in (200, 201, 202):
         logger.error(f"[Shipments] Error creating shipment from rate ({status_code}): {resp_json}")
@@ -443,6 +461,24 @@ def create_rate_shipment(
         correlation_id=client.correlation_id,
         shipment_id=None
     )
+
+    # Auto-recuperación resiliente: si Skydropx rechaza el package_type con 422
+    if status_code == 422 and isinstance(resp_json, dict):
+        pkg_type_err = resp_json.get("errors", {}).get("package_type")
+        if pkg_type_err:
+            logger.warning(f"[Shipments] Skydropx rechazó package_type ({pkg_type_err}). Aplicando auto-recuperación con '4G'...")
+            packages_list = payload.get("shipment", {}).get("packages", [])
+            for pkg in packages_list:
+                pkg["package_type"] = "4G"
+            try:
+                attempt_key = f"{order.shipping_attempt_id}_ptretry" if order and getattr(order, 'shipping_attempt_id', None) else None
+                retry_res = client.request("POST", endpoint, json_data=payload, idempotency_key=attempt_key)
+                if retry_res.status_code in (200, 201, 202):
+                    logger.info(f"[Shipments] Auto-recuperación de package_type exitosa (HTTP {retry_res.status_code}).")
+                    status_code = retry_res.status_code
+                    resp_json = retry_res.json()
+            except Exception as retry_e:
+                logger.error(f"[Shipments] Error en reintento de auto-recuperación de package_type: {retry_e}")
 
     if status_code not in (200, 201, 202):
         logger.error(f"[Shipments] Error in direct rate shipment ({status_code}): {resp_json}")

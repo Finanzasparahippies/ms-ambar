@@ -12,11 +12,15 @@ def check_wallet_balance_alert(balance_amount: Optional[float], currency: str = 
         try:
             numeric_balance = float(balance_amount)
             if numeric_balance < SKYDROPX_MIN_BALANCE_ALERT:
-                logger.error(
-                    f"[SKYDROPX_WALLET_CRITICAL] Saldo en cartera de Skydropx crítico: ${numeric_balance:.2f} {currency} "
-                    f"(umbral de alerta: ${SKYDROPX_MIN_BALANCE_ALERT:.2f} {currency}). "
-                    f"Recargue saldo inmediatamente en https://app.skydropx.com/ para prevenir interrupciones de despacho."
-                )
+                from django.core.cache import cache
+                throttle_key = f"skydropx_wallet_alert_{int(numeric_balance)}"
+                if not cache.get(throttle_key):
+                    cache.set(throttle_key, True, timeout=60)
+                    logger.error(
+                        f"[SKYDROPX_WALLET_CRITICAL] Saldo en cartera de Skydropx crítico: ${numeric_balance:.2f} {currency} "
+                        f"(umbral de alerta: ${SKYDROPX_MIN_BALANCE_ALERT:.2f} {currency}). "
+                        f"Recargue saldo inmediatamente en https://app.skydropx.com/ para prevenir interrupciones de despacho."
+                    )
         except (ValueError, TypeError):
             pass
 

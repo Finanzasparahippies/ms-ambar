@@ -1127,7 +1127,7 @@ class ShopAppTests(APITestCase):
             packaging_type='bag'
         )
         pkg_bag = calculate_order_package(order_bag)
-        self.assertEqual(pkg_bag[0]['package_type'], '5M')
+        self.assertEqual(pkg_bag[0]['package_type'], '4G')
         self.assertEqual(pkg_bag[0]['length'], 30)
         self.assertEqual(pkg_bag[0]['width'], 20)
         self.assertEqual(pkg_bag[0]['height'], 5)
