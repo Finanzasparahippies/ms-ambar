@@ -32,6 +32,7 @@ services:
     volumes:
       - ./frontend:/app:Z
       - /app/node_modules
+      - /app/.next
     env_file:
       - .env.staging
     environment:

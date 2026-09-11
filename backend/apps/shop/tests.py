@@ -947,3 +947,18 @@ class ShopAppTests(APITestCase):
         self.assertGreaterEqual(metrics["http_5xx_count"], 1)
         self.assertIn("success_rate_percent", metrics)
         self.assertIn("pending_reconciliation_orders", metrics)
+
+    def test_shipping_module_exports_shipping_status(self):
+        """Verifica que el paquete apps.shop.shipping exporte ShippingStatus y utilidades directamente."""
+        from apps.shop.shipping import (
+            ShippingStatus,
+            map_skydropx_status,
+            calculate_order_package,
+            validate_shipment_payload_contract,
+        )
+        self.assertEqual(ShippingStatus.PENDING.value, "pending")
+        self.assertEqual(ShippingStatus.COMPLETED.value, "completed")
+        self.assertTrue(callable(map_skydropx_status))
+        self.assertTrue(callable(calculate_order_package))
+        self.assertTrue(callable(validate_shipment_payload_contract))
+

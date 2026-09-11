@@ -11,6 +11,10 @@ from .common import (
     validate_postal_code,
     lookup_postal_code,
     get_origin_address,
+    ShippingStatus,
+    map_skydropx_status,
+    calculate_order_package,
+    validate_shipment_payload_contract,
 )
 
 from .auth import OAuthManager
@@ -62,6 +66,10 @@ __all__ = [
     "validate_postal_code",
     "lookup_postal_code",
     "get_origin_address",
+    "ShippingStatus",
+    "map_skydropx_status",
+    "calculate_order_package",
+    "validate_shipment_payload_contract",
     "OAuthManager",
     "SkydropxClient",
     "get_credits",

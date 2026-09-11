@@ -9,7 +9,14 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
-from .shipping import generate_shipping_label, generate_sample_shipping_label_pdf
+from .shipping import (
+    generate_shipping_label,
+    generate_sample_shipping_label_pdf,
+    quote_shipping_rates,
+    lookup_postal_code,
+    validate_postal_code,
+    ShippingStatus,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -393,7 +400,6 @@ def send_order_confirmation_email(order):
 def process_fulfillment(order, correlation_id=None):
     """Ejecuta la emisión idempotente de la guía e inyecta los datos en el correo de confirmación con bloqueo select_for_update()."""
     import uuid
-    from .shipping import ShippingStatus
 
     should_generate = False
     with transaction.atomic():
@@ -415,8 +421,7 @@ def process_fulfillment(order, correlation_id=None):
         order.refresh_from_db()
 
     send_order_confirmation_email(order)
-    
-from .shipping import generate_shipping_label, quote_shipping_rates, lookup_postal_code, validate_postal_code, generate_sample_shipping_label_pdf, ShippingStatus
+
 
 class OrderBySessionView(APIView):
     """
