@@ -223,15 +223,43 @@ DEFAULT_PACKAGE_WEIGHT = float(getattr(settings, "DEFAULT_PACKAGE_WEIGHT", 1.0))
 
 def calculate_order_package(
     order: Any = None, 
-    parcel_override: Optional[dict] = None
+    parcel_override: Optional[dict] = None,
+    packaging_type: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Calcula dinámicamente el arreglo 'packages' para la emisión oficial en Skydropx.
     Deriva peso real a partir de los OrderItems si están disponibles en base de datos,
-    o utiliza los overrides/defaults documentados.
+    o utiliza los overrides/defaults documentados respetando el tipo de empaque (Caja 4G vs Bolsa 5M).
     """
     p = parcel_override or {}
     
+    cfg = None
+    try:
+        from apps.shop.models import ShopShippingConfig
+        cfg = ShopShippingConfig.get_solo()
+    except Exception:
+        pass
+
+    pkg_type = str(
+        packaging_type or 
+        (p.get("packaging_type") if p else None) or 
+        getattr(order, 'packaging_type', None) or 
+        (getattr(cfg, 'default_packaging_type', None) or 'box')
+    ).lower().strip()
+
+    if pkg_type == 'bag':
+        default_sat_type = "5M"  # Bolsa de polietileno / plástico SAT
+        default_length = getattr(cfg, 'bag_length', 30.0) if cfg else 30.0
+        default_width = getattr(cfg, 'bag_width', 20.0) if cfg else 20.0
+        default_height = getattr(cfg, 'bag_height', 5.0) if cfg else 5.0
+        default_weight = getattr(cfg, 'bag_weight', 0.5) if cfg else 0.5
+    else:
+        default_sat_type = "4G"  # Cajas de cartón SAT
+        default_length = getattr(cfg, 'box_length', DEFAULT_PACKAGE_LENGTH) if cfg else DEFAULT_PACKAGE_LENGTH
+        default_width = getattr(cfg, 'box_width', DEFAULT_PACKAGE_WIDTH) if cfg else DEFAULT_PACKAGE_WIDTH
+        default_height = getattr(cfg, 'box_height', DEFAULT_PACKAGE_HEIGHT) if cfg else DEFAULT_PACKAGE_HEIGHT
+        default_weight = getattr(cfg, 'box_weight', DEFAULT_PACKAGE_WEIGHT) if cfg else DEFAULT_PACKAGE_WEIGHT
+
     total_weight = 0.0
     declared_value = 100.0
 
@@ -256,15 +284,15 @@ def calculate_order_package(
 
     final_weight = max(
         0.1, 
-        float(p.get("weight") or (total_weight if total_weight > 0 else DEFAULT_PACKAGE_WEIGHT))
+        float(p.get("weight") or (total_weight if total_weight > 0 else default_weight))
     )
-    final_length = float(p.get("length") or DEFAULT_PACKAGE_LENGTH)
-    final_width = float(p.get("width") or DEFAULT_PACKAGE_WIDTH)
-    final_height = float(p.get("height") or DEFAULT_PACKAGE_HEIGHT)
+    final_length = float(p.get("length") or default_length)
+    final_width = float(p.get("width") or default_width)
+    final_height = float(p.get("height") or default_height)
     final_declared = max(10.0, float(p.get("declared_value") or declared_value))
 
     consignment_note = str(p.get("consignment_note") or DEFAULT_CONSIGNMENT_NOTE).strip()
-    package_type = str(p.get("package_type") or DEFAULT_PACKAGE_TYPE).strip()
+    package_type = str(p.get("package_type") or default_sat_type).strip()
 
     return [
         {

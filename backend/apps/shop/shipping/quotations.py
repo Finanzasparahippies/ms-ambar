@@ -91,17 +91,40 @@ def quote_shipping_rates(
     dest_zip: str, 
     weight_kg: float = 1.0,
     dest_address_extra: Optional[Dict[str, Any]] = None,
-    force_refresh: bool = False
+    force_refresh: bool = False,
+    packaging_type: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
     Cotiza tarifas multi-carrier en tiempo real usando Skydropx Pro API (POST /api/v1/quotations).
+    Calcula dimensiones óptimas según el empaque (Bolsa 5M vs Caja 4G) para obtener los mejores precios.
     Caché de 15 minutos (900s) para evitar que expiren los rate_ids generados por Skydropx.
     """
     if not validate_postal_code(origin_zip) or not validate_postal_code(dest_zip):
         logger.warning(f"[Quotations] Códigos postales inválidos: origen={origin_zip}, destino={dest_zip}")
         return get_fallback_rates()
 
-    cache_key = f"shipping_quote_v2_{origin_zip}_{dest_zip}_{int(weight_kg * 10)}"
+    cfg = None
+    try:
+        from apps.shop.models import ShopShippingConfig
+        cfg = ShopShippingConfig.get_solo()
+    except Exception:
+        pass
+
+    pkg_type = str(packaging_type or (getattr(cfg, 'default_packaging_type', None) or 'box')).lower().strip()
+    if pkg_type == 'bag':
+        p_len = getattr(cfg, 'bag_length', 30.0) if cfg else 30.0
+        p_wid = getattr(cfg, 'bag_width', 20.0) if cfg else 20.0
+        p_hei = getattr(cfg, 'bag_height', 5.0) if cfg else 5.0
+        base_w = getattr(cfg, 'bag_weight', 0.5) if cfg else 0.5
+    else:
+        p_len = getattr(cfg, 'box_length', 35.0) if cfg else 35.0
+        p_wid = getattr(cfg, 'box_width', 25.0) if cfg else 25.0
+        p_hei = getattr(cfg, 'box_height', 15.0) if cfg else 15.0
+        base_w = getattr(cfg, 'box_weight', 1.0) if cfg else 1.0
+
+    actual_weight = max(0.1, float(weight_kg if weight_kg > 0 else base_w))
+
+    cache_key = f"shipping_quote_v3_{origin_zip}_{dest_zip}_{int(actual_weight * 10)}_{pkg_type}"
     if not force_refresh:
         cached = cache.get(cache_key)
         if cached:
@@ -138,10 +161,10 @@ def quote_shipping_rates(
             },
             "parcels": [
                 {
-                    "length": 35,
-                    "width": 25,
-                    "height": 15,
-                    "weight": max(0.1, float(weight_kg)),
+                    "length": p_len,
+                    "width": p_wid,
+                    "height": p_hei,
+                    "weight": actual_weight,
                     "package_protected": False,
                     "declared_value": 100.0
                 }

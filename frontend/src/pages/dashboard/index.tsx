@@ -3128,7 +3128,7 @@ export default function AdminDashboard() {
                   <ShippingManager
                     orders={orders}
                     onRefreshOrders={() => {
-                      api.get('/shop/orders/').then(res => {
+                      api.get('/dashboard/orders/').then(res => {
                         if (Array.isArray(res.data)) setOrders(res.data);
                       }).catch(() => {});
                     }}

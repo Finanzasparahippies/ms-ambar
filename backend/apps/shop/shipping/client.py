@@ -213,9 +213,9 @@ class SkydropxClient:
             return {"success": False, "error": str(e)}
 
     # Métodos fachada delegados
-    def quote_rates(self, origin_zip: str, dest_zip: str, weight_kg: float = 1.0, dest_address_extra: Optional[dict] = None) -> List[Dict[str, Any]]:
+    def quote_rates(self, origin_zip: str, dest_zip: str, weight_kg: float = 1.0, dest_address_extra: Optional[dict] = None, packaging_type: Optional[str] = None) -> List[Dict[str, Any]]:
         from .quotations import quote_shipping_rates
-        return quote_shipping_rates(origin_zip, dest_zip, weight_kg, dest_address_extra)
+        return quote_shipping_rates(origin_zip, dest_zip, weight_kg, dest_address_extra, packaging_type=packaging_type)
 
     def create_shipment_from_rate(self, rate_id: str, address_from: Optional[dict] = None, address_to: Optional[dict] = None, order: Any = None) -> Optional[Dict[str, Any]]:
         from .shipments import create_shipment_from_rate

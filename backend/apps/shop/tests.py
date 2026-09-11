@@ -1084,4 +1084,124 @@ class ShopAppTests(APITestCase):
         self.assertEqual(order.shipping_status, ShippingStatus.RECONCILIATION_REQUIRED.value)
         self.assertIn("Simulated network crash", order.shipping_error)
 
+    def test_packaging_type_and_dimensions_calculation(self):
+        """Verifica que calculate_order_package resuelva SAT '4G' para box y '5M' para bag con dimensiones dinámicas."""
+        from apps.shop.shipping.common import calculate_order_package
+        from apps.shop.models import ShopShippingConfig
+
+        cfg = ShopShippingConfig.get_solo()
+        cfg.box_length = 35
+        cfg.box_width = 25
+        cfg.box_height = 15
+        cfg.box_weight = 1.0
+        cfg.bag_length = 30
+        cfg.bag_width = 20
+        cfg.bag_height = 5
+        cfg.bag_weight = 0.5
+        cfg.save()
+
+        # Orden tipo 'box'
+        order_box = Order.objects.create(
+            user_email='box@msambar.com',
+            status='pending',
+            total_amount=500.0,
+            full_name='Caja Test',
+            street_and_number='Kino 10',
+            postal_code='83000',
+            packaging_type='box'
+        )
+        pkg_box = calculate_order_package(order_box)
+        self.assertEqual(pkg_box[0]['package_type'], '4G')
+        self.assertEqual(pkg_box[0]['length'], 35)
+        self.assertEqual(pkg_box[0]['width'], 25)
+        self.assertEqual(pkg_box[0]['height'], 15)
+
+        # Orden tipo 'bag'
+        order_bag = Order.objects.create(
+            user_email='bag@msambar.com',
+            status='pending',
+            total_amount=500.0,
+            full_name='Bolsa Test',
+            street_and_number='Kino 20',
+            postal_code='83000',
+            packaging_type='bag'
+        )
+        pkg_bag = calculate_order_package(order_bag)
+        self.assertEqual(pkg_bag[0]['package_type'], '5M')
+        self.assertEqual(pkg_bag[0]['length'], 30)
+        self.assertEqual(pkg_bag[0]['width'], 20)
+        self.assertEqual(pkg_bag[0]['height'], 5)
+
+    def test_order_tracking_view_endpoints(self):
+        """Verifica OrderTrackingView y PublicTrackingView."""
+        order = Order.objects.create(
+            user_email='track@msambar.com',
+            status='paid',
+            total_amount=650.0,
+            full_name='Track User',
+            street_and_number='Reforma 100',
+            postal_code='83000',
+            shipping_provider='Paquetexpress',
+            tracking_number='TRACK-AMBAR-TEST-123'
+        )
+
+        # OrderTrackingView
+        url_order_track = reverse('order-tracking', kwargs={'pk': order.id})
+        res1 = self.client.get(url_order_track)
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        self.assertTrue(res1.data['success'])
+        self.assertEqual(res1.data['tracking_number'], 'TRACK-AMBAR-TEST-123')
+        self.assertIn('paquetexpress', res1.data['carrier_url'].lower())
+
+        # PublicTrackingView
+        url_public = reverse('shipping-track') + f"?order_id={order.id}"
+        res2 = self.client.get(url_public)
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertTrue(res2.data['success'])
+        self.assertEqual(res2.data['tracking_number'], 'TRACK-AMBAR-TEST-123')
+
+    def test_skydropx_webhook_idempotency_and_sha256_deduplication(self):
+        """Verifica que skydropx_webhook dedupique eventos sin fallar y use @authentication_classes([])."""
+        order = Order.objects.create(
+            user_email='webhook_test@msambar.com',
+            status='paid',
+            total_amount=700.0,
+            full_name='Webhook Fan',
+            street_and_number='Calle 5',
+            postal_code='83000',
+            tracking_number='TRACK-WH-999',
+            shipping_status='creating'
+        )
+
+        url = reverse('skydropx-webhook')
+        payload = {
+            "event": "shipment.in_transit",
+            "data": {
+                "id": "ship_wh_999",
+                "attributes": {
+                    "status": "in_transit",
+                    "tracking_number": "TRACK-WH-999"
+                }
+            }
+        }
+
+        # Primera llamada (debe procesar y responder 200)
+        res1 = self.client.post(url, payload, format='json')
+        self.assertEqual(res1.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'shipped')
+
+        # Segunda llamada duplicada (debe reconocer SHA256 o event_id y responder 200)
+        res2 = self.client.post(url, payload, format='json')
+        self.assertEqual(res2.status_code, 200)
+        self.assertIn("Webhook ya", res2.content.decode('utf-8'))
+
+    def test_orders_list_alias_endpoint(self):
+        """Verifica que /api/shop/orders/ responda 200 con campos completos para el dashboard."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('shop-orders-list')
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertIsInstance(res.data, list)
+
 

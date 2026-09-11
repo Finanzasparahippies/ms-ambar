@@ -825,9 +825,23 @@ class DashboardOrdersView(APIView):
                     'total_amount': float(o.total_amount),
                     'created_at': o.created_at.isoformat(),
                     'full_name': o.full_name,
+                    'phone': o.phone,
                     'address': o.address,
                     'city': o.city,
+                    'state': o.state,
+                    'postal_code': o.postal_code,
                     'country': o.country,
+                    'selected_rate_id': o.selected_rate_id,
+                    'shipping_cost': float(o.shipping_cost) if o.shipping_cost is not None else 0.0,
+                    'shipping_provider': o.shipping_provider,
+                    'tracking_number': o.tracking_number,
+                    'tracking_url': o.tracking_url,
+                    'shipping_label_pdf': o.shipping_label_pdf,
+                    'shipping_status': o.shipping_status,
+                    'shipping_attempt_id': o.shipping_attempt_id,
+                    'skydropx_shipment_id': o.skydropx_shipment_id,
+                    'shipping_error': o.shipping_error,
+                    'packaging_type': o.packaging_type,
                     'items': items_data
                 })
             

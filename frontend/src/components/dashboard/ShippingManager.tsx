@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Truck, 
-  RefreshCw, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Clock, 
-  ExternalLink, 
-  Download, 
-  ShieldAlert, 
-  Settings2, 
-  DollarSign, 
-  Activity, 
+import {
+  Truck,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  Download,
+  ShieldAlert,
+  Settings2,
+  DollarSign,
+  Activity,
   FileText,
   HelpCircle,
   Radio,
   Sliders,
   MapPin,
-  Building2
+  Building2,
+  Box,
+  Copy,
+  Check,
+  X
 } from 'lucide-react';
 import api from '../../lib/api';
 import { showToast } from '../../lib/notifications';
@@ -58,6 +62,24 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
   const [autoAdvanceSandbox, setAutoAdvanceSandbox] = useState(false);
   const [minBalanceAlert, setMinBalanceAlert] = useState(500);
 
+  // Packaging State (Caja vs. Bolsa)
+  const [defaultPackagingType, setDefaultPackagingType] = useState<'box' | 'bag'>('box');
+  const [boxLength, setBoxLength] = useState(35);
+  const [boxWidth, setBoxWidth] = useState(25);
+  const [boxHeight, setBoxHeight] = useState(15);
+  const [boxWeight, setBoxWeight] = useState(1.0);
+  const [bagLength, setBagLength] = useState(30);
+  const [bagWidth, setBagWidth] = useState(20);
+  const [bagHeight, setBagHeight] = useState(5);
+  const [bagWeight, setBagWeight] = useState(0.5);
+
+  // Live Tracking Modal State
+  const [trackingModalOpen, setTrackingModalOpen] = useState(false);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
+  const [activeTrackingOrder, setActiveTrackingOrder] = useState<Order | null>(null);
+  const [copiedTrackingModal, setCopiedTrackingModal] = useState(false);
+
   // Origin / Sender Address State (Skydropx Remitente)
   const [originName, setOriginName] = useState('Almacén Oficial Ms Ambar');
   const [originCompany, setOriginCompany] = useState('Ms Ambar');
@@ -88,6 +110,15 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
         setAllowCustomerSelection(Boolean(c.allow_customer_carrier_selection));
         setAutoAdvanceSandbox(Boolean(c.auto_advance_sandbox));
         setMinBalanceAlert(c.min_balance_alert || 500);
+        setDefaultPackagingType(c.default_packaging_type || 'box');
+        setBoxLength(c.box_length ?? 35);
+        setBoxWidth(c.box_width ?? 25);
+        setBoxHeight(c.box_height ?? 15);
+        setBoxWeight(c.box_weight ?? 1.0);
+        setBagLength(c.bag_length ?? 30);
+        setBagWidth(c.bag_width ?? 20);
+        setBagHeight(c.bag_height ?? 5);
+        setBagWeight(c.bag_weight ?? 0.5);
         setOriginName(c.origin_name || 'Almacén Oficial Ms Ambar');
         setOriginCompany(c.origin_company || 'Ms Ambar');
         setOriginPhone(c.origin_phone || '6622140000');
@@ -119,6 +150,26 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
     }
   };
 
+  const handleOpenTracking = async (order: Order) => {
+    setActiveTrackingOrder(order);
+    setTrackingModalOpen(true);
+    setTrackingLoading(true);
+    try {
+      const res = await api.get(`/shop/orders/${order.id}/tracking/`);
+      setTrackingData(res.data);
+    } catch (err: any) {
+      console.error('Error consultando tracking:', err);
+      setTrackingData({
+        success: false,
+        status: order.shipping_status,
+        tracking_number: order.tracking_number,
+        events: []
+      });
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchShippingConfig();
   }, []);
@@ -134,6 +185,15 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
         allow_customer_carrier_selection: allowCustomerSelection,
         auto_advance_sandbox: autoAdvanceSandbox,
         min_balance_alert: minBalanceAlert,
+        default_packaging_type: defaultPackagingType,
+        box_length: Number(boxLength),
+        box_width: Number(boxWidth),
+        box_height: Number(boxHeight),
+        box_weight: Number(boxWeight),
+        bag_length: Number(bagLength),
+        bag_width: Number(bagWidth),
+        bag_height: Number(bagHeight),
+        bag_weight: Number(bagWeight),
         origin_name: originName.trim(),
         origin_company: originCompany.trim(),
         origin_phone: originPhone.trim(),
@@ -144,7 +204,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
         origin_state: originState.trim(),
         origin_postal_code: originPostalCode.trim(),
       });
-      showToast.success('Configuración logística y datos del remitente actualizados correctamente.');
+      showToast.success('Configuración logística, empaque y remitente actualizados con éxito.');
       fetchShippingConfig();
     } catch (err: any) {
       console.error('Error guardando configuración:', err);
@@ -236,11 +296,10 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
       {/* Top Banner: Environment, Status & Balance */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Wallet Balance Card */}
-        <div className={`p-6 rounded-3xl border transition-all ${
-          isBalanceCritical 
-            ? 'bg-red-950/20 border-red-500/40 shadow-lg shadow-red-950/30' 
+        <div className={`p-6 rounded-3xl border transition-all ${isBalanceCritical
+            ? 'bg-red-950/20 border-red-500/40 shadow-lg shadow-red-950/30'
             : 'bg-[#141C16] border-[#2B392F]'
-        }`}>
+          }`}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-[11px] uppercase tracking-widest text-[#F4F6F0]/60 font-bold flex items-center gap-1.5">
               <DollarSign size={14} className="text-amber-honey" /> Saldo en Cartera Skydropx
@@ -258,7 +317,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
             <span className="text-xs font-bold text-[#F4F6F0]/40 uppercase font-mono">MXN</span>
           </div>
           <p className="text-[11px] text-[#F4F6F0]/50 mt-2">
-            {isBalanceCritical 
+            {isBalanceCritical
               ? `Por debajo del umbral mínimo de seguridad ($${minBalanceAlert} MXN). Recarga saldo para evitar interrupciones.`
               : `Umbral de alerta configurado en $${minBalanceAlert} MXN.`}
           </p>
@@ -285,7 +344,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
             )}
           </div>
           <p className="text-[11px] text-[#F4F6F0]/50 mt-2">
-            {methodMode === 'quotation' 
+            {methodMode === 'quotation'
               ? 'Cotiza en tiempo real contra múltiples paqueterías (FedEx, Estafeta, DHL) y permite elegir.'
               : `Emite directamente con el transportista por defecto (${defaultCarrier.toUpperCase()} - ${defaultService}).`}
           </p>
@@ -297,9 +356,8 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
             <span className="text-[11px] uppercase tracking-widest text-[#F4F6F0]/60 font-bold flex items-center gap-1.5">
               <Activity size={14} className="text-amber-honey" /> Entorno & Conectividad
             </span>
-            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
-              configData?.is_configured ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
-            }`}>
+            <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${configData?.is_configured ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
+              }`}>
               {configData?.is_configured ? 'Conectado' : 'Mock Mode'}
             </span>
           </div>
@@ -320,21 +378,19 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveSubTab('orders')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              activeSubTab === 'orders'
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeSubTab === 'orders'
                 ? 'bg-amber-honey text-[#1E2B22] shadow-md'
                 : 'text-[#F4F6F0]/60 hover:text-white'
-            }`}
+              }`}
           >
             📦 Pedidos & Guías ({orders.length})
           </button>
           <button
             onClick={() => setActiveSubTab('config')}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              activeSubTab === 'config'
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeSubTab === 'config'
                 ? 'bg-amber-honey text-[#1E2B22] shadow-md'
                 : 'text-[#F4F6F0]/60 hover:text-white'
-            }`}
+              }`}
           >
             ⚙️ Configuración Logística
           </button>
@@ -343,11 +399,10 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
               setActiveSubTab('events');
               fetchShippingEvents();
             }}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              activeSubTab === 'events'
+            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeSubTab === 'events'
                 ? 'bg-amber-honey text-[#1E2B22] shadow-md'
                 : 'text-[#F4F6F0]/60 hover:text-white'
-            }`}
+              }`}
           >
             🛡️ Auditoría Inmutable (ShippingEvent)
           </button>
@@ -394,6 +449,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                 <tr>
                   <th className="p-4">Pedido</th>
                   <th className="p-4">Destinatario</th>
+                  <th className="p-4">Empaque</th>
                   <th className="p-4">Transportista / Método</th>
                   <th className="p-4">Estado Logístico</th>
                   <th className="p-4">Tracking Number</th>
@@ -404,7 +460,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
               <tbody className="divide-y divide-white/5">
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-[#F4F6F0]/40 uppercase tracking-wider italic">
+                    <td colSpan={8} className="p-8 text-center text-[#F4F6F0]/40 uppercase tracking-wider italic">
                       No hay pedidos registrados en la tienda.
                     </td>
                   </tr>
@@ -426,6 +482,14 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                           </span>
                         </td>
                         <td className="p-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${order.packaging_type === 'bag'
+                              ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
+                              : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                            }`}>
+                            {order.packaging_type === 'bag' ? '✉️ Bolsa' : '📦 Caja'}
+                          </span>
+                        </td>
+                        <td className="p-4">
                           <span className="font-medium text-[#F4F6F0]/90 block">
                             {order.shipping_provider || 'Estándar Nacional'}
                           </span>
@@ -438,7 +502,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                         <td className="p-4">
                           {getStatusBadge(order.shipping_status, order)}
                           {order.shipping_error && (
-                            <span 
+                            <span
                               className="block text-[10px] text-red-400/80 mt-1 max-w-xs truncate"
                               title={order.shipping_error}
                             >
@@ -482,6 +546,15 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                         </td>
                         <td className="p-4 text-right">
                           <div className="inline-flex items-center gap-2">
+                            {order.tracking_number && (
+                              <button
+                                onClick={() => handleOpenTracking(order)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/25 font-black text-[10px] uppercase tracking-wider transition-colors"
+                                title="Rastrear paquete en vivo"
+                              >
+                                <Truck size={10} /> Rastrear
+                              </button>
+                            )}
                             <button
                               onClick={() => {
                                 setSelectedEventOrder(order.id);
@@ -532,13 +605,12 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
               Modo de Operación de Envíos
             </label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div 
+              <div
                 onClick={() => setMethodMode('quotation')}
-                className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                  methodMode === 'quotation'
+                className={`p-5 rounded-2xl border cursor-pointer transition-all ${methodMode === 'quotation'
                     ? 'bg-amber-honey/10 border-amber-honey/50 ring-1 ring-amber-honey/30'
                     : 'bg-[#0C120E] border-white/5 hover:border-white/20'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
@@ -554,13 +626,12 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                 </p>
               </div>
 
-              <div 
+              <div
                 onClick={() => setMethodMode('direct_rate')}
-                className={`p-5 rounded-2xl border cursor-pointer transition-all ${
-                  methodMode === 'direct_rate'
+                className={`p-5 rounded-2xl border cursor-pointer transition-all ${methodMode === 'direct_rate'
                     ? 'bg-amber-honey/10 border-amber-honey/50 ring-1 ring-amber-honey/30'
                     : 'bg-[#0C120E] border-white/5 hover:border-white/20'
-                }`}
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-black text-white uppercase tracking-tight flex items-center gap-2">
@@ -749,6 +820,179 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
             </div>
           </div>
 
+          {/* Tipo de Empaque y Dimensiones Predeterminadas (Caja vs Bolsa) */}
+          <div className="pt-6 border-t border-white/10 space-y-6">
+            <div>
+              <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Box size={16} className="text-amber-honey" /> Dimensiones y Empaque Predeterminado (Skydropx)
+              </h4>
+              <p className="text-[11px] text-[#F4F6F0]/60 mt-0.5">
+                Configura las medidas y peso físico de cada empaque. Las paqueterías facturan el mayor entre el peso físico y el peso volumétrico (L × W × H / 5000).
+              </p>
+            </div>
+
+            {/* Selector de empaque predeterminado */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-white uppercase tracking-wider block">
+                Empaque Predeterminado para Nuevos Pedidos
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div
+                  onClick={() => setDefaultPackagingType('box')}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${defaultPackagingType === 'box'
+                      ? 'bg-amber-honey/10 border-amber-honey/60 ring-1 ring-amber-honey/30'
+                      : 'bg-[#0C120E] border-white/5 hover:border-white/20'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Radio size={14} className={defaultPackagingType === 'box' ? 'text-amber-honey' : 'text-white/40'} />
+                    <div>
+                      <span className="text-xs font-black text-white uppercase tracking-tight block">
+                        📦 Caja de Cartón (SAT: 4G)
+                      </span>
+                      <span className="text-[10px] text-[#F4F6F0]/50">Para múltiples artículos o mercancía rígida</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-amber-honey bg-white/5 px-2 py-0.5 rounded">
+                    Billed ~3.0 KG
+                  </span>
+                </div>
+
+                <div
+                  onClick={() => setDefaultPackagingType('bag')}
+                  className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center justify-between ${defaultPackagingType === 'bag'
+                      ? 'bg-amber-honey/10 border-amber-honey/60 ring-1 ring-amber-honey/30'
+                      : 'bg-[#0C120E] border-white/5 hover:border-white/20'
+                    }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Radio size={14} className={defaultPackagingType === 'bag' ? 'text-amber-honey' : 'text-white/40'} />
+                    <div>
+                      <span className="text-xs font-black text-white uppercase tracking-tight block">
+                        ✉️ Bolsa de Seguridad (SAT: 5M)
+                      </span>
+                      <span className="text-[10px] text-[#F4F6F0]/50">Para playeras, gorras y textiles ligeros (Mejor Precio)</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-mono font-bold text-emerald-400 bg-white/5 px-2 py-0.5 rounded">
+                    Billed 1.0 KG
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Medidas de Caja vs Medidas de Bolsa */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Tarjeta Caja */}
+              <div className="bg-[#0C120E] border border-white/10 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    📦 Medidas de Caja (cm / kg)
+                  </span>
+                  <span className="text-[10px] font-mono text-amber-honey bg-amber-honey/10 px-2 py-0.5 rounded font-bold">
+                    Volumétrico: {((boxLength * boxWidth * boxHeight) / 5000).toFixed(2)} KG
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Largo</label>
+                    <input
+                      type="number"
+                      value={boxLength}
+                      onChange={(e) => setBoxLength(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Ancho</label>
+                    <input
+                      type="number"
+                      value={boxWidth}
+                      onChange={(e) => setBoxWidth(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Alto</label>
+                    <input
+                      type="number"
+                      value={boxHeight}
+                      onChange={(e) => setBoxHeight(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Peso (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={boxWeight}
+                      onChange={(e) => setBoxWeight(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-[#F4F6F0]/40">
+                  35×25×15 cm arroja ~2.63 kg vol. Las paqueterías redondean hacia arriba a 3.00 kg facturados.
+                </p>
+              </div>
+
+              {/* Tarjeta Bolsa */}
+              <div className="bg-[#0C120E] border border-white/10 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                    ✉️ Medidas de Bolsa (cm / kg)
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-bold">
+                    Volumétrico: {((bagLength * bagWidth * bagHeight) / 5000).toFixed(2)} KG
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Largo</label>
+                    <input
+                      type="number"
+                      value={bagLength}
+                      onChange={(e) => setBagLength(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Ancho</label>
+                    <input
+                      type="number"
+                      value={bagWidth}
+                      onChange={(e) => setBagWidth(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Alto</label>
+                    <input
+                      type="number"
+                      value={bagHeight}
+                      onChange={(e) => setBagHeight(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-[#F4F6F0]/50 uppercase font-mono block mb-1">Peso (kg)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={bagWeight}
+                      onChange={(e) => setBagWeight(Number(e.target.value))}
+                      className="w-full bg-[#141C16] border border-white/10 rounded-lg p-2 text-xs text-white text-center font-mono font-bold focus:border-amber-honey outline-none"
+                    />
+                  </div>
+                </div>
+                <p className="text-[10px] text-emerald-400/80">
+                  30×20×5 cm arroja ~0.60 kg vol. Califica para el escalafón base de 1.00 kg facturado (máximo ahorro).
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Toggles & Umbrales */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
             <div className="space-y-4">
@@ -824,8 +1068,8 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                 <ShieldAlert size={16} className="text-amber-honey" /> Registro de Auditoría Inmutable (ShippingEvent)
               </h3>
               <p className="text-xs text-[#F4F6F0]/50 mt-0.5">
-                {selectedEventOrder 
-                  ? `Mostrando eventos del Pedido #${selectedEventOrder}` 
+                {selectedEventOrder
+                  ? `Mostrando eventos del Pedido #${selectedEventOrder}`
                   : 'Últimos 50 eventos registrados de llamadas hacia la API de Skydropx.'}
               </p>
             </div>
@@ -883,11 +1127,10 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          ev.http_status && ev.http_status >= 200 && ev.http_status < 300
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ev.http_status && ev.http_status >= 200 && ev.http_status < 300
                             ? 'bg-emerald-500/20 text-emerald-400'
                             : 'bg-red-500/20 text-red-400'
-                        }`}>
+                          }`}>
                           {ev.http_status || 'N/A'}
                         </span>
                       </td>
@@ -908,6 +1151,120 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* LIVE TRACKING MODAL */}
+      {trackingModalOpen && activeTrackingOrder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-[#141C16] border border-[#2B392F] rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 relative max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-honey/10 border border-amber-honey/20 flex items-center justify-center text-amber-honey">
+                  <Truck size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white uppercase tracking-tight">
+                    Rastreo en Vivo: Pedido #{activeTrackingOrder.id}
+                  </h3>
+                  <p className="text-xs text-[#F4F6F0]/50">
+                    {activeTrackingOrder.shipping_provider || 'Transportista'} • Guía Oficial
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setTrackingModalOpen(false)}
+                className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Tracking Number Bar */}
+            <div className="bg-[#0C120E] border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] uppercase tracking-widest text-[#F4F6F0]/40 font-mono block">
+                  Número de Rastreo
+                </span>
+                <span className="font-mono text-base font-black text-emerald-400">
+                  {activeTrackingOrder.tracking_number}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(activeTrackingOrder.tracking_number || '');
+                    setCopiedTrackingModal(true);
+                    setTimeout(() => setCopiedTrackingModal(false), 2000);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs text-white/80 hover:text-white font-mono flex items-center gap-1.5 transition-colors"
+                >
+                  {copiedTrackingModal ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                  {copiedTrackingModal ? 'Copiado' : 'Copiar Guía'}
+                </button>
+                {(trackingData?.carrier_url || activeTrackingOrder.tracking_url) && (
+                  <a
+                    href={trackingData?.carrier_url || activeTrackingOrder.tracking_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-amber-honey/20 hover:bg-amber-honey/30 text-amber-honey font-bold text-xs flex items-center gap-1.5 transition-colors"
+                  >
+                    <ExternalLink size={12} /> Sitio del Transportista
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Tracking Status & Timeline */}
+            {trackingLoading ? (
+              <div className="py-12 text-center text-xs text-white/50 space-y-3">
+                <RefreshCw size={24} className="animate-spin mx-auto text-amber-honey" />
+                <p>Consultando eventos de rastreo en tiempo real...</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-black uppercase tracking-wider text-white">
+                    Historial de Tránsito
+                  </span>
+                  <span className="text-[11px] font-mono text-emerald-400 uppercase font-bold">
+                    Estado: {trackingData?.status || activeTrackingOrder.shipping_status || 'En camino'}
+                  </span>
+                </div>
+
+                <div className="bg-[#0C120E] border border-white/10 rounded-2xl p-4 space-y-4">
+                  {trackingData?.events && trackingData.events.length > 0 ? (
+                    <div className="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-white/10">
+                      {trackingData.events.map((ev: any, idx: number) => (
+                        <div key={idx} className="relative">
+                          <div className={`absolute -left-6 top-0.5 w-3.5 h-3.5 rounded-full border-2 border-[#0C120E] ${idx === 0 ? 'bg-amber-honey ring-4 ring-amber-honey/20' : 'bg-white/30'
+                            }`} />
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-bold text-white">{ev.description || ev.status}</p>
+                              {ev.location && (
+                                <p className="text-[11px] text-[#F4F6F0]/50 flex items-center gap-1 mt-0.5">
+                                  <MapPin size={10} /> {ev.location}
+                                </p>
+                              )}
+                            </div>
+                            <span className="text-[10px] font-mono text-[#F4F6F0]/40 shrink-0">
+                              {ev.timestamp ? new Date(ev.timestamp).toLocaleString('es-MX') : 'Actualizado'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[#F4F6F0]/40 text-center py-6">
+                      El paquete fue emitido y está en espera del primer escaneo en la sucursal de recolección.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -22,7 +22,7 @@ from .shipping import (
 logger = logging.getLogger(__name__)
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes, action
+from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from apps.tickets.models import Ticket, Event, Seat
@@ -58,45 +58,54 @@ class ProductViewSet(viewsets.ModelViewSet):
     def upload_images(self, request, pk=None):
         """Añade una o múltiples imágenes a la galería del producto."""
         product = self.get_object()
-        images_urls = request.data.get('images', [])
-        if isinstance(images_urls, str):
-            images_urls = [images_urls]
-        
-        created_imgs = []
-        current_count = product.images.count()
-        with transaction.atomic():
-            for idx, url in enumerate(images_urls):
-                if url:
-                    img_obj = ProductImage.objects.create(
-                        product=product,
-                        image=url,
-                        is_primary=(current_count == 0 and idx == 0),
-                        order=current_count + idx
-                    )
-                    created_imgs.append(img_obj)
-            if not product.image and created_imgs:
-                product.image = created_imgs[0].image
-                product.save(update_fields=['image'])
+        images = request.FILES.getlist('images') or request.FILES.getlist('image')
+        if not images:
+            return Response({'error': 'No se enviaron imágenes.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(ProductSerializer(product).data, status=status.HTTP_200_OK)
+        created_images = []
+        is_first = not product.images.exists()
+        for idx, img in enumerate(images):
+            is_primary = is_first and (idx == 0)
+            pi = ProductImage.objects.create(
+                product=product,
+                image=img,
+                is_primary=is_primary,
+                order=product.images.count()
+            )
+            if is_primary and not product.image:
+                product.image = img
+                product.save(update_fields=['image'])
+            created_images.append(pi)
+
+        return Response(ProductSerializer(product).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['POST'], permission_classes=[permissions.IsAdminUser])
     def set_primary_image(self, request, pk=None):
-        """Define una imagen específica como la portada del producto."""
+        """Establece una imagen existente como la principal del producto."""
         product = self.get_object()
         image_id = request.data.get('image_id')
+        if not image_id:
+            return Response({'error': 'Se requiere image_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             target_image = product.images.get(id=image_id)
+            product.images.update(is_primary=False)
             target_image.is_primary = True
             target_image.save()
+            product.image = target_image.image
+            product.save(update_fields=['image'])
             return Response(ProductSerializer(product).data, status=status.HTTP_200_OK)
         except ProductImage.DoesNotExist:
-            return Response({'error': 'Imagen no encontrada para este producto.'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error': 'Imagen no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
 
-    @action(detail=True, methods=['DELETE'], url_path='delete_image/(?P<image_id>[^/.]+)', permission_classes=[permissions.IsAdminUser])
-    def delete_image(self, request, pk=None, image_id=None):
-        """Elimina una imagen de la galería."""
+    @action(detail=True, methods=['DELETE'], permission_classes=[permissions.IsAdminUser])
+    def delete_image(self, request, pk=None):
+        """Elimina una imagen de la galería de producto de forma segura."""
         product = self.get_object()
+        image_id = request.data.get('image_id')
+        if not image_id:
+            return Response({'error': 'Se requiere image_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             target_image = product.images.get(id=image_id)
             was_primary = target_image.is_primary
@@ -106,9 +115,10 @@ class ProductViewSet(viewsets.ModelViewSet):
                 if new_primary:
                     new_primary.is_primary = True
                     new_primary.save()
+                    product.image = new_primary.image
                 else:
                     product.image = None
-                    product.save(update_fields=['image'])
+                product.save(update_fields=['image'])
             return Response(ProductSerializer(product).data, status=status.HTTP_200_OK)
         except ProductImage.DoesNotExist:
             return Response({'error': 'Imagen no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
@@ -116,6 +126,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def stripe_webhook(request):
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
@@ -319,6 +330,7 @@ def handle_successful_payment(session):
     elif metadata.get('type') == 'shop_purchase':
         order_id = metadata.get('order_id')
         try:
+            order_to_fulfill = None
             with transaction.atomic():
                 order = None
                 if order_id:
@@ -344,15 +356,16 @@ def handle_successful_payment(session):
                             product.stock = max(0, product.stock - item.quantity)
                             product.save()
 
-                        # Ejecutar logística y despacho de confirmación
-                        process_fulfillment(order)
-                        logger.info(f"Pedido #{order.id} pagado con éxito y despachado.")
-
-
+                        order_to_fulfill = order
                     else:
                         logger.info(f"Pedido #{order.id} ya se encontraba procesado (status={order.status}). Ignorando duplicados.")
                 else:
                     logger.error(f"Pedido con ID {order_id} o sesión {session_id} no encontrado.")
+
+            # Ejecutar logística y despacho de confirmación fuera de la transacción atómica
+            if order_to_fulfill:
+                process_fulfillment(order_to_fulfill)
+                logger.info(f"Pedido #{order_to_fulfill.id} pagado con éxito y despachado.")
         except Exception as e:
             logger.error(f"Error procesando pedido #{order_id}: {e}", exc_info=True)
 
@@ -447,6 +460,7 @@ class OrderBySessionView(APIView):
                 order_id = int(order_id_str)
                 order = Order.objects.filter(id=order_id).first()
                 if order and order.status == 'pending':
+                    order_to_fulfill = None
                     with transaction.atomic():
                         locked_order = Order.objects.select_for_update().get(id=order.id)
                         if locked_order.status == 'pending':
@@ -457,7 +471,9 @@ class OrderBySessionView(APIView):
                                 prod = Product.objects.select_for_update().get(id=item.product.id)
                                 prod.stock = max(0, prod.stock - item.quantity)
                                 prod.save()
-                            process_fulfillment(locked_order)
+                            order_to_fulfill = locked_order
+                    if order_to_fulfill:
+                        process_fulfillment(order_to_fulfill)
                     order.refresh_from_db()
 
 
@@ -537,16 +553,20 @@ class ShippingQuoteView(APIView):
 
     def post(self, request):
         dest_postal_code = request.data.get('postal_code') or request.data.get('dest_postal_code')
-        origin_postal_code = request.data.get('origin_postal_code') or settings.SHIPPING_ORIGIN_POSTAL_CODE if hasattr(settings, 'SHIPPING_ORIGIN_POSTAL_CODE') else os.environ.get('SHIPPING_ORIGIN_POSTAL_CODE', '83000')
+        origin_postal_code = request.data.get('origin_postal_code') or (settings.SHIPPING_ORIGIN_POSTAL_CODE if hasattr(settings, 'SHIPPING_ORIGIN_POSTAL_CODE') else os.environ.get('SHIPPING_ORIGIN_POSTAL_CODE', '83000'))
         weight_kg = float(request.data.get('weight_kg', 1.0))
+        packaging_type = str(request.data.get('packaging_type', 'box')).lower().strip()
+        if packaging_type not in ('box', 'bag'):
+            packaging_type = 'box'
 
         if not dest_postal_code or not validate_postal_code(str(dest_postal_code)):
             return Response({"error": "El código postal de destino debe tener 5 dígitos numéricos."}, status=status.HTTP_400_BAD_REQUEST)
 
-        rates = quote_shipping_rates(origin_postal_code, str(dest_postal_code), weight_kg=weight_kg)
+        rates = quote_shipping_rates(origin_postal_code, str(dest_postal_code), weight_kg=weight_kg, packaging_type=packaging_type)
         return Response({
             "origin_postal_code": origin_postal_code,
             "dest_postal_code": str(dest_postal_code),
+            "packaging_type": packaging_type,
             "rates": rates
         }, status=status.HTTP_200_OK)
 
@@ -589,6 +609,9 @@ class ShopCheckoutView(APIView):
         items_data = data.get('items', [])
         shipping_rate_id = data.get('shipping_rate_id', 'rate_std_fallback')
         shipping_amount = float(data.get('shipping_amount', 150.0))
+        packaging_type = str(data.get('packaging_type', 'box')).lower().strip()
+        if packaging_type not in ('box', 'bag'):
+            packaging_type = 'box'
 
         if not all([email, full_name, phone, street_and_number, postal_code, items_data]):
             return Response({"error": "Todos los campos de entrega e ítems son requeridos."}, status=status.HTTP_400_BAD_REQUEST)
@@ -637,7 +660,7 @@ class ShopCheckoutView(APIView):
 
         shipping_provider_name = data.get('shipping_provider', '')
 
-        # 2. Registrar la orden en estado 'pending' con persistencia exacta de tarifas
+        # 2. Registrar la orden en estado 'pending' con persistencia exacta de tarifas y tipo de empaque
         with transaction.atomic():
             order = Order.objects.create(
                 user_email=email,
@@ -653,7 +676,8 @@ class ShopCheckoutView(APIView):
                 country=country,
                 selected_rate_id=shipping_rate_id,
                 shipping_cost=shipping_amount,
-                shipping_provider=shipping_provider_name
+                shipping_provider=shipping_provider_name,
+                packaging_type=packaging_type
             )
 
             # Enlazar los artículos de la orden
@@ -701,6 +725,7 @@ class ShopCheckoutView(APIView):
                 'rate_id': str(shipping_rate_id or 'rate_std_fallback'),
                 'shipping_amount': str(shipping_amount),
                 'postal_code': str(postal_code),
+                'packaging_type': str(packaging_type),
             }
 
             session_kwargs = {
@@ -745,6 +770,7 @@ ORDER_SHIPPING_STATUS_RANK = {
 @csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def skydropx_webhook(request):
     """
     Webhook oficial para recibir notificaciones de Skydropx sobre el ciclo de vida del paquete.
@@ -785,11 +811,19 @@ def skydropx_webhook(request):
         # Deduplicación idempotente vía SkydropxWebhookEvent
         from .models import SkydropxWebhookEvent
         event_id = str(payload.get('id') or payload.get('event_id') or request.META.get('HTTP_X_SKYDROPX_EVENT_ID') or "").strip()
-        if event_id:
-            if SkydropxWebhookEvent.objects.filter(event_id=event_id).exists():
-                logger.info(f"[Skydropx Webhook] Evento ya procesado previamente (id={event_id}). Descartando.")
-                return HttpResponse("Webhook ya procesado previamente", status=200)
+        if not event_id:
+            import hashlib
+            raw_body = json.dumps(payload, sort_keys=True, default=str).encode('utf-8')
+            event_id = f"sha256:{hashlib.sha256(raw_body).hexdigest()}"
+
+        if SkydropxWebhookEvent.objects.filter(event_id=event_id).exists():
+            logger.info(f"[Skydropx Webhook] Evento ya procesado previamente (id={event_id}). Descartando.")
+            return HttpResponse("Webhook ya procesado previamente", status=200)
+        try:
             SkydropxWebhookEvent.objects.create(event_id=event_id, payload=payload)
+        except Exception as dup_err:
+            logger.info(f"[Skydropx Webhook] Colisión concurrente al registrar evento {event_id}: {dup_err}")
+            return HttpResponse("Webhook ya procesado previamente", status=200)
 
         event_type = payload.get('event') or payload.get('type') or payload.get('status') or ""
         data = payload.get('data', payload)
@@ -943,14 +977,19 @@ class ShopShippingConfigView(APIView):
     def put(self, request):
         from .models import ShopShippingConfig
         from .serializers import ShopShippingConfigSerializer
+        from django.core.cache import cache
 
-        config = ShopShippingConfig.get_solo()
-        serializer = ShopShippingConfigSerializer(config, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            logger.info(f"[ShippingConfig] Configuración logística actualizada por {request.user}: {serializer.data}")
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        with transaction.atomic():
+            config = ShopShippingConfig.objects.select_for_update().filter(id=1).first()
+            if not config:
+                config = ShopShippingConfig.objects.create(id=1)
+            serializer = ShopShippingConfigSerializer(config, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                cache.delete("shop_shipping_config_solo")
+                logger.info(f"[ShippingConfig] Configuración logística actualizada por {request.user}: {serializer.data}")
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ShippingReconcileView(APIView):
@@ -1012,4 +1051,64 @@ class ShippingCatalogsView(APIView):
             "carrier_services": get_carrier_services(),
             "consignment_notes": get_consignment_notes(),
             "packagings": get_packagings(),
-        })
+        })
+
+
+class OrderTrackingView(APIView):
+    """
+    Permite consultar el estado de rastreo y eventos de logística para una orden.
+    Accesible para el comprador o administradores.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        order = Order.objects.filter(id=pk).first()
+        if not order:
+            return Response({'error': 'Pedido no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        tracking_num = order.tracking_number
+        if not tracking_num:
+            return Response({
+                "success": True,
+                "order_id": order.id,
+                "shipping_status": order.shipping_status,
+                "carrier": order.shipping_provider or "Pendiente",
+                "tracking_number": None,
+                "carrier_url": None,
+                "events": [],
+                "message": "La guía aún se encuentra en proceso de emisión."
+            }, status=status.HTTP_200_OK)
+
+        from .shipping.tracking import get_tracking_events, get_carrier_tracking_url
+        carrier = order.shipping_provider or ""
+        tracking_info = get_tracking_events(tracking_num, carrier=carrier)
+        tracking_info["order_id"] = order.id
+        tracking_info["shipping_status"] = order.shipping_status
+        tracking_info["carrier_url"] = tracking_info.get("carrier_url") or get_carrier_tracking_url(tracking_num, carrier)
+        return Response(tracking_info, status=status.HTTP_200_OK)
+
+
+class PublicTrackingView(APIView):
+    """
+    Permite el rastreo público mediante tracking_number o número de orden.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tracking_number = request.query_params.get('tracking_number')
+        order_id = request.query_params.get('order_id')
+        carrier = request.query_params.get('carrier')
+
+        if order_id and not tracking_number:
+            order = Order.objects.filter(id=order_id).first()
+            if order and order.tracking_number:
+                tracking_number = order.tracking_number
+                carrier = carrier or order.shipping_provider
+
+        if not tracking_number:
+            return Response({"error": "Debe proporcionar un tracking_number o un order_id válido."}, status=status.HTTP_400_BAD_REQUEST)
+
+        from .shipping.tracking import get_tracking_events, get_carrier_tracking_url
+        data = get_tracking_events(tracking_number, carrier=carrier)
+        data["carrier_url"] = data.get("carrier_url") or get_carrier_tracking_url(tracking_number, carrier)
+        return Response(data, status=status.HTTP_200_OK)

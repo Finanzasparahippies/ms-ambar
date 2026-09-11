@@ -172,7 +172,8 @@ class OrderSerializer(serializers.ModelSerializer):
             'full_name', 'phone', 'street_and_number', 'suburb', 'city', 'state',
             'postal_code', 'country', 'address', 'selected_rate_id', 'shipping_cost',
             'shipping_provider', 'tracking_number', 'tracking_url', 'shipping_label_pdf',
-            'shipping_status', 'shipping_attempt_id', 'skydropx_shipment_id', 'shipping_error'
+            'shipping_status', 'shipping_attempt_id', 'skydropx_shipment_id', 'shipping_error',
+            'packaging_type'
         ]
 
 
@@ -184,6 +185,9 @@ class ShopShippingConfigSerializer(serializers.ModelSerializer):
             'id', 'method_mode', 'default_carrier', 'default_service',
             'allow_customer_carrier_selection', 'auto_advance_sandbox',
             'min_balance_alert',
+            'default_packaging_type',
+            'box_length', 'box_width', 'box_height', 'box_weight',
+            'bag_length', 'bag_width', 'bag_height', 'bag_weight',
             'origin_name', 'origin_company', 'origin_phone', 'origin_email',
             'origin_street', 'origin_suburb', 'origin_city', 'origin_state',
             'origin_postal_code',

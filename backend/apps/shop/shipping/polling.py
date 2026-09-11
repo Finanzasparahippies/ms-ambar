@@ -7,8 +7,8 @@ from .common import ShippingStatus, map_skydropx_status
 
 logger = logging.getLogger("apps")
 
-DEFAULT_BACKOFF_INTERVALS = [1.0, 2.0, 4.0, 8.0, 16.0]
-MAX_POLL_TIMEOUT_SECONDS = 45.0
+DEFAULT_BACKOFF_INTERVALS = [1.0, 1.5, 2.5]
+MAX_POLL_TIMEOUT_SECONDS = float(getattr(settings, "SKYDROPX_POLL_TIMEOUT", 6.0))
 
 
 def poll_shipment_resolution(

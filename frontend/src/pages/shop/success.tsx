@@ -56,7 +56,19 @@ interface OrderDetails {
   tracking_number?: string;
   tracking_url?: string;
   shipping_label_pdf?: string;
+  packaging_type?: 'box' | 'bag';
 }
+
+const getCarrierTrackingDirectUrl = (trackingNumber?: string, provider?: string, fallbackUrl?: string) => {
+  if (!trackingNumber) return fallbackUrl || '#';
+  const clean = trackingNumber.trim();
+  const p = (provider || '').toLowerCase();
+  if (p.includes('paquetexpress')) return `https://www.paquetexpress.com.mx/rastreo?tracking=${clean}`;
+  if (p.includes('fedex')) return `https://www.fedex.com/fedextrack/?trknbr=${clean}`;
+  if (p.includes('dhl')) return `https://www.dhl.com/mx-es/home/rastreo.html?tracking-id=${clean}`;
+  if (p.includes('estafeta')) return `https://www.estafeta.com/Herramientas/Rastreo?rastreo=${clean}`;
+  return fallbackUrl || `https://track.skydropx.com/?q=${clean}`;
+};
 
 export default function ShopSuccessPage() {
   const router = useRouter();
@@ -243,9 +255,14 @@ export default function ShopSuccessPage() {
                     <Truck size={28} />
                   </div>
                   <div>
-                    <span className="text-xs uppercase tracking-wider text-gray-400 font-medium">Paquetería Asignada</span>
+                    <span className="text-xs uppercase tracking-wider text-gray-400 font-medium">Paquetería y Empaque</span>
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      {order.shipping_provider || 'Estándar Nacional (FedEx / Estafeta)'}
+                      {order.shipping_provider || 'Estándar Nacional'}
+                      {order.packaging_type && (
+                        <span className="text-[11px] font-mono px-2.5 py-0.5 rounded-full bg-white/10 text-white/80 font-normal">
+                          {order.packaging_type === 'bag' ? '✉️ Bolsa de Seguridad' : '📦 Caja de Envío'}
+                        </span>
+                      )}
                     </h3>
                   </div>
                 </div>
@@ -272,14 +289,14 @@ export default function ShopSuccessPage() {
 
               {/* Action Buttons for Tracking & PDF */}
               <div className="pt-6 flex flex-wrap gap-4 items-center justify-start">
-                {order.tracking_url && (
+                {order.tracking_number && (
                   <a
-                    href={order.tracking_url}
+                    href={getCarrierTrackingDirectUrl(order.tracking_number, order.shipping_provider, order.tracking_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm shadow-[0_4px_20px_rgba(245,158,11,0.3)] transition-all duration-200"
                   >
-                    <ExternalLink size={16} /> Rastrear Paquete en Vivo
+                    <ExternalLink size={16} /> Rastrear Paquete en Vivo ({order.shipping_provider?.split(' ')[0] || 'Transportista'})
                   </a>
                 )}
 

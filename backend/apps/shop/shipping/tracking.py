@@ -5,6 +5,20 @@ from .client import SkydropxClient
 logger = logging.getLogger("apps")
 
 
+def get_carrier_tracking_url(tracking_number: str, carrier: Optional[str] = None) -> str:
+    clean = str(tracking_number).strip()
+    c_lower = str(carrier or "").lower()
+    if "paquetexpress" in c_lower:
+        return f"https://www.paquetexpress.com.mx/rastreo?tracking={clean}"
+    if "fedex" in c_lower:
+        return f"https://www.fedex.com/fedextrack/?trknbr={clean}"
+    if "dhl" in c_lower:
+        return f"https://www.dhl.com/mx-es/home/rastreo.html?tracking-id={clean}"
+    if "estafeta" in c_lower:
+        return f"https://www.estafeta.com/Herramientas/Rastreo?rastreo={clean}"
+    return f"https://track.skydropx.com/?q={clean}"
+
+
 def get_tracking_events(
     tracking_number: str,
     carrier: Optional[str] = None,
@@ -15,11 +29,15 @@ def get_tracking_events(
     Consulta el historial completo de eventos y estatus de entrega para un número de guía.
     """
     clean_tracking = str(tracking_number).strip()
+    carrier_url = get_carrier_tracking_url(clean_tracking, carrier)
+
     if not clean_tracking or clean_tracking.startswith("TRACK-AMBAR"):
         return {
             "success": True,
             "tracking_number": clean_tracking,
             "status": "in_transit",
+            "carrier": carrier or "Paquetería Nacional",
+            "carrier_url": carrier_url,
             "is_simulated": True,
             "events": [
                 {
@@ -65,6 +83,7 @@ def get_tracking_events(
                 "tracking_number": clean_tracking,
                 "status": data.get("status", "in_transit"),
                 "carrier": data.get("carrier", carrier or ""),
+                "carrier_url": carrier_url,
                 "estimated_delivery": data.get("estimated_delivery"),
                 "events": normalized_events,
                 "raw": data

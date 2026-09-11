@@ -212,6 +212,16 @@ class Order(models.Model):
     tracking_number = models.CharField(max_length=100, blank=True, null=True, db_index=True)
     tracking_url = models.URLField(max_length=500, blank=True, null=True)
     shipping_label_pdf = models.URLField(max_length=500, blank=True, null=True)
+    PACKAGING_TYPE_CHOICES = [
+        ('box', 'Caja'),
+        ('bag', 'Bolsa'),
+    ]
+    packaging_type = models.CharField(
+        max_length=20,
+        choices=PACKAGING_TYPE_CHOICES,
+        default='box',
+        help_text="Tipo de empaque seleccionado para el despacho (box: Caja 4G, bag: Bolsa 5M)"
+    )
 
     @property
     def address(self):
@@ -290,6 +300,28 @@ class ShopShippingConfig(models.Model):
         default=500.00,
         help_text="Umbral de saldo en pesos para emitir alertas de recarga preventiva"
     )
+    PACKAGING_CHOICES = [
+        ('box', 'Caja'),
+        ('bag', 'Bolsa'),
+    ]
+    default_packaging_type = models.CharField(
+        max_length=20,
+        choices=PACKAGING_CHOICES,
+        default='box',
+        help_text="Tipo de empaque por defecto para cotizaciones y envíos (box: Caja 4G, bag: Bolsa 5M)"
+    )
+    # Medidas configurables para Caja (SAT 4G)
+    box_length = models.FloatField(default=35.0, help_text="Largo de caja en cm")
+    box_width = models.FloatField(default=25.0, help_text="Ancho de caja en cm")
+    box_height = models.FloatField(default=15.0, help_text="Alto de caja en cm")
+    box_weight = models.FloatField(default=1.0, help_text="Peso base de caja en kg")
+
+    # Medidas configurables para Bolsa / Sobre (SAT 5M)
+    bag_length = models.FloatField(default=30.0, help_text="Largo de bolsa en cm")
+    bag_width = models.FloatField(default=20.0, help_text="Ancho de bolsa en cm")
+    bag_height = models.FloatField(default=5.0, help_text="Alto de bolsa en cm")
+    bag_weight = models.FloatField(default=0.5, help_text="Peso base de bolsa en kg")
+
     # Datos oficiales del Remitente (Origen de Envíos en Skydropx)
     origin_name = models.CharField(
         max_length=150,

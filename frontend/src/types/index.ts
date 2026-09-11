@@ -102,6 +102,7 @@ export interface Order {
   shipping_attempt_id?: string;
   skydropx_shipment_id?: string;
   shipping_error?: string;
+  packaging_type?: 'box' | 'bag';
 }
 
 export interface ShopShippingConfig {
@@ -112,6 +113,15 @@ export interface ShopShippingConfig {
   allow_customer_carrier_selection: boolean;
   auto_advance_sandbox: boolean;
   min_balance_alert: number;
+  default_packaging_type?: 'box' | 'bag';
+  box_length?: number;
+  box_width?: number;
+  box_height?: number;
+  box_weight?: number;
+  bag_length?: number;
+  bag_width?: number;
+  bag_height?: number;
+  bag_weight?: number;
   origin_name?: string;
   origin_company?: string;
   origin_phone?: string;
@@ -122,6 +132,28 @@ export interface ShopShippingConfig {
   origin_state?: string;
   origin_postal_code?: string;
   updated_at?: string;
+}
+
+export interface TrackingEventItem {
+  status: string;
+  description: string;
+  location: string;
+  timestamp: string | null;
+}
+
+export interface TrackingResponse {
+  success: boolean;
+  tracking_number?: string;
+  order_id?: number;
+  status?: string;
+  shipping_status?: ShippingStatus;
+  carrier?: string;
+  carrier_url?: string;
+  estimated_delivery?: string | null;
+  events?: TrackingEventItem[];
+  is_simulated?: boolean;
+  message?: string;
+  error?: string;
 }
 
 export interface ShippingEvent {

@@ -1,5 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from apps.dashboard.views import DashboardOrdersView
 from .views import (
     CategoryViewSet, 
     ProductViewSet, 
@@ -10,6 +11,8 @@ from .views import (
     PostalCodeLookupView,
     OrderBySessionView,
     OrderDownloadLabelView,
+    OrderTrackingView,
+    PublicTrackingView,
     ShippingHealthCheckView,
     ShopShippingConfigView,
     ShippingReconcileView,
@@ -26,9 +29,12 @@ urlpatterns = [
     path('webhook/', stripe_webhook, name='stripe-webhook'),
     path('webhook/skydropx/', skydropx_webhook, name='skydropx-webhook'),
     path('checkout/', ShopCheckoutView.as_view(), name='shop-checkout'),
+    path('orders/', DashboardOrdersView.as_view(), name='shop-orders-list'),
     path('orders/by_session/', OrderBySessionView.as_view(), name='order-by-session'),
     path('orders/<int:pk>/label/', OrderDownloadLabelView.as_view(), name='order-download-label'),
+    path('orders/<int:pk>/tracking/', OrderTrackingView.as_view(), name='order-tracking'),
     path('shipping/quote/', ShippingQuoteView.as_view(), name='shipping-quote'),
+    path('shipping/track/', PublicTrackingView.as_view(), name='shipping-track'),
     path('shipping/health-check/', ShippingHealthCheckView.as_view(), name='shipping-health-check'),
     path('shipping/postal-code/<str:postal_code>/', PostalCodeLookupView.as_view(), name='postal-code-lookup'),
     path('shipping/config/', ShopShippingConfigView.as_view(), name='shipping-config'),
