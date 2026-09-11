@@ -102,6 +102,7 @@ const Navbar = () => {
     { name: 'Galería', href: '/galeria' },
     { name: 'Música', href: '/musica' },
     { name: 'Tienda', href: '/tienda' },
+    { name: 'Rastreo', href: '/rastreo' },
     { name: 'Ambar te escribe', href: '/ambar-te-escribe' },
     { name: 'Contacto', href: '/contacto' },
   ];

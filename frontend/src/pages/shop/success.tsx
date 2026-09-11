@@ -322,14 +322,21 @@ export default function ShopSuccessPage() {
 
               {/* Action Buttons for Tracking & PDF */}
               <div className="pt-6 flex flex-wrap gap-4 items-center justify-start">
+                <Link
+                  href={`/rastreo?order_id=${order.id}`}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm shadow-[0_4px_20px_rgba(245,158,11,0.3)] transition-all duration-200"
+                >
+                  <Truck size={16} /> Seguir Pedido en Rastreo Ms Ambar
+                </Link>
+
                 {order.tracking_number && (
                   <a
                     href={getCarrierTrackingDirectUrl(order.tracking_number, order.shipping_provider, order.tracking_url)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm shadow-[0_4px_20px_rgba(245,158,11,0.3)] transition-all duration-200"
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-semibold text-sm transition-all duration-200"
                   >
-                    <ExternalLink size={16} /> Rastrear Paquete en Vivo ({order.shipping_provider?.split(' ')[0] || 'Transportista'})
+                    <ExternalLink size={16} /> Portal {order.shipping_provider?.split(' ')[0] || 'Carrier'}
                   </a>
                 )}
 

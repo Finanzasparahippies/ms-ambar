@@ -222,6 +222,21 @@ class Order(models.Model):
         default='box',
         help_text="Tipo de empaque seleccionado para el despacho (box: Caja 4G, bag: Bolsa 5M)"
     )
+    tracking_history = models.JSONField(
+        default=list, 
+        blank=True, 
+        help_text="Historial cronológico de checkpoints del paquete reportados por la paquetería"
+    )
+    tracking_last_checked_at = models.DateTimeField(
+        null=True, 
+        blank=True, 
+        help_text="Timestamp del último sondeo exitoso contra la paquetería/Skydropx"
+    )
+    estimated_delivery_date = models.DateField(
+        null=True, 
+        blank=True, 
+        help_text="Fecha estimada de entrega oficial reportada por la paquetería"
+    )
 
     @property
     def address(self):

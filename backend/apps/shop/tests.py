@@ -1386,4 +1386,133 @@ class ShopAppTests(APITestCase):
             if label_file.exists():
                 label_file.unlink()
 
+    def test_shipping_config_public_get_anonymous(self):
+        """Verifica que un comprador anónimo pueda leer la configuración de empaque sin requerir login (200 OK)."""
+        url = reverse('shipping-config')
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('default_packaging_type', res.data)
+        self.assertIn('box_length', res.data)
+        self.assertIn('bag_length', res.data)
+        # Asegurar que no filtre información sensible de cartera para anónimos
+        self.assertNotIn('credits', res.data)
+
+    def test_shipping_config_put_requires_admin(self):
+        """Verifica que la modificación de configuración de empaque requiera permisos de administrador."""
+        url = reverse('shipping-config')
+        # Anónimo
+        res_anon = self.client.put(url, {'default_packaging_type': 'bag'}, format='json')
+        self.assertEqual(res_anon.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Admin
+        self.client.force_authenticate(user=self.admin_user)
+        res_admin = self.client.put(url, {'default_packaging_type': 'bag'}, format='json')
+        self.assertEqual(res_admin.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_admin.data['default_packaging_type'], 'bag')
+
+    def test_public_tracking_by_order_id_and_tracking_number(self):
+        """Verifica que cualquier comprador (anónimo o no) pueda rastrear su paquete por order_id o tracking_number."""
+        order = Order.objects.create(
+            user_email='tracking_guest@msambar.com',
+            status='shipped',
+            total_amount=950.0,
+            full_name='Comprador Invitado',
+            street_and_number='Reforma 222',
+            postal_code='06600',
+            shipping_provider='FedEx',
+            tracking_number='TRACK-AMBAR-PUBLIC-777',
+            packaging_type='bag'
+        )
+
+        url = reverse('shipping-track')
+
+        # 1. Búsqueda por order_id (soporta formato #123 o 123)
+        res_by_id = self.client.get(f"{url}?order_id=#{order.id}")
+        self.assertEqual(res_by_id.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_by_id.data['success'])
+        self.assertEqual(res_by_id.data['order_id'], order.id)
+        self.assertEqual(res_by_id.data['tracking_number'], 'TRACK-AMBAR-PUBLIC-777')
+        self.assertEqual(res_by_id.data['packaging_type'], 'bag')
+        self.assertIn('events', res_by_id.data)
+        self.assertGreater(len(res_by_id.data['events']), 0)
+
+        # 2. Búsqueda directa por tracking_number
+        res_by_track = self.client.get(f"{url}?tracking_number=TRACK-AMBAR-PUBLIC-777")
+        self.assertEqual(res_by_track.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_by_track.data['order_id'], order.id)
+        self.assertEqual(res_by_track.data['carrier'], 'FedEx')
+        self.assertTrue(res_by_track.data['carrier_url'].startswith('https://www.fedex.com'))
+
+    def test_order_tracking_caching_behavior(self):
+        """Verifica que el endpoint de tracking respete la caché de 15 minutos en order.tracking_history."""
+        now = timezone.now()
+        cached_checkpoint = {
+            "stage": "in_transit",
+            "status": "En Tránsito a Sucursal",
+            "description": "El paquete salió de Guadalajara hacia Hermosillo",
+            "location": "Guadalajara, Jalisco",
+            "timestamp": now.isoformat()
+        }
+
+        order = Order.objects.create(
+            user_email='cache_test@msambar.com',
+            status='shipped',
+            total_amount=1200.0,
+            full_name='Cache Tester',
+            street_and_number='Juárez 45',
+            postal_code='83000',
+            shipping_provider='Paquetexpress',
+            tracking_number='PAQUET-CACHE-1234',
+            tracking_history=[cached_checkpoint],
+            tracking_last_checked_at=now
+        )
+
+        url = reverse('order-tracking', kwargs={'pk': order.id})
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertTrue(res.data.get('is_cached'))
+        self.assertEqual(res.data['current_stage'], 'in_transit')
+        self.assertEqual(len(res.data['events']), 1)
+        self.assertEqual(res.data['events'][0]['location'], 'Guadalajara, Jalisco')
+
+    def test_skydropx_webhook_checkpoint_ingestion(self):
+        """Verifica que las notificaciones de webhook de Skydropx agreguen hitos a order.tracking_history en tiempo real."""
+        order = Order.objects.create(
+            user_email='webhook_ingest@msambar.com',
+            status='paid',
+            total_amount=800.0,
+            full_name='Webhook Ingest User',
+            street_and_number='Serdán 10',
+            postal_code='83000',
+            shipping_provider='FedEx',
+            tracking_number='FEDEX-HOOK-8888',
+            tracking_history=[]
+        )
+
+        webhook_url = reverse('skydropx-webhook')
+        payload = {
+            "id": "evt_hook_test_checkpoint_999",
+            "event": "in_transit",
+            "data": {
+                "attributes": {
+                    "status": "in_transit",
+                    "tracking_number": "FEDEX-HOOK-8888",
+                    "description": "Llegada al centro de clasificación",
+                    "location": "Ciudad de México"
+                }
+            }
+        }
+
+        res = self.client.post(webhook_url, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'shipped')
+        self.assertIsNotNone(order.tracking_history)
+        self.assertGreater(len(order.tracking_history), 0)
+        latest_event = order.tracking_history[-1]
+        self.assertEqual(latest_event['stage'], 'in_transit')
+        self.assertEqual(latest_event['location'], 'Ciudad de México')
+
+
 

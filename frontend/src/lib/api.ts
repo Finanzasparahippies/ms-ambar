@@ -41,11 +41,16 @@ api?.interceptors?.response?.use(
     const originalRequest = error.config;
 
     if (error.response?.status === 401 && typeof window !== 'undefined') {
-      // Limpieza de sesión en expiración de token de forma segura
       const currentPath = window.location.pathname;
-      if (!currentPath.startsWith('/login') && !currentPath.startsWith('/signup')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+      const isProtectedRoute = currentPath.startsWith('/dashboard') || currentPath.startsWith('/designer');
+      const requiresAuth = isProtectedRoute || originalRequest?.headers?.['X-Require-Auth'];
+
+      // Limpieza de tokens inválidos o expirados en almacenamiento local
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+
+      // Solo redirige forzosamente si el usuario navegaba en una sección administrativa o protegida
+      if (requiresAuth && !currentPath.startsWith('/login') && !currentPath.startsWith('/signup')) {
         window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
       }
     }

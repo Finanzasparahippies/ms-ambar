@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
+from django.utils import timezone
 from .shipping import (
     generate_shipping_label,
     generate_sample_shipping_label_pdf,
@@ -963,6 +964,24 @@ def skydropx_webhook(request):
                 order.shipping_status = 'cancelled'
                 update_fields.append('shipping_status')
 
+            # Ingestar checkpoint en tracking_history para actualización en tiempo real del tracking
+            now_dt = timezone.now()
+            new_event_desc = attributes.get('status_details') or attributes.get('description') or attributes.get('message') or target_status
+            new_event_location = attributes.get('location') or attributes.get('city') or ""
+            new_event_stage = 'delivered' if target_status == 'delivered' else ('cancelled' if target_status == 'cancelled' else 'in_transit')
+
+            history = list(order.tracking_history or [])
+            history.append({
+                "stage": new_event_stage,
+                "status": str(event_type or target_status).title(),
+                "description": new_event_desc,
+                "location": new_event_location,
+                "timestamp": now_dt.isoformat()
+            })
+            order.tracking_history = history
+            order.tracking_last_checked_at = now_dt
+            update_fields.extend(['tracking_history', 'tracking_last_checked_at'])
+
             order.save(update_fields=update_fields)
 
             # Registrar ShippingEvent de auditoría
@@ -991,10 +1010,13 @@ def skydropx_webhook(request):
 class ShopShippingConfigView(APIView):
     """
     Gestión centralizada de la configuración logística de Skydropx Pro.
-    Permite alternar en caliente entre Opción A (Quotation) y Opción B (Direct Rate),
-    configurar paquetería predeterminada y consultar saldo actual de la cartera.
+    Lectura pública de parámetros de empaque para el cotizador y carrito.
+    Modificación restringida estrictamente a administradores.
     """
-    permission_classes = [permissions.IsAdminUser]
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
     def get(self, request):
         from .models import ShopShippingConfig
@@ -1005,21 +1027,54 @@ class ShopShippingConfigView(APIView):
         serializer = ShopShippingConfigSerializer(config)
         client = SkydropxClient()
 
-        credits_info = None
-        if client.is_configured:
-            try:
-                credits_res = client.get_credits()
-                if credits_res.get("success"):
-                    credits_info = credits_res.get("credits")
-            except Exception as e:
-                logger.warning(f"[ShippingConfigView] Error obteniendo saldo: {e}")
-
-        return Response({
-            "config": serializer.data,
-            "environment": client.environment,
+        # Datos seguros de empaque expuestos públicamente
+        packaging_data = {
+            "default_packaging_type": config.default_packaging_type,
+            "box_length": float(config.box_length),
+            "box_width": float(config.box_width),
+            "box_height": float(config.box_height),
+            "box_weight": float(config.box_weight),
+            "bag_length": float(config.bag_length),
+            "bag_width": float(config.bag_width),
+            "bag_height": float(config.bag_height),
+            "bag_weight": float(config.bag_weight),
             "is_configured": client.is_configured,
-            "credits": credits_info,
-            "auto_advance_sandbox_allowed": client.environment in ["staging", "sandbox", "pro_staging", "pro_sandbox"]
+        }
+
+        # Para administradores, adjuntar configuración completa, saldo y credenciales
+        if request.user and request.user.is_staff:
+            credits_info = None
+            if client.is_configured:
+                try:
+                    credits_res = client.get_credits()
+                    if credits_res.get("success"):
+                        credits_info = credits_res.get("credits")
+                except Exception as e:
+                    logger.warning(f"[ShippingConfigView] Error obteniendo saldo: {e}")
+
+            return Response({
+                "config": serializer.data,
+                "environment": client.environment,
+                "is_configured": client.is_configured,
+                "credits": credits_info,
+                "auto_advance_sandbox_allowed": client.environment in ["staging", "sandbox", "pro_staging", "pro_sandbox"],
+                **packaging_data
+            })
+
+        # Para compradores anónimos y clientes regulares
+        return Response({
+            "config": {
+                "default_packaging_type": config.default_packaging_type,
+                "box_length": float(config.box_length),
+                "box_width": float(config.box_width),
+                "box_height": float(config.box_height),
+                "box_weight": float(config.box_weight),
+                "bag_length": float(config.bag_length),
+                "bag_width": float(config.bag_width),
+                "bag_height": float(config.bag_height),
+                "bag_weight": float(config.bag_weight),
+            },
+            **packaging_data
         })
 
     def put(self, request):
@@ -1105,11 +1160,12 @@ class ShippingCatalogsView(APIView):
 class OrderTrackingView(APIView):
     """
     Permite consultar el estado de rastreo y eventos de logística para una orden.
-    Accesible para el comprador o administradores.
+    Accesible para el comprador o administradores con tolerancia a fallos y caché.
     """
     permission_classes = [AllowAny]
 
     def get(self, request, pk):
+        force_live = request.query_params.get('force') in ['true', '1']
         order = Order.objects.filter(id=pk).first()
         if not order:
             return Response({'error': 'Pedido no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
@@ -1123,13 +1179,17 @@ class OrderTrackingView(APIView):
                 "carrier": order.shipping_provider or "Pendiente",
                 "tracking_number": None,
                 "carrier_url": None,
+                "current_stage": "confirmed",
+                "status_label": "Pedido Confirmado",
+                "stage_percentage": 15,
+                "packaging_type": getattr(order, 'packaging_type', 'box'),
                 "events": [],
-                "message": "La guía aún se encuentra en proceso de emisión."
+                "message": "Tu pago ha sido acreditado. La guía oficial se encuentra en proceso de emisión."
             }, status=status.HTTP_200_OK)
 
         from .shipping.tracking import get_tracking_events, get_carrier_tracking_url
         carrier = order.shipping_provider or ""
-        tracking_info = get_tracking_events(tracking_num, carrier=carrier)
+        tracking_info = get_tracking_events(tracking_num, carrier=carrier, order=order, force_live=force_live)
         tracking_info["order_id"] = order.id
         tracking_info["shipping_status"] = order.shipping_status
         tracking_info["carrier_url"] = tracking_info.get("carrier_url") or get_carrier_tracking_url(tracking_num, carrier)
@@ -1138,7 +1198,8 @@ class OrderTrackingView(APIView):
 
 class PublicTrackingView(APIView):
     """
-    Permite el rastreo público mediante tracking_number o número de orden.
+    Permite el rastreo público mediante tracking_number o número de orden (ej. 16 o #16).
+    Soporta force=true para refrescar en vivo y saltar la caché si el cliente lo solicita.
     """
     permission_classes = [AllowAny]
 
@@ -1146,17 +1207,48 @@ class PublicTrackingView(APIView):
         tracking_number = request.query_params.get('tracking_number')
         order_id = request.query_params.get('order_id')
         carrier = request.query_params.get('carrier')
+        force_live = request.query_params.get('force') in ['true', '1']
 
-        if order_id and not tracking_number:
-            order = Order.objects.filter(id=order_id).first()
-            if order and order.tracking_number:
-                tracking_number = order.tracking_number
+        order = None
+        if order_id:
+            clean_order_id = str(order_id).replace('#', '').strip()
+            if clean_order_id.isdigit():
+                order = Order.objects.filter(id=int(clean_order_id)).first()
+                if order:
+                    if not tracking_number and order.tracking_number:
+                        tracking_number = order.tracking_number
+                    carrier = carrier or order.shipping_provider
+
+        if tracking_number and not order:
+            clean_track = str(tracking_number).strip()
+            order = Order.objects.filter(tracking_number=clean_track).first()
+            if order:
                 carrier = carrier or order.shipping_provider
 
-        if not tracking_number:
+        if not tracking_number and not order:
             return Response({"error": "Debe proporcionar un tracking_number o un order_id válido."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Si tenemos orden pero aún no tiene número de guía asignado
+        if order and not tracking_number:
+            return Response({
+                "success": True,
+                "order_id": order.id,
+                "shipping_status": order.shipping_status,
+                "carrier": order.shipping_provider or "Pendiente",
+                "tracking_number": None,
+                "carrier_url": None,
+                "current_stage": "confirmed",
+                "status_label": "Pedido Confirmado",
+                "stage_percentage": 15,
+                "packaging_type": getattr(order, 'packaging_type', 'box'),
+                "events": [],
+                "message": "Tu pago ha sido acreditado. La guía oficial se encuentra en proceso de emisión."
+            }, status=status.HTTP_200_OK)
+
         from .shipping.tracking import get_tracking_events, get_carrier_tracking_url
-        data = get_tracking_events(tracking_number, carrier=carrier)
-        data["carrier_url"] = data.get("carrier_url") or get_carrier_tracking_url(tracking_number, carrier)
+        data = get_tracking_events(tracking_number or "", carrier=carrier, order=order, force_live=force_live)
+        data["carrier_url"] = data.get("carrier_url") or get_carrier_tracking_url(tracking_number or "", carrier)
+        if order:
+            data["order_id"] = order.id
+            data["shipping_status"] = order.shipping_status
         return Response(data, status=status.HTTP_200_OK)
