@@ -148,14 +148,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'product', 'product_name', 'product_image', 'quantity', 'price']
 
     def get_product_image(self, obj):
-        if obj.product and obj.product.image:
-            val = obj.product.image
-            if isinstance(val, str):
-                return val
-            try:
-                return val.url
-            except Exception:
-                return str(val)
+        if obj.product:
+            if obj.product.image:
+                val = obj.product.image
+                url = val if isinstance(val, str) else getattr(val, 'url', str(val))
+                if url:
+                    return url
+            primary_img = obj.product.images.filter(is_primary=True).first() or obj.product.images.first()
+            if primary_img and primary_img.image:
+                val = primary_img.image
+                url = val if isinstance(val, str) else getattr(val, 'url', str(val))
+                if url:
+                    return url
         return None
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -179,12 +183,19 @@ class ShopShippingConfigSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'method_mode', 'default_carrier', 'default_service',
             'allow_customer_carrier_selection', 'auto_advance_sandbox',
-            'min_balance_alert', 'updated_at'
+            'min_balance_alert',
+            'origin_name', 'origin_company', 'origin_phone', 'origin_email',
+            'origin_street', 'origin_suburb', 'origin_city', 'origin_state',
+            'origin_postal_code',
+            'updated_at'
         ]
         read_only_fields = ['id', 'updated_at']
 
 
 class ShippingEventSerializer(serializers.ModelSerializer):
+    balance_before = serializers.FloatField(read_only=True, allow_null=True)
+    balance_after = serializers.FloatField(read_only=True, allow_null=True)
+
     class Meta:
         from .models import ShippingEvent
         model = ShippingEvent

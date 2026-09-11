@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from apps.shop.models import Category, Product, Order, OrderItem
 from apps.tickets.models import Event, Theater, Seat, Ticket
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 User = get_user_model()
 
@@ -719,11 +719,13 @@ class ShopAppTests(APITestCase):
                 "rate_id": "rate_123",
                 "address_from": {
                     "name": "Remitente", "phone": "6622140000", "street1": "Kino 456",
-                    "postal_code": "83150", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX"
+                    "postal_code": "83150", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX",
+                    "email": "contacto@msambar.com"
                 },
                 "address_to": {
                     "name": "Destinatario", "phone": "6622140000", "street1": "Juarez 123",
-                    "postal_code": "83000", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX"
+                    "postal_code": "83000", "area_level1": "SO", "area_level2": "Hermosillo", "country_code": "MX",
+                    "email": "cliente@example.com"
                 },
                 "packages": [
                     {
@@ -961,4 +963,62 @@ class ShopAppTests(APITestCase):
         self.assertTrue(callable(map_skydropx_status))
         self.assertTrue(callable(calculate_order_package))
         self.assertTrue(callable(validate_shipment_payload_contract))
+
+    def test_origin_sender_address_dynamic_and_idempotent(self):
+        """Verifica que get_origin_address obtenga la dirección desde ShopShippingConfig y sanitice el email."""
+        from apps.shop.models import ShopShippingConfig
+        from apps.shop.shipping.common import get_origin_address
+
+        cfg = ShopShippingConfig.get_solo()
+        cfg.origin_name = "Almacén Central"
+        cfg.origin_email = "Ms Ambar <despacho@msambar.com>"
+        cfg.origin_phone = "6621112233"
+        cfg.origin_street = "Av. Cultura 100"
+        cfg.origin_city = "Hermosillo"
+        cfg.origin_state = "Sonora"
+        cfg.origin_postal_code = "83000"
+        cfg.save()
+
+        origin = get_origin_address()
+        self.assertEqual(origin["name"], "Almacén Central")
+        self.assertEqual(origin["email"], "despacho@msambar.com")
+        self.assertEqual(origin["phone"], "6621112233")
+        self.assertEqual(origin["street1"], "Av. Cultura 100")
+        self.assertEqual(origin["postal_code"], "83000")
+
+    def test_shipping_config_api_updates_origin_sender_idempotently(self):
+        """Verifica que ShopShippingConfigView actualice los datos del remitente y persista idempotentemente."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('shipping-config')
+
+        update_payload = {
+            'origin_name': 'Bodega Norte',
+            'origin_company': 'Ms Ambar Merch',
+            'origin_phone': '6629998877',
+            'origin_email': 'bodega@msambar.com',
+            'origin_street': 'Calle 12 #45',
+            'origin_suburb': 'San Benito',
+            'origin_city': 'Hermosillo',
+            'origin_state': 'Sonora',
+            'origin_postal_code': '83190'
+        }
+
+        # Primera actualización
+        res1 = self.client.put(url, update_payload, format='json')
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        self.assertEqual(res1.data['origin_name'], 'Bodega Norte')
+        self.assertEqual(res1.data['origin_email'], 'bodega@msambar.com')
+
+        # Segunda actualización con los mismos datos (Idempotencia)
+        res2 = self.client.put(url, update_payload, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_200_OK)
+        self.assertEqual(res2.data['origin_name'], 'Bodega Norte')
+        self.assertEqual(res2.data['origin_email'], 'bodega@msambar.com')
+
+        # Verificar en base de datos que solo existe 1 registro singleton
+        from apps.shop.models import ShopShippingConfig
+        self.assertEqual(ShopShippingConfig.objects.count(), 1)
+        cfg = ShopShippingConfig.get_solo()
+        self.assertEqual(cfg.origin_name, 'Bodega Norte')
+        self.assertEqual(cfg.origin_postal_code, '83190')
 

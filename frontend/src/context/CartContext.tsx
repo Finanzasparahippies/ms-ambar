@@ -176,6 +176,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = useCallback(() => {
     setCart([]);
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(CART_STORAGE_KEY);
+      }
+    } catch (e) {
+      console.warn('Error clearing cart storage:', e);
+    }
   }, []);
 
   const handleAnimationComplete = useCallback(

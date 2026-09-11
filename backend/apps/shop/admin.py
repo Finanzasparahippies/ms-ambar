@@ -63,6 +63,14 @@ class ShopShippingConfigAdmin(admin.ModelAdmin):
         ('Valores por Defecto (Opción B)', {
             'fields': ('default_carrier', 'default_service'),
         }),
+        ('Datos Oficiales del Remitente (Origen en Skydropx)', {
+            'fields': (
+                'origin_name', 'origin_company', 'origin_phone', 'origin_email',
+                'origin_street', 'origin_suburb', 'origin_city', 'origin_state',
+                'origin_postal_code'
+            ),
+            'description': 'Dirección física y contacto de origen remitida a Skydropx en cada emisión de guía.'
+        }),
         ('Entorno y Alertas', {
             'fields': ('auto_advance_sandbox', 'min_balance_alert'),
             'description': 'auto_advance_sandbox fuerza el avance de estados en entorno de prueba. min_balance_alert genera advertencias si la cartera baja de ese saldo.'

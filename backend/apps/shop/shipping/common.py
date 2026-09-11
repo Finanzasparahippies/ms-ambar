@@ -92,20 +92,65 @@ def lookup_postal_code(postal_code: str) -> dict:
 
 
 def get_origin_address() -> Dict[str, str]:
-    """Retorna la dirección de origen del remitente desde settings o entorno."""
+    """
+    Retorna la dirección de origen del remitente desde DB (ShopShippingConfig)
+    con sanitización estricta de email (RFC 5322 a dirección limpia) y fallback a settings / entorno.
+    """
+    from email.utils import parseaddr
+
+    default_name = getattr(settings, "SHIPPING_ORIGIN_NAME", os.environ.get("SHIPPING_ORIGIN_NAME", "Almacén Oficial Ms Ambar"))
+    default_company = "Ms Ambar"
+    default_phone = re.sub(r'\D', '', str(getattr(settings, "SHIPPING_ORIGIN_PHONE", os.environ.get("SHIPPING_ORIGIN_PHONE", "6622140000"))))[:10]
+    default_street = getattr(settings, "SHIPPING_ORIGIN_STREET", os.environ.get("SHIPPING_ORIGIN_STREET", "Blvd. Kino 456"))
+    default_suburb = getattr(settings, "SHIPPING_ORIGIN_SUBURB", os.environ.get("SHIPPING_ORIGIN_SUBURB", "Pitic"))
+    default_city = getattr(settings, "SHIPPING_ORIGIN_CITY", os.environ.get("SHIPPING_ORIGIN_CITY", "Hermosillo"))
+    default_state = getattr(settings, "SHIPPING_ORIGIN_STATE", os.environ.get("SHIPPING_ORIGIN_STATE", "SO"))
+    default_zip = str(getattr(settings, "SHIPPING_ORIGIN_POSTAL_CODE", os.environ.get("SHIPPING_ORIGIN_POSTAL_CODE", "83150"))).strip()
+
+    raw_default_email = getattr(settings, "SHIPPING_ORIGIN_EMAIL", os.environ.get("SHIPPING_ORIGIN_EMAIL", getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com")))
+    _, clean_default_email = parseaddr(raw_default_email)
+    if not clean_default_email or "@" not in clean_default_email:
+        clean_default_email = "contacto@msambar.com"
+
+    try:
+        from apps.shop.models import ShopShippingConfig
+        config = ShopShippingConfig.get_solo()
+        name = (config.origin_name or "").strip() or default_name
+        company = (config.origin_company or "").strip() or default_company
+        phone = re.sub(r'\D', '', str(config.origin_phone or default_phone))[:10]
+
+        _, clean_config_email = parseaddr(config.origin_email or "")
+        email = clean_config_email if (clean_config_email and "@" in clean_config_email) else clean_default_email
+
+        street = (config.origin_street or "").strip() or default_street
+        suburb = (config.origin_suburb or "").strip() or default_suburb
+        city = (config.origin_city or "").strip() or default_city
+        state = normalize_mexican_state(config.origin_state or default_state)
+        zip_code = str(config.origin_postal_code or default_zip).strip()
+    except Exception:
+        name = default_name
+        company = default_company
+        phone = default_phone
+        email = clean_default_email
+        street = default_street
+        suburb = default_suburb
+        city = default_city
+        state = normalize_mexican_state(default_state)
+        zip_code = default_zip
+
     return {
-        "name": getattr(settings, "SHIPPING_ORIGIN_NAME", os.environ.get("SHIPPING_ORIGIN_NAME", "Almacén Oficial Ms Ambar")),
-        "company": "Ms Ambar",
-        "phone": str(getattr(settings, "SHIPPING_ORIGIN_PHONE", os.environ.get("SHIPPING_ORIGIN_PHONE", "6622140000")))[:10],
-        "email": getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com"),
-        "street": getattr(settings, "SHIPPING_ORIGIN_STREET", os.environ.get("SHIPPING_ORIGIN_STREET", "Blvd. Kino 456")),
-        "street1": getattr(settings, "SHIPPING_ORIGIN_STREET", os.environ.get("SHIPPING_ORIGIN_STREET", "Blvd. Kino 456")),
+        "name": name,
+        "company": company,
+        "phone": phone if len(phone) == 10 else "6622140000",
+        "email": email,
+        "street": street,
+        "street1": street,
         "reference": "Almacén Principal Ms Ambar",
-        "suburb": getattr(settings, "SHIPPING_ORIGIN_SUBURB", os.environ.get("SHIPPING_ORIGIN_SUBURB", "Pitic")),
-        "city": getattr(settings, "SHIPPING_ORIGIN_CITY", os.environ.get("SHIPPING_ORIGIN_CITY", "Hermosillo")),
-        "state": normalize_mexican_state(getattr(settings, "SHIPPING_ORIGIN_STATE", os.environ.get("SHIPPING_ORIGIN_STATE", "SO"))),
-        "zip_code": str(getattr(settings, "SHIPPING_ORIGIN_POSTAL_CODE", os.environ.get("SHIPPING_ORIGIN_POSTAL_CODE", "83150"))).strip(),
-        "postal_code": str(getattr(settings, "SHIPPING_ORIGIN_POSTAL_CODE", os.environ.get("SHIPPING_ORIGIN_POSTAL_CODE", "83150"))).strip(),
+        "suburb": suburb,
+        "city": city,
+        "state": state,
+        "zip_code": zip_code,
+        "postal_code": zip_code,
         "country": "MX",
     }
 
@@ -266,18 +311,24 @@ def validate_shipment_payload_contract(payload: dict) -> Tuple[bool, List[str]]:
     if not isinstance(addr_from, dict) or not addr_from:
         errors.append("La clave 'address_from' no puede estar en blanco y debe ser un objeto.")
     else:
-        for f in ["name", "phone", "street1", "postal_code", "area_level1", "area_level2", "country_code"]:
+        for f in ["name", "phone", "street1", "postal_code", "area_level1", "area_level2", "country_code", "email"]:
             if not addr_from.get(f):
                 errors.append(f"address_from.{f} es requerido.")
+        from_email = str(addr_from.get("email") or "").strip()
+        if from_email and not re.match(r'^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$', from_email):
+            errors.append(f"address_from.email '{from_email}' no es un correo electrónico válido (no debe contener corchetes ni nombres).")
 
     # Validar address_to
     addr_to = shipment.get("address_to")
     if not isinstance(addr_to, dict) or not addr_to:
         errors.append("La clave 'address_to' no puede estar en blanco y debe ser un objeto.")
     else:
-        for f in ["name", "phone", "street1", "postal_code", "area_level1", "area_level2", "country_code"]:
+        for f in ["name", "phone", "street1", "postal_code", "area_level1", "area_level2", "country_code", "email"]:
             if not addr_to.get(f):
                 errors.append(f"address_to.{f} es requerido.")
+        to_email = str(addr_to.get("email") or "").strip()
+        if to_email and not re.match(r'^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$', to_email):
+            errors.append(f"address_to.email '{to_email}' no es un correo electrónico válido.")
 
     # Validar packages
     packages = shipment.get("packages")

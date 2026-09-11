@@ -159,7 +159,7 @@ const Navbar = () => {
             className={`relative p-2.5 rounded-full border transition-all flex items-center justify-center ${
               cartItemsCount > 0
                 ? 'bg-amber-honey/15 border-amber-honey text-amber-honey shadow-lg shadow-amber-honey/20'
-                : 'bg-white/5 border-white/10 text-white hover:text-amber-honey hover:border-amber-honey/40'
+                : 'bg-[#181028] border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 hover:border-purple-400/50'
             }`}
             title="Ver Bolsa de Compras"
             aria-label="Ver Bolsa de Compras"
@@ -187,8 +187,8 @@ const Navbar = () => {
                   <Link
                     href="/designer"
                     className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/designer'
-                      ? 'bg-amber-honey text-nature-night border-amber-honey'
-                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40'
+                      : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white hover:border-purple-400'
                       }`}
                     title="Nectar Studio Designer — Solo Admins"
                   >
@@ -198,8 +198,8 @@ const Navbar = () => {
                   <Link
                     href="/dashboard/scan-tickets"
                     className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/dashboard/scan-tickets'
-                      ? 'bg-amber-honey text-nature-night border-amber-honey'
-                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40'
+                      : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white hover:border-purple-400'
                       }`}
                     title="Escáner de Boletos"
                   >
@@ -209,8 +209,8 @@ const Navbar = () => {
                   <Link
                     href="/dashboard"
                     className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
-                      ? 'bg-amber-honey text-nature-night border-amber-honey'
-                      : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                      ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40'
+                      : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white hover:border-purple-400'
                       }`}
                   >
                     <Shield size={10} /> Admin
@@ -228,7 +228,7 @@ const Navbar = () => {
           ) : (
             <Link
               href="/login"
-              className="text-[9px] uppercase font-black tracking-widest text-amber-honey hover:text-white transition-all bg-white/5 border border-white/10 px-4 py-2 rounded-full hover:bg-white/10"
+              className="text-[9px] uppercase font-black tracking-widest text-purple-200 hover:text-white transition-all bg-[#1e1338] border border-purple-500/40 px-4 py-2 rounded-full hover:bg-purple-600/30 hover:border-purple-400 shadow-sm"
             >
               Login
             </Link>
@@ -254,7 +254,7 @@ const Navbar = () => {
             className={`relative p-2 rounded-full border transition-all flex items-center justify-center ${
               cartItemsCount > 0
                 ? 'bg-amber-honey/15 border-amber-honey text-amber-honey shadow-md shadow-amber-honey/20'
-                : 'bg-white/5 border-white/10 text-white hover:text-amber-honey'
+                : 'bg-[#181028] border-purple-500/30 text-purple-200 hover:text-white'
             }`}
             aria-label="Bolsa de compras"
           >
@@ -308,8 +308,8 @@ const Navbar = () => {
                       <Link
                         href="/designer"
                         className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname === '/designer'
-                          ? 'bg-amber-honey text-nature-night border-amber-honey'
-                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                          ? 'bg-purple-600 text-white border-purple-400 shadow-md'
+                          : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white'
                           }`}
                       >
                         <Layers size={12} /> Studio
@@ -317,8 +317,8 @@ const Navbar = () => {
                       <Link
                         href="/dashboard"
                         className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all flex-1 ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
-                          ? 'bg-amber-honey text-nature-night border-amber-honey'
-                          : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                          ? 'bg-purple-600 text-white border-purple-400 shadow-md'
+                          : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white'
                           }`}
                       >
                         <Shield size={12} /> Admin
@@ -327,8 +327,8 @@ const Navbar = () => {
                     <Link
                       href="/dashboard/scan-tickets"
                       className={`text-[10px] uppercase font-black tracking-widest flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full border transition-all w-full ${router.pathname === '/dashboard/scan-tickets'
-                        ? 'bg-amber-honey text-nature-night border-amber-honey'
-                        : 'text-amber-honey bg-amber-honey/10 border-amber-honey/20 hover:bg-amber-honey/25'
+                        ? 'bg-purple-600 text-white border-purple-400 shadow-md'
+                        : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white'
                         }`}
                     >
                       <Camera size={12} /> Escáner de Boletos
@@ -345,7 +345,7 @@ const Navbar = () => {
             ) : (
               <Link
                 href="/login"
-                className="text-[10px] uppercase font-black tracking-widest text-amber-honey hover:text-white text-center transition-all bg-white/5 border border-white/10 py-3 rounded-2xl hover:bg-white/10 mt-2"
+                className="text-[10px] uppercase font-black tracking-widest text-purple-200 hover:text-white text-center transition-all bg-[#1e1338] border border-purple-500/40 py-3 rounded-2xl hover:bg-purple-600/30 hover:border-purple-400 mt-2 shadow-sm"
               >
                 Login
               </Link>

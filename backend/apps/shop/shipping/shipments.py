@@ -102,11 +102,18 @@ def create_shipment_from_rate(
     except Exception:
         pass
 
+    from email.utils import parseaddr
+
+    raw_from_email = origin.get("email") or getattr(settings, "SHIPPING_ORIGIN_EMAIL", getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com"))
+    _, clean_from_email = parseaddr(raw_from_email)
+    if not clean_from_email or "@" not in clean_from_email:
+        clean_from_email = "contacto@msambar.com"
+
     from_payload = {
         "name": origin.get("name") or "Almacén Oficial Ms Ambar",
         "company": origin.get("company") or "Ms Ambar",
-        "phone": str(origin.get("phone") or "6622140000")[:10],
-        "email": origin.get("email") or getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com"),
+        "phone": re.sub(r'\D', '', str(origin.get("phone") or "6622140000"))[:10],
+        "email": clean_from_email,
         "street1": origin.get("street") or origin.get("street1") or "Blvd. Kino 456",
         "reference": origin.get("reference") or "Almacén Principal Ms Ambar",
         "country_code": "MX",
@@ -117,12 +124,17 @@ def create_shipment_from_rate(
         "tax_id_number": origin.get("tax_id_number") or "XAXX010101000"
     }
 
+    raw_to_email = dest.get("email") or dest.get("user_email") or "cliente@msambar.com"
+    _, clean_to_email = parseaddr(raw_to_email)
+    if not clean_to_email or "@" not in clean_to_email:
+        clean_to_email = "cliente@msambar.com"
+
     dest_state = normalize_mexican_state(dest.get("state") or "SO")
     to_payload = {
         "name": dest.get("name") or dest.get("full_name") or "Cliente Ms Ambar",
         "company": dest.get("company") or "Particular",
-        "phone": str(dest.get("phone") or "6620000000")[:10],
-        "email": dest.get("email") or dest.get("user_email") or "cliente@msambar.com",
+        "phone": re.sub(r'\D', '', str(dest.get("phone") or "6620000000"))[:10],
+        "email": clean_to_email,
         "street1": dest.get("street") or dest.get("street1") or dest.get("street_and_number") or "Domicilio Conocido",
         "reference": dest.get("reference") or f"Col. {dest.get('suburb', 'Centro')}".strip() or "Entrega a domicilio",
         "country_code": "MX",
@@ -303,11 +315,18 @@ def create_rate_shipment(
     except Exception:
         pass
 
+    from email.utils import parseaddr
+
+    raw_from_email = origin.get("email") or getattr(settings, "SHIPPING_ORIGIN_EMAIL", getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com"))
+    _, clean_from_email = parseaddr(raw_from_email)
+    if not clean_from_email or "@" not in clean_from_email:
+        clean_from_email = "contacto@msambar.com"
+
     from_payload = {
         "name": origin.get("name") or "Almacén Oficial Ms Ambar",
         "company": origin.get("company") or "Ms Ambar",
-        "phone": str(origin.get("phone") or "6622140000")[:10],
-        "email": origin.get("email") or getattr(settings, "DEFAULT_FROM_EMAIL", "contacto@msambar.com"),
+        "phone": re.sub(r'\D', '', str(origin.get("phone") or "6622140000"))[:10],
+        "email": clean_from_email,
         "street1": origin.get("street") or origin.get("street1") or "Blvd. Kino 456",
         "reference": origin.get("reference") or "Almacén Principal Ms Ambar",
         "country_code": "MX",
@@ -318,12 +337,17 @@ def create_rate_shipment(
         "tax_id_number": origin.get("tax_id_number") or "XAXX010101000"
     }
 
+    raw_to_email = dest.get("email") or dest.get("user_email") or "cliente@msambar.com"
+    _, clean_to_email = parseaddr(raw_to_email)
+    if not clean_to_email or "@" not in clean_to_email:
+        clean_to_email = "cliente@msambar.com"
+
     dest_state = normalize_mexican_state(dest.get("state") or "SO")
     to_payload = {
         "name": dest.get("name") or dest.get("full_name") or "Cliente Ms Ambar",
         "company": dest.get("company") or "Particular",
-        "phone": str(dest.get("phone") or "6620000000")[:10],
-        "email": dest.get("email") or dest.get("user_email") or "cliente@msambar.com",
+        "phone": re.sub(r'\D', '', str(dest.get("phone") or "6620000000"))[:10],
+        "email": clean_to_email,
         "street1": dest.get("street") or dest.get("street1") or dest.get("street_and_number") or "Domicilio Conocido",
         "reference": dest.get("reference") or f"Col. {dest.get('suburb', 'Centro')}".strip() or "Entrega a domicilio",
         "country_code": "MX",
@@ -585,7 +609,7 @@ def generate_shipping_label(order: Any, correlation_id: Optional[str] = None) ->
     # Método A: Quotation con rate_id
     else:
         # A.1 Si el cliente ya seleccionó una tarifa con UUID de Skydropx
-        if order.selected_rate_id and not order.selected_rate_id.startswith("rate_"):
+        if order.selected_rate_id and not order.selected_rate_id.endswith("_fallback"):
             logger.info(f"[Logística] Creando envío en Skydropx usando selected_rate_id: {order.selected_rate_id}")
             shipment_result = create_shipment_from_rate(
                 client=client,

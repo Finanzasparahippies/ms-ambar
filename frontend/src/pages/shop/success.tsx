@@ -71,6 +71,11 @@ export default function ShopSuccessPage() {
   useEffect(() => {
     // Vaciar el carrito de inmediato al concretar la compra
     clearCart();
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('ms_ambar_cart');
+      }
+    } catch (e) {}
   }, [clearCart]);
 
   useEffect(() => {
@@ -121,6 +126,16 @@ export default function ShopSuccessPage() {
     navigator.clipboard.writeText(trackingNum);
     setCopiedTracking(true);
     setTimeout(() => setCopiedTracking(false), 2500);
+  };
+
+  const resolveImageUrl = (imgUrl?: string | null) => {
+    if (!imgUrl) return null;
+    if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://') || imgUrl.startsWith('data:')) {
+      return imgUrl;
+    }
+    const baseUrl = getApiUrl().replace(/\/api$/, '');
+    const path = imgUrl.startsWith('/') ? imgUrl : `/${imgUrl}`;
+    return `${baseUrl}${path}`;
   };
 
   const getLabelUrl = (pdfPath?: string, orderId?: number) => {
@@ -210,7 +225,7 @@ export default function ShopSuccessPage() {
                   <ShieldCheck size={14} /> Pago Verificado con Éxito
                 </span>
                 <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
-                  ¡Gracias por tu compra, {order.full_name.split(' ')[0]}!
+                  ¡Gracias por tu compra, {order.full_name?.split(' ')[0] || 'Fan'}!
                 </h1>
                 <p className="text-gray-400 text-sm sm:text-base max-w-xl mx-auto">
                   Tu pedido <span className="text-amber-400 font-semibold">#{order.id}</span> ha sido recibido y ya se encuentra en proceso de empaque y logística.
@@ -296,11 +311,14 @@ export default function ShopSuccessPage() {
                   {order.items?.map((item) => (
                     <div key={item.id} className="pt-4 first:pt-0 flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        {item.product_image ? (
+                        {resolveImageUrl(item.product_image) ? (
                           <img 
-                            src={item.product_image} 
+                            src={resolveImageUrl(item.product_image)!} 
                             alt={item.product_name} 
                             className="w-14 h-14 rounded-xl object-cover bg-black/40 border border-white/10 shrink-0" 
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
                           />
                         ) : (
                           <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-gray-500 shrink-0">

@@ -290,6 +290,51 @@ class ShopShippingConfig(models.Model):
         default=500.00,
         help_text="Umbral de saldo en pesos para emitir alertas de recarga preventiva"
     )
+    # Datos oficiales del Remitente (Origen de Envíos en Skydropx)
+    origin_name = models.CharField(
+        max_length=150,
+        default='Almacén Oficial Ms Ambar',
+        help_text="Nombre de la persona o contacto remitente"
+    )
+    origin_company = models.CharField(
+        max_length=150,
+        default='Ms Ambar',
+        help_text="Razón social o empresa remitente"
+    )
+    origin_phone = models.CharField(
+        max_length=20,
+        default='6622140000',
+        help_text="Teléfono del remitente (10 dígitos)"
+    )
+    origin_email = models.EmailField(
+        default='contacto@msambar.com',
+        help_text="Correo electrónico oficial del remitente para Skydropx"
+    )
+    origin_street = models.CharField(
+        max_length=255,
+        default='Blvd. Kino 456',
+        help_text="Calle y número exterior/interior del almacén"
+    )
+    origin_suburb = models.CharField(
+        max_length=100,
+        default='Pitic',
+        help_text="Colonia o asentamiento del remitente"
+    )
+    origin_city = models.CharField(
+        max_length=100,
+        default='Hermosillo',
+        help_text="Ciudad o municipio del remitente"
+    )
+    origin_state = models.CharField(
+        max_length=100,
+        default='Sonora',
+        help_text="Estado de la república del remitente"
+    )
+    origin_postal_code = models.CharField(
+        max_length=10,
+        default='83150',
+        help_text="Código postal del remitente (5 dígitos)"
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

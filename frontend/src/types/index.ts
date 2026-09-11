@@ -112,6 +112,15 @@ export interface ShopShippingConfig {
   allow_customer_carrier_selection: boolean;
   auto_advance_sandbox: boolean;
   min_balance_alert: number;
+  origin_name?: string;
+  origin_company?: string;
+  origin_phone?: string;
+  origin_email?: string;
+  origin_street?: string;
+  origin_suburb?: string;
+  origin_city?: string;
+  origin_state?: string;
+  origin_postal_code?: string;
   updated_at?: string;
 }
 

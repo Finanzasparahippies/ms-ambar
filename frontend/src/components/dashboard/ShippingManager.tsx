@@ -14,7 +14,9 @@ import {
   FileText,
   HelpCircle,
   Radio,
-  Sliders
+  Sliders,
+  MapPin,
+  Building2
 } from 'lucide-react';
 import api from '../../lib/api';
 import { showToast } from '../../lib/notifications';
@@ -56,6 +58,23 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
   const [autoAdvanceSandbox, setAutoAdvanceSandbox] = useState(false);
   const [minBalanceAlert, setMinBalanceAlert] = useState(500);
 
+  // Origin / Sender Address State (Skydropx Remitente)
+  const [originName, setOriginName] = useState('Almacén Oficial Ms Ambar');
+  const [originCompany, setOriginCompany] = useState('Ms Ambar');
+  const [originPhone, setOriginPhone] = useState('6622140000');
+  const [originEmail, setOriginEmail] = useState('contacto@msambar.com');
+  const [originStreet, setOriginStreet] = useState('Blvd. Kino 456');
+  const [originSuburb, setOriginSuburb] = useState('Pitic');
+  const [originCity, setOriginCity] = useState('Hermosillo');
+  const [originState, setOriginState] = useState('Sonora');
+  const [originPostalCode, setOriginPostalCode] = useState('83150');
+
+  const formatBalance = (val: any) => {
+    if (val === null || val === undefined || val === '') return '-';
+    const num = Number(val);
+    return isNaN(num) ? String(val) : num.toFixed(2);
+  };
+
   const fetchShippingConfig = async () => {
     try {
       setLoading(true);
@@ -69,6 +88,15 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
         setAllowCustomerSelection(Boolean(c.allow_customer_carrier_selection));
         setAutoAdvanceSandbox(Boolean(c.auto_advance_sandbox));
         setMinBalanceAlert(c.min_balance_alert || 500);
+        setOriginName(c.origin_name || 'Almacén Oficial Ms Ambar');
+        setOriginCompany(c.origin_company || 'Ms Ambar');
+        setOriginPhone(c.origin_phone || '6622140000');
+        setOriginEmail(c.origin_email || 'contacto@msambar.com');
+        setOriginStreet(c.origin_street || 'Blvd. Kino 456');
+        setOriginSuburb(c.origin_suburb || 'Pitic');
+        setOriginCity(c.origin_city || 'Hermosillo');
+        setOriginState(c.origin_state || 'Sonora');
+        setOriginPostalCode(c.origin_postal_code || '83150');
       }
     } catch (err: any) {
       console.error('Error cargando configuración logística:', err);
@@ -106,8 +134,17 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
         allow_customer_carrier_selection: allowCustomerSelection,
         auto_advance_sandbox: autoAdvanceSandbox,
         min_balance_alert: minBalanceAlert,
+        origin_name: originName.trim(),
+        origin_company: originCompany.trim(),
+        origin_phone: originPhone.trim(),
+        origin_email: originEmail.trim(),
+        origin_street: originStreet.trim(),
+        origin_suburb: originSuburb.trim(),
+        origin_city: originCity.trim(),
+        origin_state: originState.trim(),
+        origin_postal_code: originPostalCode.trim(),
       });
-      showToast.success('Configuración logística actualizada correctamente.');
+      showToast.success('Configuración logística y datos del remitente actualizados correctamente.');
       fetchShippingConfig();
     } catch (err: any) {
       console.error('Error guardando configuración:', err);
@@ -574,6 +611,144 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
             </div>
           </div>
 
+          {/* Datos Oficiales del Remitente (Origen en Skydropx) */}
+          <div className="pt-6 border-t border-white/10 space-y-4">
+            <div>
+              <h4 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Building2 size={16} className="text-amber-honey" /> Datos Oficiales del Remitente (Origen de Envíos)
+              </h4>
+              <p className="text-[11px] text-[#F4F6F0]/60 mt-0.5">
+                Dirección y contacto físico remitente enviados a Skydropx para la emisión de guías y recolección.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Nombre Contacto
+                </label>
+                <input
+                  type="text"
+                  value={originName}
+                  onChange={(e) => setOriginName(e.target.value)}
+                  placeholder="Almacén Oficial Ms Ambar"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Empresa / Razón Social
+                </label>
+                <input
+                  type="text"
+                  value={originCompany}
+                  onChange={(e) => setOriginCompany(e.target.value)}
+                  placeholder="Ms Ambar"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Teléfono (10 dígitos)
+                </label>
+                <input
+                  type="text"
+                  value={originPhone}
+                  onChange={(e) => setOriginPhone(e.target.value)}
+                  placeholder="6622140000"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Email Remitente (Skydropx)
+                </label>
+                <input
+                  type="email"
+                  value={originEmail}
+                  onChange={(e) => setOriginEmail(e.target.value)}
+                  placeholder="contacto@msambar.com"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-mono"
+                />
+                <span className="block text-[10px] text-amber-honey/80 mt-1">
+                  Dirección directa sin corchetes &lt;&gt; ni nombres para evitar rechazo en Skydropx Pro.
+                </span>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Calle y Número
+                </label>
+                <input
+                  type="text"
+                  value={originStreet}
+                  onChange={(e) => setOriginStreet(e.target.value)}
+                  placeholder="Blvd. Kino 456"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Colonia
+                </label>
+                <input
+                  type="text"
+                  value={originSuburb}
+                  onChange={(e) => setOriginSuburb(e.target.value)}
+                  placeholder="Pitic"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Ciudad
+                </label>
+                <input
+                  type="text"
+                  value={originCity}
+                  onChange={(e) => setOriginCity(e.target.value)}
+                  placeholder="Hermosillo"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Estado
+                </label>
+                <input
+                  type="text"
+                  value={originState}
+                  onChange={(e) => setOriginState(e.target.value)}
+                  placeholder="Sonora"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-white uppercase tracking-wider block mb-1.5">
+                  Código Postal
+                </label>
+                <input
+                  type="text"
+                  value={originPostalCode}
+                  onChange={(e) => setOriginPostalCode(e.target.value)}
+                  placeholder="83150"
+                  className="w-full bg-[#0C120E] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs text-white focus:border-amber-honey outline-none font-mono font-bold"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Toggles & Umbrales */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
             <div className="space-y-4">
@@ -718,8 +893,8 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                       </td>
                       <td className="p-4">
                         {ev.balance_before !== null || ev.balance_after !== null ? (
-                          <span>
-                            ${ev.balance_before?.toFixed(2) ?? '-'} → ${ev.balance_after?.toFixed(2) ?? '-'}
+                          <span className="font-mono text-xs">
+                            ${formatBalance(ev.balance_before)} → ${formatBalance(ev.balance_after)}
                           </span>
                         ) : (
                           <span className="text-[#F4F6F0]/30">-</span>
