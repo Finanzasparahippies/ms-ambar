@@ -50,7 +50,7 @@ services:
       context: ./docker/nginx
       dockerfile: Dockerfile
     ports:
-      - "3080:80"
+      - "127.0.0.1:3080:80"
     volumes:
       - ./docker/nginx/staging.conf:/etc/nginx/default.conf.template:Z
       - static_volume_staging:/app/staticfiles

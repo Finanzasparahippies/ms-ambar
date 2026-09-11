@@ -1022,3 +1022,66 @@ class ShopAppTests(APITestCase):
         self.assertEqual(cfg.origin_name, 'Bodega Norte')
         self.assertEqual(cfg.origin_postal_code, '83190')
 
+    def test_create_shipment_from_rate_sanitizes_phones_without_re_error(self):
+        """Verifica que create_shipment_from_rate y create_rate_shipment limpien teléfonos sin NameError."""
+        from apps.shop.shipping.shipments import create_shipment_from_rate, SkydropxClient
+
+        mock_client = MagicMock(spec=SkydropxClient)
+        mock_client.is_configured = True
+        mock_client.environment = "staging"
+        mock_client.correlation_id = "test-corr-re"
+        mock_client.get_credits.return_value = {"success": True, "credits": {"balance": 1000.0}}
+
+        mock_response = MagicMock()
+        mock_response.status_code = 201
+        mock_response.json.return_value = {
+            "data": {
+                "id": "ship_test_re",
+                "attributes": {
+                    "status": "completed",
+                    "tracking_number": "TRACK-RE-123",
+                    "label_url": "https://labels.skydropx.com/test.pdf"
+                }
+            }
+        }
+        mock_client.request.return_value = mock_response
+
+        res = create_shipment_from_rate(
+            client=mock_client,
+            rate_id="rate_real_uuid_123",
+            address_from={"phone": "(662) 214-0000", "email": "contacto@msambar.com"},
+            address_to={"phone": "+52 662 139 0238", "email": "cliente@example.com"}
+        )
+        self.assertTrue(res["success"])
+        self.assertEqual(res["tracking_number"], "TRACK-RE-123")
+
+    def test_generate_shipping_label_reconciliation_force_and_exception_safety(self):
+        """Verifica que generate_shipping_label soporte force=True y capture excepciones sin quedar en 'creating'."""
+        from apps.shop.shipping.shipments import generate_shipping_label
+        from apps.shop.shipping.common import ShippingStatus
+
+        order = Order.objects.create(
+            user_email='force_test@msambar.com',
+            status='paid',
+            total_amount=500.0,
+            full_name='Cliente Force',
+            street_and_number='Juarez 10',
+            postal_code='83000',
+            state='SO',
+            shipping_status=ShippingStatus.CREATING.value
+        )
+
+        # Sin force: debe abortar para prevenir race conditions
+        res_abort = generate_shipping_label(order, force=False)
+        self.assertFalse(res_abort)
+
+        # Con force=True y simulando una excepción interna: no debe crashear ni quedarse en creating
+        with patch('apps.shop.shipping.shipments.SkydropxClient', side_effect=RuntimeError("Simulated network crash")):
+            res_force = generate_shipping_label(order, force=True)
+            self.assertFalse(res_force)
+
+        order.refresh_from_db()
+        self.assertEqual(order.shipping_status, ShippingStatus.RECONCILIATION_REQUIRED.value)
+        self.assertIn("Simulated network crash", order.shipping_error)
+
+

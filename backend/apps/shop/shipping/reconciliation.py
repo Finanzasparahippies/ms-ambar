@@ -124,7 +124,7 @@ def reconcile_order_shipping(order: Any, dry_run: bool = False) -> Dict[str, Any
 
             logger.info(f"[Reconciliación] Re-intentando emisión limpia de guía para Pedido #{locked_order.id}")
             from .shipments import generate_shipping_label
-            success = generate_shipping_label(locked_order)
+            success = generate_shipping_label(locked_order, force=True)
             locked_order.refresh_from_db()
             return {
                 "reconciled": success,

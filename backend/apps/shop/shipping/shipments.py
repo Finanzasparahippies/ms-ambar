@@ -1,8 +1,10 @@
 import hashlib
 import json
 import logging
+import re
 import uuid
 import requests
+from email.utils import parseaddr
 from typing import Optional, Dict, Any
 from django.conf import settings
 from django.db import transaction
@@ -524,7 +526,7 @@ def cancel_shipment(client: SkydropxClient, shipment_id: str, reason: str = "Can
     return {"success": status_code in (200, 201, 204), "status_code": status_code, "data": resp_json}
 
 
-def generate_shipping_label(order: Any, correlation_id: Optional[str] = None) -> bool:
+def generate_shipping_label(order: Any, correlation_id: Optional[str] = None, force: bool = False) -> bool:
     """
     Despachador logístico principal para emisión de guías tras confirmación de pago.
     1. Bloqueo atómico select_for_update() e Idempotencia (previene dobles emisiones y race conditions).
@@ -545,8 +547,8 @@ def generate_shipping_label(order: Any, correlation_id: Optional[str] = None) ->
             logger.info(f"[Logística] Pedido #{locked_order.id} ya cuenta con guía emitida ({tracking}). Operación idempotente.")
             return True
 
-        # Prevención de Race Condition: si otro proceso ya inició la emisión
-        if current_status == ShippingStatus.CREATING.value:
+        # Prevención de Race Condition: si otro proceso ya inició la emisión (salvo forzado explícito en reconciliación)
+        if current_status == ShippingStatus.CREATING.value and not force:
             logger.warning(f"[Logística] Pedido #{locked_order.id} ya se encuentra en estado 'creating' por otro hilo. Abortando doble emisión.")
             return False
 
@@ -556,126 +558,136 @@ def generate_shipping_label(order: Any, correlation_id: Optional[str] = None) ->
         locked_order.shipping_status = ShippingStatus.CREATING.value
         locked_order.save(update_fields=["shipping_attempt_id", "shipping_status"])
 
-    cid = correlation_id or f"shipping:order-{order.id}:attempt-{uuid.uuid4().hex[:8]}"
-    client = SkydropxClient(correlation_id=cid)
+    try:
+        cid = correlation_id or f"shipping:order-{order.id}:attempt-{uuid.uuid4().hex[:8]}"
+        client = SkydropxClient(correlation_id=cid)
 
-    origin_address = get_origin_address()
-    destination_address = {
-        "name": order.full_name,
-        "phone": order.phone or "6620000000",
-        "email": order.user_email or "cliente@msambar.com",
-        "street": order.street_and_number,
-        "street1": order.street_and_number,
-        "street_and_number": order.street_and_number,
-        "suburb": order.suburb or "Centro",
-        "city": order.city or "Hermosillo",
-        "state": normalize_mexican_state(order.state or "SO"),
-        "zip_code": order.postal_code or "83000",
-        "postal_code": order.postal_code or "83000",
-        "country": "MX",
-        "country_code": "MX"
-    }
+        origin_address = get_origin_address()
+        destination_address = {
+            "name": order.full_name,
+            "phone": order.phone or "6620000000",
+            "email": order.user_email or "cliente@msambar.com",
+            "street": order.street_and_number,
+            "street1": order.street_and_number,
+            "street_and_number": order.street_and_number,
+            "suburb": order.suburb or "Centro",
+            "city": order.city or "Hermosillo",
+            "state": normalize_mexican_state(order.state or "SO"),
+            "zip_code": order.postal_code or "83000",
+            "postal_code": order.postal_code or "83000",
+            "country": "MX",
+            "country_code": "MX"
+        }
 
-    # Modo Mock / Testing cuando las credenciales no están configuradas
-    if not client.is_configured:
-        logger.info(f"[Logística/Mock] Generación de guía simulada para Pedido #{order.id} (entorno sin credenciales).")
-        order.tracking_number = f"TRACK-AMBAR-{order.id}MX"
-        order.tracking_url = f"https://track.skydropx.com/?q={order.tracking_number}"
-        order.shipping_provider = order.shipping_provider or "Paquetería Nacional (Mock)"
-        sample_pdf = generate_sample_shipping_label_pdf(order)
-        order.shipping_label_pdf = sample_pdf or f"https://labels.skydropx.com/sample_{order.id}.pdf"
-        order.shipping_status = ShippingStatus.COMPLETED.value
-        order.save(update_fields=["tracking_number", "tracking_url", "shipping_provider", "shipping_label_pdf", "shipping_status"])
-        return True
+        # Modo Mock / Testing cuando las credenciales no están configuradas
+        if not client.is_configured:
+            logger.info(f"[Logística/Mock] Generación de guía simulada para Pedido #{order.id} (entorno sin credenciales).")
+            order.tracking_number = f"TRACK-AMBAR-{order.id}MX"
+            order.tracking_url = f"https://track.skydropx.com/?q={order.tracking_number}"
+            order.shipping_provider = order.shipping_provider or "Paquetería Nacional (Mock)"
+            sample_pdf = generate_sample_shipping_label_pdf(order)
+            order.shipping_label_pdf = sample_pdf or f"https://labels.skydropx.com/sample_{order.id}.pdf"
+            order.shipping_status = ShippingStatus.COMPLETED.value
+            order.save(update_fields=["tracking_number", "tracking_url", "shipping_provider", "shipping_label_pdf", "shipping_status"])
+            return True
 
-    # Obtener configuración logística activa
-    config = ShopShippingConfig.get_solo()
-    method_mode = config.method_mode
+        # Obtener configuración logística activa
+        config = ShopShippingConfig.get_solo()
+        method_mode = config.method_mode
 
-    shipment_result = None
+        shipment_result = None
 
-    # Método B: Direct Rate Shipment
-    if method_mode == "direct_rate":
-        logger.info(f"[Logística] Emisión de envío directo (Opción B) con transportista: {config.default_carrier}")
-        shipment_result = create_rate_shipment(
-            client=client,
-            origin_address=origin_address,
-            destination_address=destination_address,
-            carrier_name=config.default_carrier,
-            service_name=config.default_service,
-            order=order
-        )
-
-    # Método A: Quotation con rate_id
-    else:
-        # A.1 Si el cliente ya seleccionó una tarifa con UUID de Skydropx
-        if order.selected_rate_id and not order.selected_rate_id.endswith("_fallback"):
-            logger.info(f"[Logística] Creando envío en Skydropx usando selected_rate_id: {order.selected_rate_id}")
-            shipment_result = create_shipment_from_rate(
+        # Método B: Direct Rate Shipment
+        if method_mode == "direct_rate":
+            logger.info(f"[Logística] Emisión de envío directo (Opción B) con transportista: {config.default_carrier}")
+            shipment_result = create_rate_shipment(
                 client=client,
-                rate_id=order.selected_rate_id,
-                address_from=origin_address,
-                address_to=destination_address,
+                origin_address=origin_address,
+                destination_address=destination_address,
+                carrier_name=config.default_carrier,
+                service_name=config.default_service,
                 order=order
             )
 
-        # Regla P0 de Idempotencia: si falló por timeout de red (502/503/504), NO cotizar en vivo para no duplicar envío
-        if shipment_result and shipment_result.get("status_code") in (502, 503, 504):
-            logger.warning(f"[Logística] Incertidumbre de red en emisión para Pedido #{order.id} (HTTP {shipment_result.get('status_code')}). Transicionando a 'reconciliation_required' sin emitir duplicado.")
-            order.shipping_status = ShippingStatus.RECONCILIATION_REQUIRED.value
-            order.shipping_error = f"Incertidumbre o timeout de red con pasarela (HTTP {shipment_result.get('status_code')}); en espera de reconciliación segura."
-            order.save(update_fields=["shipping_status", "shipping_error"])
-            return False
-
-        # A.2 Si no había tarifa previa o fue rechazada por expiración (422), cotizar en vivo
-        if not shipment_result or not shipment_result.get("success"):
-            logger.info(f"[Logística] Cotizando tarifa en vivo para Pedido #{order.id} (force_refresh=True)")
-            from .quotations import quote_shipping_rates
-            rates = quote_shipping_rates(origin_address["zip_code"], destination_address["postal_code"], force_refresh=True)
-            real_rates = [r for r in rates if not r.get("is_fallback") and r.get("id")]
-            if real_rates:
-                chosen_rate = real_rates[0]
-                logger.info(f"[Logística] Seleccionada tarifa óptima {chosen_rate['id']} ({chosen_rate['provider']})")
+        # Método A: Quotation con rate_id
+        else:
+            # A.1 Si el cliente ya seleccionó una tarifa con UUID de Skydropx
+            if order.selected_rate_id and not order.selected_rate_id.endswith("_fallback"):
+                logger.info(f"[Logística] Creando envío en Skydropx usando selected_rate_id: {order.selected_rate_id}")
                 shipment_result = create_shipment_from_rate(
                     client=client,
-                    rate_id=chosen_rate["id"],
+                    rate_id=order.selected_rate_id,
                     address_from=origin_address,
                     address_to=destination_address,
                     order=order
                 )
 
-    # Procesar resultado exitoso
-    if shipment_result and shipment_result.get("success"):
-        order.skydropx_shipment_id = str(shipment_result.get("shipment_id") or "")
-        order.shipping_id = order.skydropx_shipment_id
-        order.tracking_number = shipment_result.get("tracking_number") or ""
-        order.tracking_url = shipment_result.get("tracking_url") or ""
-        order.shipping_provider = shipment_result.get("carrier_name") or order.shipping_provider
-        order.shipping_error = ""
+            # Regla P0 de Idempotencia: si falló por timeout de red (502/503/504), NO cotizar en vivo para no duplicar envío
+            if shipment_result and shipment_result.get("status_code") in (502, 503, 504):
+                logger.warning(f"[Logística] Incertidumbre de red en emisión para Pedido #{order.id} (HTTP {shipment_result.get('status_code')}). Transicionando a 'reconciliation_required' sin emitir duplicado.")
+                order.shipping_status = ShippingStatus.RECONCILIATION_REQUIRED.value
+                order.shipping_error = f"Incertidumbre o timeout de red con pasarela (HTTP {shipment_result.get('status_code')}); en espera de reconciliación segura."
+                order.save(update_fields=["shipping_status", "shipping_error"])
+                return False
 
-        remote_label_url = shipment_result.get("label_url")
-        if remote_label_url:
-            local_url = backup_remote_label_pdf(remote_label_url, order.id)
-            order.shipping_label_pdf = local_url or remote_label_url
-            order.shipping_status = ShippingStatus.COMPLETED.value
-        else:
-            order.shipping_status = ShippingStatus.LABEL_PENDING.value if order.tracking_number else ShippingStatus.PROCESSING.value
+            # A.2 Si no había tarifa previa o fue rechazada por expiración (422), cotizar en vivo
+            if not shipment_result or not shipment_result.get("success"):
+                logger.info(f"[Logística] Cotizando tarifa en vivo para Pedido #{order.id} (force_refresh=True)")
+                from .quotations import quote_shipping_rates
+                rates = quote_shipping_rates(origin_address["zip_code"], destination_address["postal_code"], force_refresh=True)
+                real_rates = [r for r in rates if not r.get("is_fallback") and r.get("id")]
+                if real_rates:
+                    chosen_rate = real_rates[0]
+                    logger.info(f"[Logística] Seleccionada tarifa óptima {chosen_rate['id']} ({chosen_rate['provider']})")
+                    shipment_result = create_shipment_from_rate(
+                        client=client,
+                        rate_id=chosen_rate["id"],
+                        address_from=origin_address,
+                        address_to=destination_address,
+                        order=order
+                    )
 
-        order.save(update_fields=["skydropx_shipment_id", "shipping_id", "tracking_number", "tracking_url", "shipping_provider", "shipping_error", "shipping_label_pdf", "shipping_status"])
-        logger.info(
-            f"[Logística] ✅ Envío registrado exitosamente para Pedido #{order.id}. "
-            f"Tracking: {order.tracking_number}, Status: {order.shipping_status}"
+        # Procesar resultado exitoso
+        if shipment_result and shipment_result.get("success"):
+            order.skydropx_shipment_id = str(shipment_result.get("shipment_id") or "")
+            order.shipping_id = order.skydropx_shipment_id
+            order.tracking_number = shipment_result.get("tracking_number") or ""
+            order.tracking_url = shipment_result.get("tracking_url") or ""
+            order.shipping_provider = shipment_result.get("carrier_name") or order.shipping_provider
+            order.shipping_error = ""
+
+            remote_label_url = shipment_result.get("label_url")
+            if remote_label_url:
+                local_url = backup_remote_label_pdf(remote_label_url, order.id)
+                order.shipping_label_pdf = local_url or remote_label_url
+                order.shipping_status = ShippingStatus.COMPLETED.value
+            else:
+                order.shipping_status = ShippingStatus.LABEL_PENDING.value if order.tracking_number else ShippingStatus.PROCESSING.value
+
+            order.save(update_fields=["skydropx_shipment_id", "shipping_id", "tracking_number", "tracking_url", "shipping_provider", "shipping_error", "shipping_label_pdf", "shipping_status"])
+            logger.info(
+                f"[Logística] ✅ Envío registrado exitosamente para Pedido #{order.id}. "
+                f"Tracking: {order.tracking_number}, Status: {order.shipping_status}"
+            )
+            return True
+
+        # Fallo o Incertidumbre: Transición formal a reconciliation_required sin fallos silenciosos
+        err_str = (shipment_result or {}).get("error", "Error indeterminado contactando Skydropx")
+        logger.error(
+            f"[Logística] ❌ No se pudo emitir guía para Pedido #{order.id} en Skydropx: {err_str}. "
+            f"Marcando orden como 'reconciliation_required'."
         )
-        return True
-
-    # Fallo o Incertidumbre: Transición formal a reconciliation_required sin fallos silenciosos
-    err_str = (shipment_result or {}).get("error", "Error indeterminado contactando Skydropx")
-    logger.error(
-        f"[Logística] ❌ No se pudo emitir guía para Pedido #{order.id} en Skydropx: {err_str}. "
-        f"Marcando orden como 'reconciliation_required'."
-    )
-    order.shipping_status = ShippingStatus.RECONCILIATION_REQUIRED.value
-    order.shipping_error = str(err_str)[:500]
-    order.save(update_fields=["shipping_status", "shipping_error"])
-    return False
+        order.shipping_status = ShippingStatus.RECONCILIATION_REQUIRED.value
+        order.shipping_error = str(err_str)[:500]
+        order.save(update_fields=["shipping_status", "shipping_error"])
+        return False
+    except Exception as e:
+        logger.error(f"[Logística] ❌ Excepción no controlada procesando emisión para Pedido #{order.id}: {e}", exc_info=True)
+        order.shipping_status = ShippingStatus.RECONCILIATION_REQUIRED.value
+        order.shipping_error = f"Error inesperado en emisión: {str(e)}"[:500]
+        try:
+            order.save(update_fields=["shipping_status", "shipping_error"])
+        except Exception:
+            pass
+        return False
 
