@@ -70,6 +70,7 @@ export const CartDrawer: React.FC = () => {
   const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
   const [quotingShipping, setQuotingShipping] = useState<boolean>(false);
   const [orderResult, setOrderResult] = useState<any>(null);
+  const [packagingType, setPackagingType] = useState<'bag' | 'box'>('bag');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -84,20 +85,31 @@ export const CartDrawer: React.FC = () => {
         } catch (e) {}
       }
     }
+
+    // Sincronizar empaque por defecto de la tienda
+    const fetchShippingConfig = async () => {
+      try {
+        const res = await api.get('/shop/shipping/config/');
+        if (res.data?.default_packaging_type) {
+          setPackagingType(res.data.default_packaging_type);
+        }
+      } catch (e) {}
+    };
+    fetchShippingConfig();
   }, []);
 
-  // Escuchar cambios en el Código Postal
+  // Escuchar cambios en el Código Postal o Tipo de Empaque
   useEffect(() => {
     const cleanCp = postalCode.replace(/\D/g, '');
     if (cleanCp.length === 5) {
-      handlePostalCodeLookupAndQuote(cleanCp);
+      handlePostalCodeLookupAndQuote(cleanCp, packagingType);
     } else {
       setShippingRates([]);
       setSelectedRate(null);
     }
-  }, [postalCode]);
+  }, [postalCode, packagingType]);
 
-  const handlePostalCodeLookupAndQuote = async (cp: string) => {
+  const handlePostalCodeLookupAndQuote = async (cp: string, currentPackaging: 'bag' | 'box' = packagingType) => {
     setQuotingShipping(true);
     setError(null);
     try {
@@ -116,6 +128,7 @@ export const CartDrawer: React.FC = () => {
       const quoteRes = await api.post('/shop/shipping/quote/', {
         postal_code: cp,
         weight_kg: 1.0,
+        packaging_type: currentPackaging,
       });
 
       if (quoteRes.data?.rates && quoteRes.data.rates.length > 0) {
@@ -171,6 +184,7 @@ export const CartDrawer: React.FC = () => {
         suburb,
         street_and_number: streetAndNumber,
         country,
+        packaging_type: packagingType,
         shipping_rate_id: selectedRate?.id || 'rate_std_fallback',
         shipping_amount: selectedRate?.total_price || 150.0,
         shipping_provider: selectedRate?.provider || 'Estándar Nacional',
@@ -438,6 +452,37 @@ export const CartDrawer: React.FC = () => {
                               className="w-full bg-[#0E1310] border border-purple-500/40 focus:border-purple-400 focus:ring-1 focus:ring-purple-400/40 rounded-xl pl-9 pr-3 py-3 text-xs text-white placeholder-neutral-500 outline-none transition-all font-mono font-bold shadow-inner"
                             />
                           </div>
+                        </div>
+                      </div>
+
+                      {/* Selector de Tipo de Empaque (Bolsa vs Caja) */}
+                      <div className="space-y-1.5 pt-1">
+                        <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1">
+                          Tipo de Empaque
+                        </label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPackagingType('bag')}
+                            className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                              packagingType === 'bag'
+                                ? 'border-purple-500 bg-purple-950/60 text-white shadow-md shadow-purple-950/40 ring-1 ring-purple-500/50'
+                                : 'border-white/10 bg-white/[0.02] text-neutral-400 hover:border-white/20'
+                            }`}
+                          >
+                            <span>✉️</span> Bolsa de Seguridad
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPackagingType('box')}
+                            className={`py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                              packagingType === 'box'
+                                ? 'border-purple-500 bg-purple-950/60 text-white shadow-md shadow-purple-950/40 ring-1 ring-purple-500/50'
+                                : 'border-white/10 bg-white/[0.02] text-neutral-400 hover:border-white/20'
+                            }`}
+                          >
+                            <span>📦</span> Caja de Envío
+                          </button>
                         </div>
                       </div>
 

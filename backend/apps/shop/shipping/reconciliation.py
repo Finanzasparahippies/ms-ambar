@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.db import transaction
 from .client import SkydropxClient
 from .labels import backup_remote_label_pdf
-from .common import ShippingStatus
+from .common import ShippingStatus, parse_skydropx_shipment_response
 
 logger = logging.getLogger("apps")
 
@@ -45,11 +45,13 @@ def reconcile_order_shipping(order: Any, dry_run: bool = False) -> Dict[str, Any
             logger.info(f"[Reconciliación] Consultando estado en Skydropx para Pedido #{locked_order.id} (Shipment: {shipment_id})")
             res = client.get_shipment(shipment_id)
             if res.get("success"):
-                data = res.get("data", {})
-                attrs = data.get("attributes", data)
-                remote_status = str(attrs.get("status") or "").lower()
-                tracking_number = attrs.get("master_tracking_number") or attrs.get("tracking_number")
-                label_url = attrs.get("label_url")
+                raw_payload = res.get("data", {})
+                parsed = parse_skydropx_shipment_response(raw_payload)
+                remote_status = parsed["workflow_status"]
+                tracking_number = parsed["tracking_number"]
+                label_url = parsed["label_url"]
+                tracking_url = parsed["tracking_url"]
+                carrier_name = parsed["carrier_name"]
 
                 if dry_run:
                     return {
@@ -63,9 +65,12 @@ def reconcile_order_shipping(order: Any, dry_run: bool = False) -> Dict[str, Any
                         "label_url": label_url
                     }
 
+                if carrier_name:
+                    locked_order.shipping_provider = carrier_name
+
                 if tracking_number:
                     locked_order.tracking_number = tracking_number
-                    locked_order.tracking_url = attrs.get("tracking_url") or f"https://track.skydropx.com/?q={tracking_number}"
+                    locked_order.tracking_url = tracking_url or f"https://track.skydropx.com/?q={tracking_number}"
 
                 if label_url:
                     local_pdf = backup_remote_label_pdf(label_url, locked_order.id)
@@ -86,6 +91,7 @@ def reconcile_order_shipping(order: Any, dry_run: bool = False) -> Dict[str, Any
                 }
             else:
                 logger.warning(f"[Reconciliación] Consulta de envío {shipment_id} falló: {res.get('error')}")
+
 
         # 2. Si no hay shipment_id, verificar si se creó en auditoría ShippingEvent
         recent_events = ShippingEvent.objects.filter(order=locked_order, http_status__in=[200, 201, 202]).order_by("-created_at")

@@ -3,12 +3,12 @@ import random
 import logging
 from typing import Dict, Any, Optional
 from django.conf import settings
-from .common import ShippingStatus, map_skydropx_status
+from .common import ShippingStatus, map_skydropx_status, parse_skydropx_shipment_response
 
 logger = logging.getLogger("apps")
 
-DEFAULT_BACKOFF_INTERVALS = [1.0, 1.5, 2.5]
-MAX_POLL_TIMEOUT_SECONDS = float(getattr(settings, "SKYDROPX_POLL_TIMEOUT", 6.0))
+DEFAULT_BACKOFF_INTERVALS = [1.0, 2.0, 3.0, 4.0]
+MAX_POLL_TIMEOUT_SECONDS = float(getattr(settings, "SKYDROPX_POLL_TIMEOUT", 10.0))
 
 
 def poll_shipment_resolution(
@@ -21,6 +21,7 @@ def poll_shipment_resolution(
     """
     Sondea la resolución asíncrona de un envío (guía y tracking) en Skydropx Pro
     utilizando backoff exponencial con jitter para evitar sobrecargar la API.
+    Soporta estándar JSON:API (paquetes y guía dentro de 'included').
     
     Retorna un diccionario con:
       - success: bool
@@ -64,40 +65,36 @@ def poll_shipment_resolution(
         last_response = shipment_data
 
         if shipment_data.get("success"):
-            data = shipment_data.get("data") or {}
-            # El backend de Skydropx puede devolver data anidada o plana
-            attrs = data.get("attributes", data)
-            current_status = str(attrs.get("status") or "").lower()
-            label_url = attrs.get("label_url") or attrs.get("label") or attrs.get("url") or ""
-            tracking_number = attrs.get("tracking_number") or attrs.get("tracking") or ""
-            carrier_name = attrs.get("carrier_name") or attrs.get("carrier") or ""
+            raw_payload = shipment_data.get("data") or {}
+            parsed = parse_skydropx_shipment_response(raw_payload)
 
-            mapped_status, is_known = map_skydropx_status(current_status)
-            if not is_known:
-                logger.warning(
-                    f"[Skydropx Polling] ⚠️ Código o estado externo no reconocido: '{current_status}' "
-                    f"para shipment_id {shipment_id}. Mapeado a internal_status='{mapped_status}'."
-                )
+            current_status = parsed["workflow_status"]
+            mapped_status = parsed["internal_status"]
+            label_url = parsed["label_url"]
+            tracking_number = parsed["tracking_number"]
+            carrier_name = parsed["carrier_name"]
+            tracking_url = parsed["tracking_url"]
 
             logger.info(
                 f"[Skydropx Polling] Intento #{step} para {shipment_id} - "
-                f"Estado: {current_status} (interno: {mapped_status}), Tracking: {bool(tracking_number)}, Label: {bool(label_url)}"
+                f"Estado: '{current_status}' (interno: {mapped_status}), Tracking: {bool(tracking_number)}, Label: {bool(label_url)}"
             )
 
-            # Si ya tenemos tracking number o status completado
-            if mapped_status == ShippingStatus.COMPLETED.value or (tracking_number and label_url):
+            # Si ya tenemos tracking number y etiqueta, o estado completado
+            if parsed["is_completed"] or (tracking_number and label_url):
                 return {
                     "success": True,
                     "status": "completed",
                     "shipment_id": shipment_id,
                     "tracking_number": tracking_number,
-                    "tracking_url": attrs.get("tracking_url") or f"https://track.skydropx.com/?q={tracking_number}",
+                    "tracking_url": tracking_url,
                     "label_url": label_url,
                     "carrier_name": carrier_name,
-                    "raw_data": data
+                    "raw_data": raw_payload
                 }
 
             if mapped_status in [ShippingStatus.FAILED.value, ShippingStatus.CANCELLED.value]:
+                attrs = raw_payload.get("attributes", raw_payload) if isinstance(raw_payload, dict) else {}
                 error_msg = attrs.get("error_message") or attrs.get("message") or f"Envío finalizó con status: {current_status}"
                 logger.error(f"[Skydropx Polling] Envío {shipment_id} terminó con status de error: {error_msg}")
                 return {
@@ -105,7 +102,7 @@ def poll_shipment_resolution(
                     "status": mapped_status,
                     "shipment_id": shipment_id,
                     "error": error_msg,
-                    "raw_data": data
+                    "raw_data": raw_payload
                 }
 
         # Calcular tiempo de espera con jitter (+/- 25%)
@@ -128,24 +125,27 @@ def poll_shipment_resolution(
     label_url = ""
     tracking_number = ""
     carrier_name = ""
+    tracking_url = ""
     raw = {}
 
     if last_response and last_response.get("success"):
         raw = last_response.get("data") or {}
-        attrs = raw.get("attributes", raw)
-        status_label = attrs.get("status") or "processing"
-        label_url = attrs.get("label_url") or ""
-        tracking_number = attrs.get("tracking_number") or ""
-        carrier_name = attrs.get("carrier_name") or ""
+        parsed = parse_skydropx_shipment_response(raw)
+        status_label = parsed["workflow_status"] or "processing"
+        label_url = parsed["label_url"]
+        tracking_number = parsed["tracking_number"]
+        carrier_name = parsed["carrier_name"]
+        tracking_url = parsed["tracking_url"]
 
     return {
         "success": bool(tracking_number),
         "status": "label_pending" if tracking_number and not label_url else status_label,
         "shipment_id": shipment_id,
         "tracking_number": tracking_number,
-        "tracking_url": f"https://track.skydropx.com/?q={tracking_number}" if tracking_number else "",
+        "tracking_url": tracking_url or (f"https://track.skydropx.com/?q={tracking_number}" if tracking_number else ""),
         "label_url": label_url,
         "carrier_name": carrier_name,
         "timeout": True,
         "raw_data": raw
     }
+

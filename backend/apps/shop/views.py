@@ -15,6 +15,7 @@ from .shipping import (
     quote_shipping_rates,
     lookup_postal_code,
     validate_postal_code,
+    reconcile_order_shipping,
     ShippingStatus,
 )
 
@@ -26,7 +27,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from apps.tickets.models import Ticket, Event, Seat
-from .models import Category, Product, ProductImage, Order, OrderItem
+from .models import Category, Product, ProductImage, Order, OrderItem, ShopShippingConfig
 from .serializers import CategorySerializer, ProductSerializer, ProductImageSerializer, OrderSerializer
 
 stripe.api_key = settings.STRIPE_SECRET_KEY
@@ -511,8 +512,11 @@ class OrderBySessionView(APIView):
 
 class OrderDownloadLabelView(APIView):
     """
-    Permite visualizar o descargar la guía de envío en PDF para un pedido específico.
-    Si la guía no existe aún en disco, la genera bajo demanda con el generador de muestra.
+    Permite visualizar o descargar la guía oficial de envío en PDF para un pedido específico.
+    1. Si el pedido posee 'skydropx_shipment_id', consulta y concilia en vivo la guía oficial
+       emitida por Skydropx si aún no ha sido descargada o si existe un mock residual en disco.
+    2. Si el envío aún está en procesamiento asíncrono con la paquetería, responde HTTP 202 Accepted.
+    3. Si está en modo de prueba/mock local sin pasarela configurada, genera el formato de muestra.
     """
     permission_classes = [AllowAny]
 
@@ -523,6 +527,42 @@ class OrderDownloadLabelView(APIView):
             return Response({'error': 'Pedido no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
         filepath = Path(settings.MEDIA_ROOT) / 'shipping_labels' / f"guia_pedido_{order.id}.pdf"
+
+        # 1. Si existe envío en Skydropx, asegurar sincronización y reemplazo de cualquier mock previo
+        has_skydropx = bool(order.skydropx_shipment_id or (order.shipping_id and not order.shipping_id.startswith('mock_')))
+        if has_skydropx:
+            is_stale_mock = filepath.exists() and filepath.stat().st_size <= 2500
+            needs_sync = not filepath.exists() or is_stale_mock or not order.shipping_label_pdf
+
+            if needs_sync:
+                logger.info(f"[OrderDownloadLabelView] Sincronizando guía oficial en vivo con Skydropx para Pedido #{order.id}")
+                reconcile_order_shipping(order)
+                order.refresh_from_db()
+
+            # Si ya se descargó el PDF oficial o existe URL remota
+            if order.shipping_label_pdf and order.shipping_label_pdf.startswith('http'):
+                from .shipping.labels import backup_remote_label_pdf
+                backup_remote_label_pdf(order.shipping_label_pdf, order.id)
+
+            if filepath.exists() and filepath.stat().st_size > 2500:
+                from django.http import FileResponse
+                response = FileResponse(open(filepath, 'rb'), content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename="guia_envio_pedido_{order.id}.pdf"'
+                return response
+
+            # Si el envío aún está siendo procesado por Skydropx / Paquetería
+            current_status = getattr(order, 'shipping_status', '')
+            if current_status in [ShippingStatus.PROCESSING.value, ShippingStatus.CREATING.value, ShippingStatus.LABEL_PENDING.value, 'processing', 'creating', 'label_pending']:
+                return Response(
+                    {
+                        'status': 'processing',
+                        'message': 'La guía oficial de envío se está procesando con la paquetería en Skydropx. Por favor espera unos segundos y reintenta.'
+                    },
+                    status=status.HTTP_202_ACCEPTED,
+                    headers={'Retry-After': '3'}
+                )
+
+        # 2. Modo contingencia o mock de pruebas (TRACK-AMBAR o sin pasarela)
         if not filepath.exists():
             generate_sample_shipping_label_pdf(order)
 
@@ -547,7 +587,6 @@ class PostalCodeLookupView(APIView):
 
 
 class ShippingQuoteView(APIView):
-
     """Permite al frontend consultar tarifas de envío en tiempo real con fallback resiliente."""
     permission_classes = [AllowAny]
 
@@ -555,9 +594,13 @@ class ShippingQuoteView(APIView):
         dest_postal_code = request.data.get('postal_code') or request.data.get('dest_postal_code')
         origin_postal_code = request.data.get('origin_postal_code') or (settings.SHIPPING_ORIGIN_POSTAL_CODE if hasattr(settings, 'SHIPPING_ORIGIN_POSTAL_CODE') else os.environ.get('SHIPPING_ORIGIN_POSTAL_CODE', '83000'))
         weight_kg = float(request.data.get('weight_kg', 1.0))
-        packaging_type = str(request.data.get('packaging_type', 'box')).lower().strip()
-        if packaging_type not in ('box', 'bag'):
-            packaging_type = 'box'
+
+        config = ShopShippingConfig.get_solo()
+        raw_pkg = request.data.get('packaging_type')
+        if raw_pkg and str(raw_pkg).lower().strip() in ('box', 'bag'):
+            packaging_type = str(raw_pkg).lower().strip()
+        else:
+            packaging_type = getattr(config, 'default_packaging_type', 'box') or 'box'
 
         if not dest_postal_code or not validate_postal_code(str(dest_postal_code)):
             return Response({"error": "El código postal de destino debe tener 5 dígitos numéricos."}, status=status.HTTP_400_BAD_REQUEST)
@@ -609,9 +652,14 @@ class ShopCheckoutView(APIView):
         items_data = data.get('items', [])
         shipping_rate_id = data.get('shipping_rate_id', 'rate_std_fallback')
         shipping_amount = float(data.get('shipping_amount', 150.0))
-        packaging_type = str(data.get('packaging_type', 'box')).lower().strip()
-        if packaging_type not in ('box', 'bag'):
-            packaging_type = 'box'
+
+        config = ShopShippingConfig.get_solo()
+        raw_pkg = data.get('packaging_type')
+        if raw_pkg and str(raw_pkg).lower().strip() in ('box', 'bag'):
+            packaging_type = str(raw_pkg).lower().strip()
+        else:
+            packaging_type = getattr(config, 'default_packaging_type', 'box') or 'box'
+
 
         if not all([email, full_name, phone, street_and_number, postal_code, items_data]):
             return Response({"error": "Todos los campos de entrega e ítems son requeridos."}, status=status.HTTP_400_BAD_REQUEST)

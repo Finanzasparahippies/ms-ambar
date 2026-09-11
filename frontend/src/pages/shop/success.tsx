@@ -133,6 +133,39 @@ export default function ShopSuccessPage() {
     };
   }, [router.isReady, session_id]);
 
+  // Sondeo reactivo si la guía sigue en proceso asíncrono con Skydropx
+  useEffect(() => {
+    if (!order || !session_id) return;
+
+    const isProcessing =
+      order.shipping_status === 'processing' ||
+      order.shipping_status === 'creating' ||
+      (!order.tracking_number && order.status === 'paid');
+
+    if (!isProcessing) return;
+
+    let pollCount = 0;
+    const maxPolls = 8;
+    const interval = setInterval(async () => {
+      pollCount += 1;
+      try {
+        const res = await api.get<OrderDetails>(`/shop/orders/by_session/?session_id=${session_id}`);
+        if (res.data) {
+          setOrder(res.data);
+          if (res.data.tracking_number || res.data.shipping_status === 'completed') {
+            clearInterval(interval);
+          }
+        }
+      } catch (e) {}
+
+      if (pollCount >= maxPolls) {
+        clearInterval(interval);
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [order?.shipping_status, order?.tracking_number, session_id]);
+
   const handleCopyTracking = (trackingNum: string) => {
     if (!trackingNum) return;
     navigator.clipboard.writeText(trackingNum);

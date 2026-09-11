@@ -199,6 +199,7 @@ def map_skydropx_status(external_status: str) -> Tuple[str, bool]:
         "pending": ShippingStatus.PROCESSING.value,
         "processing": ShippingStatus.PROCESSING.value,
         "creating": ShippingStatus.CREATING.value,
+        "created": ShippingStatus.CREATED.value,
         "label_pending": ShippingStatus.LABEL_PENDING.value,
         "failed": ShippingStatus.FAILED.value,
         "error": ShippingStatus.FAILED.value,
@@ -377,4 +378,156 @@ def validate_shipment_payload_contract(payload: dict) -> Tuple[bool, List[str]]:
                     errors.append(f"El atributo {dim} debe ser mayor a 0 en el paquete {idx+1}.")
 
     return len(errors) == 0, errors
+
+
+def parse_skydropx_shipment_response(response_data: Any) -> Dict[str, Any]:
+    """
+    Parsea de forma resiliente la respuesta de Skydropx Pro tanto en formato JSON:API
+    como en formato plano o anidado.
+    
+    Estructura JSON:API canónica de Skydropx Pro:
+      data: {
+        id: "...",
+        type: "shipments",
+        attributes: {
+          id: "...",
+          workflow_status: "completed" / "processing",
+          master_tracking_number: "...",
+          carrier_name: "fedex",
+          payment_status: "paid",
+          ...
+        },
+        relationships: {
+          packages: { data: [{ id: "...", type: "packages" }] }
+        }
+      },
+      included: [
+        {
+          id: "...",
+          type: "packages",
+          attributes: {
+            tracking_number: "...",
+            label_url: "https://...",
+            tracking_url_provider: "https://..."
+          }
+        }
+      ]
+    """
+    if not isinstance(response_data, dict):
+        return {
+            "shipment_id": "",
+            "workflow_status": "",
+            "internal_status": ShippingStatus.PENDING.value,
+            "tracking_number": "",
+            "tracking_url": "",
+            "label_url": "",
+            "carrier_name": "",
+            "is_completed": False
+        }
+
+    data = response_data.get("data")
+    if isinstance(data, dict):
+        attrs = data.get("attributes") or data
+        top_id = data.get("id") or attrs.get("id") or response_data.get("id")
+    else:
+        attrs = response_data.get("attributes") or response_data
+        top_id = response_data.get("id")
+
+    shipment_id = str(top_id or "").strip()
+
+    # 1. Estado / Workflow Status
+    raw_status = (
+        attrs.get("workflow_status") or 
+        attrs.get("status") or 
+        response_data.get("workflow_status") or 
+        response_data.get("status") or 
+        ""
+    )
+    raw_status = str(raw_status).lower().strip()
+    internal_status, _ = map_skydropx_status(raw_status)
+
+    # 2. Tracking Number
+    tracking_number = (
+        attrs.get("master_tracking_number") or 
+        attrs.get("tracking_number") or 
+        attrs.get("tracking") or 
+        response_data.get("master_tracking_number") or 
+        response_data.get("tracking_number") or 
+        ""
+    )
+    tracking_number = str(tracking_number).strip()
+
+    # 3. Label URL
+    label_url = (
+        attrs.get("label_url") or 
+        attrs.get("label") or 
+        attrs.get("url") or 
+        response_data.get("label_url") or 
+        ""
+    )
+    label_url = str(label_url).strip()
+
+    # 4. Carrier Name & Tracking URL Provider
+    carrier_name = (
+        attrs.get("carrier_name") or 
+        attrs.get("carrier") or 
+        response_data.get("carrier_name") or 
+        ""
+    )
+    carrier_name = str(carrier_name).strip()
+
+    tracking_url = (
+        attrs.get("tracking_url_provider") or 
+        attrs.get("tracking_url") or 
+        response_data.get("tracking_url") or 
+        ""
+    )
+    tracking_url = str(tracking_url).strip()
+
+    # 5. Extraer desde 'included' (JSON:API paquetes)
+    included = response_data.get("included") or (data.get("included") if isinstance(data, dict) else None) or []
+    if isinstance(included, list):
+        for item in included:
+            if not isinstance(item, dict):
+                continue
+            item_type = str(item.get("type") or "").lower()
+            item_attrs = item.get("attributes") or {}
+            if item_type in ["packages", "package"]:
+                if not label_url:
+                    candidate_label = item_attrs.get("label_url") or item_attrs.get("url") or item_attrs.get("label")
+                    if candidate_label:
+                        label_url = str(candidate_label).strip()
+                if not tracking_number:
+                    candidate_tracking = item_attrs.get("tracking_number") or item_attrs.get("master_tracking_number")
+                    if candidate_tracking:
+                        tracking_number = str(candidate_tracking).strip()
+                if not tracking_url and item_attrs.get("tracking_url_provider"):
+                    tracking_url = str(item_attrs.get("tracking_url_provider")).strip()
+
+    # Si hay tracking number pero no tracking_url, construir url estándar de Skydropx
+    if tracking_number and not tracking_url:
+        tracking_url = f"https://track.skydropx.com/?q={tracking_number}"
+
+    # Si el estado es 'completed' o ya tenemos tanto guía como tracking
+    is_completed = (
+        raw_status in ["completed", "delivered", "in_transit", "shipped"] or
+        internal_status in [ShippingStatus.COMPLETED.value] or
+        bool(tracking_number and label_url)
+    )
+
+    if is_completed and internal_status == ShippingStatus.PROCESSING.value:
+        internal_status = ShippingStatus.COMPLETED.value
+
+    return {
+        "shipment_id": shipment_id,
+        "workflow_status": raw_status,
+        "internal_status": internal_status,
+        "status": internal_status,
+        "tracking_number": tracking_number,
+        "tracking_url": tracking_url,
+        "label_url": label_url,
+        "carrier_name": carrier_name,
+        "is_completed": is_completed
+    }
+
 

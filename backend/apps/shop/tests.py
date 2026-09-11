@@ -1204,4 +1204,186 @@ class ShopAppTests(APITestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIsInstance(res.data, list)
 
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_valid_key')
+    @patch('stripe.checkout.Session.create')
+    @patch('apps.shop.views.send_order_confirmation_email')
+    def test_default_packaging_type_quote_and_checkout(self, mock_email, mock_session_create):
+        """Verifica que quote y checkout hereden default_packaging_type de ShopShippingConfig."""
+        from apps.shop.models import ShopShippingConfig
+        class MockSession:
+            id = 'cs_pkg_test'
+            url = 'https://checkout.stripe.com/pay/cs_pkg_test'
+        mock_session_create.return_value = MockSession()
+
+        # 1. Configurar default a 'bag'
+        cfg = ShopShippingConfig.get_solo()
+        cfg.default_packaging_type = 'bag'
+        cfg.save()
+
+        # Quote sin packaging_type
+        quote_url = reverse('shipping-quote')
+        res_quote = self.client.post(quote_url, {'postal_code': '83000'}, format='json')
+        self.assertEqual(res_quote.status_code, status.HTTP_200_OK)
+
+        # Checkout sin packaging_type debe crear orden con 'bag'
+        checkout_url = reverse('shop-checkout')
+        data = {
+            'email': 'bagbuyer@example.com',
+            'full_name': 'Bag Buyer',
+            'phone': '6621234567',
+            'street_and_number': 'Kino 10',
+            'postal_code': '83000',
+            'city': 'Hermosillo',
+            'state': 'Sonora',
+            'country': 'México',
+            'shipping_amount': 150.00,
+            'items': [{'product_id': self.product_active.id, 'quantity': 1}]
+        }
+        res_checkout = self.client.post(checkout_url, data, format='json')
+        self.assertEqual(res_checkout.status_code, status.HTTP_201_CREATED)
+        order_bag = Order.objects.get(user_email='bagbuyer@example.com')
+        self.assertEqual(order_bag.packaging_type, 'bag')
+
+        # 2. Configurar default a 'box'
+        cfg.default_packaging_type = 'box'
+        cfg.save()
+
+        data['email'] = 'boxbuyer@example.com'
+        res_checkout2 = self.client.post(checkout_url, data, format='json')
+        self.assertEqual(res_checkout2.status_code, status.HTTP_201_CREATED)
+        order_box = Order.objects.get(user_email='boxbuyer@example.com')
+        self.assertEqual(order_box.packaging_type, 'box')
+
+    def test_parse_skydropx_shipment_response_json_api(self):
+        """Verifica parse_skydropx_shipment_response extrayendo workflow_status, tracking y label_url de included."""
+        from apps.shop.shipping.common import parse_skydropx_shipment_response
+
+        # Caso JSON:API con included packages
+        json_api_data = {
+            "data": {
+                "id": "ship_jsonapi_999",
+                "type": "shipments",
+                "attributes": {
+                    "workflow_status": "in_transit",
+                    "master_tracking_number": "MASTER-TRACK-999",
+                    "label_url": None
+                }
+            },
+            "included": [
+                {
+                    "type": "packages",
+                    "id": "pkg_999",
+                    "attributes": {
+                        "tracking_number": "PKG-TRACK-999",
+                        "label_url": "https://carrier.skydropx.com/labels/real_carrier_label.pdf"
+                    }
+                }
+            ]
+        }
+        res = parse_skydropx_shipment_response(json_api_data)
+        self.assertEqual(res["shipment_id"], "ship_jsonapi_999")
+        self.assertEqual(res["workflow_status"], "in_transit")
+        self.assertEqual(res["status"], "completed")
+        self.assertEqual(res["tracking_number"], "MASTER-TRACK-999")
+        self.assertEqual(res["label_url"], "https://carrier.skydropx.com/labels/real_carrier_label.pdf")
+
+        # Caso donde master_tracking_number es nulo y se extrae de included packages
+        json_api_data_pkg_only = {
+            "data": {
+                "id": "ship_jsonapi_777",
+                "type": "shipments",
+                "attributes": {
+                    "workflow_status": "in_transit",
+                    "master_tracking_number": None,
+                    "label_url": None
+                }
+            },
+            "included": [
+                {
+                    "type": "packages",
+                    "id": "pkg_777",
+                    "attributes": {
+                        "tracking_number": "PKG-TRACK-777",
+                        "label_url": "https://carrier.skydropx.com/labels/real_carrier_label_777.pdf"
+                    }
+                }
+            ]
+        }
+        res_pkg = parse_skydropx_shipment_response(json_api_data_pkg_only)
+        self.assertEqual(res_pkg["tracking_number"], "PKG-TRACK-777")
+        self.assertEqual(res_pkg["label_url"], "https://carrier.skydropx.com/labels/real_carrier_label_777.pdf")
+
+        # Caso fallback a master_tracking_number cuando no hay package tracking
+        json_api_data_no_pkg_track = {
+            "data": {
+                "id": "ship_jsonapi_888",
+                "attributes": {
+                    "workflow_status": "created",
+                    "master_tracking_number": "MASTER-ONLY-888"
+                }
+            },
+            "included": []
+        }
+        res2 = parse_skydropx_shipment_response(json_api_data_no_pkg_track)
+        self.assertEqual(res2["workflow_status"], "created")
+        self.assertEqual(res2["status"], "created")
+        self.assertEqual(res2["tracking_number"], "MASTER-ONLY-888")
+
+    @patch('apps.shop.views.reconcile_order_shipping')
+    def test_order_download_label_processing_202_and_reconciliation(self, mock_reconcile):
+        """Verifica que OrderDownloadLabelView responda 202 si sigue procesando e invalide mocks <= 2500 bytes."""
+        from pathlib import Path
+        from django.conf import settings
+
+        order = Order.objects.create(
+            user_email='label_test@msambar.com',
+            status='paid',
+            total_amount=500.0,
+            full_name='Label Test User',
+            street_and_number='Kino 100',
+            postal_code='83000',
+            skydropx_shipment_id='ship_label_test_123',
+            shipping_status='processing'
+        )
+
+        labels_dir = Path(settings.MEDIA_ROOT) / 'shipping_labels'
+        labels_dir.mkdir(parents=True, exist_ok=True)
+        label_file = labels_dir / f"guia_pedido_{order.id}.pdf"
+        if label_file.exists():
+            label_file.unlink()
+
+        try:
+            # 1. Cuando Skydropx sigue procesando (status: processing)
+            def reconcile_processing(ord_obj):
+                ord_obj.shipping_status = 'processing'
+                ord_obj.save()
+                return {'shipping_status': 'processing', 'label_url': None}
+
+            mock_reconcile.side_effect = reconcile_processing
+
+            url = reverse('order-download-label', kwargs={'pk': order.id})
+            res1 = self.client.get(url)
+            self.assertEqual(res1.status_code, 202)
+            self.assertEqual(res1['Retry-After'], '3')
+            self.assertEqual(res1.data['status'], 'processing')
+
+            # 2. Cuando Skydropx ya completó y genera PDF oficial (> 2500 bytes)
+            with open(label_file, 'wb') as f:
+                f.write(b"%PDF-1.4 " + b"X" * 3000)
+
+            def reconcile_completed(ord_obj):
+                ord_obj.shipping_status = 'completed'
+                ord_obj.shipping_label_pdf = f"https://s3.amazonaws.com/labels/guia_{ord_obj.id}.pdf"
+                ord_obj.save()
+                return {'shipping_status': 'completed', 'label_url': ord_obj.shipping_label_pdf}
+
+            mock_reconcile.side_effect = reconcile_completed
+
+            res2 = self.client.get(url)
+            self.assertEqual(res2.status_code, 200)
+            self.assertEqual(res2['Content-Type'], 'application/pdf')
+        finally:
+            if label_file.exists():
+                label_file.unlink()
+
 
