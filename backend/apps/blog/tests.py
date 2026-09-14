@@ -200,7 +200,7 @@ class BlogAppTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, "Subscribed")
-        mock_get.assert_called_once_with("https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription")
+        mock_get.assert_called_once_with("https://sns.us-east-1.amazonaws.com/?Action=ConfirmSubscription", timeout=5.0)
 
     def test_ses_webhook_bounce_and_complaint(self):
         """Verify that receiving Bounce/Complaint notifications deactivates subscribers."""

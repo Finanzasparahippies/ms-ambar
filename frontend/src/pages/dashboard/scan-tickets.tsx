@@ -588,7 +588,7 @@ export default function ScanTicketsPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <span className="text-[8px] uppercase text-neutral-500 tracking-wider block">Ubicación / Asiento</span>
-                        <span className="text-xs font-black text-amber-honey block uppercase">{scanResult.seat}</span>
+                        <span className="text-xs font-black text-amber-honey block uppercase">{scanResult.seat_label || scanResult.seat}</span>
                       </div>
                       {scanResult.scanned_at && (
                         <div>

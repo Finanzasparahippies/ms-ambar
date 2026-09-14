@@ -298,7 +298,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     except (ValueError, TypeError):
                         pass
 
-                seat_label = f"Fila {ticket.seat.row} - #{ticket.seat.number}" if ticket.seat else (ticket.ga_zone.name if ticket.ga_zone else ("Pase Meet & Greet" if ticket.event and ticket.event.event_type == 'meet_greet' else "General Sin Asiento"))
+                seat_code = f"{ticket.seat.row}{ticket.seat.number}" if ticket.seat else (ticket.ga_zone.name if ticket.ga_zone else ("Pase Meet & Greet" if ticket.event and ticket.event.event_type == 'meet_greet' else "General Sin Asiento"))
+                seat_label = f"Fila {ticket.seat.row} - #{ticket.seat.number}" if ticket.seat else seat_code
 
                 if ticket.is_scanned:
                     return Response({
@@ -309,7 +310,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                         'event_id': ticket.event_id,
                         'buyer': ticket.user_email,
                         'phone': ticket.user_phone or '',
-                        'seat': seat_label,
+                        'seat': seat_code,
+                        'seat_label': seat_label,
                         'has_mg': getattr(ticket, 'has_mg', False)
                     }, status=400)
                     
@@ -328,7 +330,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     'event_id': ticket.event_id,
                     'buyer': ticket.user_email,
                     'phone': ticket.user_phone or '',
-                    'seat': seat_label,
+                    'seat': seat_code,
+                    'seat_label': seat_label,
                     'has_mg': getattr(ticket, 'has_mg', False),
                     'ticket_type': 'Numerado' if ticket.seat else ('General' if ticket.ga_zone else ('M&G' if ticket.event and ticket.event.event_type == 'meet_greet' else 'General')),
                     'scanned_at': ticket.scanned_at.isoformat()
