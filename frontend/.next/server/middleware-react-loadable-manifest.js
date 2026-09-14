@@ -1,1 +1,0 @@
-self.__REACT_LOADABLE_MANIFEST='{"comprar-boletos.tsx -> ../components/SeatingChart":{"id":5608,"files":["static/chunks/608-9d87fb07fe1defdc.js"]},"dashboard\\\\scan-tickets.tsx -> html5-qrcode":{"id":6916,"files":["static/chunks/527dfe43.a938752d0b42ab05.js","static/chunks/916.033ca59886db69d5.js"]}}';

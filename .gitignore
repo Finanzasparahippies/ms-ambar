@@ -12,3 +12,11 @@ tsconfig.tsbuildinfo
 # Logs
 backend/logs/
 *.log
+
+# Next.js / Node build and cache
+.next/
+frontend/.next/
+out/
+build/
+dist/
+.turbo/
