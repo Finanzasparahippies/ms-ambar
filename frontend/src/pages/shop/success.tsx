@@ -53,6 +53,7 @@ interface OrderDetails {
   selected_rate_id?: string;
   shipping_cost: string | number;
   shipping_provider?: string;
+  shipping_status?: 'creating' | 'processing' | 'completed' | 'failed' | string;
   tracking_number?: string;
   tracking_url?: string;
   shipping_label_pdf?: string;
