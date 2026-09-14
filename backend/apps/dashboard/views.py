@@ -1,4 +1,6 @@
+import csv
 import logging
+from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
@@ -568,42 +570,107 @@ class AnalyticsUnitDataView(APIView):
 
         data_type = request.query_params.get('type', 'tickets')
         search_query = request.query_params.get('search', '').strip().lower()
+        event_id = request.query_params.get('event_id')
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+        scan_status = request.query_params.get('scan_status', 'all')
 
         try:
             if data_type == 'tickets':
                 qs = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon').order_by('-created_at')
+
+                if event_id and str(event_id).strip():
+                    qs = qs.filter(event_id=event_id)
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
+                if scan_status == 'scanned':
+                    qs = qs.filter(is_scanned=True)
+                elif scan_status == 'pending':
+                    qs = qs.filter(is_scanned=False)
+
                 results = []
                 for t in qs:
                     user_email = t.user_email or 'Invitado'
                     event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
-                    seat_str = f"Fila {t.seat.row} - #{t.seat.number}" if getattr(t, 'seat', None) else (t.ga_zone.name if getattr(t, 'ga_zone', None) else "General")
-                    
+                    seat_str = f"Fila {t.seat.row} - #{t.seat.number}" if getattr(t, 'seat', None) else (t.ga_zone.name if getattr(t, 'ga_zone', None) else ("Meet & Greet" if t.event and t.event.event_type == 'meet_greet' else "General Sin Asiento"))
+                    ticket_type = 'Numerado' if getattr(t, 'seat', None) else ('General / Zona' if getattr(t, 'ga_zone', None) else ('Meet & Greet' if t.event and t.event.event_type == 'meet_greet' else 'General'))
                     price = get_ticket_actual_price(t)
 
                     row = {
                         'id': t.id,
+                        'token': str(t.token),
                         'buyer': user_email,
+                        'phone': t.user_phone or '',
                         'event': event_title,
+                        'event_id': t.event_id,
+                        'event_date': t.event.date.isoformat() if getattr(t, 'event', None) and t.event.date else '',
                         'seat': seat_str,
+                        'ticket_type': ticket_type,
                         'has_mg': getattr(t, 'has_mg', False),
                         'coupon': t.used_coupon.code if getattr(t, 'used_coupon', None) else 'Ninguno',
                         'status': t.status,
+                        'is_scanned': getattr(t, 'is_scanned', False),
+                        'scanned_at': t.scanned_at.isoformat() if getattr(t, 'scanned_at', None) else '',
                         'amount': round(price, 2),
                         'created_at': t.created_at.isoformat() if getattr(t, 'created_at', None) else ''
                     }
 
                     if search_query:
                         if (search_query in user_email.lower() or 
+                            search_query in (t.user_phone or '').lower() or
                             search_query in event_title.lower() or 
                             search_query in seat_str.lower() or 
+                            search_query in str(t.token).lower() or
                             search_query in str(t.id)):
                             results.append(row)
                     else:
                         results.append(row)
-                return Response({'type': 'tickets', 'count': len(results), 'data': results[:200]})
+
+                scanned_count = sum(1 for r in results if r['is_scanned'])
+                pending_count = len(results) - scanned_count
+                total_amount = round(sum(r['amount'] for r in results), 2)
+
+                return Response({
+                    'type': 'tickets',
+                    'count': len(results),
+                    'stats': {
+                        'total_count': len(results),
+                        'scanned_count': scanned_count,
+                        'pending_count': pending_count,
+                        'total_amount': total_amount
+                    },
+                    'data': results[:1000]
+                })
 
             elif data_type == 'orders':
                 qs = Order.objects.filter(status__in=['paid', 'shipped', 'delivered']).prefetch_related('items__product').order_by('-created_at')
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
                 results = []
                 for o in qs:
                     items_str = ", ".join([f"{item.quantity}x {item.product.name if item.product else 'Prod'}" for item in o.items.all()])
@@ -624,10 +691,24 @@ class AnalyticsUnitDataView(APIView):
                             results.append(row)
                     else:
                         results.append(row)
-                return Response({'type': 'orders', 'count': len(results), 'data': results[:200]})
+                return Response({'type': 'orders', 'count': len(results), 'data': results[:1000]})
 
             elif data_type == 'expenses':
                 qs = Expense.objects.all().order_by('-created_at')
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
                 results = []
                 for e in qs:
                     row = {
@@ -645,10 +726,27 @@ class AnalyticsUnitDataView(APIView):
                             results.append(row)
                     else:
                         results.append(row)
-                return Response({'type': 'expenses', 'count': len(results), 'data': results[:200]})
+                return Response({'type': 'expenses', 'count': len(results), 'data': results[:1000]})
 
             elif data_type == 'mg_upgrades':
                 qs = Ticket.objects.filter(has_mg=True, status__in=['paid', 'used']).select_related('event').order_by('-created_at')
+
+                if event_id and str(event_id).strip():
+                    qs = qs.filter(event_id=event_id)
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
                 results = []
                 for t in qs:
                     user_email = t.user_email or 'Invitado'
@@ -667,7 +765,7 @@ class AnalyticsUnitDataView(APIView):
                             results.append(row)
                     else:
                         results.append(row)
-                return Response({'type': 'mg_upgrades', 'count': len(results), 'data': results[:200]})
+                return Response({'type': 'mg_upgrades', 'count': len(results), 'data': results[:1000]})
 
             elif data_type == 'users':
                 qs = User.objects.all().order_by('-date_joined')
@@ -693,13 +791,267 @@ class AnalyticsUnitDataView(APIView):
                             results.append(row)
                     else:
                         results.append(row)
-                return Response({'type': 'users', 'count': len(results), 'data': results[:200]})
+                return Response({'type': 'users', 'count': len(results), 'data': results[:1000]})
 
             else:
                 return Response({'error': 'Tipo de dato no válido.'}, status=400)
 
         except Exception as ex:
             logger.error(f"[AnalyticsUnitDataView] Error fetching unit data: {ex}", exc_info=True)
+            return Response({'error': str(ex)}, status=500)
+
+
+class AnalyticsExportCSVView(APIView):
+    """
+    Exportación robusta de datos analíticos a CSV con codificación UTF-8-SIG (compatible con Excel).
+    Soporta filtros por evento, rango de fechas, estado de escaneo y búsqueda textual sin límite artificial.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        if not (request.user.is_staff or request.user.is_superuser):
+            return Response({'error': 'Acceso denegado.'}, status=403)
+
+        data_type = request.query_params.get('type', 'tickets')
+        search_query = request.query_params.get('search', '').strip().lower()
+        event_id = request.query_params.get('event_id')
+        start_date_str = request.query_params.get('start_date')
+        end_date_str = request.query_params.get('end_date')
+        scan_status = request.query_params.get('scan_status', 'all')
+
+        timestamp_str = timezone.now().strftime('%Y%m%d_%H%M%S')
+        response = HttpResponse(content_type='text/csv; charset=utf-8-sig')
+        response['Content-Disposition'] = f'attachment; filename="reporte_{data_type}_{timestamp_str}.csv"'
+        writer = csv.writer(response)
+
+        try:
+            if data_type == 'tickets':
+                writer.writerow([
+                    'ID Boleto',
+                    'UUID / Token',
+                    'Evento',
+                    'Fecha Evento',
+                    'Comprador',
+                    'Teléfono',
+                    'Tipo Boleto',
+                    'Asiento / Zona',
+                    'Meet & Greet',
+                    'Cupón',
+                    'Estatus Pago',
+                    'Monto (MXN)',
+                    'Fecha Compra',
+                    'Ingreso Validado',
+                    'Fecha y Hora Ingreso'
+                ])
+
+                qs = Ticket.objects.filter(status__in=['paid', 'used']).select_related('event', 'seat', 'ga_zone', 'used_coupon').order_by('-created_at')
+
+                if event_id and str(event_id).strip():
+                    qs = qs.filter(event_id=event_id)
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
+                if scan_status == 'scanned':
+                    qs = qs.filter(is_scanned=True)
+                elif scan_status == 'pending':
+                    qs = qs.filter(is_scanned=False)
+
+                for t in qs.iterator(chunk_size=500):
+                    user_email = t.user_email or 'Invitado'
+                    event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
+                    event_date_str = t.event.date.strftime('%Y-%m-%d %H:%M') if getattr(t, 'event', None) and t.event.date else ''
+                    seat_str = f"Fila {t.seat.row} - #{t.seat.number}" if getattr(t, 'seat', None) else (t.ga_zone.name if getattr(t, 'ga_zone', None) else ("Meet & Greet" if t.event and t.event.event_type == 'meet_greet' else "General Sin Asiento"))
+                    ticket_type = 'Numerado' if getattr(t, 'seat', None) else ('General / Zona' if getattr(t, 'ga_zone', None) else ('Meet & Greet' if t.event and t.event.event_type == 'meet_greet' else 'General'))
+                    price = get_ticket_actual_price(t)
+                    scanned_str = 'SÍ (Ingresado)' if t.is_scanned else 'NO (Pendiente)'
+                    scanned_at_str = t.scanned_at.strftime('%Y-%m-%d %H:%M:%S') if t.scanned_at else ''
+                    created_at_str = t.created_at.strftime('%Y-%m-%d %H:%M:%S') if t.created_at else ''
+
+                    if search_query:
+                        matches = (
+                            search_query in user_email.lower() or
+                            search_query in (t.user_phone or '').lower() or
+                            search_query in event_title.lower() or
+                            search_query in seat_str.lower() or
+                            search_query in str(t.token).lower() or
+                            search_query in str(t.id)
+                        )
+                        if not matches:
+                            continue
+
+                    writer.writerow([
+                        t.id,
+                        str(t.token),
+                        event_title,
+                        event_date_str,
+                        user_email,
+                        t.user_phone or '',
+                        ticket_type,
+                        seat_str,
+                        'SÍ' if getattr(t, 'has_mg', False) else 'NO',
+                        t.used_coupon.code if getattr(t, 'used_coupon', None) else 'Ninguno',
+                        t.status,
+                        f"{price:.2f}",
+                        created_at_str,
+                        scanned_str,
+                        scanned_at_str
+                    ])
+
+            elif data_type == 'orders':
+                writer.writerow(['ID Orden', 'Comprador', 'Email', 'Items', 'Ciudad', 'País', 'Estado', 'Total (MXN)', 'Fecha'])
+                qs = Order.objects.filter(status__in=['paid', 'shipped', 'delivered']).prefetch_related('items__product').order_by('-created_at')
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
+                for o in qs.iterator(chunk_size=500):
+                    items_str = ", ".join([f"{item.quantity}x {item.product.name if item.product else 'Prod'}" for item in o.items.all()])
+                    if search_query:
+                        matches = (
+                            search_query in o.full_name.lower() or
+                            search_query in o.user_email.lower() or
+                            search_query in items_str.lower() or
+                            search_query in str(o.id)
+                        )
+                        if not matches:
+                            continue
+                    writer.writerow([
+                        o.id,
+                        o.full_name,
+                        o.user_email,
+                        items_str or 'Sin items',
+                        o.city,
+                        o.country,
+                        o.status,
+                        f"{float(o.total_amount):.2f}",
+                        o.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    ])
+
+            elif data_type == 'expenses':
+                writer.writerow(['ID Gasto', 'Título', 'Categoría', 'Descripción', 'Monto (MXN)', 'Fecha'])
+                qs = Expense.objects.all().order_by('-created_at')
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
+                for e in qs.iterator(chunk_size=500):
+                    if search_query:
+                        matches = (
+                            search_query in e.title.lower() or
+                            search_query in e.category.lower() or
+                            search_query in (e.description or '').lower() or
+                            search_query in str(e.id)
+                        )
+                        if not matches:
+                            continue
+                    writer.writerow([
+                        e.id,
+                        e.title,
+                        e.category,
+                        e.description or '',
+                        f"{float(e.amount):.2f}",
+                        e.created_at.strftime('%Y-%m-%d %H:%M:%S')
+                    ])
+
+            elif data_type == 'mg_upgrades':
+                writer.writerow(['ID Boleto', 'Comprador', 'Evento', 'Precio M&G (MXN)', 'Estado', 'Fecha'])
+                qs = Ticket.objects.filter(has_mg=True, status__in=['paid', 'used']).select_related('event').order_by('-created_at')
+
+                if event_id and str(event_id).strip():
+                    qs = qs.filter(event_id=event_id)
+
+                if start_date_str:
+                    try:
+                        start_date = datetime.strptime(start_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__gte=start_date)
+                    except ValueError:
+                        pass
+                if end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str.strip(), '%Y-%m-%d').date()
+                        qs = qs.filter(created_at__date__lte=end_date)
+                    except ValueError:
+                        pass
+
+                for t in qs.iterator(chunk_size=500):
+                    user_email = t.user_email or 'Invitado'
+                    event_title = t.event.title if getattr(t, 'event', None) else 'Evento'
+                    mg_price = float(getattr(t.event, 'mg_price', 0.0) or 0.0) if getattr(t, 'event', None) else 0.0
+                    if search_query:
+                        matches = search_query in user_email.lower() or search_query in event_title.lower()
+                        if not matches:
+                            continue
+                    writer.writerow([
+                        t.id,
+                        user_email,
+                        event_title,
+                        f"{mg_price:.2f}",
+                        t.status,
+                        t.created_at.strftime('%Y-%m-%d %H:%M:%S') if t.created_at else ''
+                    ])
+
+            elif data_type == 'users':
+                writer.writerow(['ID Usuario', 'Email', 'Usuario', 'Nombre Completo', 'Activo', 'Staff', 'Fecha Registro'])
+                qs = User.objects.all().order_by('-date_joined')
+                for u in qs.iterator(chunk_size=500):
+                    email = getattr(u, 'email', '') or ''
+                    username = getattr(u, 'username', '') or ''
+                    full_name = f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+                    if search_query:
+                        matches = (
+                            search_query in email.lower() or
+                            search_query in username.lower() or
+                            search_query in full_name.lower() or
+                            search_query in str(u.id)
+                        )
+                        if not matches:
+                            continue
+                    writer.writerow([
+                        u.id,
+                        email,
+                        username,
+                        full_name or username or email,
+                        'SÍ' if getattr(u, 'is_active', True) else 'NO',
+                        'SÍ' if getattr(u, 'is_staff', False) else 'NO',
+                        u.date_joined.strftime('%Y-%m-%d %H:%M:%S') if getattr(u, 'date_joined', None) else ''
+                    ])
+
+            return response
+
+        except Exception as ex:
+            logger.error(f"[AnalyticsExportCSVView] Error generating CSV: {ex}", exc_info=True)
             return Response({'error': str(ex)}, status=500)
 
 

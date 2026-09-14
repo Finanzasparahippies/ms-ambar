@@ -221,7 +221,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['checkout', 'by_session', 'retrieve']:
             return [permissions.AllowAny()]
-        elif self.action == 'validate':
+        elif self.action in ['validate', 'toggle_checkin']:
             return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated()]
 
@@ -270,42 +270,97 @@ class TicketViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'], url_path='validate')
     def validate(self, request):
         token = request.data.get('token')
+        event_id = request.data.get('event_id')
         if not token:
-            return Response({'error': 'Token QR no proporcionado'}, status=400)
+            return Response({'error': 'Token QR no proporcionado.'}, status=400)
         
         try:
-            ticket = Ticket.objects.get(token=token)
-            
-            if ticket.status not in ['paid', 'used']:
-                return Response({
-                    'status': 'error',
-                    'message': 'Este boleto no ha sido pagado todavía.'
-                }, status=400)
+            with transaction.atomic():
+                ticket = Ticket.objects.select_for_update().select_related('event', 'seat', 'ga_zone').get(token=token)
                 
-            if ticket.is_scanned:
+                if ticket.status not in ['paid', 'used']:
+                    return Response({
+                        'status': 'error',
+                        'message': 'Este boleto no ha sido pagado todavía.'
+                    }, status=400)
+
+                # Validar evento si se especificó event_id desde el escáner del staff
+                if event_id and str(event_id).strip():
+                    try:
+                        expected_event_id = int(event_id)
+                        if ticket.event_id != expected_event_id:
+                            return Response({
+                                'status': 'wrong_event',
+                                'message': f'Este boleto pertenece a otro evento: "{ticket.event.title}".',
+                                'ticket_event': ticket.event.title,
+                                'ticket_event_id': ticket.event_id
+                            }, status=400)
+                    except (ValueError, TypeError):
+                        pass
+
+                seat_label = f"Fila {ticket.seat.row} - #{ticket.seat.number}" if ticket.seat else (ticket.ga_zone.name if ticket.ga_zone else ("Pase Meet & Greet" if ticket.event and ticket.event.event_type == 'meet_greet' else "General Sin Asiento"))
+
+                if ticket.is_scanned:
+                    return Response({
+                        'status': 'already_used',
+                        'message': f'Boleto ya utilizado el {ticket.scanned_at.strftime("%d/%m/%Y %H:%M") if ticket.scanned_at else "anteriormente"}.',
+                        'scanned_at': ticket.scanned_at.isoformat() if ticket.scanned_at else None,
+                        'event': ticket.event.title,
+                        'event_id': ticket.event_id,
+                        'buyer': ticket.user_email,
+                        'phone': ticket.user_phone or '',
+                        'seat': seat_label,
+                        'has_mg': getattr(ticket, 'has_mg', False)
+                    }, status=400)
+                    
+                # Validar y marcar atómicamente
+                ticket.is_scanned = True
+                ticket.scanned_at = timezone.now()
+                ticket.status = 'used'
+                ticket.save(update_fields=['is_scanned', 'scanned_at', 'status'])
+                
                 return Response({
-                    'status': 'already_used',
-                    'message': f'Boleto ya utilizado el {ticket.scanned_at.strftime("%d/%m %H:%M")}',
-                    'scanned_at': ticket.scanned_at,
+                    'status': 'success',
+                    'message': 'Acceso Permitido',
+                    'ticket_id': ticket.id,
+                    'token': str(ticket.token),
                     'event': ticket.event.title,
-                    'seat': f"{ticket.seat.row}{ticket.seat.number}" if ticket.seat else "Meet & Greet"
-                }, status=400)
+                    'event_id': ticket.event_id,
+                    'buyer': ticket.user_email,
+                    'phone': ticket.user_phone or '',
+                    'seat': seat_label,
+                    'has_mg': getattr(ticket, 'has_mg', False),
+                    'ticket_type': 'Numerado' if ticket.seat else ('General' if ticket.ga_zone else ('M&G' if ticket.event and ticket.event.event_type == 'meet_greet' else 'General')),
+                    'scanned_at': ticket.scanned_at.isoformat()
+                })
                 
-            # Validar y marcar
-            ticket.is_scanned = True
-            ticket.scanned_at = timezone.now()
-            ticket.status = 'used'
-            ticket.save()
-            
-            return Response({
-                'status': 'success',
-                'message': 'Acceso Permitido',
-                'event': ticket.event.title,
-                'seat': f"{ticket.seat.row}{ticket.seat.number}" if ticket.seat else "Meet & Greet"
-            })
-            
         except Ticket.DoesNotExist:
-            return Response({'error': 'Boleto Inválido o Falsificado'}, status=404)
+            return Response({'error': 'Boleto Inválido o Falsificado.'}, status=404)
+
+    @action(detail=True, methods=['post'], url_path='toggle_checkin')
+    def toggle_checkin(self, request, pk=None):
+        """
+        Permite al personal del staff en puerta marcar o desmarcar el ingreso de un asistente manualmente.
+        """
+        ticket = self.get_object()
+        ticket.is_scanned = not ticket.is_scanned
+        if ticket.is_scanned:
+            ticket.scanned_at = timezone.now()
+            if ticket.status == 'paid':
+                ticket.status = 'used'
+        else:
+            ticket.scanned_at = None
+            if ticket.status == 'used':
+                ticket.status = 'paid'
+        ticket.save(update_fields=['is_scanned', 'scanned_at', 'status'])
+        
+        return Response({
+            'status': 'success',
+            'ticket_id': ticket.id,
+            'is_scanned': ticket.is_scanned,
+            'scanned_at': ticket.scanned_at.isoformat() if ticket.scanned_at else None,
+            'message': f"Boleto #{ticket.id} ({ticket.user_email}) marcado como {'INGRESADO' if ticket.is_scanned else 'PENDIENTE'}."
+        })
 
     @action(detail=False, methods=['post'], url_path='checkout')
     def checkout(self, request):

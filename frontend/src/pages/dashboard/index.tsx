@@ -12,9 +12,11 @@ import {
   Calendar,
   Camera,
   Check,
+  CheckCircle,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
+  Clock,
   Cpu,
   Database,
   DollarSign,
@@ -266,54 +268,172 @@ export default function AdminDashboard() {
   const [unitDataList, setUnitDataList] = useState<Record<string, any>[]>([]);
   const [unitDataLoading, setUnitDataLoading] = useState(false);
   const [unitSearchQuery, setUnitSearchQuery] = useState('');
+  const [unitFilterEventId, setUnitFilterEventId] = useState('');
+  const [unitFilterStartDate, setUnitFilterStartDate] = useState('');
+  const [unitFilterEndDate, setUnitFilterEndDate] = useState('');
+  const [unitFilterScanStatus, setUnitFilterScanStatus] = useState<'all' | 'scanned' | 'pending'>('all');
+  const [unitStats, setUnitStats] = useState<{ total_count: number; scanned_count: number; pending_count: number; total_amount: number } | null>(null);
+  const [unitExportLoading, setUnitExportLoading] = useState(false);
 
-  const fetchUnitData = async (type: 'tickets' | 'orders' | 'expenses' | 'mg_upgrades' | 'users', title: string) => {
+  const fetchUnitData = async (
+    type: 'tickets' | 'orders' | 'expenses' | 'mg_upgrades' | 'users',
+    title: string,
+    filters?: { eventId?: string; startDate?: string; endDate?: string; scanStatus?: 'all' | 'scanned' | 'pending'; query?: string }
+  ) => {
     setUnitModalType(type);
     setUnitModalTitle(title);
     setUnitDataLoading(true);
-    setUnitSearchQuery('');
+
+    const activeEventId = filters?.eventId !== undefined ? filters.eventId : (filters ? unitFilterEventId : '');
+    const activeStartDate = filters?.startDate !== undefined ? filters.startDate : (filters ? unitFilterStartDate : '');
+    const activeEndDate = filters?.endDate !== undefined ? filters.endDate : (filters ? unitFilterEndDate : '');
+    const activeScanStatus = filters?.scanStatus !== undefined ? filters.scanStatus : (filters ? unitFilterScanStatus : 'all');
+    const activeQuery = filters?.query !== undefined ? filters.query : (filters ? unitSearchQuery : '');
+
+    if (!filters) {
+      setUnitFilterEventId('');
+      setUnitFilterStartDate('');
+      setUnitFilterEndDate('');
+      setUnitFilterScanStatus('all');
+      setUnitSearchQuery('');
+    }
+
+    if (events.length === 0) {
+      api.get('/tickets/events/').then(res => {
+        if (Array.isArray(res.data)) setEvents(res.data);
+      }).catch(() => {});
+    }
+
     try {
-      const res = await api.get(`/dashboard/analytics/unit-data/?type=${type}`);
+      const params = new URLSearchParams();
+      params.append('type', type);
+      if (activeEventId) params.append('event_id', activeEventId);
+      if (activeStartDate) params.append('start_date', activeStartDate);
+      if (activeEndDate) params.append('end_date', activeEndDate);
+      if (activeScanStatus && activeScanStatus !== 'all') params.append('scan_status', activeScanStatus);
+      if (activeQuery) params.append('search', activeQuery);
+
+      const res = await api.get(`/dashboard/analytics/unit-data/?${params.toString()}`);
       setUnitDataList(Array.isArray(res.data?.data) ? res.data.data : []);
+      if (res.data?.stats) {
+        setUnitStats(res.data.stats);
+      } else {
+        setUnitStats(null);
+      }
     } catch (err: unknown) {
       console.error('Error loading unit data:', err);
       showToast.error('Error al cargar registros unitarios.');
       setUnitDataList([]);
+      setUnitStats(null);
     } finally {
       setUnitDataLoading(false);
     }
   };
 
-  const handleSearchUnitData = async (query: string) => {
-    setUnitSearchQuery(query);
+  const applyUnitFilters = (overrides?: { eventId?: string; startDate?: string; endDate?: string; scanStatus?: 'all' | 'scanned' | 'pending'; query?: string }) => {
     if (!unitModalType) return;
+    const eventId = overrides?.eventId !== undefined ? overrides.eventId : unitFilterEventId;
+    const startDate = overrides?.startDate !== undefined ? overrides.startDate : unitFilterStartDate;
+    const endDate = overrides?.endDate !== undefined ? overrides.endDate : unitFilterEndDate;
+    const scanStatus = overrides?.scanStatus !== undefined ? overrides.scanStatus : unitFilterScanStatus;
+    const query = overrides?.query !== undefined ? overrides.query : unitSearchQuery;
+
+    if (overrides?.eventId !== undefined) setUnitFilterEventId(overrides.eventId);
+    if (overrides?.startDate !== undefined) setUnitFilterStartDate(overrides.startDate);
+    if (overrides?.endDate !== undefined) setUnitFilterEndDate(overrides.endDate);
+    if (overrides?.scanStatus !== undefined) setUnitFilterScanStatus(overrides.scanStatus);
+    if (overrides?.query !== undefined) setUnitSearchQuery(overrides.query);
+
+    fetchUnitData(unitModalType, unitModalTitle, { eventId, startDate, endDate, scanStatus, query });
+  };
+
+  const handleSearchUnitData = (query: string) => {
+    setUnitSearchQuery(query);
+    applyUnitFilters({ query });
+  };
+
+  const handleToggleCheckin = async (ticketId: number) => {
     try {
-      const res = await api.get(`/dashboard/analytics/unit-data/?type=${unitModalType}&search=${encodeURIComponent(query)}`);
-      setUnitDataList(Array.isArray(res.data?.data) ? res.data.data : []);
-    } catch (err: unknown) {
-      console.error('Error searching unit data:', err);
+      const res = await api.post(`/tickets/tickets/${ticketId}/toggle_checkin/`);
+      showToast.success(res.data?.message || 'Estado de acceso actualizado');
+      setUnitDataList(prev => prev.map(item => {
+        if (item.id === ticketId) {
+          const newScanned = res.data?.is_scanned ?? !item.is_scanned;
+          return {
+            ...item,
+            is_scanned: newScanned,
+            scanned_at: res.data?.scanned_at || (newScanned ? new Date().toISOString() : '')
+          };
+        }
+        return item;
+      }));
+      setUnitStats(prev => {
+        if (!prev) return null;
+        const newScanned = unitDataList.map(item => item.id === ticketId ? (res.data?.is_scanned ?? !item.is_scanned) : item.is_scanned).filter(Boolean).length;
+        return {
+          ...prev,
+          scanned_count: newScanned,
+          pending_count: Math.max(0, prev.total_count - newScanned)
+        };
+      });
+    } catch (err: any) {
+      showToast.error(err.response?.data?.error || 'Error al actualizar estado del boleto.');
     }
   };
 
-  const exportUnitDataCSV = () => {
-    if (!unitDataList || unitDataList.length === 0) {
-      showToast.error('No hay datos para exportar.');
-      return;
+  const exportUnitDataCSV = async () => {
+    if (!unitModalType) return;
+    setUnitExportLoading(true);
+    try {
+      const params = new URLSearchParams();
+      params.append('type', unitModalType);
+      if (unitFilterEventId) params.append('event_id', unitFilterEventId);
+      if (unitFilterStartDate) params.append('start_date', unitFilterStartDate);
+      if (unitFilterEndDate) params.append('end_date', unitFilterEndDate);
+      if (unitFilterScanStatus && unitFilterScanStatus !== 'all') params.append('scan_status', unitFilterScanStatus);
+      if (unitSearchQuery) params.append('search', unitSearchQuery);
+
+      const res = await api.get(`/dashboard/analytics/export-csv/?${params.toString()}`, {
+        responseType: 'blob'
+      });
+
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = `reporte_${unitModalType}_${unitFilterEventId ? `evento_${unitFilterEventId}_` : ''}${new Date().toISOString().slice(0, 10)}.csv`;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      showToast.success('Archivo CSV descargado exitosamente.');
+    } catch (err: unknown) {
+      console.error('Error downloading CSV from backend:', err);
+      // Fallback robusto a Blob local en el navegador con BOM UTF-8 (\uFEFF)
+      if (unitDataList && unitDataList.length > 0) {
+        const keys = Object.keys(unitDataList[0]);
+        const headers = keys.join(',');
+        const rows = unitDataList.map((item: Record<string, any>) =>
+          keys.map(k => `"${String(item[k] ?? '').replace(/"/g, '""')}"`).join(',')
+        );
+        const csvContent = "\uFEFF" + [headers, ...rows].join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `reporte_${unitModalType}_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast.success('Archivo CSV generado y descargado.');
+      } else {
+        showToast.error('No hay datos disponibles para exportar.');
+      }
+    } finally {
+      setUnitExportLoading(false);
     }
-    const keys = Object.keys(unitDataList[0]);
-    const headers = keys.join(',');
-    const rows = unitDataList.map((item: Record<string, any>) =>
-      keys.map(k => `"${String(item[k] ?? '').replace(/"/g, '""')}"`).join(',')
-    );
-    const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `reporte_${unitModalType}_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast.success('Archivo CSV descargado.');
   };
 
   const handlePrintReport = () => {
@@ -9459,7 +9579,7 @@ export default function AdminDashboard() {
             className="amber-glass border border-white/15 w-full max-w-5xl rounded-[2.5rem] p-6 sm:p-8 max-h-[90vh] flex flex-col shadow-2xl relative overflow-hidden"
           >
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-white/10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-white/10">
               <div>
                 <span className="text-[9px] text-amber-honey uppercase tracking-widest font-black flex items-center gap-2">
                   <FileText size={12} /> Bóveda de Registros Unitarios
@@ -9476,15 +9596,18 @@ export default function AdminDashboard() {
                     type="text"
                     value={unitSearchQuery}
                     onChange={e => handleSearchUnitData(e.target.value)}
-                    placeholder="Buscar registros..."
+                    placeholder="Buscar por comprador, asiento, token..."
                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-[#F4F6F0] focus:outline-none focus:border-amber-honey font-medium"
                   />
                 </div>
                 <button
                   onClick={exportUnitDataCSV}
-                  className="bg-amber-honey/20 border border-amber-honey/40 hover:bg-amber-honey hover:text-black text-amber-honey px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0"
+                  disabled={unitExportLoading}
+                  className="bg-amber-honey/20 border border-amber-honey/40 hover:bg-amber-honey hover:text-black text-amber-honey px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shrink-0 disabled:opacity-50"
+                  title="Descargar reporte completo en archivo CSV con filtros activos"
                 >
-                  <Download size={13} /> CSV
+                  <Download size={13} className={unitExportLoading ? 'animate-bounce' : ''} />
+                  {unitExportLoading ? 'Descargando...' : 'Descargar CSV'}
                 </button>
                 <button
                   onClick={() => setUnitModalType(null)}
@@ -9493,6 +9616,108 @@ export default function AdminDashboard() {
                   <X size={18} />
                 </button>
               </div>
+            </div>
+
+            {/* Filter Toolbar for Reports & Event Day Control */}
+            <div className="py-3 px-1 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Event Selector Filter */}
+                {(unitModalType === 'tickets' || unitModalType === 'mg_upgrades') && (
+                  <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5">
+                    <Ticket size={12} className="text-amber-honey shrink-0" />
+                    <select
+                      value={unitFilterEventId}
+                      onChange={e => applyUnitFilters({ eventId: e.target.value })}
+                      className="bg-transparent text-[#F4F6F0] text-[11px] font-bold focus:outline-none cursor-pointer max-w-[180px]"
+                    >
+                      <option value="" className="bg-neutral-900 text-white">Todos los Eventos</option>
+                      {events.map((ev: any) => (
+                        <option key={ev.id} value={ev.id} className="bg-neutral-900 text-white">
+                          {ev.title} {ev.date ? `(${new Date(ev.date).toLocaleDateString('es-MX')})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Date Range Filters */}
+                <div className="flex items-center gap-1.5 bg-black/40 border border-white/10 rounded-xl px-2.5 py-1.5 text-[11px] text-[#F4F6F0]/70 font-medium">
+                  <Calendar size={12} className="text-amber-honey shrink-0" />
+                  <span>Desde:</span>
+                  <input
+                    type="date"
+                    value={unitFilterStartDate}
+                    onChange={e => applyUnitFilters({ startDate: e.target.value })}
+                    className="bg-transparent text-[#F4F6F0] text-[11px] font-bold focus:outline-none cursor-pointer"
+                  />
+                  <span>Hasta:</span>
+                  <input
+                    type="date"
+                    value={unitFilterEndDate}
+                    onChange={e => applyUnitFilters({ endDate: e.target.value })}
+                    className="bg-transparent text-[#F4F6F0] text-[11px] font-bold focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Check-in Access Filter for Tickets on Event Day */}
+                {unitModalType === 'tickets' && (
+                  <div className="flex items-center gap-1 bg-black/40 border border-white/10 rounded-xl p-0.5 text-[10px] font-bold uppercase tracking-wider">
+                    <button
+                      onClick={() => applyUnitFilters({ scanStatus: 'all' })}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${unitFilterScanStatus === 'all' ? 'bg-amber-honey text-neutral-950 font-black' : 'text-[#F4F6F0]/60 hover:text-white'}`}
+                    >
+                      Todos
+                    </button>
+                    <button
+                      onClick={() => applyUnitFilters({ scanStatus: 'scanned' })}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${unitFilterScanStatus === 'scanned' ? 'bg-emerald-500 text-neutral-950 font-black' : 'text-[#F4F6F0]/60 hover:text-white'}`}
+                    >
+                      ✓ Ingresados
+                    </button>
+                    <button
+                      onClick={() => applyUnitFilters({ scanStatus: 'pending' })}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${unitFilterScanStatus === 'pending' ? 'bg-amber-500 text-neutral-950 font-black' : 'text-[#F4F6F0]/60 hover:text-white'}`}
+                    >
+                      ⏳ Pendientes
+                    </button>
+                  </div>
+                )}
+
+                {/* Clear Filters Button */}
+                {(unitFilterEventId || unitFilterStartDate || unitFilterEndDate || unitFilterScanStatus !== 'all' || unitSearchQuery) && (
+                  <button
+                    onClick={() => {
+                      setUnitFilterEventId('');
+                      setUnitFilterStartDate('');
+                      setUnitFilterEndDate('');
+                      setUnitFilterScanStatus('all');
+                      setUnitSearchQuery('');
+                      fetchUnitData(unitModalType, unitModalTitle, { eventId: '', startDate: '', endDate: '', scanStatus: 'all', query: '' });
+                    }}
+                    className="text-[10px] font-black uppercase tracking-wider text-red-400 hover:text-red-300 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg transition-all"
+                  >
+                    Limpiar Filtros
+                  </button>
+                )}
+              </div>
+
+              {/* KPI Summary Chips */}
+              {unitStats && unitModalType === 'tickets' && (
+                <div className="flex items-center gap-2 font-mono text-[10px]">
+                  <span className="bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg text-[#F4F6F0]/80">
+                    Total: <strong className="text-white">{unitStats.total_count}</strong>
+                  </span>
+                  <span className="bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg text-emerald-400">
+                    Ingresaron: <strong className="text-emerald-300">{unitStats.scanned_count} ({unitStats.total_count ? Math.round((unitStats.scanned_count / unitStats.total_count) * 100) : 0}%)</strong>
+                  </span>
+                  <span className="bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg text-amber-honey">
+                    Pendientes: <strong className="text-amber-300">{unitStats.pending_count}</strong>
+                  </span>
+                  <span className="bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg text-emerald-400">
+                    Recaudado: <strong>${unitStats.total_amount?.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</strong>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Content Table */}
@@ -9504,7 +9729,7 @@ export default function AdminDashboard() {
                 </div>
               ) : unitDataList.length === 0 ? (
                 <div className="py-16 text-center text-[#F4F6F0]/40 font-bold uppercase tracking-widest text-xs">
-                  No se encontraron registros unitarios.
+                  No se encontraron registros que coincidan con los filtros aplicados.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -9520,6 +9745,8 @@ export default function AdminDashboard() {
                             <th className="py-3 px-3">M&G</th>
                             <th className="py-3 px-3">Cupón</th>
                             <th className="py-3 px-3 text-right">Monto</th>
+                            <th className="py-3 px-3 text-center">Acceso (Día Evento)</th>
+                            <th className="py-3 px-3 text-center">Control Puerta</th>
                           </>
                         )}
                         {unitModalType === 'orders' && (
@@ -9564,7 +9791,10 @@ export default function AdminDashboard() {
 
                           {unitModalType === 'tickets' && (
                             <>
-                              <td className="py-3 px-3 font-medium text-[#F4F6F0]/90">{item.buyer}</td>
+                              <td className="py-3 px-3">
+                                <div className="font-medium text-[#F4F6F0]/90">{item.buyer}</div>
+                                {item.phone && <div className="text-[10px] text-[#F4F6F0]/40 font-mono">{item.phone}</div>}
+                              </td>
                               <td className="py-3 px-3 italic">{item.event}</td>
                               <td className="py-3 px-3 font-mono text-amber-300">{item.seat}</td>
                               <td className="py-3 px-3">
@@ -9576,6 +9806,28 @@ export default function AdminDashboard() {
                               </td>
                               <td className="py-3 px-3 text-[10px] text-[#F4F6F0]/50">{item.coupon}</td>
                               <td className="py-3 px-3 text-right font-mono text-emerald-400 font-black">${item.amount?.toFixed(2)}</td>
+                              <td className="py-3 px-3 text-center">
+                                {item.is_scanned ? (
+                                  <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">
+                                    <CheckCircle size={10} /> Ingresó
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-honey/70 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">
+                                    <Clock size={10} /> Pendiente
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                <button
+                                  onClick={() => handleToggleCheckin(item.id)}
+                                  className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border transition-all ${item.is_scanned
+                                    ? 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white'
+                                    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white'}`}
+                                  title={item.is_scanned ? "Desmarcar entrada (volver a pendiente)" : "Marcar entrada manualmente (Check-in)"}
+                                >
+                                  {item.is_scanned ? 'Revertir' : 'Check-In'}
+                                </button>
+                              </td>
                             </>
                           )}
 

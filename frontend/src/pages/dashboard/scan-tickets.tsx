@@ -3,7 +3,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import {
-  Camera, ShieldCheck, AlertCircle, CheckCircle, ArrowLeft, RefreshCw, Smartphone, Keyboard, Volume2
+  Camera, ShieldCheck, AlertCircle, CheckCircle, ArrowLeft, RefreshCw, Smartphone, Keyboard, Volume2, Ticket, Users, Sparkles, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
@@ -13,6 +13,11 @@ export default function ScanTicketsPage() {
   const router = useRouter();
   const [isStaff, setIsStaff] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Event Context State
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
+  const [eventStats, setEventStats] = useState<{ total: number; scanned: number } | null>(null);
 
   // Scanner states
   const [scannerActive, setScannerActive] = useState(false);
@@ -58,6 +63,44 @@ export default function ScanTicketsPage() {
         setIsLoading(false);
       });
   }, []);
+
+  // Load Events & Attendance for Event-Day Verification
+  useEffect(() => {
+    api.get('/tickets/events/')
+      .then(res => {
+        const evList = Array.isArray(res.data) ? res.data : [];
+        setEvents(evList);
+        if (evList.length > 0) {
+          const firstId = String(evList[0].id);
+          setSelectedEventId(firstId);
+          fetchAttendance(firstId);
+        }
+      })
+      .catch(err => console.error("Error loading events for scanner:", err));
+  }, []);
+
+  const fetchAttendance = async (eventId: string) => {
+    if (!eventId) {
+      setEventStats(null);
+      return;
+    }
+    try {
+      const res = await api.get(`/dashboard/analytics/unit-data/?type=tickets&event_id=${eventId}`);
+      if (res.data?.stats) {
+        setEventStats({
+          total: res.data.stats.total_count,
+          scanned: res.data.stats.scanned_count
+        });
+      }
+    } catch (e) {
+      console.warn("Could not fetch attendance stats:", e);
+    }
+  };
+
+  const handleEventChange = (evId: string) => {
+    setSelectedEventId(evId);
+    fetchAttendance(evId);
+  };
 
   // Clean up scanner on unmount
   useEffect(() => {
@@ -208,7 +251,10 @@ export default function ScanTicketsPage() {
     stopScanner(); // Pause camera reader during api validation
 
     try {
-      const res = await api.post('/tickets/tickets/validate/', { token }).catch(err => err.response);
+      const payload: { token: string; event_id?: string } = { token };
+      if (selectedEventId) payload.event_id = selectedEventId;
+
+      const res = await api.post('/tickets/tickets/validate/', payload).catch(err => err.response);
       const data = res?.data || {};
 
       if (res && res.status === 200) {
@@ -216,6 +262,7 @@ export default function ScanTicketsPage() {
           playSound('success');
           setScanResult(data);
           setScanStatusType('success');
+          if (selectedEventId) fetchAttendance(selectedEventId);
         } else {
           playSound('error');
           setScanError(data.message || 'Error de validación');
@@ -227,10 +274,20 @@ export default function ScanTicketsPage() {
           setScanResult({
             event: data.event || 'Evento',
             seat: data.seat || 'Asiento',
+            buyer: data.buyer || '',
+            has_mg: data.has_mg,
             scanned_at: data.scanned_at
           });
           setScanError(data.message || 'Boleto ya utilizado anteriormente.');
           setScanStatusType('already_used');
+        } else if (data.status === 'wrong_event') {
+          playSound('warning');
+          setScanResult({
+            event: data.ticket_event || 'Otro Evento',
+            seat: 'No aplicable hoy'
+          });
+          setScanError(data.message || 'Boleto pertenece a otro evento.');
+          setScanStatusType('error');
         } else {
           playSound('error');
           setScanError(data.error || data.message || 'Boleto inválido, falsificado o cancelado.');
@@ -298,31 +355,59 @@ export default function ScanTicketsPage() {
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-amber-honey/5 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-amber-600/5 blur-[120px] pointer-events-none" />
 
-      {/* Top navigation */}
-      <header className="max-w-4xl mx-auto w-full flex items-center justify-between mb-8 z-10">
+      {/* Top navigation & Event Live Status */}
+      <header className="max-w-4xl mx-auto w-full flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 z-10">
         <Link
           href="/dashboard"
           onClick={stopScanner}
-          className="inline-flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-[#F4F6F0]/50 hover:text-amber-honey transition-colors"
+          className="inline-flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-[#F4F6F0]/50 hover:text-amber-honey transition-colors shrink-0"
         >
           <ArrowLeft size={14} />
           <span>Volver al Dashboard</span>
         </Link>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setAudioEnabled(!audioEnabled)}
-            className={`p-2.5 rounded-xl border transition-all ${audioEnabled
-              ? 'bg-amber-honey/10 border-amber-honey/20 text-amber-honey'
-              : 'bg-white/5 border-white/10 text-white/30'
-              }`}
-            title={audioEnabled ? "Silenciar alertas de audio" : "Activar alertas de audio"}
-          >
-            <Volume2 size={14} />
-          </button>
-          <span className="flex items-center gap-1.5 bg-[#122017]/40 border border-[#2e4d38]/50 px-3 py-1.5 rounded-full text-[#82c99b] text-[8px] font-black uppercase tracking-wider">
-            <ShieldCheck size={11} className="text-[#82c99b]" />
-            Staff Autorizado
-          </span>
+
+        <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">
+          {/* Active Event Selector */}
+          <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-xl px-3 py-1.5">
+            <Ticket size={12} className="text-amber-honey shrink-0" />
+            <select
+              value={selectedEventId}
+              onChange={e => handleEventChange(e.target.value)}
+              className="bg-transparent text-[#F4F6F0] text-xs font-bold focus:outline-none cursor-pointer max-w-[210px]"
+            >
+              <option value="" className="bg-neutral-900 text-white">Todos / Cualquier Evento</option>
+              {events.map((ev: any) => (
+                <option key={ev.id} value={ev.id} className="bg-neutral-900 text-white">
+                  {ev.title} {ev.date ? `(${new Date(ev.date).toLocaleDateString('es-MX')})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Attendance live badge */}
+          {eventStats && (
+            <span className="flex items-center gap-1.5 bg-[#122017]/70 border border-[#2e4d38] px-3 py-1.5 rounded-full text-[#82c99b] text-[10px] font-mono font-bold">
+              <Users size={12} className="text-[#82c99b]" />
+              {eventStats.scanned} / {eventStats.total} ({eventStats.total ? Math.round((eventStats.scanned / eventStats.total) * 100) : 0}%)
+            </span>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAudioEnabled(!audioEnabled)}
+              className={`p-2.5 rounded-xl border transition-all ${audioEnabled
+                ? 'bg-amber-honey/10 border-amber-honey/20 text-amber-honey'
+                : 'bg-white/5 border-white/10 text-white/30'
+                }`}
+              title={audioEnabled ? "Silenciar alertas de audio" : "Activar alertas de audio"}
+            >
+              <Volume2 size={14} />
+            </button>
+            <span className="flex items-center gap-1.5 bg-[#122017]/40 border border-[#2e4d38]/50 px-3 py-1.5 rounded-full text-[#82c99b] text-[8px] font-black uppercase tracking-wider">
+              <ShieldCheck size={11} className="text-[#82c99b]" />
+              Staff
+            </span>
+          </div>
         </div>
       </header>
 
@@ -482,13 +567,27 @@ export default function ScanTicketsPage() {
                 {/* Ticket Details Panel */}
                 {scanResult && (
                   <div className="bg-[#07080a] border border-white/5 rounded-2xl p-5 text-left space-y-3 font-mono">
+                    {scanResult.has_mg && (
+                      <div className="bg-amber-500/20 border border-amber-500/40 text-amber-honey p-2.5 rounded-xl text-center font-black text-xs uppercase tracking-wider animate-pulse flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/10">
+                        <Sparkles size={14} className="text-amber-honey" />
+                        ★ ACCESO VIP MEET & GREET - ENTREGAR PULSERA ★
+                        <Sparkles size={14} className="text-amber-honey" />
+                      </div>
+                    )}
                     <div>
                       <span className="text-[8px] uppercase text-neutral-500 tracking-wider block">Evento</span>
                       <span className="text-xs font-bold text-neutral-200 block break-words leading-tight">{scanResult.event}</span>
                     </div>
+                    {scanResult.buyer && (
+                      <div>
+                        <span className="text-[8px] uppercase text-neutral-500 tracking-wider block">Asistente / Comprador</span>
+                        <span className="text-xs font-bold text-white block break-words">{scanResult.buyer}</span>
+                        {scanResult.phone && <span className="text-[10px] text-[#F4F6F0]/50 block">{scanResult.phone}</span>}
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <span className="text-[8px] uppercase text-neutral-500 tracking-wider block">Ubicación</span>
+                        <span className="text-[8px] uppercase text-neutral-500 tracking-wider block">Ubicación / Asiento</span>
                         <span className="text-xs font-black text-amber-honey block uppercase">{scanResult.seat}</span>
                       </div>
                       {scanResult.scanned_at && (

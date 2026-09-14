@@ -1143,7 +1143,7 @@ export const ShippingManager: React.FC<ShippingManagerProps> = ({ orders, onRefr
                           <span className="text-[#F4F6F0]/30">-</span>
                         )}
                       </td>
-                      <td className="p-4 text-[10px] text-[#F4F6F0]/50 max-w-xs truncate" title={ev.correlation_id}>
+                      <td className="p-4 text-[10px] text-[#F4F6F0]/50 max-w-xs truncate" title={ev.correlation_id ?? undefined}>
                         {ev.correlation_id || '-'}
                       </td>
                     </tr>

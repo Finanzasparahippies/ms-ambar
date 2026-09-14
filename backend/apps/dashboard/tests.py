@@ -370,3 +370,77 @@ class DashboardAppTests(APITestCase):
         self.assertTrue(len(response.data['data']) >= 2)
         emails = [u['email'] for u in response.data['data']]
         self.assertIn(self.admin_user.email, emails)
+
+    def test_analytics_unit_data_tickets_with_filters(self):
+        """Verify ticket unit data supports event_id, scan_status, and returns enriched fields and stats."""
+        # Create second ticket
+        seat2 = Seat.objects.create(theater=self.theater, section="VIP", row="B", number=2, base_price=500.0)
+        t2 = Ticket.objects.create(
+            event=self.event,
+            seat=seat2,
+            user_email='scanned_attendee@example.com',
+            status='used',
+            is_scanned=True,
+            scanned_at=timezone.now(),
+            amount_paid=600.0
+        )
+
+        self.client.force_authenticate(user=self.admin_user)
+        # Filter by event
+        url = reverse('analytics_unit_data') + f'?type=tickets&event_id={self.event.id}'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 2)
+        self.assertIn('stats', response.data)
+        self.assertEqual(response.data['stats']['scanned_count'], 1)
+        self.assertEqual(response.data['stats']['pending_count'], 1)
+
+        # Filter by scan_status=scanned
+        url_scanned = reverse('analytics_unit_data') + f'?type=tickets&event_id={self.event.id}&scan_status=scanned'
+        res_scanned = self.client.get(url_scanned)
+        self.assertEqual(res_scanned.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_scanned.data['data']), 1)
+        self.assertEqual(res_scanned.data['data'][0]['id'], t2.id)
+
+    def test_analytics_export_csv_view(self):
+        """Verify AnalyticsExportCSVView outputs full CSV with UTF-8-SIG without truncation."""
+        self.client.force_authenticate(user=self.admin_user)
+        url = reverse('analytics_export_csv') + f'?type=tickets&event_id={self.event.id}'
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8-sig')
+        self.assertIn('attachment;', response['Content-Disposition'])
+
+        content = response.content.decode('utf-8-sig')
+        # Check header
+        self.assertIn('ID Boleto', content)
+        self.assertIn('UUID / Token', content)
+        self.assertIn('Asiento / Zona', content)
+        # Check content includes seat with # character
+        self.assertIn('#1', content)
+        self.assertIn('ticketbuyer@example.com', content)
+
+    def test_ticket_validate_and_toggle_checkin(self):
+        """Verify TicketViewSet validate and toggle_checkin atomic behavior."""
+        self.client.force_authenticate(user=self.admin_user)
+
+        # 1. Successful first validation
+        val_url = '/api/tickets/tickets/validate/'
+        res1 = self.client.post(val_url, {'token': str(self.ticket.token), 'event_id': self.event.id})
+        self.assertEqual(res1.status_code, status.HTTP_200_OK)
+        self.assertEqual(res1.data['status'], 'success')
+        self.ticket.refresh_from_db()
+        self.assertTrue(self.ticket.is_scanned)
+
+        # 2. Duplicate validation rejected
+        res2 = self.client.post(val_url, {'token': str(self.ticket.token), 'event_id': self.event.id})
+        self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res2.data['status'], 'already_used')
+
+        # 3. Toggle check-in to revert
+        toggle_url = f'/api/tickets/tickets/{self.ticket.id}/toggle_checkin/'
+        res_toggle = self.client.post(toggle_url)
+        self.assertEqual(res_toggle.status_code, status.HTTP_200_OK)
+        self.assertFalse(res_toggle.data['is_scanned'])
+        self.ticket.refresh_from_db()
+        self.assertFalse(self.ticket.is_scanned)

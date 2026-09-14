@@ -1,7 +1,1 @@
-{
-  "/_app": "pages/_app.js",
-  "/_error": "pages/_error.js",
-  "/_document": "pages/_document.js",
-  "/": "pages/index.js",
-  "/shop/success": "pages/shop/success.js"
-}
+{"/_app":"pages/_app.js","/_document":"pages/_document.js","/bookings/sign/[id]":"pages/bookings/sign/[id].html","/ambar-te-escribe":"pages/ambar-te-escribe.html","/blog":"pages/blog.html","/contact":"pages/contact.html","/contacto":"pages/contacto.html","/comprar-boletos":"pages/comprar-boletos.html","/dashboard/scan-tickets":"pages/dashboard/scan-tickets.html","/dashboard/performance":"pages/dashboard/performance.html","/forgot-password":"pages/forgot-password.html","/entretenimiento":"pages/entretenimiento.html","/designer":"pages/designer.html","/galeria":"pages/galeria.html","/gallery":"pages/gallery.html","/merch":"pages/merch.html","/music":"pages/music.html","/":"pages/index.html","/login":"pages/login.html","/reset-password":"pages/reset-password.html","/shop":"pages/shop.html","/signup":"pages/signup.html","/suscribirse":"pages/suscribirse.html","/tienda":"pages/tienda.html","/tickets/[token]":"pages/tickets/[token].html","/dashboard":"pages/dashboard.html","/shop/success":"pages/shop/success.html","/tour":"pages/tour.html","/_error":"pages/_error.js","/musica":"pages/musica.html","/404":"pages/404.html"}
