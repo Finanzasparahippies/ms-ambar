@@ -963,6 +963,88 @@ class SpamBotPurgeCommandTests(APITestCase):
         self.assertTrue(os.path.exists(log_path))
 
 
+class WaterFallCircuitBreakerTests(APITestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        from apps.blog.utils import _get_today_utc_date
+        from apps.blog.models import DailyEmailQuotaCounter
+        DailyEmailQuotaCounter.objects.filter(provider='brevo', date=_get_today_utc_date()).delete()
+
+    @patch('apps.blog.utils.EmailMultiAlternatives.send')
+    @patch('apps.blog.utils.get_connection')
+    def test_waterfall_batch_350_emails(self, mock_get_connection, mock_send):
+        """Simulate sending 350 emails: 300 via Brevo, 50 routed to SES."""
+        from apps.blog.utils import send_mail_waterfall, get_brevo_sent_count
+        from django.test import override_settings
+
+        mock_get_connection.return_value = "dummy_conn"
+        mock_send.return_value = 1
+
+        recipients = [f"user{i}@example.com" for i in range(350)]
+
+        with override_settings(
+            BREVO_EMAIL_HOST_USER='brevo_user',
+            BREVO_EMAIL_HOST_PASSWORD='brevo_password',
+            SES_EMAIL_HOST_USER='ses_user',
+            SES_EMAIL_HOST_PASSWORD='ses_password'
+        ):
+            send_mail_waterfall(
+                subject="Batch 350 Test",
+                html_content="<p>Test</p>",
+                text_content="Test",
+                recipient_list=recipients
+            )
+
+        self.assertEqual(get_brevo_sent_count(), 300)
+        self.assertEqual(mock_send.call_count, 350)
+
+    @patch('apps.blog.utils.EmailMultiAlternatives.send')
+    @patch('apps.blog.utils.get_connection')
+    def test_waterfall_second_send_100_emails(self, mock_get_connection, mock_send):
+        """Simulate second send on the same day of 100 emails: 0 via Brevo, 100 routed directly to SES."""
+        from apps.blog.utils import send_mail_waterfall, get_brevo_sent_count, reserve_brevo_quota
+        from django.test import override_settings
+
+        mock_get_connection.return_value = "dummy_conn"
+        mock_send.return_value = 1
+
+        reserve_brevo_quota(300)
+        self.assertEqual(get_brevo_sent_count(), 300)
+
+        recipients = [f"second_batch_{i}@example.com" for i in range(100)]
+
+        with override_settings(
+            BREVO_EMAIL_HOST_USER='brevo_user',
+            BREVO_EMAIL_HOST_PASSWORD='brevo_password',
+            SES_EMAIL_HOST_USER='ses_user',
+            SES_EMAIL_HOST_PASSWORD='ses_password'
+        ):
+            send_mail_waterfall(
+                subject="Second Batch 100 Test",
+                html_content="<p>Test</p>",
+                text_content="Test",
+                recipient_list=recipients
+            )
+
+        self.assertEqual(get_brevo_sent_count(), 300)
+        self.assertEqual(mock_send.call_count, 100)
+
+    def test_brevo_webhook_quota_reconciliation(self):
+        """Verify Brevo webhook with blocked event forces local quota to 300."""
+        from apps.blog.utils import get_brevo_sent_count
+        url = reverse('brevo-webhook-root')
+        payload = {
+            "event": "blocked",
+            "email": "blocked_user@example.com",
+            "reason": "daily quota exceeded"
+        }
+        response = self.client.post(url, payload, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_brevo_sent_count(), 300)
+
+
+
 
 
 

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import CategoryViewSet, PostViewSet, NewsletterSubscriberViewSet, SESIdentityVerificationViewSet, EmailCampaignViewSet, CampaignTemplateImageViewSet, MarketingListViewSet
+from .views import CategoryViewSet, PostViewSet, NewsletterSubscriberViewSet, SESIdentityVerificationViewSet, EmailCampaignViewSet, CampaignTemplateImageViewSet, MarketingListViewSet, BrevoWebhookView
 
 router = DefaultRouter()
 router.register('categories', CategoryViewSet, basename='category')
@@ -12,5 +12,6 @@ router.register('campaign-template-images', CampaignTemplateImageViewSet, basena
 router.register('marketing-lists', MarketingListViewSet, basename='marketing-list')
 
 urlpatterns = [
+    path('webhooks/brevo', BrevoWebhookView.as_view(), name='brevo-webhook'),
     path('', include(router.urls)),
 ]

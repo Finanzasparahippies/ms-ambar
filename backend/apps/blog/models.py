@@ -153,3 +153,19 @@ class CampaignTemplateImage(models.Model):
         return f"Template Image {self.id} ({self.created_at})"
 
 
+class DailyEmailQuotaCounter(models.Model):
+    provider = models.CharField(max_length=50, default='brevo')
+    date = models.DateField(default=timezone.now)
+    sent_count = models.IntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('provider', 'date')
+        verbose_name = "Daily Email Quota Counter"
+        verbose_name_plural = "Daily Email Quota Counters"
+
+    def __str__(self):
+        return f"{self.provider} ({self.date}): {self.sent_count}/300"
+
+
+

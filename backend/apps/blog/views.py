@@ -8,7 +8,10 @@ from django.conf import settings
 from django.utils import timezone
 from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification, EmailCampaign, CampaignTemplateImage, MarketingList
 from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer, EmailCampaignSerializer, CampaignTemplateImageSerializer, MarketingListSerializer
-from .utils import send_failover_email
+from .utils import send_failover_email, set_brevo_quota_full
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from rest_framework.views import APIView
 import logging
 import requests
 import threading
@@ -810,10 +813,30 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
     cta_alignment_tablet = custom_styles.get('cta_alignment_tablet', cta_alignment_desktop)
     cta_alignment_mobile = custom_styles.get('cta_alignment_mobile', cta_alignment_tablet)
 
+    cover_image_url = ""
+    if getattr(campaign, 'image', None) and campaign.image:
+        try:
+            cover_image_url = campaign.image.url
+        except Exception:
+            pass
+    if not cover_image_url and hasattr(campaign, 'cover_image_url') and campaign.cover_image_url:
+        cover_image_url = campaign.cover_image_url
+    if not cover_image_url and hasattr(campaign, 'post') and campaign.post and getattr(campaign.post, 'image', None):
+        try:
+            cover_image_url = campaign.post.image.url
+        except Exception:
+            pass
+
+    if cover_image_url:
+        cover_image_url = clean_media_url(cover_image_url, api_url)
+        if not cover_image_url.startswith('http'):
+            site_url = getattr(settings, 'SITE_URL', None) or getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
+            cover_image_url = f"{site_url.rstrip('/')}{cover_image_url if cover_image_url.startswith('/') else '/' + cover_image_url}"
+
+    logger.info(f"Email cover image resolved: {cover_image_url}")
+
     image_html = ""
-    if campaign.image:
-        image_url = clean_media_url(campaign.image.url, api_url)
-            
+    if cover_image_url:
         wrapper_style = "margin-bottom: 30px;"
         if image_align_desktop == 'center':
             wrapper_style += " text-align: center;"
@@ -823,9 +846,15 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
             wrapper_style += " text-align: right;"
             
         image_html = f"""
-        <div class="email-cover-wrapper" style="{wrapper_style}">
-            <img class="email-cover-image" src="{image_url}" style="width: {image_width_desktop}; max-width: 100%; height: auto; border-radius: {image_radius}; border: {border_style}; display: inline-block;" />
-        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 30px;">
+          <tr>
+            <td align="{image_align_desktop}" style="padding: 0;">
+              <div class="email-cover-wrapper" style="{wrapper_style}">
+                  <img class="email-cover-image" src="{cover_image_url}" width="100%" style="width: {image_width_desktop}; max-width: 100%; height: auto; border-radius: {image_radius}; border: {border_style}; display: inline-block;" />
+              </div>
+            </td>
+          </tr>
+        </table>
         """
 
     custom_styles = getattr(campaign, 'custom_styles', {}) or {}
@@ -1430,6 +1459,9 @@ class EmailCampaignViewSet(viewsets.ModelViewSet):
             return Response({"error": "Esta campaña ya ha sido enviada anteriormente."}, status=status.HTTP_400_BAD_REQUEST)
         
         base_url = request.build_absolute_uri('/')
+        if not base_url or not base_url.startswith('http'):
+            base_url = getattr(settings, 'SITE_URL', None) or getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
+        logger.info(f"Dispatching campaign {campaign.id} with base_url: {base_url}")
         threading.Thread(target=send_campaign_emails, args=(campaign, base_url), daemon=True).start()
         return Response({"message": "La campaña de correos ha comenzado a enviarse en segundo plano."}, status=status.HTTP_200_OK)
 
@@ -1438,6 +1470,50 @@ class CampaignTemplateImageViewSet(viewsets.ModelViewSet):
     queryset = CampaignTemplateImage.objects.all().order_by('-created_at')
     serializer_class = CampaignTemplateImageSerializer
     permission_classes = [permissions.IsAdminUser]
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class BrevoWebhookView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        secret_header = request.headers.get('x-webhook-secret') or request.query_params.get('secret')
+        expected_secret = getattr(settings, 'BREVO_WEBHOOK_SECRET', '')
+        if expected_secret and secret_header != expected_secret:
+            logger.warning("[Brevo Webhook] Invalid or missing secret token.")
+            return Response({"error": "Invalid webhook secret"}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            data = request.data
+            if not isinstance(data, dict):
+                import json
+                data = json.loads(request.body.decode('utf-8'))
+        except Exception as e:
+            logger.error(f"[Brevo Webhook] Error parsing JSON payload: {e}")
+            return Response({"error": "Invalid JSON"}, status=status.HTTP_400_BAD_REQUEST)
+
+        event = data.get('event') or data.get('type')
+        email = data.get('email') or data.get('recipient')
+        reason = (data.get('reason') or data.get('error') or '').lower()
+
+        logger.info(f"[Brevo Webhook] Received event '{event}' for email '{email}' with reason '{reason}'")
+
+        if event in ['blocked', 'hard_bounce', 'spam', 'unsubscribed'] or 'limit' in reason or 'quota' in reason or 'exceeded' in reason:
+            if event == 'blocked' or 'limit' in reason or 'quota' in reason or 'exceeded' in reason:
+                logger.warning(f"[Brevo Webhook] Brevo quota limit exceeded/blocked detected. Forcing Brevo quota full (300).")
+                set_brevo_quota_full()
+
+            if email and event in ['hard_bounce', 'spam', 'blocked', 'unsubscribed']:
+                try:
+                    sub = NewsletterSubscriber.objects.get(email__iexact=email)
+                    sub.is_active = False
+                    sub.save()
+                    logger.info(f"[Brevo Webhook] Subscriber {email} deactivated due to event '{event}'.")
+                except NewsletterSubscriber.DoesNotExist:
+                    logger.warning(f"[Brevo Webhook] Subscriber not found for email: {email}")
+
+        return Response({"status": "received"}, status=status.HTTP_200_OK)
+
 
 
 

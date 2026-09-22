@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
+from apps.blog.views import BrevoWebhookView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/webhooks/brevo', BrevoWebhookView.as_view(), name='brevo-webhook-root'),
     path('api/tickets/', include('apps.tickets.urls')),
     path('api/shop/', include('apps.shop.urls')),
     path('api/users/', include('apps.users.urls')),
