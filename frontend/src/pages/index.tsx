@@ -741,7 +741,11 @@ const Home = () => {
                   <div className="pt-2 sm:pt-4 flex flex-wrap gap-4 sm:gap-6 items-center">
                     <Link
                       href={bioCtaUrl}
-                      className="px-5 sm:px-6 py-3.5 sm:py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] bg-white/5 border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/5 hover:text-amber-honey transition-all flex items-center gap-2 text-[#F4F6F0]"
+                      className={`px-5 sm:px-6 py-3.5 sm:py-4 rounded-xl text-[9px] font-black uppercase tracking-[0.25em] transition-all duration-300 flex items-center gap-2 shadow-md hover:scale-[1.02] active:scale-[0.98] ${
+                        bioTheme.button_bg
+                          ? 'border border-white/20 hover:border-amber-honey/80 hover:brightness-110 hover:opacity-95'
+                          : 'bg-white/5 border border-white/10 hover:border-amber-honey/40 hover:bg-amber-honey/10 hover:text-amber-honey text-[#F4F6F0]'
+                      }`}
                       style={{ backgroundColor: bioTheme.button_bg || undefined, color: bioTheme.button_text || undefined }}
                     >
                       {bioCtaText} <ArrowRight size={12} />
