@@ -4,7 +4,7 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-def send_failover_email(subject, html_content, text_content, recipient_list, reply_to=None, unsubscribe_url=None):
+def send_failover_email(subject, html_content, text_content, recipient_list, reply_to=None, unsubscribe_url=None, headers=None):
     """
     Sends HTML and text emails with automatic failover across configured SMTP relays:
     Brevo SMTP -> Amazon SES SMTP -> Zoho/Default SMTP.
@@ -67,7 +67,8 @@ def send_failover_email(subject, html_content, text_content, recipient_list, rep
                 sender,
                 recipient_list,
                 connection=active_conn,
-                reply_to=reply_to
+                reply_to=reply_to,
+                headers=headers
             )
             if unsubscribe_url:
                 msg.extra_headers['List-Unsubscribe'] = f'<{unsubscribe_url}>'

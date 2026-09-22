@@ -12,6 +12,7 @@ from .utils import send_failover_email
 import logging
 import requests
 import threading
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ def send_newsletter_email(post):
 
     # Beautiful HTML layout matching ms-ambar aesthetics
     for sub in subscribers:
+        divider_id = uuid.uuid4().hex
         html_content = f"""
         <html>
           <head>
@@ -67,48 +69,55 @@ def send_newsletter_email(post):
             </style>
           </head>
           <body style="background-color: #080C0A; color: #F4F6F0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; padding: 40px 20px; margin: 0; -webkit-font-smoothing: antialiased;">
-            <div style="max-width: 600px; margin: 0 auto; background: #0B0F0D; border: 1px solid rgba(229, 169, 59, 0.12); padding: 40px; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02);">
-              
-              <!-- Header/Logo -->
-              <div style="text-align: center; margin-bottom: 40px;">
-                <div style="display: inline-block; width: 60px; height: 60px; background-color: #080C0A; border: 1px solid rgba(229, 169, 59, 0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 6px; box-sizing: border-box; box-shadow: 0 0 20px rgba(229, 169, 59, 0.12); vertical-align: middle;">
-                  <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_b.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
-                </div>
-                <h1 style="color: #F4F6F0; font-size: 26px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; font-style: italic;">Ms Ambar</h1>
-                <div style="height: 1px; width: 40px; background-color: rgba(229, 169, 59, 0.3); margin: 8px auto;"></div>
-                <p style="color: #E5A93B; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">Club Exclusivo</p>
-              </div>
-              
-              <!-- Post cover image if exists -->
-              {f"<div style='border-radius: 24px; overflow: hidden; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);'><img src='{image_url}' style='width: 100%; height: auto; display: block;' /></div>" if image_url else ""}
-              
-              <!-- Content -->
-              <h2 style="color: #F4F6F0; font-size: 28px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">{post.title}</h2>
-              
-              <div style="color: rgba(244, 246, 240, 0.8); font-size: 15px; line-height: 1.8; margin-bottom: 30px;">
-                {post.content}
-              </div>
-              
-              <!-- Button link -->
-              <div style="text-align: center; margin-bottom: 45px;">
-                <a href="{settings.FRONTEND_URL}/ambar-te-escribe" style="background-color: #E5A93B; color: #080C0A; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
-                  Leer Entrada Completa
-                </a>
-              </div>
-              
-              <!-- Footer -->
-              <div style="text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; color: rgba(244, 246, 240, 0.35); font-size: 11px; line-height: 1.6;">
-                <p style="margin: 0 0 10px 0; font-weight: 500;">Recibiste este correo porque estás suscrito a las cartas de Ms Ambar.</p>
-                <p style="margin: 0;">
-                  <a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub.email}" style="color: #E5A93B; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.25); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">Desuscribirse</a>
-                </p>
-                <!-- Premium Watermark Signature -->
-                <p style="margin: 30px 0 0 0; font-size: 8px; color: rgba(244, 246, 240, 0.15); letter-spacing: 2px; text-transform: uppercase; font-weight: bold;">
-                  Diseñado con alma por <a href="https://nectarlabs.dev" target="_blank" style="color: rgba(229, 169, 59, 0.45); text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.2); font-weight: 800; transition: all 0.3s;">Nectar Labs</a>
-                </p>
-              </div>
-              
-            </div>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; margin: 0 auto; background: #0B0F0D; border: 1px solid rgba(229, 169, 59, 0.12); border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02);">
+              <tr>
+                <td style="padding: 40px;">
+                  
+                  <!-- Header/Logo -->
+                  <div style="text-align: center; margin-bottom: 40px;">
+                    <div style="display: inline-block; width: 60px; height: 60px; background-color: #080C0A; border: 1px solid rgba(229, 169, 59, 0.35); border-radius: 50%; overflow: hidden; text-align: center; padding: 6px; box-sizing: border-box; box-shadow: 0 0 20px rgba(229, 169, 59, 0.12); vertical-align: middle;">
+                      <img src="{settings.FRONTEND_URL}/logos/ms_ambar_monograma_b.png" alt="A" style="width: 100%; height: 100%; object-fit: contain; display: block; margin: 0 auto;" />
+                    </div>
+                    <h1 style="color: #F4F6F0; font-size: 26px; font-weight: 900; letter-spacing: -0.05em; margin-top: 15px; margin-bottom: 5px; text-transform: uppercase; font-style: italic;">Ms Ambar</h1>
+                    <div style="height: 1px; width: 40px; background-color: rgba(229, 169, 59, 0.3); margin: 8px auto;"></div>
+                    <p style="color: #E5A93B; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 4px; margin: 0;">Club Exclusivo</p>
+                  </div>
+                  
+                  <!-- Post cover image if exists -->
+                  {f"<div style='border-radius: 24px; overflow: hidden; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.05);'><img src='{image_url}' style='width: 100%; height: auto; display: block;' /></div>" if image_url else ""}
+                  
+                  <!-- Content -->
+                  <h2 style="color: #F4F6F0; font-size: 28px; font-weight: 900; line-height: 1.2; margin-top: 0; margin-bottom: 20px; letter-spacing: -0.02em;">{post.title}</h2>
+                  
+                  <div style="color: rgba(244, 246, 240, 0.8); font-size: 15px; line-height: 1.8; margin-bottom: 30px;">
+                    {post.content}
+                  </div>
+                  
+                  <!-- Button link -->
+                  <div style="text-align: center; margin-bottom: 45px;">
+                    <a href="{settings.FRONTEND_URL}/ambar-te-escribe" style="background-color: #E5A93B; color: #080C0A; padding: 16px 32px; border-radius: 16px; font-size: 12px; font-weight: 900; text-transform: uppercase; text-decoration: none; display: inline-block; letter-spacing: 1px;">
+                      Leer Entrada Completa
+                    </a>
+                  </div>
+                  
+                  <!-- Invisible Gmail quote-breaker divider -->
+                  <div style="display:none;font-size:0;max-height:0;line-height:0;mso-hide:all;">{divider_id}</div>
+
+                  <!-- Footer -->
+                  <div style="text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; color: rgba(244, 246, 240, 0.35); font-size: 11px; line-height: 1.6;">
+                    <p style="margin: 0 0 10px 0; font-weight: 500;">Recibiste este correo porque estás suscrito a las cartas de Ms Ambar.</p>
+                    <p style="margin: 0;">
+                      <a href="{settings.FRONTEND_URL}/ambar-te-escribe?unsubscribe={sub.email}" style="color: #E5A93B; text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.25); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">Desuscribirse</a>
+                    </p>
+                    <!-- Premium Watermark Signature -->
+                    <p style="margin: 30px 0 0 0; font-size: 8px; color: rgba(244, 246, 240, 0.15); letter-spacing: 2px; text-transform: uppercase; font-weight: bold;">
+                      Diseñado con alma por <a href="https://nectarlabs.dev" target="_blank" style="color: rgba(229, 169, 59, 0.45); text-decoration: none; border-bottom: 1px solid rgba(229, 169, 59, 0.2); font-weight: 800; transition: all 0.3s;">Nectar Labs</a>
+                    </p>
+                  </div>
+                  
+                </td>
+              </tr>
+            </table>
           </body>
         </html>
         """
@@ -116,7 +125,8 @@ def send_newsletter_email(post):
         html_minified = _minify_email_html(html_content)
         _warn_if_html_oversized(html_minified, f"newsletter post:{post.id} → {sub.email}")
         try:
-            send_failover_email(subject, html_minified, text_content, [sub.email])
+            unique_msg_id = f"<{uuid.uuid4()}@msambar.com>"
+            send_failover_email(subject, html_minified, text_content, [sub.email], headers={'Message-ID': unique_msg_id})
         except Exception as e:
             logger.error(f"Error sending newsletter email to {sub.email} via all failover providers: {e}")
 
