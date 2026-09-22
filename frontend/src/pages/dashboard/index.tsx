@@ -491,6 +491,14 @@ export default function AdminDashboard() {
   const [listDescription, setListDescription] = useState('');
   const [listLoading, setListLoading] = useState(false);
   const [listErrorMsg, setListErrorMsg] = useState<string | null>(null);
+
+  // ── Gestión de suscriptores por lista (modal) ────────────────────────────
+  const [managingList, setManagingList] = useState<any>(null);
+  const [listSubscribers, setListSubscribers] = useState<any[]>([]);
+  const [listMgmtTotal, setListMgmtTotal] = useState(0);
+  const [listMgmtSearch, setListMgmtSearch] = useState('');
+  const [listMgmtEmail, setListMgmtEmail] = useState('');
+  const [listMgmtLoading, setListMgmtLoading] = useState(false);
   const [campaignSubTab, setCampaignSubTab] = useState<'campaigns' | 'subscribers' | 'lists'>('campaigns');
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [subscribersCount, setSubscribersCount] = useState<number>(0);
@@ -1747,7 +1755,100 @@ export default function AdminDashboard() {
     }
   };
 
+  // ── Gestión de contactos por lista ──────────────────────────────────────────
+
+  const fetchListSubscribers = async (list: any, search = '') => {
+    if (!list) return;
+    setListMgmtLoading(true);
+    const token = localStorage.getItem('token');
+    try {
+      const params: any = { page_size: 50 };
+      if (search.trim()) params.search = search.trim();
+      const res = await axios.get(
+        `${API_URL}/blog/marketing-lists/${list.id}/list_subscribers/`,
+        { headers: { Authorization: `Bearer ${token}` }, params }
+      );
+      setListSubscribers(res.data?.results ?? []);
+      setListMgmtTotal(res.data?.count ?? 0);
+    } catch {
+      setListSubscribers([]);
+      setListMgmtTotal(0);
+    } finally {
+      setListMgmtLoading(false);
+    }
+  };
+
+  // Cargar suscriptores al abrir el modal
+  useEffect(() => {
+    if (!managingList) {
+      setListSubscribers([]);
+      setListMgmtTotal(0);
+      setListMgmtEmail('');
+      setListMgmtSearch('');
+      return;
+    }
+    fetchListSubscribers(managingList, '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [managingList]);
+
+  // Búsqueda con debounce dentro del modal de lista
+  useEffect(() => {
+    if (!managingList) return;
+    const h = setTimeout(() => fetchListSubscribers(managingList, listMgmtSearch), 350);
+    return () => clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [listMgmtSearch]);
+
+  const handleAddSubscriberToList = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const emailNorm = listMgmtEmail.trim().toLowerCase();
+    if (!managingList || !emailNorm) return;
+    const token = localStorage.getItem('token');
+    try {
+      await axios.post(
+        `${API_URL}/blog/marketing-lists/${managingList.id}/add_subscriber/`,
+        { email: emailNorm },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setListMgmtEmail('');
+      showToast.success('Suscriptor añadido a la lista.');
+      await fetchListSubscribers(managingList, listMgmtSearch);
+      setMarketingLists(prev =>
+        prev.map(l => l.id === managingList.id
+          ? { ...l, subscriber_count: (l.subscriber_count || 0) + 1 }
+          : l
+        )
+      );
+    } catch (err: any) {
+      showToast.error(err.response?.data?.error || 'Error al añadir suscriptor.');
+    }
+  };
+
+  const handleRemoveSubscriberFromList = async (subscriberId: number, email: string) => {
+    if (!managingList) return;
+    const token = localStorage.getItem('token');
+    try {
+      await axios.post(
+        `${API_URL}/blog/marketing-lists/${managingList.id}/remove_subscriber/`,
+        { subscriber_id: subscriberId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setListSubscribers(prev => prev.filter(s => s.id !== subscriberId));
+      setListMgmtTotal(prev => Math.max(0, prev - 1));
+      setMarketingLists(prev =>
+        prev.map(l => l.id === managingList.id
+          ? { ...l, subscriber_count: Math.max(0, (l.subscriber_count || 1) - 1) }
+          : l
+        )
+      );
+      showToast.success(`${email} removido de la lista.`);
+    } catch (err: any) {
+      showToast.error(err.response?.data?.error || 'Error al remover suscriptor.');
+    }
+  };
+
   const handleCampaignSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
     if (!campSubject.trim()) { setCampErrorMsg('El asunto es obligatorio.'); return; }
 
@@ -6504,6 +6605,13 @@ export default function AdminDashboard() {
                                     Creado: {new Date(list.created_at).toLocaleDateString('es-MX')}
                                   </div>
                                 </div>
+                                {/* Acción: gestionar contactos de esta lista */}
+                                <button
+                                  onClick={() => setManagingList(list)}
+                                  className="w-full mt-2 py-2 text-[9px] font-black uppercase tracking-widest bg-white/5 hover:bg-amber-honey/10 border border-white/10 hover:border-amber-honey/30 rounded-xl text-[#F4F6F0]/60 hover:text-amber-honey transition-all flex items-center justify-center gap-1.5"
+                                >
+                                  👥 Gestionar Contactos
+                                </button>
                               </div>
                             ))}
                           </div>
@@ -6512,6 +6620,86 @@ export default function AdminDashboard() {
                     </div>
                   )}
                 </motion.div>
+              )}
+
+              {/* MODAL: Gestión de suscriptores de una lista */}
+              {managingList && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+                  <div className="amber-glass border border-white/10 rounded-[2rem] p-6 w-full max-w-lg max-h-[85vh] flex flex-col gap-4 shadow-2xl">
+                    {/* Header */}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-sm font-black uppercase tracking-wide text-[#F4F6F0]">{managingList.name}</h3>
+                        <p className="text-[9px] text-[#F4F6F0]/40 uppercase tracking-widest font-bold mt-0.5">
+                          {listMgmtLoading ? 'Cargando...' : `${listMgmtTotal} contacto${listMgmtTotal !== 1 ? 's' : ''} en esta lista`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setManagingList(null)}
+                        className="text-[#F4F6F0]/40 hover:text-[#F4F6F0] transition-colors p-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Añadir suscriptor */}
+                    <form onSubmit={handleAddSubscriberToList} className="flex gap-2">
+                      <input
+                        type="email"
+                        placeholder="email@ejemplo.com"
+                        value={listMgmtEmail}
+                        onChange={e => setListMgmtEmail(e.target.value)}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] focus:border-amber-honey outline-none placeholder:text-[#F4F6F0]/30 transition-all"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-amber-honey text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-amber-honey/80 transition-colors whitespace-nowrap"
+                      >
+                        + Añadir
+                      </button>
+                    </form>
+
+                    {/* Buscador */}
+                    <input
+                      type="text"
+                      placeholder="Buscar por email o nombre..."
+                      value={listMgmtSearch}
+                      onChange={e => setListMgmtSearch(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-[#F4F6F0] focus:border-amber-honey outline-none placeholder:text-[#F4F6F0]/30 transition-all"
+                    />
+
+                    {/* Lista de suscriptores */}
+                    <div className="overflow-y-auto flex-1 space-y-1.5 custom-scroll">
+                      {listMgmtLoading ? (
+                        <div className="py-8 text-center text-[#F4F6F0]/40 text-xs italic">Cargando contactos...</div>
+                      ) : listSubscribers.length === 0 ? (
+                        <div className="py-8 text-center text-[#F4F6F0]/40 text-xs italic">
+                          {listMgmtSearch ? 'Sin resultados para esa búsqueda.' : 'Esta lista no tiene contactos aún.'}
+                        </div>
+                      ) : (
+                        listSubscribers.map((s: any) => (
+                          <div key={s.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-[#F4F6F0] font-semibold truncate">{s.email}</p>
+                              {s.name && <p className="text-[9px] text-[#F4F6F0]/50 truncate">{s.name}</p>}
+                            </div>
+                            <button
+                              onClick={() => handleRemoveSubscriberFromList(s.id, s.email)}
+                              className="text-[9px] font-black uppercase tracking-widest text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-400/40 px-2.5 py-1 rounded-lg transition-all whitespace-nowrap shrink-0"
+                            >
+                              Quitar
+                            </button>
+                          </div>
+                        ))
+                      )}
+                      {!listMgmtLoading && listSubscribers.length > 0 && listMgmtTotal > listSubscribers.length && (
+                        <p className="text-center text-[9px] text-[#F4F6F0]/40 italic pt-2">
+                          Mostrando {listSubscribers.length} de {listMgmtTotal}. Usa el buscador para filtrar.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* TAB 8: EVENTS MANAGEMENT */}
@@ -8004,10 +8192,10 @@ export default function AdminDashboard() {
                                     className="w-full bg-[#121915] border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-amber-honey text-[#F4F6F0]"
                                   >
                                     {(previewViewport === 'desktop'
-                                      ? ['14px', '16px', '18px', '20px']
+                                      ? ['14px', '15px', '16px', '17px', '18px', '19px', '20px', '21px', '22px', '24px']
                                       : previewViewport === 'tablet'
-                                        ? ['13px', '14px', '15px', '16px', '18px']
-                                        : ['12px', '13px', '14px', '15px', '16px']
+                                        ? ['13px', '14px', '15px', '16px', '17px', '18px', '20px']
+                                        : ['12px', '13px', '14px', '15px', '16px', '18px']
                                     ).map(sz => (
                                       <option key={sz} value={sz}>{sz}</option>
                                     ))}

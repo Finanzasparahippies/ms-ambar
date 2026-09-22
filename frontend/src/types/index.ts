@@ -223,6 +223,9 @@ export interface MarketingList {
   name: string;
   description: string;
   slug: string;
+  subscriber_count?: number;
+  event_title?: string;
+  created_at?: string;
 }
 
 export interface Subscriber {

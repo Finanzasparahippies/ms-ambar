@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db.models import Q
 from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
@@ -108,8 +109,10 @@ def send_newsletter_email(post):
         </html>
         """
         text_content = strip_tags(html_content)
+        html_minified = _minify_email_html(html_content)
+        _warn_if_html_oversized(html_minified, f"newsletter post:{post.id} → {sub.email}")
         try:
-            send_failover_email(subject, html_content, text_content, [sub.email])
+            send_failover_email(subject, html_minified, text_content, [sub.email])
         except Exception as e:
             logger.error(f"Error sending newsletter email to {sub.email} via all failover providers: {e}")
 
@@ -174,8 +177,10 @@ def send_welcome_email(subscriber):
     """
     
     text_content = strip_tags(html_content)
+    html_minified = _minify_email_html(html_content)
+    _warn_if_html_oversized(html_minified, f"welcome → {subscriber.email}")
     try:
-        send_failover_email(subject, html_content, text_content, [subscriber.email])
+        send_failover_email(subject, html_minified, text_content, [subscriber.email])
     except Exception as e:
         logger.error(f"Error sending welcome newsletter email to {subscriber.email} via all failover providers: {e}")
 
@@ -538,6 +543,35 @@ class SESIdentityVerificationViewSet(viewsets.ModelViewSet):
                 return Response("Error procesado internamente", status=status.HTTP_200_OK)
 
         return Response("OK", status=status.HTTP_200_OK)
+
+
+def _minify_email_html(html: str) -> str:
+    """
+    Minificación segura de HTML de email.
+    - Elimina comentarios HTML (excepto condicionales MSO/IE <!--[if...).
+    - Colapsa whitespace ENTRE etiquetas contiguas (preserva texto/poemas).
+    - Normaliza espacios múltiples dentro de atributos/etiquetas.
+    No toca el contenido textual interno para preservar la estructura poética.
+    """
+    import re as _re
+    # Eliminar comentarios HTML preservando condicionales MSO
+    html = _re.sub(r'<!--(?!\[if).*?-->', '', html, flags=_re.DOTALL)
+    # Colapsar whitespace entre etiquetas contiguas únicamente
+    html = _re.sub(r'>\s+<', '><', html)
+    # Normalizar tabs y espacios múltiples en la misma línea (sin tocar newlines de poemas)
+    html = _re.sub(r'[ \t]+', ' ', html)
+    return html.strip()
+
+
+def _warn_if_html_oversized(html: str, context: str = '') -> None:
+    """Emite logger.warning si el HTML supera 98KB (umbral previo al límite de 102KB de Gmail)."""
+    size_bytes = len(html.encode('utf-8'))
+    if size_bytes > 98_000:
+        logger.warning(
+            f"[EMAIL SIZE WARNING] HTML de campaña roza el límite de Gmail (102KB). "
+            f"Tamaño actual: {size_bytes / 1024:.1f}KB. Contexto: {context}. "
+            f"Considera reducir imágenes o contenido del poema."
+        )
 
 
 def get_campaign_html_template(campaign, sub_email, base_url=None):
@@ -1177,6 +1211,8 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
       </body>
     </html>
     """
+    html_content = _minify_email_html(html_content)
+    _warn_if_html_oversized(html_content, f"campaign:{campaign.id} → {sub_email}")
     return html_content
 
 
@@ -1199,8 +1235,14 @@ def send_campaign_emails(campaign, base_url=None):
     for sub in subscribers:
         html_content = get_campaign_html_template(campaign, sub.email, base_url=base_url)
         text_content = strip_tags(html_content)
+        # Construir URL de baja one-click (token prioritario, fallback al id del suscriptor)
+        sub_token = getattr(sub, 'token', None) or str(sub.id)
+        unsub_url = f"{base_url or ''}/api/blog/subscribers/unsubscribe/?token={sub_token}"
         try:
-            send_failover_email(campaign.subject, html_content, text_content, [sub.email])
+            send_failover_email(
+                campaign.subject, html_content, text_content, [sub.email],
+                unsubscribe_url=unsub_url
+            )
         except Exception as e:
             logger.error(f"Error sending campaign email to {sub.email} via all failover providers: {e}")
 
@@ -1209,6 +1251,106 @@ class MarketingListViewSet(viewsets.ModelViewSet):
     queryset = MarketingList.objects.all().order_by('-created_at')
     serializer_class = MarketingListSerializer
     permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=True, methods=['post'], url_path='add_subscriber')
+    def add_subscriber(self, request, pk=None):
+        """
+        Añade uno o varios NewsletterSubscribers a esta lista.
+        Acepta `email` (str) O `emails` (list[str]) O `subscriber_id` (int).
+        Los emails se normalizan a minúsculas para evitar duplicados.
+        """
+        ml = self.get_object()
+        emails_raw = request.data.get('emails')
+        email_raw = request.data.get('email', '').strip().lower()
+        subscriber_id = request.data.get('subscriber_id')
+
+        # ── Bulk por lista de emails ──────────────────────────────────────────
+        if emails_raw and isinstance(emails_raw, list):
+            normalized = [e.strip().lower() for e in emails_raw if isinstance(e, str) and e.strip()]
+            if not normalized:
+                return Response({'error': 'La lista de emails está vacía.'}, status=status.HTTP_400_BAD_REQUEST)
+            subs = NewsletterSubscriber.objects.filter(email__in=normalized)
+            ml.subscribers.add(*subs)
+            found = list(subs.values_list('email', flat=True))
+            not_found = list(set(normalized) - set(found))
+            return Response({
+                'added': found,
+                'not_found': not_found,
+                'message': f'{len(found)} suscriptor(es) añadido(s) a "{ml.name}".'
+            })
+
+        # ── Individual por subscriber_id ──────────────────────────────────────
+        if subscriber_id:
+            try:
+                sub = NewsletterSubscriber.objects.get(pk=subscriber_id)
+            except NewsletterSubscriber.DoesNotExist:
+                return Response({'error': 'Suscriptor no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            ml.subscribers.add(sub)
+            return Response({'message': f'{sub.email} añadido a "{ml.name}".'}, status=status.HTTP_200_OK)
+
+        # ── Individual por email ──────────────────────────────────────────────
+        if email_raw:
+            try:
+                sub = NewsletterSubscriber.objects.get(email__iexact=email_raw)
+            except NewsletterSubscriber.DoesNotExist:
+                return Response({'error': f'El suscriptor "{email_raw}" no existe en el sistema.'}, status=status.HTTP_404_NOT_FOUND)
+            ml.subscribers.add(sub)
+            return Response({'message': f'{sub.email} añadido a "{ml.name}".'}, status=status.HTTP_200_OK)
+
+        return Response({'error': 'Se requiere email, emails[] o subscriber_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'], url_path='remove_subscriber')
+    def remove_subscriber(self, request, pk=None):
+        """
+        Quita un NewsletterSubscriber de esta lista (sin eliminarlo del sistema).
+        Acepta `email` (str) O `subscriber_id` (int).
+        El email se normaliza a minúsculas.
+        """
+        ml = self.get_object()
+        email_raw = request.data.get('email', '').strip().lower()
+        subscriber_id = request.data.get('subscriber_id')
+
+        if subscriber_id:
+            try:
+                sub = NewsletterSubscriber.objects.get(pk=subscriber_id)
+            except NewsletterSubscriber.DoesNotExist:
+                return Response({'error': 'Suscriptor no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+            ml.subscribers.remove(sub)
+            return Response({'message': f'{sub.email} removido de "{ml.name}".'}, status=status.HTTP_200_OK)
+
+        if email_raw:
+            try:
+                sub = NewsletterSubscriber.objects.get(email__iexact=email_raw)
+            except NewsletterSubscriber.DoesNotExist:
+                return Response({'error': f'El suscriptor "{email_raw}" no existe en el sistema.'}, status=status.HTTP_404_NOT_FOUND)
+            ml.subscribers.remove(sub)
+            return Response({'message': f'{sub.email} removido de "{ml.name}".'}, status=status.HTTP_200_OK)
+
+        return Response({'error': 'Se requiere email o subscriber_id.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'], url_path='list_subscribers')
+    def list_subscribers(self, request, pk=None):
+        """
+        Retorna los suscriptores de esta lista con búsqueda por texto y paginación.
+        Query params: search, page, page_size (default 50, max 500).
+        """
+        ml = self.get_object()
+        search = request.query_params.get('search', '').strip()
+        qs = ml.subscribers.all().order_by('email')
+        if search:
+            qs = qs.filter(
+                Q(email__icontains=search) | Q(name__icontains=search)
+            )
+        # Paginación ad-hoc
+        try:
+            page_size = max(1, min(500, int(request.query_params.get('page_size', 50))))
+        except (ValueError, TypeError):
+            page_size = 50
+        paginator = PageNumberPagination()
+        paginator.page_size = page_size
+        page_qs = paginator.paginate_queryset(qs, request)
+        serializer = NewsletterSubscriberSerializer(page_qs, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class EmailCampaignViewSet(viewsets.ModelViewSet):
