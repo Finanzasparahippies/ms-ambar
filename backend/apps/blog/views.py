@@ -549,17 +549,34 @@ def _minify_email_html(html: str) -> str:
     """
     Minificación segura de HTML de email.
     - Elimina comentarios HTML (excepto condicionales MSO/IE <!--[if...).
-    - Colapsa whitespace ENTRE etiquetas contiguas (preserva texto/poemas).
-    - Normaliza espacios múltiples dentro de atributos/etiquetas.
-    No toca el contenido textual interno para preservar la estructura poética.
+    - Colapsa whitespace ENTRE etiquetas contiguas FUERA de bloques <style>.
+    - Normaliza tabs y espacios múltiples en línea (sin tocar newlines de poemas).
+    Preserva íntegramente el contenido de <style>...</style> para que los
+    media queries y sus reglas CSS mantengan su estructura original.
     """
     import re as _re
+
     # Eliminar comentarios HTML preservando condicionales MSO
     html = _re.sub(r'<!--(?!\[if).*?-->', '', html, flags=_re.DOTALL)
-    # Colapsar whitespace entre etiquetas contiguas únicamente
+
+    # Separar bloques <style>...</style> del resto para procesarlos por separado
+    style_blocks: list[str] = []
+
+    def _stash_style(m: '_re.Match[str]') -> str:
+        style_blocks.append(m.group(0))
+        return f'\x00STYLE{len(style_blocks) - 1}\x00'
+
+    html = _re.sub(r'<style[^>]*>.*?</style>', _stash_style, html, flags=_re.DOTALL | _re.IGNORECASE)
+
+    # Colapsar whitespace entre etiquetas sólo en el HTML fuera de <style>
     html = _re.sub(r'>\s+<', '><', html)
-    # Normalizar tabs y espacios múltiples en la misma línea (sin tocar newlines de poemas)
+    # Normalizar tabs/espacios múltiples en la misma línea
     html = _re.sub(r'[ \t]+', ' ', html)
+
+    # Restaurar bloques <style> intactos
+    for idx, block in enumerate(style_blocks):
+        html = html.replace(f'\x00STYLE{idx}\x00', block)
+
     return html.strip()
 
 
@@ -1255,31 +1272,38 @@ class MarketingListViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], url_path='add_subscriber')
     def add_subscriber(self, request, pk=None):
         """
-        Añade uno o varios NewsletterSubscribers a esta lista.
-        Acepta `email` (str) O `emails` (list[str]) O `subscriber_id` (int).
-        Los emails se normalizan a minúsculas para evitar duplicados.
+        Añade uno o varios contactos a esta lista.
+        - `email` (str): crea el suscriptor si no existe y lo añade.
+        - `emails` (list[str]): bulk — crea los que no existen y añade todos.
+        - `subscriber_id` (int): añade suscriptor existente por PK.
+        Todos los emails se normalizan a minúsculas (iexact-safe).
         """
         ml = self.get_object()
         emails_raw = request.data.get('emails')
         email_raw = request.data.get('email', '').strip().lower()
         subscriber_id = request.data.get('subscriber_id')
 
-        # ── Bulk por lista de emails ──────────────────────────────────────────
+        # ── Bulk ──────────────────────────────────────────────────────────────
         if emails_raw and isinstance(emails_raw, list):
             normalized = [e.strip().lower() for e in emails_raw if isinstance(e, str) and e.strip()]
             if not normalized:
                 return Response({'error': 'La lista de emails está vacía.'}, status=status.HTTP_400_BAD_REQUEST)
-            subs = NewsletterSubscriber.objects.filter(email__in=normalized)
-            ml.subscribers.add(*subs)
-            found = list(subs.values_list('email', flat=True))
-            not_found = list(set(normalized) - set(found))
+            added, created_count = [], 0
+            for em in normalized:
+                sub, created = NewsletterSubscriber.objects.get_or_create(
+                    email=em, defaults={'is_active': True}
+                )
+                if created:
+                    created_count += 1
+                ml.subscribers.add(sub)
+                added.append(em)
             return Response({
-                'added': found,
-                'not_found': not_found,
-                'message': f'{len(found)} suscriptor(es) añadido(s) a "{ml.name}".'
+                'added': added,
+                'created_count': created_count,
+                'message': f'{len(added)} contacto(s) añadido(s) a "{ml.name}" ({created_count} nuevos).'
             })
 
-        # ── Individual por subscriber_id ──────────────────────────────────────
+        # ── Por subscriber_id ─────────────────────────────────────────────────
         if subscriber_id:
             try:
                 sub = NewsletterSubscriber.objects.get(pk=subscriber_id)
@@ -1288,14 +1312,18 @@ class MarketingListViewSet(viewsets.ModelViewSet):
             ml.subscribers.add(sub)
             return Response({'message': f'{sub.email} añadido a "{ml.name}".'}, status=status.HTTP_200_OK)
 
-        # ── Individual por email ──────────────────────────────────────────────
+        # ── Por email (crea si no existe) ─────────────────────────────────────
         if email_raw:
-            try:
-                sub = NewsletterSubscriber.objects.get(email__iexact=email_raw)
-            except NewsletterSubscriber.DoesNotExist:
-                return Response({'error': f'El suscriptor "{email_raw}" no existe en el sistema.'}, status=status.HTTP_404_NOT_FOUND)
+            sub, created = NewsletterSubscriber.objects.get_or_create(
+                email=email_raw, defaults={'is_active': True}
+            )
             ml.subscribers.add(sub)
-            return Response({'message': f'{sub.email} añadido a "{ml.name}".'}, status=status.HTTP_200_OK)
+            action_word = 'creado y añadido' if created else 'añadido'
+            return Response({
+                'message': f'{sub.email} {action_word} a "{ml.name}".',
+                'created': created,
+                'subscriber_id': sub.id
+            }, status=status.HTTP_200_OK)
 
         return Response({'error': 'Se requiere email, emails[] o subscriber_id.'}, status=status.HTTP_400_BAD_REQUEST)
 
