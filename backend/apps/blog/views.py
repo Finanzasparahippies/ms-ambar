@@ -1237,17 +1237,19 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
           </div>
           
           <!-- Poem content / Body Block -->
-          <div class="email-poem-box" style="color: {body_color}; font-family: {body_font_family}; padding: {body_padding}; border-radius: {body_radius}; {body_bg_style}; margin-bottom: 40px; box-sizing: border-box; text-align: center;">
-            <div class="email-poem-text" style="color: inherit; font-size: {body_font_size_desktop}; line-height: 1.8; text-align: {body_alignment_desktop}; font-style: italic; opacity: 0.9; font-family: inherit; padding: 10px; display: inline-block; max-width: 90%; word-break: break-word;">
+          <div class="email-poem-box" style="color: {body_color}; font-family: {body_font_family}; padding: {body_padding}; border-radius: {body_radius}; {body_bg_style}; margin-bottom: 30px; box-sizing: border-box; text-align: center;">
+            <div class="email-poem-text" style="color: inherit; font-size: {body_font_size_desktop}; line-height: 1.8; text-align: {body_alignment_desktop}; font-style: italic; opacity: 0.9; font-family: inherit; padding: 10px; display: inline-block; max-width: 90%; word-break: break-word; margin-bottom: 25px;">
               {poem_paragraphs}
+            </div>
+            <!-- Dynamic CTA Button merged inside body container -->
+            <div class="email-cta-box" style="box-sizing: border-box; text-align: center; margin-top: 15px;">
+              {cta_html}
             </div>
           </div>
           
-          <!-- Dynamic CTA Button -->
-          <div class="email-cta-box" style="box-sizing: border-box;">
-            {cta_html}
-          </div>
-          
+          <!-- Invisible Gmail quote-breaker anti-trim divider -->
+          <div style="display:none!important;font-size:0;max-height:0;line-height:0;opacity:0;mso-hide:all;">{uuid.uuid4().hex}</div>
+
           <!-- Footer Block -->
           <div class="email-footer" style="color: {footer_color}; font-family: {footer_font_family}; padding: {footer_padding}; border-radius: {footer_radius}; {footer_bg_style}; text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; line-height: 1.6; box-sizing: border-box;">
             {footer_html}
@@ -1285,14 +1287,15 @@ def send_campaign_emails(campaign, base_url=None):
 
     for sub in subscribers:
         html_content = get_campaign_html_template(campaign, sub.email, base_url=base_url)
-        text_content = strip_tags(html_content)
-        # Construir URL de baja one-click (token prioritario, fallback al id del suscriptor)
         sub_token = getattr(sub, 'token', None) or str(sub.id)
         unsub_url = f"{base_url or ''}/api/blog/subscribers/unsubscribe/?token={sub_token}"
+        cta_link_val = campaign.cta_link or f"{base_url or ''}/ambar-te-escribe"
+        text_content = f"{campaign.subject}\n\n{campaign.poem_text}\n\nVer más: {cta_link_val}\n\nDesuscribirse: {unsub_url}"
         try:
+            unique_msg_id = f"<{uuid.uuid4()}@msambar.com>"
             send_failover_email(
                 campaign.subject, html_content, text_content, [sub.email],
-                unsubscribe_url=unsub_url
+                unsubscribe_url=unsub_url, headers={'Message-ID': unique_msg_id}
             )
         except Exception as e:
             logger.error(f"Error sending campaign email to {sub.email} via all failover providers: {e}")
