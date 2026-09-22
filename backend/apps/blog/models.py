@@ -132,8 +132,9 @@ class EmailCampaign(models.Model):
     title_font_family = models.CharField(max_length=100, default='serif')
     footer_font_family = models.CharField(max_length=100, default='serif')
 
-    # Custom Email Title and Footer
+    # Custom Email Title, Snippet and Footer
     email_title = models.TextField(blank=True, default='')
+    snippet = models.TextField(blank=True, default='', help_text="Texto de previsualización (snippet/preheader) para clientes de correo.")
     footer_text = models.TextField(blank=True, default='')
 
     created_at = models.DateTimeField(auto_now_add=True)

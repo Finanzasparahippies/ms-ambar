@@ -454,9 +454,9 @@ if TESTING:
 # Cloudinary Configuration
 import cloudinary
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default=''),
-    'API_KEY': env('CLOUDINARY_API_KEY', default=''),
-    'API_SECRET': env('CLOUDINARY_API_SECRET', default=''),
+    'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default='test_cloud' if TESTING else ''),
+    'API_KEY': env('CLOUDINARY_API_KEY', default='test_key' if TESTING else ''),
+    'API_SECRET': env('CLOUDINARY_API_SECRET', default='test_secret' if TESTING else ''),
 }
 cloudinary.config(
     cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],

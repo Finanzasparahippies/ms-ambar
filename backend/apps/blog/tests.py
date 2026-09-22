@@ -415,11 +415,14 @@ class BlogAppTests(APITestCase):
         
         campaign = EmailCampaign.objects.create(
             subject='Noche Cósmica',
+            snippet='Exclusiva cósmica de medianoche',
             poem_text='Estrellas fugaces\nen el infinito...',
             template_type='cosmic'
         )
         
         html = get_campaign_html_template(campaign, 'fan@example.com')
+        self.assertIn('display: none; font-size: 1px; color: #06070b;', html)
+        self.assertIn("Exclusiva cósmica de medianoche", html)
         self.assertIn('#0c0a1a', html)
         self.assertIn('#c084fc', html)
         self.assertIn('Noche Cósmica', html)

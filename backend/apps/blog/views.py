@@ -47,6 +47,10 @@ def send_newsletter_email(post):
             # Fallback to local host default or settings configuration
             api_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
             image_url = f"{api_url}{image_url}"
+        if "res.cloudinary.com" in image_url or "/upload/" in image_url:
+            if "/upload/" in image_url and "f_auto" not in image_url:
+                parts = image_url.split("/upload/", 1)
+                image_url = f"{parts[0]}/upload/f_auto,q_auto,w_800/{parts[1]}"
 
     # Beautiful HTML layout matching ms-ambar aesthetics
     for sub in subscribers:
@@ -605,10 +609,14 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
         if not url.startswith('http://') and not url.startswith('https://'):
             if not url.startswith('/'):
                 url = '/' + url
-            return f"{api_url_val}{url}"
-        if "/media/" in url:
+            url = f"{api_url_val}{url}"
+        elif "/media/" in url:
             parts = url.split("/media/", 1)
-            return f"{api_url_val}/media/{parts[1]}"
+            url = f"{api_url_val}/media/{parts[1]}"
+        if "res.cloudinary.com" in url or "/upload/" in url:
+            if "/upload/" in url and "f_auto" not in url:
+                parts = url.split("/upload/", 1)
+                url = f"{parts[0]}/upload/f_auto,q_auto,w_800/{parts[1]}"
         return url
 
     def get_hover_color(hex_str):
@@ -1064,6 +1072,19 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
         email_title_to_render = campaign.subject
     email_title_to_render = make_urls_absolute(email_title_to_render)
 
+    email_snippet = getattr(campaign, 'snippet', '') or ''
+    if not email_snippet:
+        if campaign.email_title:
+            email_snippet = campaign.email_title
+        elif campaign.subject:
+            email_snippet = campaign.subject
+        elif campaign.poem_text:
+            clean_poem = re.sub(r'<[^>]*>', '', campaign.poem_text)
+            email_snippet = clean_poem.replace('\n', ' ').strip()[:120]
+        else:
+            email_snippet = f"Nuevo mensaje de {sender_name}"
+    email_snippet = make_urls_absolute(email_snippet)
+
     footer_text_to_render = getattr(campaign, 'footer_text', '')
     if footer_text_to_render:
         footer_html = f"<div style='margin: 0 0 10px 0;'>{footer_text_to_render}</div>"
@@ -1180,6 +1201,9 @@ def get_campaign_html_template(campaign, sub_email, base_url=None):
         </style>
       </head>
       <body class="email-body" style="background-color: {bg_color}; color: {text_color}; font-family: {body_font_family}; padding: 40px 20px; margin: 0; text-align: center; -webkit-font-smoothing: antialiased;">
+        <div style="display: none; font-size: 1px; color: #06070b; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+          {email_snippet} &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+        </div>
         <div class="email-card" style="max-width: {card_max_width_desktop}; width: 100%; min-width: 300px; box-sizing: border-box; margin: 0 auto; background: {card_bg}; {bg_style} border: {border_style}; padding: {card_padding_desktop}; border-radius: 32px; box-shadow: 0 30px 60px rgba(0,0,0,0.5), 0 0 50px rgba(229, 169, 59, 0.02); text-align: left;">
           
           <!-- Header/Logo -->
