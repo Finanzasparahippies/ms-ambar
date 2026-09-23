@@ -112,11 +112,11 @@ const PriceBreakdown = ({ baseTotal, label = 'Subtotal boletos' }: { baseTotal: 
             Transparencia Tarifaria
           </span>
           <span className="text-xs font-extrabold uppercase px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            Stripe MX
+            Nectar Checkout
           </span>
         </div>
         <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
-          El subtotal de tus accesos (<strong className="font-mono text-slate-900 dark:text-white">${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) va íntegramente al artista. El cargo de servicio (<strong className="font-mono text-amber-600 dark:text-amber-400">${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) cubre el procesamiento seguro con cifrado bancario Stripe (3.6% + $3.00 MXN).
+          El subtotal de tus accesos (<strong className="font-mono text-slate-900 dark:text-white">${base_price.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) va íntegramente al artista. El cargo de servicio (<strong className="font-mono text-amber-600 dark:text-amber-400">${service_fee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</strong>) cubre el procesamiento seguro con cifrado bancario.
         </p>
       </div>
     </div>
@@ -1316,7 +1316,7 @@ const TourPage = () => {
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
                           <span className="text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                            <Info size={10} className="shrink-0" /> Cargo de servicio (Stripe MX 3.6% + $3.00)
+                            <Info size={10} className="shrink-0" /> Cargo de servicio
                           </span>
                           <span className="font-bold font-mono text-amber-600 dark:text-amber-400">+${checkoutServiceFee.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN</span>
                         </div>
