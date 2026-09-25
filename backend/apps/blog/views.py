@@ -7,6 +7,7 @@ from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
 from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification, EmailCampaign, CampaignTemplateImage, MarketingList
+from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer, EmailCampaignSerializer, CampaignTemplateImageSerializer, MarketingListSerializer
 from .utils import send_failover_email, set_brevo_quota_full
 from config.email_waterfall import is_brevo_webhook_event_duplicate
 from django.views.decorators.csrf import csrf_exempt
