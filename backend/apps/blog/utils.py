@@ -17,129 +17,14 @@ except ImportError:
     ClientError = Exception
 
 
-def _get_today_utc_date() -> date:
-    return timezone.now().date()
+from config.email_waterfall import (
+    get_today_utc_date as _get_today_utc_date,
+    get_brevo_sent_count,
+    reserve_brevo_quota,
+    release_brevo_quota,
+    set_brevo_quota_full,
+)
 
-
-def get_brevo_sent_count(target_date: date = None) -> int:
-    if not target_date:
-        target_date = _get_today_utc_date()
-    
-    date_str = target_date.isoformat()
-    cache_key = f"brevo:daily_sent_count:{date_str}"
-    
-    # Try getting from Redis / Cache first
-    sent_count = cache.get(cache_key)
-    if sent_count is not None:
-        try:
-            return int(sent_count)
-        except (ValueError, TypeError):
-            pass
-
-    # Fallback to Database persistence
-    from apps.blog.models import DailyEmailQuotaCounter
-    try:
-        counter, created = DailyEmailQuotaCounter.objects.get_or_create(
-            provider='brevo',
-            date=target_date,
-            defaults={'sent_count': 0}
-        )
-        sent_count = counter.sent_count
-        cache.set(cache_key, sent_count, timeout=86400)
-        return sent_count
-    except Exception as e:
-        logger.error(f"[WATERFALL] Error fetching Brevo quota counter from DB: {e}")
-        return 0
-
-
-def reserve_brevo_quota(count: int = 1) -> int:
-    """
-    Atomically reserves up to `count` quota units for Brevo for today UTC.
-    Returns the number of units successfully reserved (0 to count).
-    """
-    target_date = _get_today_utc_date()
-    date_str = target_date.isoformat()
-    cache_key = f"brevo:daily_sent_count:{date_str}"
-    
-    from apps.blog.models import DailyEmailQuotaCounter
-    
-    with transaction.atomic():
-        try:
-            counter, created = DailyEmailQuotaCounter.objects.select_for_update().get_or_create(
-                provider='brevo',
-                date=target_date,
-                defaults={'sent_count': 0}
-            )
-            current = counter.sent_count
-            remaining = max(0, 300 - current)
-            if remaining <= 0:
-                cache.set(cache_key, 300, timeout=86400)
-                return 0
-            
-            to_reserve = min(count, remaining)
-            counter.sent_count = current + to_reserve
-            counter.save(update_fields=['sent_count', 'updated_at'])
-            
-            # Update cache
-            cache.set(cache_key, counter.sent_count, timeout=86400)
-            return to_reserve
-        except OperationalError as oe:
-            logger.warning(f"[WATERFALL] OperationalError during atomic quota reservation: {oe}")
-            # Fallback non-locking
-            current = get_brevo_sent_count(target_date)
-            remaining = max(0, 300 - current)
-            to_reserve = min(count, remaining)
-            if to_reserve > 0:
-                DailyEmailQuotaCounter.objects.filter(provider='brevo', date=target_date).update(
-                    sent_count=models.F('sent_count') + to_reserve
-                )
-                cache.set(cache_key, current + to_reserve, timeout=86400)
-            return to_reserve
-
-
-def release_brevo_quota(count: int = 1) -> None:
-    """
-    Releases previously reserved Brevo quota (e.g. if socket error occurred before handover).
-    """
-    target_date = _get_today_utc_date()
-    date_str = target_date.isoformat()
-    cache_key = f"brevo:daily_sent_count:{date_str}"
-    
-    from apps.blog.models import DailyEmailQuotaCounter
-    from django.db.models import F
-    
-    with transaction.atomic():
-        try:
-            counter = DailyEmailQuotaCounter.objects.select_for_update().filter(
-                provider='brevo', date=target_date
-            ).first()
-            if counter:
-                counter.sent_count = max(0, counter.sent_count - count)
-                counter.save(update_fields=['sent_count', 'updated_at'])
-                cache.set(cache_key, counter.sent_count, timeout=86400)
-        except Exception as e:
-            logger.warning(f"[WATERFALL] Error releasing Brevo quota: {e}")
-
-
-def set_brevo_quota_full() -> None:
-    """
-    Forces Brevo quota to 300 (exhausted) for today UTC (triggered by webhooks or limit notices).
-    """
-    target_date = _get_today_utc_date()
-    date_str = target_date.isoformat()
-    cache_key = f"brevo:daily_sent_count:{date_str}"
-    
-    from apps.blog.models import DailyEmailQuotaCounter
-    try:
-        DailyEmailQuotaCounter.objects.update_or_create(
-            provider='brevo',
-            date=target_date,
-            defaults={'sent_count': 300}
-        )
-        cache.set(cache_key, 300, timeout=86400)
-        logger.warning(f"[WATERFALL] [BREVO QUOTA FORCED FULL] Brevo daily quota exhausted/set to 300 for {date_str}.")
-    except Exception as e:
-        logger.error(f"[WATERFALL] Error forcing Brevo quota full: {e}")
 
 
 def send_mail_waterfall(subject, html_content, text_content, recipient_list, reply_to=None, unsubscribe_url=None, headers=None):

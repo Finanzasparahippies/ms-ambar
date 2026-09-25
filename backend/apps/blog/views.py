@@ -7,8 +7,8 @@ from django.utils.html import strip_tags
 from django.conf import settings
 from django.utils import timezone
 from .models import Category, Post, NewsletterSubscriber, SESIdentityVerification, EmailCampaign, CampaignTemplateImage, MarketingList
-from .serializers import CategorySerializer, PostSerializer, NewsletterSubscriberSerializer, SESIdentityVerificationSerializer, EmailCampaignSerializer, CampaignTemplateImageSerializer, MarketingListSerializer
 from .utils import send_failover_email, set_brevo_quota_full
+from config.email_waterfall import is_brevo_webhook_event_duplicate
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from rest_framework.views import APIView
@@ -1495,8 +1495,14 @@ class BrevoWebhookView(APIView):
         event = data.get('event') or data.get('type')
         email = data.get('email') or data.get('recipient')
         reason = (data.get('reason') or data.get('error') or '').lower()
+        event_id = data.get('id') or data.get('message-id') or data.get('event_id') or data.get('msgid')
 
-        logger.info(f"[Brevo Webhook] Received event '{event}' for email '{email}' with reason '{reason}'")
+        # Control de idempotencia en Redis con TTL de 24 horas
+        if event_id and is_brevo_webhook_event_duplicate(str(event_id)):
+            logger.info(f"[Brevo Webhook DEDUPLICATED] Evento {event_id} ({event}) ya procesado previamente. Retornando 200 OK.")
+            return Response({"status": "duplicate_skipped"}, status=status.HTTP_200_OK)
+
+        logger.info(f"[Brevo Webhook] Received event '{event}' for email '{email}' with reason '{reason}' (event_id: {event_id})")
 
         if event in ['blocked', 'hard_bounce', 'spam', 'unsubscribed'] or 'limit' in reason or 'quota' in reason or 'exceeded' in reason:
             if event == 'blocked' or 'limit' in reason or 'quota' in reason or 'exceeded' in reason:

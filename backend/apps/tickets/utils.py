@@ -6,6 +6,7 @@ from email.mime.image import MIMEImage
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
+from config.email_waterfall import dispatch_email_async
 
 
 logger = logging.getLogger(__name__)
@@ -130,7 +131,7 @@ def send_ticket_telegram(ticket):
     logger.info(f"[Ticket] Telegram delivery stub: {ticket.token}")
 
 
-def send_coupon_email(coupon, recipient_email, custom_note=''):
+def send_coupon_email(coupon, recipient_email, custom_note='', async_send=False):
     """
     Despacha un correo electrónico elegante con la información del cupón y link de auto-aplicación.
     Si el cupón no tenía correo asignado, lo asigna automáticamente al correo del destinatario para blindar el beneficio.
@@ -204,6 +205,11 @@ def send_coupon_email(coupon, recipient_email, custom_note=''):
             to=[recipient_email]
         )
         msg.attach_alternative(html_content, "text/html")
+        if async_send:
+            dispatch_email_async(msg)
+            logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Correo de cupón encolado asíncronamente.")
+            return True, "Email encolado para despacho asíncrono."
+
         msg.send(fail_silently=False)
         logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Status: exitoso. Correo de cupón enviado a {recipient_email}")
         return True, "Email enviado correctamente."

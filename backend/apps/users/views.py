@@ -13,6 +13,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView
+from config.email_waterfall import dispatch_email_async
 
 from apps.users.serializers import (
     UserRegisterSerializer,
@@ -111,10 +112,10 @@ class PasswordResetRequestView(APIView):
                     to=[email],
                 )
                 email_msg.attach_alternative(html_content, "text/html")
-                email_msg.send(fail_silently=False)
+                dispatch_email_async(email_msg)
                 email_sent = True
             except Exception as e:
-                logger.error(f"Error al enviar correo electrónico de recuperación: {e}", exc_info=True)
+                logger.error(f"Error al preparar correo de recuperación: {e}", exc_info=True)
                 # We continue since we already logged it to console for the dev to use.
 
             response_data = {

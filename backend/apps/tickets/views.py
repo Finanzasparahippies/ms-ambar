@@ -75,7 +75,7 @@ class CouponViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Debes ingresar una dirección de correo de destino.'}, status=status.HTTP_400_BAD_REQUEST)
 
         from apps.tickets.utils import send_coupon_email
-        success, msg = send_coupon_email(coupon, recipient_email, custom_note)
+        success, msg = send_coupon_email(coupon, recipient_email, custom_note, async_send=True)
         if success:
             return Response({'message': f'Cupón enviado exitosamente a {recipient_email}.'})
         return Response({'error': f'Error al enviar el correo: {msg}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
