@@ -1,9 +1,9 @@
-from django.test import SimpleTestCase, override_settings
+from django.test import TestCase, override_settings
 from django.core.mail import EmailMessage, get_connection
 from unittest.mock import patch, MagicMock
 from config.email_backends import FailoverEmailBackend
 
-class FailoverEmailBackendTests(SimpleTestCase):
+class FailoverEmailBackendTests(TestCase):
     
     @patch('config.email_backends.get_connection')
     def test_failover_sequence_all_successful(self, mock_get_connection):
