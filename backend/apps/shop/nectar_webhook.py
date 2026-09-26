@@ -54,8 +54,9 @@ class NectarWebhookReceiverView(APIView):
                     {"error": "TIMESTAMP_EXPIRED", "detail": "Desfase de tiempo excesivo."},
                     status=status.HTTP_401_UNAUTHORIZED
                 )
-        except Exception:
-            return Response({"error": "INVALID_TIMESTAMP"}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError) as ts_err:
+            logger.warning(f"[NectarWebhook] Timestamp inválido '{timestamp_str}': {ts_err}")
+            return Response({"error": "INVALID_TIMESTAMP", "detail": str(ts_err)}, status=status.HTTP_400_BAD_REQUEST)
 
         # 3. Validación Criptográfica HMAC-SHA256
         secret_key = (
@@ -81,7 +82,8 @@ class NectarWebhookReceiverView(APIView):
 
         try:
             payload = json.loads(raw_body.decode('utf-8'))
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError) as json_err:
+            logger.warning(f"[NectarWebhook] Payload no es JSON válido: {json_err}")
             payload = {}
 
         event_id = payload.get("id") or payload.get("event_id") or f"evt_{hashlib.md5(raw_body).hexdigest()}"

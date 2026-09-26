@@ -123,7 +123,8 @@ class NectarGatewayClient:
         current_fails = cache.get(fail_key, 0)
         try:
             current_fails = int(current_fails) + 1
-        except Exception:
+        except (ValueError, TypeError) as err:
+            logger.debug(f"[CircuitBreaker] Contador de fallos corrupto, reseteando a 1: {err}")
             current_fails = 1
 
         cache.set(fail_key, current_fails, timeout=CIRCUIT_BREAKER_RESET_TIMEOUT * 2)
