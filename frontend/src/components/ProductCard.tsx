@@ -167,22 +167,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           )}
         </ProductGallery>
       </div>
-      className="w-8 h-8 rounded-full bg-black/85 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/40 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
-      title="Eliminar Producto"
-      aria-label="Eliminar Producto"
-              >
-      <Trash2 size={13} />
-    </button>
-  )
-}
-          </div >
-        )}
-      </div >
 
-  {/* Product Information Header */ }
-  < div className = "flex-1 flex flex-col justify-between px-1" >
-    <div>
-      <div className="flex justify-between items-start gap-2 mb-2">
+      {/* Product Information Header */}
+      <div className="flex-1 flex flex-col justify-between px-1">
+        <div>
+          <div className="flex justify-between items-start gap-2 mb-2">
         <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-white transition-colors duration-300 group-hover:text-purple-300 leading-snug line-clamp-2">
           {product.name}
         </h3>
