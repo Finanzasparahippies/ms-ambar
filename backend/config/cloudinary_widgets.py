@@ -185,8 +185,10 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
 </div>
 
 <script>
-if (!window.cldOpenMediaLibrary) {{
-    window._cldWidgets = window._cldWidgets || {{}};
+if (!window._cldInitialized) {{
+    window._cldInitialized = true;
+    window._cldSharedML = null;
+    window._cldActiveFieldId = null;
 
     async function _cldGetFreshSignature() {{
         try {{
@@ -198,19 +200,54 @@ if (!window.cldOpenMediaLibrary) {{
     }}
 
     window.cldOpenMediaLibrary = async function(fieldId) {{
+        window._cldActiveFieldId = fieldId;
         const container = document.getElementById('cld_container_' + fieldId);
         if (!container) return;
+
+        const btn = container.querySelector('.cld-browse-btn');
+        const origBtnText = btn ? btn.innerHTML : '';
+        if (btn) {{
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+        }}
+
+        const restoreBtn = () => {{
+            if (btn) {{
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerHTML = origBtnText;
+            }}
+        }};
+
+        // Si el widget ya fue instanciado previamente, solo mostrarlo (Singleton reutilizable)
+        if (window._cldSharedML) {{
+            try {{
+                const targetFolder = container.dataset.defaultFolder;
+                window._cldSharedML.show({{
+                    folder: targetFolder ? {{ path: targetFolder, resource_type: 'image' }} : undefined
+                }});
+                restoreBtn();
+                return;
+            }} catch (err) {{
+                console.warn('Re-inicializando Media Library Widget...', err);
+                window._cldSharedML = null;
+            }}
+        }}
 
         if (typeof cloudinary === 'undefined' || !cloudinary.createMediaLibrary) {{
             if (!document.getElementById('cld_sdk_script')) {{
                 const s = document.createElement('script');
                 s.id = 'cld_sdk_script';
                 s.src = 'https://media-library.cloudinary.com/global/all.js';
-                s.onload = () => window.cldOpenMediaLibrary(fieldId);
+                s.onload = () => {{
+                    restoreBtn();
+                    window.cldOpenMediaLibrary(fieldId);
+                }};
                 document.head.appendChild(s);
                 return;
             }} else {{
-                alert('El SDK de Cloudinary se está cargando. Por favor intenta en un instante.');
+                restoreBtn();
+                alert('El componente de Cloudinary se está cargando. Intenta de nuevo en unos segundos.');
                 return;
             }}
         }}
@@ -228,38 +265,47 @@ if (!window.cldOpenMediaLibrary) {{
             }}
         }}
 
-        const widget = cloudinary.createMediaLibrary({{
-            cloud_name: cloudName,
-            api_key: apiKey,
-            timestamp: timestamp,
-            signature: signature,
-            default_folder: defaultFolder,
-            multiple: false,
-            max_files: 1
-        }}, {{
-            insertHandler: function(data) {{
-                if (data && data.assets && data.assets.length > 0) {{
+        try {{
+            window._cldSharedML = cloudinary.createMediaLibrary({{
+                cloud_name: cloudName,
+                api_key: apiKey,
+                timestamp: timestamp,
+                signature: signature,
+                default_folder: defaultFolder,
+                multiple: false,
+                max_files: 1
+            }}, {{
+                insertHandler: function(data) {{
+                    const currentFieldId = window._cldActiveFieldId;
+                    if (!currentFieldId || !data || !data.assets || !data.assets.length) return;
+
                     const asset = data.assets[0];
                     const ref = asset.format && !asset.public_id.endsWith('.' + asset.format) 
                         ? `${{asset.public_id}}.${{asset.format}}` 
                         : asset.public_id;
 
-                    const hidden = document.getElementById(fieldId + '_cloudinary_asset');
-                    const fileInput = document.getElementById(fieldId);
-                    const previewWrapper = document.getElementById('cld_preview_' + fieldId);
-                    const previewImg = document.getElementById('cld_img_' + fieldId);
-                    const previewInfo = document.getElementById('cld_info_' + fieldId);
+                    const hidden = document.getElementById(currentFieldId + '_cloudinary_asset');
+                    const fileInput = document.getElementById(currentFieldId);
+                    const previewWrapper = document.getElementById('cld_preview_' + currentFieldId);
+                    const previewImg = document.getElementById('cld_img_' + currentFieldId);
+                    const previewInfo = document.getElementById('cld_info_' + currentFieldId);
+                    const clearCheckbox = document.getElementById(currentFieldId + '-clear_id');
 
                     if (hidden) hidden.value = ref;
                     if (fileInput) fileInput.value = '';
                     if (previewImg) previewImg.src = asset.secure_url;
                     if (previewInfo) previewInfo.textContent = ref;
                     if (previewWrapper) previewWrapper.style.display = 'flex';
+                    if (clearCheckbox) clearCheckbox.checked = false;
                 }}
-            }}
-        }});
+            }});
 
-        widget.show({{ folder: {{ path: defaultFolder, resource_type: 'image' }} }});
+            window._cldSharedML.show({{
+                folder: defaultFolder ? {{ path: defaultFolder, resource_type: 'image' }} : undefined
+            }});
+        }} finally {{
+            restoreBtn();
+        }}
     }};
 
     window.cldClearAsset = function(fieldId) {{

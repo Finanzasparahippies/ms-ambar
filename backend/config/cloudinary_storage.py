@@ -34,11 +34,33 @@ class EnvironmentMediaCloudinaryStorage(MediaCloudinaryStorage):
         return cloudinary.uploader.upload(content, **options)
 
 
+_ENSURED_FOLDERS = set()
+
+
+def ensure_cloudinary_folder(folder_path: str) -> None:
+    """
+    Garantiza que la carpeta raíz exista en Cloudinary para que el Media Library
+    no genere errores 404 ni reintentos al inspeccionar rutas inexistentes.
+    """
+    if not folder_path or folder_path in _ENSURED_FOLDERS:
+        return
+    try:
+        import cloudinary.api
+        cloudinary.api.create_folder(folder_path)
+    except Exception:
+        pass
+    finally:
+        _ENSURED_FOLDERS.add(folder_path)
+
+
 def generate_cloudinary_signature(params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Genera en el servidor la firma HMAC SHA para inicializar el Media Library Widget
     sin exponer el API_SECRET en el cliente.
     """
+    default_folder = getattr(settings, 'CLOUDINARY_ENV_FOLDER', 'ms_ambar/staging')
+    ensure_cloudinary_folder(default_folder)
+
     timestamp = int(time.time())
     payload = {'timestamp': timestamp}
     if params:
@@ -52,7 +74,7 @@ def generate_cloudinary_signature(params: Optional[Dict[str, Any]] = None) -> Di
         'api_key': settings.CLOUDINARY_STORAGE.get('API_KEY', ''),
         'timestamp': timestamp,
         'signature': signature,
-        'default_folder': getattr(settings, 'CLOUDINARY_ENV_FOLDER', 'ms_ambar/staging'),
+        'default_folder': default_folder,
         'environment': getattr(settings, 'CLOUDINARY_ENV_TAG', 'staging'),
     }
 
