@@ -478,7 +478,6 @@ cloudinary.config(
 )
 
 if not TESTING:
-    DEFAULT_FILE_STORAGE = 'config.cloudinary_storage.EnvironmentMediaCloudinaryStorage'
     STORAGES = {
         "default": {
             "BACKEND": "config.cloudinary_storage.EnvironmentMediaCloudinaryStorage",
