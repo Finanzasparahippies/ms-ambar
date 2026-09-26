@@ -109,6 +109,7 @@ export const ThemedSection: React.FC<ThemedSectionProps> = ({
       data-section-animation={effectiveAnimation}
       data-section-image-filter={spec.image_filter || 'none'}
       style={combinedStyle}
+      suppressHydrationWarning={true}
       className={`relative transition-colors duration-300 ${radiusClass} ${isFooter ? 'isolation-auto !transform-none !animate-none' : ''} ${className}`}
     >
       {spec.image_filter && spec.image_filter !== 'none' && (

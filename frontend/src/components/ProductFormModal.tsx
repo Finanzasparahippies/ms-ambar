@@ -76,7 +76,9 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       
       // Load images array
       let imgList: string[] = [];
-      if (Array.isArray(editingProduct.images) && editingProduct.images.length > 0) {
+      if (Array.isArray(editingProduct.gallery) && editingProduct.gallery.length > 0) {
+        imgList = editingProduct.gallery.filter(Boolean);
+      } else if (Array.isArray(editingProduct.images) && editingProduct.images.length > 0) {
         imgList = editingProduct.images.map((img) => (typeof img === 'string' ? img : img.image)).filter(Boolean);
       } else if (editingProduct.image) {
         imgList = [editingProduct.image];

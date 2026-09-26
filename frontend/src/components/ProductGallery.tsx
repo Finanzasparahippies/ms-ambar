@@ -16,17 +16,35 @@ export interface ProductGalleryProps {
 
 /**
  * Inserta transformaciones automáticas de Cloudinary (formato óptimo, compresión inteligente y ancho)
- * sin romper URLs externas (Unsplash, etc.) ni duplicar transformaciones.
+ * sanitizando URLs anidadas o prefijos cruzados heredados.
  */
 export function getOptimizedCloudinaryUrl(url: string, width = 800): string {
   if (!url || typeof url !== 'string') return '';
-  if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
-    if (url.includes('/upload/f_auto') || url.includes('/upload/w_')) {
-      return url;
-    }
-    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${width},c_limit/`);
+  
+  let cleanUrl = url.trim();
+
+  // 1. Desanidar URLs duplicadas tipo .../https://res.cloudinary.com/...
+  if (cleanUrl.includes('https://res.cloudinary.com')) {
+    const parts = cleanUrl.split('https://res.cloudinary.com');
+    cleanUrl = 'https://res.cloudinary.com' + parts[parts.length - 1];
+  } else if (cleanUrl.includes('http://res.cloudinary.com')) {
+    const parts = cleanUrl.split('http://res.cloudinary.com');
+    cleanUrl = 'https://res.cloudinary.com' + parts[parts.length - 1];
   }
-  return url;
+
+  // 2. Corregir prefijo duplicado sobre assets existentes en ms-ambar/
+  cleanUrl = cleanUrl
+    .replace(/\/ms_ambar\/prod\/ms-ambar\//g, '/ms-ambar/')
+    .replace(/\/ms_ambar\/staging\/ms-ambar\//g, '/ms-ambar/');
+
+  // 3. Aplicar transformaciones Cloudinary
+  if (cleanUrl.includes('res.cloudinary.com') && cleanUrl.includes('/upload/')) {
+    if (cleanUrl.includes('/upload/f_auto') || cleanUrl.includes('/upload/w_')) {
+      return cleanUrl;
+    }
+    return cleanUrl.replace('/upload/', `/upload/f_auto,q_auto,w_${width},c_limit/`);
+  }
+  return cleanUrl;
 }
 
 const slideVariants = {

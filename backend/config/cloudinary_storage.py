@@ -33,6 +33,29 @@ class EnvironmentMediaCloudinaryStorage(MediaCloudinaryStorage):
             options['folder'] = folder
         return cloudinary.uploader.upload(content, **options)
 
+    def url(self, name: str) -> str:
+        if not name:
+            return ""
+        # 1. Si ya es una URL absoluta o vino anidada con otra URL, limpiar y devolver
+        if 'https://res.cloudinary.com' in name or 'http://res.cloudinary.com' in name:
+            parts = name.split('https://res.cloudinary.com')
+            return f"https://res.cloudinary.com{parts[-1]}"
+        if name.startswith('http://') or name.startswith('https://'):
+            return name
+
+        # 2. Si ya contiene el prefijo de entorno o el prefijo de galería heredado, no anteponer PREFIX
+        prefix = settings.CLOUDINARY_STORAGE.get('PREFIX', '')
+        if prefix and name.startswith(prefix):
+            clean_name = name
+        elif name.startswith('ms-ambar/') or name.startswith('ms_ambar/'):
+            clean_name = name
+        elif prefix:
+            clean_name = prefix + name
+        else:
+            clean_name = name
+
+        return cloudinary.utils.cloudinary_url(clean_name)[0]
+
 
 _ENSURED_FOLDERS = set()
 

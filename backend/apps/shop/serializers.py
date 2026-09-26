@@ -15,24 +15,37 @@ class HybridImageField(serializers.ImageField):
     def to_representation(self, value):
         if not value:
             return None
-        # Si es un objeto de almacenamiento con atributo .url resoluble
+
+        val_str = getattr(value, 'name', None) or str(value) or ''
+
+        # 1. Si ya contiene una URL de Cloudinary (o vino anidada con prefijos de entorno), limpiarla
+        if 'https://res.cloudinary.com' in val_str or 'http://res.cloudinary.com' in val_str:
+            parts = val_str.split('https://res.cloudinary.com')
+            clean_url = f"https://res.cloudinary.com{parts[-1]}"
+            # Remover prefijo duplicado sobre rutas de galería existentes
+            return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
+
+        if val_str.startswith('http://') or val_str.startswith('https://'):
+            return val_str
+
+        # 2. Si es un FieldFile con storage
         try:
             url = getattr(value, 'url', None)
-            if url and isinstance(url, str) and (url.startswith('http://') or url.startswith('https://')):
+            if url and isinstance(url, str):
+                if 'https://res.cloudinary.com' in url or 'http://res.cloudinary.com' in url:
+                    parts = url.split('https://res.cloudinary.com')
+                    clean_url = f"https://res.cloudinary.com{parts[-1]}"
+                    return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
                 return url
         except Exception:
             pass
 
-        val_str = getattr(value, 'name', str(value)) or str(value)
-        if isinstance(val_str, str) and val_str:
-            if val_str.startswith('http://') or val_str.startswith('https://'):
-                return val_str
-            # Si es un public_id relativo guardado desde el widget o Cloudinary
-            from django.conf import settings
-            cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME', '')
-            if cloud_name:
-                clean_path = val_str.lstrip('/')
-                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
+        # 3. Construir URL limpia sin prefijos duplicados
+        from django.conf import settings
+        cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME', '')
+        if cloud_name and val_str:
+            clean_path = val_str.lstrip('/')
+            return f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
         return str(value)
 
 class ProductImageSerializer(serializers.ModelSerializer):
