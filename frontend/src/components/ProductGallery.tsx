@@ -63,6 +63,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
   showThumbnails = true,
   className = '',
   onImageChange,
+  children,
 }) => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [direction, setDirection] = useState<number>(0);
