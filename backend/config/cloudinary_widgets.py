@@ -40,11 +40,7 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
     class Media:
         js = (
             'https://media-library.cloudinary.com/global/all.js',
-            'admin/js/cloudinary_media_library.js',
         )
-        css = {
-            'all': ('admin/css/cloudinary_media_library.css',)
-        }
 
     def get_context(self, name: str, value: Any, attrs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         context = super().get_context(name, value, attrs)
@@ -77,13 +73,7 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
 
     def render(self, name: str, value: Any, attrs: Optional[Dict[str, Any]] = None, renderer: Any = None) -> str:
         context = self.get_context(name, value, attrs)
-        try:
-            from django.template.loader import render_to_string
-            from django.utils.safestring import mark_safe
-            return mark_safe(render_to_string(self.template_name, context))
-        except Exception:
-            # Fallback inline: 100% blindado contra TemplateDoesNotExist si el contenedor no ha sido reconstruido
-            return self._render_inline(name, value, attrs, context)
+        return self._render_inline(name, value, attrs, context)
 
     def _render_inline(self, name: str, value: Any, attrs: Optional[Dict[str, Any]], context: Dict[str, Any]) -> str:
         from django.forms.widgets import FileInput
@@ -112,7 +102,7 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
             checkbox_name = escape(str(w.get('checkbox_name', f"{name}-clear")))
             checkbox_id = escape(str(w.get('checkbox_id', f"{field_id}-clear_id")))
             clear_checkbox_html = (
-                f'<div class="cld-initial-wrapper" style="margin-top: 6px; font-size: 12px;">'
+                f'<div class="cld-initial-wrapper" style="margin-top: 6px; font-size: 12px; color: #64748b;">'
                 f'<label for="{checkbox_id}">'
                 f'<input type="checkbox" name="{checkbox_name}" id="{checkbox_id}"> '
                 f'Limpiar / Eliminar imagen actual'
@@ -121,6 +111,34 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
             )
 
         html = f"""
+<style>
+.cloudinary-widget-container {{
+    display: flex; flex-direction: column; gap: 12px; padding: 12px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; max-width: 650px; margin: 6px 0;
+}}
+.cld-preview-card {{
+    display: flex; align-items: center; gap: 14px; background: #0f172a; border: 1px solid #1e293b;
+    border-radius: 8px; padding: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}}
+.cld-preview-img {{ width: 100px; height: 75px; object-fit: cover; border-radius: 6px; border: 1px solid #334155; background: #000; }}
+.cld-asset-meta {{ display: flex; flex-direction: column; gap: 6px; flex: 1; overflow: hidden; }}
+.cld-env-badge {{ align-self: flex-start; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }}
+.cld-env-badge.cld-env-production, .cld-env-badge.cld-env-prod {{ background: #065f46; color: #6ee7b7; border: 1px solid #047857; }}
+.cld-env-badge.cld-env-staging, .cld-env-badge.cld-env-local {{ background: #78350f; color: #fde68a; border: 1px solid #b45309; }}
+.cld-asset-name {{ font-family: ui-monospace, Menlo, Monaco, Consolas, monospace; font-size: 11px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }}
+.cld-remove-btn {{ align-self: flex-start; background: transparent; color: #f87171; border: 1px solid #ef4444; padding: 3px 8px; font-size: 11px; border-radius: 4px; cursor: pointer; transition: all 0.2s; }}
+.cld-remove-btn:hover {{ background: #ef4444; color: #fff; }}
+.cld-actions-toolbar {{ display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }}
+.cld-browse-btn {{
+    background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%); color: #fff !important;
+    border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s;
+}}
+.cld-browse-btn:hover {{ background: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%); transform: translateY(-1px); }}
+.cld-separator {{ font-size: 12px; color: #64748b; font-style: italic; }}
+.cld-file-input-wrapper input[type="file"] {{ font-size: 12px; }}
+</style>
+
 <div class="cloudinary-widget-container" 
      id="cld_container_{field_id}"
      data-field-name="{name}"
@@ -165,6 +183,95 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
 
     {clear_checkbox_html}
 </div>
+
+<script>
+if (!window.cldOpenMediaLibrary) {{
+    window._cldWidgets = window._cldWidgets || {{}};
+
+    async function _cldGetFreshSignature() {{
+        try {{
+            const res = await fetch('/admin/cloudinary/signature/', {{
+                headers: {{ 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }}
+            }});
+            return res.ok ? await res.json() : null;
+        }} catch {{ return null; }}
+    }}
+
+    window.cldOpenMediaLibrary = async function(fieldId) {{
+        const container = document.getElementById('cld_container_' + fieldId);
+        if (!container) return;
+
+        if (typeof cloudinary === 'undefined' || !cloudinary.createMediaLibrary) {{
+            if (!document.getElementById('cld_sdk_script')) {{
+                const s = document.createElement('script');
+                s.id = 'cld_sdk_script';
+                s.src = 'https://media-library.cloudinary.com/global/all.js';
+                s.onload = () => window.cldOpenMediaLibrary(fieldId);
+                document.head.appendChild(s);
+                return;
+            }} else {{
+                alert('El SDK de Cloudinary se está cargando. Por favor intenta en un instante.');
+                return;
+            }}
+        }}
+
+        let {{ cloudName, apiKey, defaultFolder }} = container.dataset;
+        let timestamp = parseInt(container.dataset.timestamp, 10);
+        let signature = container.dataset.signature;
+
+        const now = Math.floor(Date.now() / 1000);
+        if (!signature || !timestamp || (now - timestamp > 1800)) {{
+            const fresh = await _cldGetFreshSignature();
+            if (fresh) {{
+                ({{ cloud_name: cloudName, api_key: apiKey, timestamp, signature, default_folder: defaultFolder }} = fresh);
+                Object.assign(container.dataset, {{ cloudName, apiKey, timestamp, signature, defaultFolder }});
+            }}
+        }}
+
+        const widget = cloudinary.createMediaLibrary({{
+            cloud_name: cloudName,
+            api_key: apiKey,
+            timestamp: timestamp,
+            signature: signature,
+            default_folder: defaultFolder,
+            multiple: false,
+            max_files: 1
+        }}, {{
+            insertHandler: function(data) {{
+                if (data && data.assets && data.assets.length > 0) {{
+                    const asset = data.assets[0];
+                    const ref = asset.format && !asset.public_id.endsWith('.' + asset.format) 
+                        ? `${{asset.public_id}}.${{asset.format}}` 
+                        : asset.public_id;
+
+                    const hidden = document.getElementById(fieldId + '_cloudinary_asset');
+                    const fileInput = document.getElementById(fieldId);
+                    const previewWrapper = document.getElementById('cld_preview_' + fieldId);
+                    const previewImg = document.getElementById('cld_img_' + fieldId);
+                    const previewInfo = document.getElementById('cld_info_' + fieldId);
+
+                    if (hidden) hidden.value = ref;
+                    if (fileInput) fileInput.value = '';
+                    if (previewImg) previewImg.src = asset.secure_url;
+                    if (previewInfo) previewInfo.textContent = ref;
+                    if (previewWrapper) previewWrapper.style.display = 'flex';
+                }}
+            }}
+        }});
+
+        widget.show({{ folder: {{ path: defaultFolder, resource_type: 'image' }} }});
+    }};
+
+    window.cldClearAsset = function(fieldId) {{
+        const hidden = document.getElementById(fieldId + '_cloudinary_asset');
+        const previewWrapper = document.getElementById('cld_preview_' + fieldId);
+        if (hidden) hidden.value = '';
+        if (previewWrapper) previewWrapper.style.display = 'none';
+        const clearCheckbox = document.getElementById(fieldId + '-clear_id');
+        if (clearCheckbox) clearCheckbox.checked = true;
+    }};
+}}
+</script>
 """
         return mark_safe(html)
 
