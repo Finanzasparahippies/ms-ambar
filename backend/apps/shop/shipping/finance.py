@@ -21,8 +21,8 @@ def check_wallet_balance_alert(balance_amount: Optional[float], currency: str = 
                         f"(umbral de alerta: ${SKYDROPX_MIN_BALANCE_ALERT:.2f} {currency}). "
                         f"Recargue saldo inmediatamente en https://app.skydropx.com/ para prevenir interrupciones de despacho."
                     )
-        except (ValueError, TypeError):
-            pass
+        except (ValueError, TypeError) as err:
+            logger.debug(f"[SkydropxWalletAlert] Error parseando saldo de cartera '{balance_amount}': {err}")
 
 
 def get_credits(client) -> Dict[str, Any]:
