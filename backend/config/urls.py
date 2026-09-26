@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
 from apps.blog.views import BrevoWebhookView
+from config.cloudinary_storage import cloudinary_signature_view
 
 urlpatterns = [
+    path('admin/cloudinary/signature/', cloudinary_signature_view, name='admin-cloudinary-signature'),
     path('admin/', admin.site.urls),
     path('api/webhooks/brevo', BrevoWebhookView.as_view(), name='brevo-webhook-root'),
     path('api/tickets/', include('apps.tickets.urls')),

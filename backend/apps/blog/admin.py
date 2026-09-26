@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.core.cache import cache
+from config.cloudinary_widgets import CloudinaryMediaAdminMixin
 from .models import Category, Post, NewsletterSubscriber, EmailCampaign, CampaignTemplateImage, DailyEmailQuotaCounter
 
 @admin.register(Category)
@@ -8,7 +9,7 @@ class CategoryAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
 
 @admin.register(Post)
-class PostAdmin(admin.ModelAdmin):
+class PostAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
     list_display = ('title', 'category', 'is_published', 'created_at')
     list_filter = ('category', 'is_published')
     prepopulated_fields = {'slug': ('title',)}
@@ -21,14 +22,14 @@ class NewsletterSubscriberAdmin(admin.ModelAdmin):
     list_filter = ('created_at', 'is_active')
 
 @admin.register(EmailCampaign)
-class EmailCampaignAdmin(admin.ModelAdmin):
+class EmailCampaignAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
     list_display = ('subject', 'template_type', 'is_sent', 'sent_at', 'created_at')
     list_filter = ('template_type', 'is_sent')
     search_fields = ('subject', 'poem_text')
 
 
 @admin.register(CampaignTemplateImage)
-class CampaignTemplateImageAdmin(admin.ModelAdmin):
+class CampaignTemplateImageAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
     list_display = ('id', 'image', 'created_at')
 
 

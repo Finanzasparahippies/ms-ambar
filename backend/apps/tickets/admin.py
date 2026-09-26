@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from config.cloudinary_widgets import CloudinaryMediaAdminMixin
 from .models import Theater, Event, Seat, Ticket, SiteSettings, Coupon
 
 
@@ -15,7 +16,7 @@ class TheaterAdmin(admin.ModelAdmin):
 
 
 @admin.register(Event)
-class EventAdmin(admin.ModelAdmin):
+class EventAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
     list_display = ('title', 'artist', 'date', 'event_type', 'allow_seatless_tickets', 'allow_numbered_tickets', 'is_active')
     list_filter = ('is_active', 'event_type', 'date', 'allow_seatless_tickets', 'allow_numbered_tickets')
     fieldsets = (
@@ -76,7 +77,7 @@ class TicketAdmin(admin.ModelAdmin):
 
 
 @admin.register(SiteSettings)
-class SiteSettingsAdmin(admin.ModelAdmin):
+class SiteSettingsAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
     fieldsets = (
         ('Página de Compra de Boletos', {
             'fields': ('tickets_page_subtitle',),

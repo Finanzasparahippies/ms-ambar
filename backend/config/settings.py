@@ -79,7 +79,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -148,6 +148,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = Path(env("STATIC_ROOT", default=str(BASE_DIR / "staticfiles")))
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Media files (User-uploaded files)
 MEDIA_URL = '/media/'
@@ -451,19 +452,41 @@ LOGGING = {
 if TESTING:
     EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 
-# Cloudinary Configuration
+# Cloudinary Environment Isolation Configuration
 import cloudinary
+
+CLOUDINARY_CURRENT_ENV = os.getenv('ENVIRONMENT', ENVIRONMENT).lower()
+CLOUDINARY_IS_PROD = CLOUDINARY_CURRENT_ENV in ['production', 'prod']
+
+CLOUDINARY_ENV_FOLDER = 'ms_ambar/prod' if CLOUDINARY_IS_PROD else 'ms_ambar/staging'
+CLOUDINARY_ENV_TAG = 'production' if CLOUDINARY_IS_PROD else 'staging'
+
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': env('CLOUDINARY_CLOUD_NAME', default='test_cloud' if TESTING else ''),
     'API_KEY': env('CLOUDINARY_API_KEY', default='test_key' if TESTING else ''),
     'API_SECRET': env('CLOUDINARY_API_SECRET', default='test_secret' if TESTING else ''),
+    'PREFIX': f"{CLOUDINARY_ENV_FOLDER}/",
+    'MEDIA_TAG': CLOUDINARY_ENV_TAG,
+    'STATIC_TAG': f"{CLOUDINARY_ENV_TAG}_static",
 }
+
 cloudinary.config(
     cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
     api_key=CLOUDINARY_STORAGE['API_KEY'],
     api_secret=CLOUDINARY_STORAGE['API_SECRET'],
     secure=True
 )
+
+if not TESTING:
+    DEFAULT_FILE_STORAGE = 'config.cloudinary_storage.EnvironmentMediaCloudinaryStorage'
+    STORAGES = {
+        "default": {
+            "BACKEND": "config.cloudinary_storage.EnvironmentMediaCloudinaryStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
 
 # File and Payload Upload Limits (100MB for batch image optimization)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100MB

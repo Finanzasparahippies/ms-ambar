@@ -1,4 +1,5 @@
 from django.contrib import admin
+from config.cloudinary_widgets import CloudinaryMediaAdminMixin, CloudinaryTabularInline
 from .models import Category, Product, ProductImage, Order, OrderItem, Expense, ShopShippingConfig, ShippingEvent
 from .shipping import reconcile_order_shipping
 
@@ -7,13 +8,13 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
     prepopulated_fields = {'slug': ('name',)}
 
-class ProductImageInline(admin.TabularInline):
+class ProductImageInline(CloudinaryTabularInline):
     model = ProductImage
     extra = 1
     fields = ('image', 'is_primary', 'order', 'alt_text')
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+class ProductAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
     list_display = ('name', 'price', 'stock', 'category', 'is_active', 'material', 'origin')
     list_filter = ('category', 'is_active', 'origin')
     search_fields = ('name', 'description', 'detailed_description', 'material', 'origin')

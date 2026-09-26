@@ -1,0 +1,148 @@
+/* Cloudinary Media Library Widget Styling - Django Admin */
+
+.cloudinary-widget-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    background: var(--darkened-bg, #f8fafc);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
+    max-width: 650px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+/* Previsualización Card */
+.cld-preview-wrapper {
+    margin-bottom: 4px;
+}
+
+.cld-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+.cld-preview-img {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    background: #000;
+}
+
+.cld-asset-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    overflow: hidden;
+}
+
+.cld-env-badge {
+    align-self: flex-start;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.cld-env-badge.cld-env-production,
+.cld-env-badge.cld-env-prod {
+    background: #065f46;
+    color: #6ee7b7;
+    border: 1px solid #047857;
+}
+
+.cld-env-badge.cld-env-staging,
+.cld-env-badge.cld-env-local {
+    background: #78350f;
+    color: #fde68a;
+    border: 1px solid #b45309;
+}
+
+.cld-asset-name {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    color: #cbd5e1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+}
+
+.cld-remove-btn {
+    align-self: flex-start;
+    background: transparent;
+    color: #f87171;
+    border: 1px solid #ef4444;
+    padding: 3px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.cld-remove-btn:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+/* Toolbar de acciones */
+.cld-actions-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.cld-browse-btn {
+    background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%);
+    color: #ffffff !important;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.cld-browse-btn:hover {
+    background: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
+.cld-cloud-icon {
+    display: inline-block;
+}
+
+.cld-separator {
+    font-size: 12px;
+    color: var(--body-quiet-color, #64748b);
+    font-style: italic;
+}
+
+.cld-file-input-wrapper input[type="file"] {
+    font-size: 12px;
+}
+
+.cld-initial-wrapper {
+    font-size: 12px;
+    color: var(--body-quiet-color, #64748b);
+    margin-top: 4px;
+}
