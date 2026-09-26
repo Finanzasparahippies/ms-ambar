@@ -4,7 +4,8 @@ from .models import Category, Product, ProductImage, Order, OrderItem
 class HybridImageField(serializers.ImageField):
     """
     Soporta tanto archivos binarios (multipart upload) como URLs directas
-    en string (Cloudinary o CDN tras optimización).
+    en string (Cloudinary o CDN tras optimización), garantizando siempre
+    la entrega de URLs seguras absolutas en la API.
     """
     def to_internal_value(self, data):
         if isinstance(data, str):
@@ -14,13 +15,25 @@ class HybridImageField(serializers.ImageField):
     def to_representation(self, value):
         if not value:
             return None
-        val_str = getattr(value, 'name', str(value)) or str(value)
-        if isinstance(val_str, str) and (val_str.startswith('http://') or val_str.startswith('https://')):
-            return val_str
+        # Si es un objeto de almacenamiento con atributo .url resoluble
         try:
-            return value.url
-        except (ValueError, AttributeError):
-            return str(value)
+            url = getattr(value, 'url', None)
+            if url and isinstance(url, str) and (url.startswith('http://') or url.startswith('https://')):
+                return url
+        except Exception:
+            pass
+
+        val_str = getattr(value, 'name', str(value)) or str(value)
+        if isinstance(val_str, str) and val_str:
+            if val_str.startswith('http://') or val_str.startswith('https://'):
+                return val_str
+            # Si es un public_id relativo guardado desde el widget o Cloudinary
+            from django.conf import settings
+            cloud_name = settings.CLOUDINARY_STORAGE.get('CLOUD_NAME', '')
+            if cloud_name:
+                clean_path = val_str.lstrip('/')
+                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
+        return str(value)
 
 class ProductImageSerializer(serializers.ModelSerializer):
     image = HybridImageField(required=True)
@@ -38,6 +51,7 @@ class CategorySerializer(serializers.ModelSerializer):
 class ProductSerializer(serializers.ModelSerializer):
     image = HybridImageField(required=False, allow_null=True)
     images = ProductImageSerializer(many=True, read_only=True)
+    gallery = serializers.SerializerMethodField()
     uploaded_images = serializers.ListField(
         child=serializers.CharField(),
         required=False,
@@ -45,6 +59,24 @@ class ProductSerializer(serializers.ModelSerializer):
     )
     category_name = serializers.ReadOnlyField(source='category.name')
     specifications = serializers.JSONField(required=False, default=dict)
+
+    def get_gallery(self, obj):
+        """
+        Retorna un array plano de URLs absolutas para facilitar el consumo
+        directo en componentes de galería y carrusel en el frontend.
+        """
+        urls = []
+        product_images = obj.images.all().order_by('-is_primary', 'order', 'id')
+        for p_img in product_images:
+            if p_img.image:
+                val = HybridImageField().to_representation(p_img.image)
+                if val and val not in urls:
+                    urls.append(val)
+        if obj.image:
+            main_url = HybridImageField().to_representation(obj.image)
+            if main_url and main_url not in urls:
+                urls.insert(0, main_url)
+        return urls
 
     def to_internal_value(self, data):
         ret = super().to_internal_value(data)
@@ -134,7 +166,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'slug', 'description', 'detailed_description',
             'material', 'dimensions', 'weight', 'origin', 'care_instructions',
             'specifications', 'price', 'stock',
-            'image', 'images', 'uploaded_images', 'category', 'category_name', 'is_active',
+            'image', 'images', 'gallery', 'uploaded_images', 'category', 'category_name', 'is_active',
             'created_at', 'stripe_product_id', 'stripe_price_id'
         ]
         read_only_fields = ['id', 'created_at', 'stripe_product_id', 'stripe_price_id']

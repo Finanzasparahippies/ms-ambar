@@ -15,6 +15,7 @@ import {
   Trash2
 } from 'lucide-react';
 import { Product } from '../types';
+import { ProductGallery } from './ProductGallery';
 
 interface ProductCardProps {
   product: Product;
@@ -36,30 +37,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const [quantity, setQuantity] = useState<number>(1);
   const [showSpecs, setShowSpecs] = useState<boolean>(false);
   const [isAdded, setIsAdded] = useState<boolean>(false);
-  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
-  const imageRef = React.useRef<HTMLImageElement>(null);
+  const cardRef = React.useRef<HTMLDivElement>(null);
 
   const productImages: string[] = React.useMemo(() => {
+    if (product.gallery && product.gallery.length > 0) {
+      const g = product.gallery.filter((url): url is string => Boolean(url && typeof url === 'string'));
+      if (g.length > 0) return g;
+    }
     if (product.images && product.images.length > 0) {
       const extracted = product.images
         .map((img) => (typeof img === 'string' ? img : img.image))
-        .filter(Boolean);
+        .filter((url): url is string => Boolean(url));
       if (extracted.length > 0) return extracted;
     }
     return [product.image || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&q=80'];
-  }, [product.images, product.image]);
-
-  const activeImage = productImages[activeImageIndex] || productImages[0];
-
-  const handleNextImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveImageIndex((prev) => (prev + 1) % productImages.length);
-  };
-
-  const handlePrevImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setActiveImageIndex((prev) => (prev - 1 + productImages.length) % productImages.length);
-  };
+  }, [product.gallery, product.images, product.image]);
 
   const handleIncrement = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -78,7 +70,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAddToCart(product, quantity, imageRef.current);
+    onAddToCart(product, quantity, cardRef.current);
     setIsAdded(true);
     setTimeout(() => {
       setIsAdded(false);
@@ -111,275 +103,250 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ delay: index * 0.05, duration: 0.4 }}
       className="group relative flex flex-col bg-[#0C0F0D]/90 backdrop-blur-xl border border-white/[0.08] hover:border-purple-500/40 rounded-[2rem] p-4 transition-all duration-500 shadow-xl hover:shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(139,92,246,0.15)] hover:-translate-y-1"
     >
-      {/* Visual Media Container with Multi-Image Carousel */}
-      <div className="aspect-[4/5] w-full rounded-[1.5rem] overflow-hidden relative mb-4 bg-gradient-to-b from-purple-950/20 to-[#080C0A] border border-white/[0.06] group/image">
-        <img
-          ref={imageRef}
-          key={activeImage}
-          src={activeImage}
-          alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105 opacity-90 group-hover:opacity-100"
-          loading="lazy"
-        />
-
-        {/* Carousel Navigation Arrows if multiple images */}
-        {productImages.length > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={handlePrevImage}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/75 hover:bg-purple-600 text-white border border-white/20 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md shadow-lg"
-              aria-label="Imagen anterior"
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleNextImage}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/75 hover:bg-purple-600 text-white border border-white/20 flex items-center justify-center transition-all opacity-0 group-hover/image:opacity-100 z-10 backdrop-blur-md shadow-lg"
-              aria-label="Siguiente imagen"
-            >
-              <ChevronRight size={16} />
-            </button>
-
-            {/* Indicator Dots */}
-            <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-1.5 z-10 pointer-events-none">
-              {productImages.map((_, dotIdx) => (
-                <div
-                  key={dotIdx}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    dotIdx === activeImageIndex
-                      ? 'w-5 bg-purple-400 shadow-[0_0_8px_rgba(168,85,247,0.8)]'
-                      : 'w-1.5 bg-white/40'
-                  }`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Category & Stock Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
-          <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.2em] bg-black/75 backdrop-blur-md border border-purple-500/30 text-purple-200 shadow-md">
-            {categoryLabel}
-          </span>
-          {typeof product.stock === 'number' && product.stock <= 5 && product.stock > 0 && (
-            <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 backdrop-blur-md border border-amber-500/50 text-amber-300 shadow-md flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-              ¡Últimas {product.stock}!
+      {/* Galería Táctil de Alto Rendimiento con Gesto Swipe Móvil */}
+      <div className="w-full relative mb-4">
+        <ProductGallery
+          images={productImages}
+          productName={product.name}
+          priority={index < 4}
+          aspectRatio="aspect-[4/5]"
+          showThumbnails={false}
+        >
+          {/* Category & Stock Badges */}
+          <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none z-10">
+            <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-[0.2em] bg-black/75 backdrop-blur-md border border-purple-500/30 text-purple-200 shadow-md">
+              {categoryLabel}
             </span>
-          )}
-        </div>
-
-        {/* Admin Quick Action Controls */}
-        {isAdmin && (
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20 opacity-95 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            {onEdit && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(product);
-                }}
-                className="w-8 h-8 rounded-full bg-black/85 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
-                title="Editar Producto"
-                aria-label="Editar Producto"
-              >
-                <Pencil size={13} />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(product);
-                }}
-                className="w-8 h-8 rounded-full bg-black/85 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/40 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
-                title="Eliminar Producto"
-                aria-label="Eliminar Producto"
-              >
-                <Trash2 size={13} />
-              </button>
+            {typeof product.stock === 'number' && product.stock <= 5 && product.stock > 0 && (
+              <span className="px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-amber-500/20 backdrop-blur-md border border-amber-500/50 text-amber-300 shadow-md flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                ¡Últimas {product.stock}!
+              </span>
             )}
           </div>
-        )}
-      </div>
 
-      {/* Product Information Header */}
-      <div className="flex-1 flex flex-col justify-between px-1">
-        <div>
-          <div className="flex justify-between items-start gap-2 mb-2">
-            <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-white transition-colors duration-300 group-hover:text-purple-300 leading-snug line-clamp-2">
-              {product.name}
-            </h3>
-            <div className="shrink-0 text-right">
-              <span className="font-black text-sm md:text-base text-amber-300 drop-shadow-md">
-                ${product.price}
-              </span>
-              <span className="block text-xs font-bold text-neutral-400 uppercase tracking-widest">
-                MXN
-              </span>
-            </div>
-          </div>
-
-          {product.description && (
-            <p className="text-xs text-neutral-300/80 line-clamp-2 mb-3 leading-relaxed font-light">
-              {product.description}
-            </p>
-          )}
-        </div>
-
-        {/* Technical Specifications Accordion Button */}
-        {hasSpecs && (
-          <div className="mb-3">
-            <button
-              type="button"
-              onClick={() => setShowSpecs((prev) => !prev)}
-              className="w-full py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-purple-950/30 border border-white/10 hover:border-purple-500/30 text-neutral-300 hover:text-white flex items-center justify-between text-xs font-black uppercase tracking-wider transition-all shadow-sm"
-              aria-expanded={showSpecs}
-            >
-              <span className="flex items-center gap-1.5">
-                <Info size={13} className="text-purple-400" />
-                Especificaciones
-              </span>
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-300 text-neutral-400 ${showSpecs ? 'rotate-180 text-purple-400' : ''}`}
-              />
-            </button>
-
-            {/* Specifications Collapsible Panel */}
-            <AnimatePresence>
-              {showSpecs && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeInOut' }}
-                  className="overflow-hidden"
+          {/* Admin Quick Action Controls */}
+          {isAdmin && (
+            <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-20 opacity-95 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-auto">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(product);
+                  }}
+                  className="w-8 h-8 rounded-full bg-black/85 hover:bg-purple-600 text-purple-300 hover:text-white border border-purple-500/40 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
+                  title="Editar Producto"
+                  aria-label="Editar Producto"
                 >
-                  <div className="mt-2 p-3.5 bg-black/90 border border-purple-500/20 rounded-xl space-y-2.5 text-xs text-neutral-200 shadow-inner backdrop-blur-md">
-                    {product.detailed_description && (
-                      <p className="text-xs text-neutral-300/90 italic pb-2 border-b border-white/10 leading-relaxed font-light">
-                        {product.detailed_description}
-                      </p>
-                    )}
-
-                    {resolvedSpecs.material && (
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1">
-                          <Layers size={11} className="text-purple-400" /> Material
-                        </span>
-                        <span className="font-semibold text-white">{resolvedSpecs.material}</span>
-                      </div>
-                    )}
-
-                    {resolvedSpecs.dimensions && (
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-neutral-400 uppercase tracking-widest font-bold">Dimensiones</span>
-                        <span className="font-semibold text-white">{resolvedSpecs.dimensions}</span>
-                      </div>
-                    )}
-
-                    {resolvedSpecs.weight && (
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-neutral-400 uppercase tracking-widest font-bold">Peso</span>
-                        <span className="font-semibold text-white">{resolvedSpecs.weight}</span>
-                      </div>
-                    )}
-
-                    {resolvedSpecs.origin && (
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-neutral-400 uppercase tracking-widest font-bold">Origen</span>
-                        <span className="font-semibold text-white">{resolvedSpecs.origin}</span>
-                      </div>
-                    )}
-
-                    {resolvedSpecs.care_instructions && (
-                      <div className="pt-1.5 border-t border-white/10">
-                        <span className="block text-xs text-neutral-400 uppercase tracking-widest font-bold mb-0.5">
-                          Cuidados
-                        </span>
-                        <span className="text-xs text-neutral-200/90 leading-tight block">
-                          {resolvedSpecs.care_instructions}
-                        </span>
-                      </div>
-                    )}
-
-                    {resolvedSpecs.details &&
-                      Object.entries(resolvedSpecs.details).map(([key, val]) => (
-                        <div key={key} className="flex justify-between items-center text-xs">
-                          <span className="text-neutral-400 uppercase tracking-widest font-bold">{key}</span>
-                          <span className="font-semibold text-white">{val}</span>
-                        </div>
-                      ))}
-                  </div>
-                </motion.div>
+                  <Pencil size={13} />
+                </button>
               )}
-            </AnimatePresence>
-          </div>
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(product);
+                  }}
+                  className="w-8 h-8 rounded-full bg-black/85 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/40 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
+                  title="Eliminar Producto"
+                  aria-label="Eliminar Producto"
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          )}
+        </ProductGallery>
+      </div>
+      className="w-8 h-8 rounded-full bg-black/85 hover:bg-rose-600 text-rose-400 hover:text-white border border-rose-500/40 flex items-center justify-center transition-all shadow-lg backdrop-blur-md"
+      title="Eliminar Producto"
+      aria-label="Eliminar Producto"
+              >
+      <Trash2 size={13} />
+    </button>
+  )
+}
+          </div >
         )}
+      </div >
 
-        {/* Action Bar: Interactive Quantity Controls & Add to Cart */}
-        <div className="pt-2.5 flex items-center gap-2 border-t border-white/[0.08]">
-          {/* Quantity Stepper */}
-          <div className="flex items-center bg-white/[0.06] border border-white/15 rounded-xl p-1 shrink-0 shadow-sm">
-            <button
-              type="button"
-              onClick={handleDecrement}
-              disabled={quantity <= 1}
-              className="w-7 h-7 rounded-lg bg-white/[0.08] hover:bg-white/[0.2] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white font-bold transition-all border border-white/10"
-              aria-label="Disminuir cantidad"
-            >
-              <Minus size={12} />
-            </button>
-            <span className="w-8 text-center text-xs font-mono font-black text-white selection:bg-none">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={handleIncrement}
-              className="w-7 h-7 rounded-lg bg-white/[0.08] hover:bg-white/[0.2] active:scale-95 flex items-center justify-center text-white font-bold transition-all border border-white/10"
-              aria-label="Aumentar cantidad"
-            >
-              <Plus size={12} />
-            </button>
-          </div>
-
-          {/* Add to Cart Button (Luxury Purple/Indigo Gradient) */}
-          <motion.button
-            whileHover={{ scale: 1.02, filter: "brightness(1.08)" }}
-            whileTap={{ scale: 0.96 }}
-            onClick={handleAddToCart}
-            className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg ${
-              isAdded
-                ? 'bg-emerald-500 text-white border border-emerald-400 shadow-emerald-500/30'
-                : 'bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white border border-purple-400/40 shadow-purple-600/30 hover:shadow-purple-600/50'
-            }`}
-          >
-            {isAdded ? (
-              <>
-                <Check size={15} className="stroke-[3]" />
-                <span>¡Agregado!</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={15} className="stroke-[2.5]" />
-                <span>Agregar ({quantity})</span>
-              </>
-            )}
-          </motion.button>
+  {/* Product Information Header */ }
+  < div className = "flex-1 flex flex-col justify-between px-1" >
+    <div>
+      <div className="flex justify-between items-start gap-2 mb-2">
+        <h3 className="text-sm md:text-base font-black uppercase tracking-wider text-white transition-colors duration-300 group-hover:text-purple-300 leading-snug line-clamp-2">
+          {product.name}
+        </h3>
+        <div className="shrink-0 text-right">
+          <span className="font-black text-sm md:text-base text-amber-300 drop-shadow-md">
+            ${product.price}
+          </span>
+          <span className="block text-xs font-bold text-neutral-400 uppercase tracking-widest">
+            MXN
+          </span>
         </div>
       </div>
-    </motion.div>
+
+      {product.description && (
+        <p className="text-xs text-neutral-300/80 line-clamp-2 mb-3 leading-relaxed font-light">
+          {product.description}
+        </p>
+      )}
+    </div>
+
+{/* Technical Specifications Accordion Button */ }
+{
+  hasSpecs && (
+    <div className="mb-3">
+      <button
+        type="button"
+        onClick={() => setShowSpecs((prev) => !prev)}
+        className="w-full py-2 px-3 rounded-xl bg-white/[0.04] hover:bg-purple-950/30 border border-white/10 hover:border-purple-500/30 text-neutral-300 hover:text-white flex items-center justify-between text-xs font-black uppercase tracking-wider transition-all shadow-sm"
+        aria-expanded={showSpecs}
+      >
+        <span className="flex items-center gap-1.5">
+          <Info size={13} className="text-purple-400" />
+          Especificaciones
+        </span>
+        <ChevronDown
+          size={14}
+          className={`transition-transform duration-300 text-neutral-400 ${showSpecs ? 'rotate-180 text-purple-400' : ''}`}
+        />
+      </button>
+
+      {/* Specifications Collapsible Panel */}
+      <AnimatePresence>
+        {showSpecs && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="mt-2 p-3.5 bg-black/90 border border-purple-500/20 rounded-xl space-y-2.5 text-xs text-neutral-200 shadow-inner backdrop-blur-md">
+              {product.detailed_description && (
+                <p className="text-xs text-neutral-300/90 italic pb-2 border-b border-white/10 leading-relaxed font-light">
+                  {product.detailed_description}
+                </p>
+              )}
+
+              {resolvedSpecs.material && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-neutral-400 uppercase tracking-widest font-bold flex items-center gap-1">
+                    <Layers size={11} className="text-purple-400" /> Material
+                  </span>
+                  <span className="font-semibold text-white">{resolvedSpecs.material}</span>
+                </div>
+              )}
+
+              {resolvedSpecs.dimensions && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-neutral-400 uppercase tracking-widest font-bold">Dimensiones</span>
+                  <span className="font-semibold text-white">{resolvedSpecs.dimensions}</span>
+                </div>
+              )}
+
+              {resolvedSpecs.weight && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-neutral-400 uppercase tracking-widest font-bold">Peso</span>
+                  <span className="font-semibold text-white">{resolvedSpecs.weight}</span>
+                </div>
+              )}
+
+              {resolvedSpecs.origin && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-neutral-400 uppercase tracking-widest font-bold">Origen</span>
+                  <span className="font-semibold text-white">{resolvedSpecs.origin}</span>
+                </div>
+              )}
+
+              {resolvedSpecs.care_instructions && (
+                <div className="pt-1.5 border-t border-white/10">
+                  <span className="block text-xs text-neutral-400 uppercase tracking-widest font-bold mb-0.5">
+                    Cuidados
+                  </span>
+                  <span className="text-xs text-neutral-200/90 leading-tight block">
+                    {resolvedSpecs.care_instructions}
+                  </span>
+                </div>
+              )}
+
+              {resolvedSpecs.details &&
+                Object.entries(resolvedSpecs.details).map(([key, val]) => (
+                  <div key={key} className="flex justify-between items-center text-xs">
+                    <span className="text-neutral-400 uppercase tracking-widest font-bold">{key}</span>
+                    <span className="font-semibold text-white">{val}</span>
+                  </div>
+                ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+{/* Action Bar: Interactive Quantity Controls & Add to Cart */ }
+<div className="pt-2.5 flex items-center gap-2 border-t border-white/[0.08]">
+  {/* Quantity Stepper */}
+  <div className="flex items-center bg-white/[0.06] border border-white/15 rounded-xl p-1 shrink-0 shadow-sm">
+    <button
+      type="button"
+      onClick={handleDecrement}
+      disabled={quantity <= 1}
+      className="w-7 h-7 rounded-lg bg-white/[0.08] hover:bg-white/[0.2] active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center text-white font-bold transition-all border border-white/10"
+      aria-label="Disminuir cantidad"
+    >
+      <Minus size={12} />
+    </button>
+    <span className="w-8 text-center text-xs font-mono font-black text-white selection:bg-none">
+      {quantity}
+    </span>
+    <button
+      type="button"
+      onClick={handleIncrement}
+      className="w-7 h-7 rounded-lg bg-white/[0.08] hover:bg-white/[0.2] active:scale-95 flex items-center justify-center text-white font-bold transition-all border border-white/10"
+      aria-label="Aumentar cantidad"
+    >
+      <Plus size={12} />
+    </button>
+  </div>
+
+  {/* Add to Cart Button (Luxury Purple/Indigo Gradient) */}
+  <motion.button
+    whileHover={{ scale: 1.02, filter: "brightness(1.08)" }}
+    whileTap={{ scale: 0.96 }}
+    onClick={handleAddToCart}
+    className={`flex-1 py-3 px-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg ${isAdded
+        ? 'bg-emerald-500 text-white border border-emerald-400 shadow-emerald-500/30'
+        : 'bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 text-white border border-purple-400/40 shadow-purple-600/30 hover:shadow-purple-600/50'
+      }`}
+  >
+    {isAdded ? (
+      <>
+        <Check size={15} className="stroke-[3]" />
+        <span>¡Agregado!</span>
+      </>
+    ) : (
+      <>
+        <ShoppingBag size={15} className="stroke-[2.5]" />
+        <span>Agregar ({quantity})</span>
+      </>
+    )}
+  </motion.button>
+</div>
+      </div >
+    </motion.div >
   );
 };
 

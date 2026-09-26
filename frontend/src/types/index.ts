@@ -307,6 +307,7 @@ export interface Product {
   is_active: boolean;
   image?: string;
   images?: (string | ProductImage)[];
+  gallery?: string[];
 }
 
 export interface Category {
