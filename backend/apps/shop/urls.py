@@ -19,6 +19,7 @@ from .views import (
     ShippingEventsListView,
     ShippingCatalogsView
 )
+from .nectar_webhook import NectarWebhookReceiverView
 
 router = DefaultRouter()
 router.register('categories', CategoryViewSet)
@@ -28,6 +29,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('webhook/', stripe_webhook, name='stripe-webhook'),
     path('webhook/skydropx/', skydropx_webhook, name='skydropx-webhook'),
+    path('webhook/nectar/', NectarWebhookReceiverView.as_view(), name='nectar-webhook'),
     path('checkout/', ShopCheckoutView.as_view(), name='shop-checkout'),
     path('orders/', DashboardOrdersView.as_view(), name='shop-orders-list'),
     path('orders/by_session/', OrderBySessionView.as_view(), name='order-by-session'),

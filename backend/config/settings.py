@@ -499,7 +499,10 @@ SHIPPING_ORIGIN_CITY = env("SHIPPING_ORIGIN_CITY", default="Hermosillo")
 SHIPPING_ORIGIN_STATE = env("SHIPPING_ORIGIN_STATE", default="SO")
 SHIPPING_ORIGIN_POSTAL_CODE = env("SHIPPING_ORIGIN_POSTAL_CODE", default="83150")
 
-
-
-
-
+# Nectar Labs Distributed Integration (HMAC-SHA256, Néctar Wallet & Central Microservices)
+NECTAR_PLATFORM_URL = env("NECTAR_PLATFORM_URL", default="https://nectarlabs.dev")
+NECTAR_API_URL = env("NECTAR_API_URL", default="https://nectarlabs.dev/api")
+NECTAR_TENANT_ID = env("NECTAR_TENANT_ID", default="")
+NECTAR_TENANT_SUBDOMAIN = env("NECTAR_TENANT_SUBDOMAIN", default="msambar")
+NECTAR_SECRET_KEY = env("NECTAR_SECRET_KEY", default=env("NECTAR_API_KEY", default=""))
+NECTAR_API_KEY = env("NECTAR_API_KEY", default=NECTAR_SECRET_KEY)
