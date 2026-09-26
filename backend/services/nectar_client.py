@@ -101,6 +101,18 @@ class NectarGatewayClient:
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
 
+    @classmethod
+    def reset(cls):
+        """Fuerza la recarga de credenciales y reinicialización del singleton."""
+        if cls._instance is not None:
+            cls._instance._init_client()
+        return cls._instance
+
+    def reload(self):
+        """Recarga la configuración desde settings y variables de entorno actuales."""
+        self._init_client()
+        return self
+
     # --------------------------------------------------------------------------
     # Circuit Breaker (Gestión de Estados en Redis con fallback local)
     # --------------------------------------------------------------------------
