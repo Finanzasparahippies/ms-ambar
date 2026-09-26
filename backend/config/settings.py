@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.forms',
     # Third party
     "rest_framework",
     "rest_framework_simplejwt",
@@ -90,6 +91,8 @@ TEMPLATES = [
         },
     },
 ]
+
+FORM_RENDERER = 'django.forms.renderers.TemplatesSetting'
 
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
@@ -512,11 +515,11 @@ DEFAULT_SKYDROPX_URL = (
 SKYDROPX_API_URL = env("SKYDROPX_API_URL", default=DEFAULT_SKYDROPX_URL)
 
 SHIPPING_ORIGIN_NAME = env("SHIPPING_ORIGIN_NAME", default="Almacén Oficial Ms Ambar")
-SHIPPING_ORIGIN_COMPANY = env("SHIPPING_ORIGIN_COMPANY", default="Ms Ambar")
-SHIPPING_ORIGIN_PHONE = env("SHIPPING_ORIGIN_PHONE", default="6622140000")
-SHIPPING_ORIGIN_EMAIL = env("SHIPPING_ORIGIN_EMAIL", default="contacto@msambar.com")
-SHIPPING_ORIGIN_STREET = env("SHIPPING_ORIGIN_STREET", default="Blvd. Kino 456")
-SHIPPING_ORIGIN_SUBURB = env("SHIPPING_ORIGIN_SUBURB", default="Pitic")
+SHIPPING_ORIGIN_COMPANY = env("SHIPPING_ORIGIN_COMPANY", default="Ms. Ambar")
+SHIPPING_ORIGIN_PHONE = env("SHIPPING_ORIGIN_PHONE", default="")
+SHIPPING_ORIGIN_EMAIL = env("SHIPPING_ORIGIN_EMAIL", default="hola@msambar.com")
+SHIPPING_ORIGIN_STREET = env("SHIPPING_ORIGIN_STREET", default="")
+SHIPPING_ORIGIN_SUBURB = env("SHIPPING_ORIGIN_SUBURB", default="")
 SHIPPING_ORIGIN_CITY = env("SHIPPING_ORIGIN_CITY", default="Hermosillo")
 SHIPPING_ORIGIN_STATE = env("SHIPPING_ORIGIN_STATE", default="SO")
 SHIPPING_ORIGIN_POSTAL_CODE = env("SHIPPING_ORIGIN_POSTAL_CODE", default="83150")

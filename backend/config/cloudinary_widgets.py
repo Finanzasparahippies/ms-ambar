@@ -75,6 +75,15 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
         })
         return context
 
+    def render(self, name: str, value: Any, attrs: Optional[Dict[str, Any]] = None, renderer: Any = None) -> str:
+        context = self.get_context(name, value, attrs)
+        try:
+            from django.template.loader import render_to_string
+            from django.utils.safestring import mark_safe
+            return mark_safe(render_to_string(self.template_name, context))
+        except Exception:
+            return super().render(name, value, attrs, renderer)
+
     def value_from_datadict(self, data: Dict[str, Any], files: Dict[str, Any], name: str) -> Any:
         # 1. Si se seleccionó un archivo local estándar, priorizarlo
         upload = files.get(name)

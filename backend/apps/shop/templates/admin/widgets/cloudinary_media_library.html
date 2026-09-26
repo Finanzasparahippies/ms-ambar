@@ -1,0 +1,54 @@
+<div class="cloudinary-widget-container" 
+     id="cld_container_{{ widget.attrs.id }}"
+     data-field-name="{{ widget.name }}"
+     data-field-id="{{ widget.attrs.id }}"
+     data-cloud-name="{{ widget.cloud_name }}"
+     data-api-key="{{ widget.api_key }}"
+     data-timestamp="{{ widget.timestamp }}"
+     data-signature="{{ widget.signature }}"
+     data-default-folder="{{ widget.default_folder }}"
+     data-environment="{{ widget.environment }}">
+
+    <!-- Previsualización reactiva inmediata -->
+    <div class="cld-preview-wrapper" id="cld_preview_{{ widget.attrs.id }}" style="{% if not widget.preview_url %}display: none;{% endif %}">
+        <div class="cld-preview-card">
+            <img src="{{ widget.preview_url }}" alt="Preview" class="cld-preview-img" id="cld_img_{{ widget.attrs.id }}">
+            <div class="cld-asset-meta">
+                <span class="cld-env-badge cld-env-{{ widget.environment }}">{{ widget.environment|upper }}</span>
+                <span class="cld-asset-name" id="cld_info_{{ widget.attrs.id }}">{{ widget.asset_value|default:"Asset seleccionado" }}</span>
+                <button type="button" class="cld-remove-btn" onclick="window.cldClearAsset('{{ widget.attrs.id }}')">✕ Quitar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones de selección y subida -->
+    <div class="cld-actions-toolbar">
+        <button type="button" class="cld-browse-btn" onclick="window.cldOpenMediaLibrary('{{ widget.attrs.id }}')">
+            <svg class="cld-cloud-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
+            </svg>
+            Explorar / Elegir desde Cloudinary
+        </button>
+
+        <span class="cld-separator">o subir archivo local:</span>
+
+        <div class="cld-file-input-wrapper">
+            <input type="{{ widget.type }}" name="{{ widget.name }}"{% include "django/forms/widgets/attrs.html" %}>
+        </div>
+    </div>
+
+    <!-- Hidden Input que conserva la referencia de Cloudinary (public_id o URL) -->
+    <input type="hidden" 
+           name="{{ widget.name }}_cloudinary_asset" 
+           id="{{ widget.attrs.id }}_cloudinary_asset" 
+           value="{{ widget.asset_value }}">
+
+    {% if widget.is_initial %}
+    <div class="cld-initial-wrapper">
+        <label for="{{ widget.checkbox_id }}">
+            <input type="checkbox" name="{{ widget.checkbox_name }}" id="{{ widget.checkbox_id }}">
+            Limpiar / Eliminar imagen actual
+        </label>
+    </div>
+    {% endif %}
+</div>
