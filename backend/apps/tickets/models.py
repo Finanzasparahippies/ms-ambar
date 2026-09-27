@@ -370,6 +370,11 @@ class Event(models.Model):
         default=120, 
         help_text="Duración estimada del evento en minutos. Útil para calcular la hora de finalización."
     )
+    timezone = models.CharField(
+        max_length=50,
+        default='America/Hermosillo',
+        help_text="Zona horaria IANA del evento (ej. America/Hermosillo, America/Mexico_City). Evita desfasamientos entre UTC y hora local."
+    )
     venue_name = models.CharField(max_length=255, blank=True, default='')
     venue_address = models.CharField(max_length=255, blank=True, default='')
     theater = models.ForeignKey('Theater', on_delete=models.CASCADE, null=True, blank=True, related_name='events')
@@ -605,8 +610,35 @@ class Event(models.Model):
             import logging
             logging.getLogger("apps").warning(f"Error creating MarketingList for Event {self.title}: {e}")
 
+    def get_local_date(self):
+        """
+        Retorna la fecha del evento convertida explícitamente a su zona horaria local.
+        Evita desfasamientos entre UTC y hora local (ej. UTC 03:00 del 4 oct vs 20:00 del 3 oct).
+        """
+        if not self.date:
+            return None
+        import zoneinfo
+        try:
+            tz = zoneinfo.ZoneInfo(self.timezone or 'America/Hermosillo')
+            return self.date.astimezone(tz)
+        except Exception:
+            return self.date
+
+    def get_local_doors_open(self):
+        """Retorna la hora de apertura de puertas convertida a la zona horaria del evento."""
+        if not self.doors_open:
+            return None
+        import zoneinfo
+        try:
+            tz = zoneinfo.ZoneInfo(self.timezone or 'America/Hermosillo')
+            return self.doors_open.astimezone(tz)
+        except Exception:
+            return self.doors_open
+
     def __str__(self):
-        return f"{self.title} - {self.date.strftime('%Y-%m-%d')}"
+        local_d = self.get_local_date()
+        date_str = local_d.strftime('%Y-%m-%d') if local_d else (self.date.strftime('%Y-%m-%d') if self.date else '')
+        return f"{self.title} - {date_str}"
 
     def get_dynamic_price(self, base_amount, purchase_date=None):
         """
@@ -620,13 +652,21 @@ class Event(models.Model):
         amount = float(base_amount)
         if amount <= 0:
             return 0.0
-        if not self.enable_dynamic_pricing or not self.date:
+        local_d = self.get_local_date()
+        if not self.enable_dynamic_pricing or not local_d:
             return round(amount, 2)
         
-        from django.utils import timezone
-        p_date = purchase_date or timezone.now()
-        event_month_idx = self.date.year * 12 + self.date.month
-        curr_month_idx = p_date.year * 12 + p_date.month
+        from django.utils import timezone as dj_timezone
+        p_date = purchase_date or dj_timezone.now()
+        try:
+            import zoneinfo
+            tz = zoneinfo.ZoneInfo(self.timezone or 'America/Hermosillo')
+            local_p_date = p_date.astimezone(tz)
+        except Exception:
+            local_p_date = p_date
+
+        event_month_idx = local_d.year * 12 + local_d.month
+        curr_month_idx = local_p_date.year * 12 + local_p_date.month
         months_diff = event_month_idx - curr_month_idx
 
         # A 2 o más meses de anticipación (ej. agosto o antes para evento en octubre): tarifa base (0 aumentos)

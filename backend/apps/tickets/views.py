@@ -101,6 +101,23 @@ class EventViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
 
+    @action(detail=False, methods=['get', 'post'], url_path='cloudinary-signature', permission_classes=[permissions.IsAdminUser])
+    def cloudinary_signature(self, request):
+        """
+        Genera firma HMAC-SHA para inicializar el Cloudinary Media Library
+        o subidas directas desde el dashboard administrativo del frontend.
+        Aísla automáticamente la carpeta según entorno (staging vs production).
+        """
+        env_folder = getattr(settings, 'CLOUDINARY_ENV_FOLDER', 'ms_ambar/staging')
+        subfolder = request.query_params.get('subfolder', 'event_flyers').strip('/')
+        target_folder = f"{env_folder}/{subfolder}" if subfolder else env_folder
+
+        from config.cloudinary_storage import generate_cloudinary_signature
+        sig_data = generate_cloudinary_signature()
+        sig_data['default_folder'] = target_folder
+        sig_data['folder'] = target_folder
+        return Response(sig_data)
+
     @action(detail=True, methods=['get'])
     def seats(self, request, pk=None):
         event = self.get_object()

@@ -12,7 +12,7 @@
     <!-- Previsualización reactiva inmediata -->
     <div class="cld-preview-wrapper" id="cld_preview_{{ widget.attrs.id }}" style="{% if not widget.preview_url %}display: none;{% endif %}">
         <div class="cld-preview-card">
-            <img src="{{ widget.preview_url }}" alt="Preview" class="cld-preview-img" id="cld_img_{{ widget.attrs.id }}">
+            <img src="{{ widget.preview_url }}" alt="Preview" class="cld-preview-img" id="cld_img_{{ widget.attrs.id }}" onerror="this.onerror=null; this.src='/static/images/placeholder-event.webp';">
             <div class="cld-asset-meta">
                 <span class="cld-env-badge cld-env-{{ widget.environment }}">{{ widget.environment|upper }}</span>
                 <span class="cld-asset-name" id="cld_info_{{ widget.attrs.id }}">{{ widget.asset_value|default:"Asset seleccionado" }}</span>

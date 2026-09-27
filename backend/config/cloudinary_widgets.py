@@ -48,16 +48,41 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
         # Generar firma para el widget del lado del servidor sin exponer API_SECRET
         sig_data = generate_cloudinary_signature()
 
-        # Determinar URL inicial de previsualización
+        # Determinar URL inicial de previsualización jerárquica y defensiva
         preview_url = ''
+        cloud_name = sig_data.get('cloud_name') or getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '')
+        default_folder = sig_data.get('default_folder', 'ms_ambar/staging')
+        prefix = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('PREFIX', f"{default_folder}/")
+
         if value:
-            val_str = getattr(value, 'url', None) or str(value)
-            if isinstance(val_str, str):
-                if val_str.startswith('http://') or val_str.startswith('https://'):
-                    preview_url = val_str
-                else:
-                    cloud_name = sig_data.get('cloud_name')
-                    preview_url = f"https://res.cloudinary.com/{cloud_name}/image/upload/{val_str}"
+            # 1. Si value tiene atributo .url (ej. FieldFile), intentar resolverlo
+            try:
+                url_candidate = value.url if hasattr(value, 'url') else None
+                if url_candidate and (url_candidate.startswith('http://') or url_candidate.startswith('https://')):
+                    preview_url = url_candidate
+            except Exception:
+                pass
+
+            # 2. Si no se resolvió con .url, procesar el valor como string
+            if not preview_url:
+                val_str = getattr(value, 'name', None) or str(value)
+                if isinstance(val_str, str) and val_str.strip():
+                    val_str = val_str.strip()
+                    if val_str.startswith('http://') or val_str.startswith('https://'):
+                        preview_url = val_str
+                    elif 'https://res.cloudinary.com' in val_str or 'http://res.cloudinary.com' in val_str:
+                        parts = val_str.split('https://res.cloudinary.com')
+                        preview_url = f"https://res.cloudinary.com{parts[-1]}"
+                    else:
+                        clean_path = val_str.lstrip('/')
+                        if not clean_path.startswith(prefix) and not clean_path.startswith('ms_ambar/') and not clean_path.startswith('ms-ambar/'):
+                            clean_path = f"{prefix}{clean_path}"
+                        if cloud_name:
+                            preview_url = f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
+
+            # 3. Limpiar duplicaciones de prefijos (ej. /ms_ambar/prod/ms-ambar/)
+            if preview_url:
+                preview_url = preview_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
 
         context['widget'].update({
             'cloud_name': sig_data.get('cloud_name', ''),
@@ -152,7 +177,7 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
 
     <div class="cld-preview-wrapper" id="cld_preview_{field_id}" style="{preview_style}">
         <div class="cld-preview-card">
-            <img src="{preview_url}" alt="Preview" class="cld-preview-img" id="cld_img_{field_id}">
+            <img src="{preview_url}" alt="Preview" class="cld-preview-img" id="cld_img_{field_id}" onerror="this.onerror=null; this.src='/static/images/placeholder-event.webp';">
             <div class="cld-asset-meta">
                 <span class="cld-env-badge cld-env-{environment}">{environment.upper()}</span>
                 <span class="cld-asset-name" id="cld_info_{field_id}">{info_text}</span>

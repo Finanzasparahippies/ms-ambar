@@ -19,6 +19,7 @@ export interface Event {
   flyer?: string;
   image?: string;
   is_active?: boolean;
+  timezone?: string;
 }
 
 interface TourTimelineProps {
@@ -213,13 +214,13 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                             "text-[10px] font-black uppercase leading-none mb-0.5 transition-colors duration-300 tracking-wider", 
                             isActive || isHovered ? "text-amber-400" : "text-slate-400 dark:text-slate-400"
                           )} style={{ color: (isActive || isHovered) ? (secTheme.accent_color || theme.primaryColor) : undefined }}>
-                            {date.toLocaleDateString('es-MX', { month: 'short' })}
+                            {new Intl.DateTimeFormat('es-MX', { month: 'short', timeZone: event.timezone || 'America/Hermosillo' }).format(date)}
                           </span>
                           <span className={cn(
                             "text-lg font-black leading-none transition-colors duration-300", 
                             isActive || isHovered ? "text-white" : "text-slate-200 dark:text-white"
                           )}>
-                            {date.getDate()}
+                            {new Intl.DateTimeFormat('es-MX', { day: 'numeric', timeZone: event.timezone || 'America/Hermosillo' }).format(date)}
                           </span>
                         </div>
                       </div>
@@ -293,7 +294,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                             isActive ? "text-amber-300/90" : "text-slate-400 dark:text-slate-400"
                           )}>
                             <Calendar size={13} className={isActive ? "text-amber-400" : "text-slate-500"} />
-                            <span>{date.toLocaleDateString('es-MX', { weekday: 'long' })}</span>
+                            <span>{new Intl.DateTimeFormat('es-MX', { weekday: 'long', timeZone: event.timezone || 'America/Hermosillo' }).format(date)}</span>
                           </div>
                         </div>
 

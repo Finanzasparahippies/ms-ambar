@@ -78,6 +78,7 @@ import ImageOptimizerWidget from '../../components/ImageOptimizerWidget';
 import { AdsPerformanceWidget } from '../../components/dashboard/AdsPerformanceWidget';
 import { CrossAnalyticsChart } from '../../components/dashboard/CrossAnalyticsChart';
 import ShippingManager from '../../components/dashboard/ShippingManager';
+import { EventMediaField } from '../../components/EventMediaField';
 import api from '../../lib/api';
 import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import { cn, getApiUrl } from '../../lib/utils';
@@ -110,6 +111,52 @@ const resolveMediaUrl = (url: string | null | undefined) => {
   }
   const backendRoot = getApiUrl().replace(/\/api$/, '');
   return `${backendRoot}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
+const formatEventDateWithTimezone = (
+  dateStr: string | null | undefined,
+  timeZone = 'America/Hermosillo'
+): string => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    return new Intl.DateTimeFormat('es-MX', {
+      timeZone: timeZone || 'America/Hermosillo',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d);
+  } catch {
+    return new Date(dateStr).toLocaleString('es-MX');
+  }
+};
+
+const getEventLocalInputDate = (
+  dateStr: string | null | undefined,
+  timeZone = 'America/Hermosillo'
+): string => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timeZone || 'America/Hermosillo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    });
+    const parts = formatter.formatToParts(d);
+    const getPart = (type: string) => parts.find((p) => p.type === type)?.value || '00';
+    return `${getPart('year')}-${getPart('month')}-${getPart('day')}T${getPart('hour')}:${getPart('minute')}`;
+  } catch {
+    const d = new Date(dateStr);
+    return d.toISOString().slice(0, 16);
+  }
 };
 
 const getHoverColor = (hex: string | null | undefined): string => {
@@ -961,8 +1008,11 @@ export default function AdminDashboard() {
   const [eventIsActive, setEventIsActive] = useState(true);
   const [eventImageFile, setEventImageFile] = useState<File | null>(null);
   const [eventImagePreview, setEventImagePreview] = useState<string | null>(null);
+  const [eventImageUrl, setEventImageUrl] = useState<string | null>(null);
   const [eventFlyerFile, setEventFlyerFile] = useState<File | null>(null);
   const [eventFlyerPreview, setEventFlyerPreview] = useState<string | null>(null);
+  const [eventFlyerUrl, setEventFlyerUrl] = useState<string | null>(null);
+  const [eventTimezone, setEventTimezone] = useState('America/Hermosillo');
   const [eventLoading, setEventLoading] = useState(false);
   const [eventSuccessMsg, setEventSuccessMsg] = useState<string | null>(null);
   const [eventErrorMsg, setEventErrorMsg] = useState<string | null>(null);
@@ -2276,8 +2326,11 @@ export default function AdminDashboard() {
     setEventIsActive(true);
     setEventImageFile(null);
     setEventImagePreview(null);
+    setEventImageUrl(null);
     setEventFlyerFile(null);
     setEventFlyerPreview(null);
+    setEventFlyerUrl(null);
+    setEventTimezone('America/Hermosillo');
     setEventErrorMsg(null);
     setEventSuccessMsg(null);
     setIsEventModalOpen(true);
@@ -2288,12 +2341,12 @@ export default function AdminDashboard() {
     setEventTitle(event.title);
     setEventArtist(event.artist);
 
+    const tz = event.timezone || 'America/Hermosillo';
+    setEventTimezone(tz);
+
     let formattedDate = '';
     if (event.date) {
-      const d = new Date(event.date);
-      const offset = d.getTimezoneOffset();
-      const localDate = new Date(d.getTime() - (offset * 60 * 1000));
-      formattedDate = localDate.toISOString().slice(0, 16);
+      formattedDate = getEventLocalInputDate(event.date, tz);
     }
     setEventDate(formattedDate);
     setEventType(event.event_type || 'concert');
@@ -2309,8 +2362,10 @@ export default function AdminDashboard() {
     setEventAllowNumbered(event.allow_numbered_tickets !== false);
     setEventIsActive(event.is_active);
     setEventImageFile(null);
+    setEventImageUrl(event.image || null);
     setEventImagePreview(event.image ? resolveMediaUrl(event.image) : null);
     setEventFlyerFile(null);
+    setEventFlyerUrl(event.flyer || null);
     setEventFlyerPreview(event.flyer ? resolveMediaUrl(event.flyer) : null);
     setEventErrorMsg(null);
     setEventSuccessMsg(null);
@@ -2343,6 +2398,7 @@ export default function AdminDashboard() {
     formData.append('title', eventTitle);
     formData.append('artist', eventArtist);
     formData.append('date', eventDate);
+    formData.append('timezone', eventTimezone || 'America/Hermosillo');
     formData.append('event_type', eventType);
     formData.append('price_multiplier', eventPriceMultiplier);
     formData.append('seatless_ticket_price', eventSeatlessPrice || '500.00');
@@ -2368,9 +2424,14 @@ export default function AdminDashboard() {
 
     if (eventImageFile) {
       formData.append('image', eventImageFile);
+    } else if (eventImageUrl !== null) {
+      formData.append('image', eventImageUrl || '');
     }
+
     if (eventFlyerFile) {
       formData.append('flyer', eventFlyerFile);
+    } else if (eventFlyerUrl !== null) {
+      formData.append('flyer', eventFlyerUrl || '');
     }
 
     try {
@@ -5817,62 +5878,52 @@ export default function AdminDashboard() {
                           )}
                         </div>
 
-                        {/* Flyer Upload */}
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">🎟️ Flyer Oficial del Evento</label>
-                          <div className="flex gap-4 items-center">
-                            <div className="flex-1">
-                              <input
-                                type="file" accept="image/*"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    setEventFlyerFile(file);
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => setEventFlyerPreview(reader.result as string);
-                                    reader.readAsDataURL(file);
-                                  }
-                                }}
-                                className="w-full text-xs text-[#F4F6F0]/60 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:tracking-widest file:bg-amber-honey/20 file:text-amber-honey hover:file:bg-amber-honey/30 file:cursor-pointer"
-                              />
-                            </div>
-                            {eventFlyerPreview && (
-                              <div className="w-24 h-14 rounded-xl border border-amber-honey/20 bg-black/40 overflow-hidden shrink-0">
-                                <img src={eventFlyerPreview} alt="Flyer Preview" className="w-full h-full object-cover" />
-                              </div>
-                            )}
-                          </div>
-                          <span className="text-[8px] text-[#F4F6F0]/30 font-bold uppercase tracking-wider block">Se mostrará en la landing page y en la p&aacute;gina de compra de boletos.</span>
+                        {/* Timezone Configuration */}
+                        <div className="space-y-1.5">
+                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Zona Horaria del Evento</label>
+                          <select
+                            value={eventTimezone}
+                            onChange={(e) => setEventTimezone(e.target.value)}
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all"
+                          >
+                            <option value="America/Hermosillo" className="bg-[#121413] text-white">America/Hermosillo (UTC-7 - Sonora)</option>
+                            <option value="America/Mexico_City" className="bg-[#121413] text-white">America/Mexico_City (UTC-6 - Centro)</option>
+                            <option value="America/Tijuana" className="bg-[#121413] text-white">America/Tijuana (UTC-8 - Pacífico)</option>
+                            <option value="America/Monterrey" className="bg-[#121413] text-white">America/Monterrey (UTC-6)</option>
+                            <option value="America/Cancun" className="bg-[#121413] text-white">America/Cancun (UTC-5)</option>
+                          </select>
+                          <span className="text-[8px] text-[#F4F6F0]/30 font-bold uppercase tracking-wider block">Garantiza que la fecha y hora no sufran saltos de día por desfase UTC.</span>
                         </div>
 
-                        {/* Image Upload */}
-                        <div className="space-y-2">
-                          <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Imagen de Portada</label>
-                          <div className="flex gap-4 items-center">
-                            <div className="flex-1">
-                              <input
-                                type="file" accept="image/*"
-                                onChange={(e) => {
-                                  const file = e.target.files?.[0];
-                                  if (file) {
-                                    setEventImageFile(file);
-                                    const reader = new FileReader();
-                                    reader.onloadend = () => {
-                                      setEventImagePreview(reader.result as string);
-                                    };
-                                    reader.readAsDataURL(file);
-                                  }
-                                }}
-                                className="w-full text-xs text-[#F4F6F0]/60 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[9px] file:font-black file:uppercase file:tracking-widest file:bg-amber-honey file:text-black hover:file:bg-amber-gold file:cursor-pointer"
-                              />
-                            </div>
-                            {eventImagePreview && (
-                              <div className="w-16 h-16 rounded-xl border border-white/10 bg-black/40 overflow-hidden shrink-0">
-                                <img src={eventImagePreview} alt="Preview" className="w-full h-full object-cover" />
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                        {/* Flyer Upload / Cloudinary / WebP */}
+                        <EventMediaField
+                          label="🎟️ Flyer Oficial del Evento"
+                          helpText="Se mostrará en la landing page y en la página de compra de boletos."
+                          file={eventFlyerFile}
+                          preview={eventFlyerPreview}
+                          valueUrl={eventFlyerUrl}
+                          subfolder="event_flyers"
+                          onFileChange={(f, p) => {
+                            setEventFlyerFile(f);
+                            setEventFlyerPreview(p);
+                          }}
+                          onUrlChange={(u) => setEventFlyerUrl(u)}
+                        />
+
+                        {/* Image / Cover Upload / Cloudinary / WebP */}
+                        <EventMediaField
+                          label="🖼️ Imagen de Portada"
+                          helpText="Imagen secundaria o banner de cabecera del recinto."
+                          file={eventImageFile}
+                          preview={eventImagePreview}
+                          valueUrl={eventImageUrl}
+                          subfolder="events"
+                          onFileChange={(f, p) => {
+                            setEventImageFile(f);
+                            setEventImagePreview(p);
+                          }}
+                          onUrlChange={(u) => setEventImageUrl(u)}
+                        />
 
                         {/* Active Toggle */}
                         <div className="flex items-center gap-3 pt-2">
@@ -6994,7 +7045,7 @@ export default function AdminDashboard() {
                             <div className="border-t border-white/5 pt-2 mt-2 space-y-1.5 text-[9px] font-bold uppercase tracking-wider text-[#F4F6F0]/70">
                               <div className="flex items-center gap-1.5">
                                 <Calendar size={11} className="text-amber-honey" />
-                                <span>{new Date(event.date).toLocaleString('es-MX', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} hrs</span>
+                                <span>{formatEventDateWithTimezone(event.date, event.timezone)} hrs</span>
                               </div>
                               {event.event_type === 'concert' && (
                                 <div className="flex items-center gap-1.5">

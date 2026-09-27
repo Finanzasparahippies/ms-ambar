@@ -10,8 +10,12 @@ class HybridImageField(serializers.ImageField):
     la entrega de URLs seguras absolutas en la API.
     """
     def to_internal_value(self, data):
+        if data == '' or data is None:
+            if self.allow_null:
+                return None
+            return ''
         if isinstance(data, str):
-            return data
+            return data.strip()
         return super().to_internal_value(data)
 
     def to_representation(self, value):
@@ -92,6 +96,8 @@ class EventSerializer(serializers.ModelSerializer):
     flyer = HybridImageField(required=False, allow_null=True)
     image_url = serializers.SerializerMethodField()
     flyer_url = serializers.SerializerMethodField()
+    local_date = serializers.SerializerMethodField()
+    local_doors_open = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
     numbered_seat_base_price = serializers.SerializerMethodField()
     price_with_fee = serializers.SerializerMethodField()
@@ -101,6 +107,7 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             'id', 'title', 'artist', 'date', 'doors_open',
+            'timezone', 'local_date', 'local_doors_open',
             'venue_name', 'venue_address', 'duration_minutes',
             'theater', 'theater_name', 'theater_location',
             'image', 'image_url', 'flyer', 'flyer_url',
@@ -177,6 +184,14 @@ class EventSerializer(serializers.ModelSerializer):
         if not obj.flyer:
             return None
         return self._resolve_media_url(obj.flyer, fallback='/static/images/placeholder-event.webp')
+
+    def get_local_date(self, obj):
+        ld = obj.get_local_date()
+        return ld.isoformat() if ld else None
+
+    def get_local_doors_open(self, obj):
+        ldo = obj.get_local_doors_open()
+        return ldo.isoformat() if ldo else None
 
     def get_base_price(self, obj):
         return obj.base_price

@@ -41,6 +41,9 @@ export interface Event {
   allow_numbered_tickets?: boolean;
   venue_name?: string;
   venue_address?: string;
+  timezone?: string;
+  local_date?: string;
+  local_doors_open?: string;
 }
 
 export interface Ticket {
