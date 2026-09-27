@@ -239,107 +239,119 @@ if (!window._cldInitialized) {{
         const container = document.getElementById('cld_container_' + fieldId);
         if (!container) return;
 
-        const btn = container.querySelector('.cld-browse-btn');
-        const origBtnText = btn ? btn.innerHTML : '';
-        if (btn) {{
-            btn.disabled = true;
-            btn.style.opacity = '0.7';
+        let modal = document.getElementById('cld_inpage_modal');
+        if (!modal) {{
+            modal = document.createElement('div');
+            modal.id = 'cld_inpage_modal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.8);z-index:999999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+            modal.innerHTML = `
+                <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;width:92%;max-width:880px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.6);overflow:hidden;color:#fff;font-family:system-ui,-apple-system,sans-serif;">
+                    <div style="display:flex;align-items:center;justify-content:between;padding:14px 18px;border-bottom:1px solid #1e293b;background:#1e293b;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:18px;">☁️</span>
+                            <div>
+                                <h3 style="margin:0;font-size:14px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#f8fafc;">Biblioteca de Medios Cloudinary</h3>
+                                <p style="margin:0;font-size:11px;color:#94a3b8;">Selecciona cualquier imagen existente en tu nube de Cloudinary</p>
+                            </div>
+                        </div>
+                        <button type="button" id="cld_modal_close_btn" style="background:transparent;border:none;color:#94a3b8;font-size:20px;cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;">✕</button>
+                    </div>
+
+                    <div style="padding:12px 18px;border-bottom:1px solid #1e293b;background:#090d16;display:flex;gap:10px;align-items:center;">
+                        <input type="text" id="cld_modal_search" placeholder="Buscar por nombre o ID..." style="flex:1;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;font-size:12px;color:#fff;outline:none;" />
+                        <a href="https://console.cloudinary.com/console/media_library/" target="_blank" style="padding:6px 12px;border:1px solid #475569;border-radius:8px;color:#cbd5e1;text-decoration:none;font-size:11px;display:flex;align-items:center;gap:4px;">↗ Consola Cloudinary</a>
+                    </div>
+
+                    <div id="cld_modal_grid" style="flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;background:#0f172a;min-height:260px;">
+                        <div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8;font-size:12px;">Cargando imágenes de Cloudinary...</div>
+                    </div>
+
+                    <div style="padding:10px 18px;border-top:1px solid #1e293b;background:#1e293b;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#94a3b8;">
+                        <span id="cld_modal_count">0 imágenes</span>
+                        <button type="button" id="cld_modal_cancel_btn" style="background:#334155;border:none;color:#fff;padding:6px 14px;border-radius:6px;font-size:12px;cursor:pointer;">Cerrar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            document.getElementById('cld_modal_close_btn').onclick = () => {{ modal.style.display = 'none'; }};
+            document.getElementById('cld_modal_cancel_btn').onclick = () => {{ modal.style.display = 'none'; }};
+            modal.onclick = (e) => {{ if (e.target === modal) modal.style.display = 'none'; }};
         }}
 
-        const restoreBtn = () => {{
-            if (btn) {{
-                btn.disabled = false;
-                btn.style.opacity = '1';
-                btn.innerHTML = origBtnText;
-            }}
-        }};
-
-        // Si el widget ya fue instanciado previamente, solo mostrarlo (Singleton reutilizable)
-        if (window._cldSharedML) {{
-            try {{
-                const targetFolder = container.dataset.defaultFolder;
-                window._cldSharedML.show({{
-                    folder: targetFolder ? {{ path: targetFolder, resource_type: 'image' }} : undefined
-                }});
-                restoreBtn();
-                return;
-            }} catch (err) {{
-                console.warn('Re-inicializando Media Library Widget...', err);
-                window._cldSharedML = null;
-            }}
-        }}
-
-        if (typeof cloudinary === 'undefined' || !cloudinary.createMediaLibrary) {{
-            if (!document.getElementById('cld_sdk_script')) {{
-                const s = document.createElement('script');
-                s.id = 'cld_sdk_script';
-                s.src = 'https://media-library.cloudinary.com/global/all.js';
-                s.onload = () => {{
-                    restoreBtn();
-                    window.cldOpenMediaLibrary(fieldId);
-                }};
-                document.head.appendChild(s);
-                return;
-            }} else {{
-                restoreBtn();
-                alert('El componente de Cloudinary se está cargando. Intenta de nuevo en unos segundos.');
-                return;
-            }}
-        }}
-
-        let {{ cloudName, apiKey, defaultFolder }} = container.dataset;
-        let timestamp = parseInt(container.dataset.timestamp, 10);
-        let signature = container.dataset.signature;
-
-        const now = Math.floor(Date.now() / 1000);
-        if (!signature || !timestamp || (now - timestamp > 1800)) {{
-            const fresh = await _cldGetFreshSignature();
-            if (fresh) {{
-                ({{ cloud_name: cloudName, api_key: apiKey, timestamp, signature, default_folder: defaultFolder }} = fresh);
-                Object.assign(container.dataset, {{ cloudName, apiKey, timestamp, signature, defaultFolder }});
-            }}
-        }}
+        modal.style.display = 'flex';
+        const grid = document.getElementById('cld_modal_grid');
+        const count = document.getElementById('cld_modal_count');
+        const searchInput = document.getElementById('cld_modal_search');
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8;font-size:12px;">Cargando imágenes de Cloudinary...</div>';
+        searchInput.value = '';
 
         try {{
-            window._cldSharedML = cloudinary.createMediaLibrary({{
-                cloud_name: cloudName,
-                api_key: apiKey,
-                timestamp: timestamp,
-                signature: signature,
-                default_folder: defaultFolder,
-                multiple: false,
-                max_files: 1
-            }}, {{
-                insertHandler: function(data) {{
-                    const currentFieldId = window._cldActiveFieldId;
-                    if (!currentFieldId || !data || !data.assets || !data.assets.length) return;
+            const res = await fetch('/admin/cloudinary/assets/');
+            const data = res.ok ? await res.json() : {{ assets: [] }};
+            const assets = data.assets || [];
 
-                    const asset = data.assets[0];
-                    const ref = asset.format && !asset.public_id.endsWith('.' + asset.format) 
-                        ? `${{asset.public_id}}.${{asset.format}}` 
-                        : asset.public_id;
-
-                    const hidden = document.getElementById(currentFieldId + '_cloudinary_asset');
-                    const fileInput = document.getElementById(currentFieldId);
-                    const previewWrapper = document.getElementById('cld_preview_' + currentFieldId);
-                    const previewImg = document.getElementById('cld_img_' + currentFieldId);
-                    const previewInfo = document.getElementById('cld_info_' + currentFieldId);
-                    const clearCheckbox = document.getElementById(currentFieldId + '-clear_id');
-
-                    if (hidden) hidden.value = ref;
-                    if (fileInput) fileInput.value = '';
-                    if (previewImg) previewImg.src = asset.secure_url;
-                    if (previewInfo) previewInfo.textContent = ref;
-                    if (previewWrapper) previewWrapper.style.display = 'flex';
-                    if (clearCheckbox) clearCheckbox.checked = false;
+            function renderAssets(list) {{
+                if (!list.length) {{
+                    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8;font-size:12px;">No se encontraron imágenes en Cloudinary.</div>';
+                    count.textContent = '0 imágenes';
+                    return;
                 }}
-            }});
+                count.textContent = list.length + ' imágenes encontradas';
+                grid.innerHTML = list.map(item => `
+                    <div class="cld-asset-item" data-ref="${{item.public_id}}" data-url="${{item.secure_url}}" style="background:#1e293b;border:1px solid #334155;border-radius:8px;overflow:hidden;cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;">
+                        <div style="width:100%;height:100px;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;">
+                            <img src="${{item.secure_url}}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='/static/images/placeholder-event.webp';" />
+                            <span style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);color:#fbbf24;font-size:9px;font-weight:700;padding:2px 4px;border-radius:3px;">${{(item.format||'img').toUpperCase()}}</span>
+                        </div>
+                        <div style="padding:8px;font-size:10px;color:#cbd5e1;overflow:hidden;">
+                            <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;" title="${{item.public_id}}">${{item.public_id.split('/').pop()}}</div>
+                            <div style="display:flex;justify-content:space-between;color:#64748b;margin-top:4px;font-size:9px;">
+                                <span>${{item.width && item.height ? item.width + 'x' + item.height : 'Cloud'}}</span>
+                                <span>${{item.bytes ? Math.round(item.bytes/1024) + ' KB' : ''}}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
 
-            window._cldSharedML.show({{
-                folder: defaultFolder ? {{ path: defaultFolder, resource_type: 'image' }} : undefined
-            }});
-        }} finally {{
-            restoreBtn();
+                grid.querySelectorAll('.cld-asset-item').forEach(el => {{
+                    el.onmouseover = () => {{ el.style.borderColor = '#fbbf24'; el.style.transform = 'translateY(-2px)'; }};
+                    el.onmouseout = () => {{ el.style.borderColor = '#334155'; el.style.transform = 'none'; }};
+                    el.onclick = () => {{
+                        const ref = el.dataset.ref;
+                        const url = el.dataset.url;
+                        const activeId = window._cldActiveFieldId;
+                        if (!activeId) return;
+
+                        const hidden = document.getElementById(activeId + '_cloudinary_asset');
+                        const fileInput = document.getElementById(activeId);
+                        const previewWrapper = document.getElementById('cld_preview_' + activeId);
+                        const previewImg = document.getElementById('cld_img_' + activeId);
+                        const previewInfo = document.getElementById('cld_info_' + activeId);
+                        const clearCheckbox = document.getElementById(activeId + '-clear_id');
+
+                        if (hidden) hidden.value = ref;
+                        if (fileInput) fileInput.value = '';
+                        if (previewImg) previewImg.src = url;
+                        if (previewInfo) previewInfo.textContent = ref;
+                        if (previewWrapper) previewWrapper.style.display = 'flex';
+                        if (clearCheckbox) clearCheckbox.checked = false;
+
+                        modal.style.display = 'none';
+                    }};
+                }});
+            }}
+
+            renderAssets(assets);
+
+            searchInput.oninput = (e) => {{
+                const q = e.target.value.toLowerCase().trim();
+                const filtered = assets.filter(a => a.public_id.toLowerCase().includes(q) || a.secure_url.toLowerCase().includes(q));
+                renderAssets(filtered);
+            }};
+        }} catch (err) {{
+            console.error('Error al cargar assets de Cloudinary:', err);
+            grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#f87171;font-size:12px;">Error al conectar con la API de Cloudinary.</div>';
         }}
     }};
 
@@ -353,6 +365,7 @@ if (!window._cldInitialized) {{
     }};
 }}
 </script>
+
 """
         return mark_safe(html)
 

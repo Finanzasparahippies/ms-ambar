@@ -140,3 +140,95 @@ def cloudinary_signature_view(request: HttpRequest) -> JsonResponse:
         import logging
         logging.getLogger('config.cloudinary').error(f"Error generando firma de Cloudinary: {exc}", exc_info=True)
         return JsonResponse({'error': 'Error interno al generar firma de Cloudinary.', 'detail': str(exc)}, status=500)
+
+
+def fetch_cloudinary_assets(max_results: int = 80, prefix: Optional[str] = None) -> list:
+    """
+    Obtiene la lista consolidada de assets visuales desde Cloudinary API y GalleryItem en BD.
+    Permite selección in-app inmediata sin depender de iframes de terceros ni sesiones OAuth.
+    """
+    import logging
+    logger = logging.getLogger('config.cloudinary')
+    assets = []
+    seen_ids = set()
+
+    # 1. Consultar Cloudinary API directamente
+    cld_storage = getattr(settings, 'CLOUDINARY_STORAGE', {})
+    cloud_name = cld_storage.get('CLOUD_NAME', '')
+    api_key = cld_storage.get('API_KEY', '')
+    api_secret = cld_storage.get('API_SECRET', '')
+
+    if cloud_name and api_key and api_secret and cloud_name != 'your_cloudinary_name':
+        try:
+            import cloudinary.api
+            import cloudinary.exceptions
+            query_kwargs = {
+                'type': 'upload',
+                'resource_type': 'image',
+                'max_results': min(max_results, 100),
+            }
+            if prefix:
+                query_kwargs['prefix'] = prefix
+
+            res = cloudinary.api.resources(**query_kwargs)
+            for item in res.get('resources', []):
+                pid = item.get('public_id')
+                if pid and pid not in seen_ids:
+                    seen_ids.add(pid)
+                    assets.append({
+                        'public_id': pid,
+                        'secure_url': item.get('secure_url', ''),
+                        'format': item.get('format', ''),
+                        'bytes': item.get('bytes', 0),
+                        'width': item.get('width', 0),
+                        'height': item.get('height', 0),
+                        'created_at': item.get('created_at', ''),
+                    })
+        except Exception as exc:
+            logger.warning(f"Error consultando recursos remotos de Cloudinary: {exc}")
+
+    # 2. Complementar con GalleryItems almacenados en BD
+    try:
+        from apps.gallery.models import GalleryItem
+        g_items = GalleryItem.objects.filter(media_type='image').order_by('-created_at')[:max_results]
+        for g in g_items:
+            pid = g.public_id or ''
+            if pid and pid in seen_ids:
+                continue
+            if pid:
+                seen_ids.add(pid)
+            url = g.optimized_url or g.url
+            if url:
+                assets.append({
+                    'public_id': pid or url,
+                    'secure_url': url,
+                    'format': 'webp' if '.webp' in url else 'jpg',
+                    'bytes': 0,
+                    'width': g.width or 0,
+                    'height': g.height or 0,
+                    'created_at': g.created_at.isoformat() if g.created_at else '',
+                })
+    except Exception as exc:
+        logger.debug(f"Error consultando GalleryItems locales: {exc}")
+
+    return assets
+
+
+@staff_member_required
+@require_GET
+def cloudinary_assets_view(request: HttpRequest) -> JsonResponse:
+    """
+    Endpoint autenticado para administradores de Django que retorna la lista
+    de assets disponibles en Cloudinary para el selector in-app.
+    """
+    if not (request.user.is_authenticated and request.user.is_staff):
+        return JsonResponse({'error': 'Permiso denegado. Se requiere cuenta de administrador.'}, status=403)
+
+    try:
+        prefix = request.GET.get('prefix')
+        assets = fetch_cloudinary_assets(max_results=80, prefix=prefix)
+        return JsonResponse({'assets': assets})
+    except Exception as exc:
+        import logging
+        logging.getLogger('config.cloudinary').error(f"Error en cloudinary_assets_view: {exc}", exc_info=True)
+        return JsonResponse({'assets': [], 'error': str(exc)}, status=500)

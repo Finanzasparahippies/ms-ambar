@@ -132,6 +132,24 @@ class EventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=False, methods=['get'], url_path='cloudinary-assets', permission_classes=[permissions.IsAdminUser])
+    def cloudinary_assets(self, request):
+        """
+        Retorna la lista de recursos visuales disponibles en Cloudinary y en la Galería,
+        permitiendo seleccionar directamente assets existentes desde el dashboard del frontend
+        sin bloqueos de popups ni dependencias de cookies de terceros.
+        """
+        import logging
+        logger = logging.getLogger('apps.tickets')
+        try:
+            from config.cloudinary_storage import fetch_cloudinary_assets
+            prefix = request.query_params.get('prefix')
+            assets = fetch_cloudinary_assets(max_results=80, prefix=prefix)
+            return Response({'assets': assets})
+        except Exception as exc:
+            logger.error(f"Error en EventViewSet.cloudinary_assets: {exc}", exc_info=True)
+            return Response({'assets': [], 'error': str(exc)}, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['get'])
     def seats(self, request, pk=None):
         event = self.get_object()
