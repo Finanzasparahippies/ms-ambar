@@ -79,6 +79,7 @@ import { AdsPerformanceWidget } from '../../components/dashboard/AdsPerformanceW
 import { CrossAnalyticsChart } from '../../components/dashboard/CrossAnalyticsChart';
 import ShippingManager from '../../components/dashboard/ShippingManager';
 import { EventMediaField } from '../../components/EventMediaField';
+import { CloudinaryMediaPicker } from '../../components/ui/CloudinaryMediaPicker';
 import api from '../../lib/api';
 import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import { cn, getApiUrl } from '../../lib/utils';
@@ -6996,31 +6997,25 @@ export default function AdminDashboard() {
                         <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block">Consejo: Separa los párrafos usando un salto de línea.</span>
                       </div>
 
-                      {/* Bio Image Upload & Preview */}
+                      {/* Bio Image Upload & Cloudinary Media Picker */}
                       <div className="space-y-2 pt-2">
-                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-honey block">Imagen Oficial de Biografía</label>
-                        <div className="flex flex-wrap items-center gap-4">
-                          {siteBioImagePreview && (
-                            <div className="w-20 h-24 rounded-xl overflow-hidden border border-white/20 shrink-0 relative bg-black/40">
-                              <img src={siteBioImagePreview} alt="Previsualización Biografía" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-[200px]">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  setSiteBioImageFile(file);
-                                  setSiteBioImagePreview(URL.createObjectURL(file));
-                                }
-                              }}
-                              className="w-full text-xs text-white/70 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-[10px] file:font-black file:uppercase file:bg-amber-honey file:text-black hover:file:bg-amber-gold cursor-pointer"
-                            />
-                            <span className="text-[8px] text-[#F4F6F0]/40 font-bold uppercase tracking-wider block mt-1">Sube una imagen vertical de alta calidad (JPG, PNG, WebP).</span>
-                          </div>
-                        </div>
+                        <CloudinaryMediaPicker
+                          label="Imagen Oficial de Biografía"
+                          helpText="Sube o selecciona una imagen vertical de alta calidad (JPG, PNG, WebP) para la historia del artista."
+                          category="Biografía"
+                          subfolder="bio"
+                          aspectRatio="portrait"
+                          file={siteBioImageFile}
+                          preview={siteBioImagePreview}
+                          valueUrl={siteBioImagePreview}
+                          onFileChange={(f, p) => {
+                            setSiteBioImageFile(f);
+                            setSiteBioImagePreview(p);
+                          }}
+                          onUrlChange={(url) => {
+                            setSiteBioImagePreview(url);
+                          }}
+                        />
                       </div>
                     </div>
 

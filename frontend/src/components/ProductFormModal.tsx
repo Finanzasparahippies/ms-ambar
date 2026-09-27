@@ -7,6 +7,7 @@ import {
 import api from '../lib/api';
 import toast from 'react-hot-toast';
 import { Product, Category, ProductImage } from '../types';
+import { CloudinaryMediaPicker } from './ui/CloudinaryMediaPicker';
 
 interface OptimizationMetrics {
   originalSize: number;
@@ -664,12 +665,25 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                   </div>
                 )}
 
-                {/* Añadir imagen por URL manual */}
-                <div className="pt-2">
-                  <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block mb-1">
-                    O agregar por URL directa:
-                  </label>
-                  <div className="flex items-center gap-2">
+                {/* Añadir imagen por URL manual o Cloudinary Media Picker */}
+                <div className="pt-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[9px] text-white/50 uppercase tracking-widest font-bold block">
+                      O agregar desde Mediateca Cloudinary / URL:
+                    </label>
+                  </div>
+                  <CloudinaryMediaPicker
+                    category="Productos"
+                    subfolder="products"
+                    aspectRatio="square"
+                    onUrlChange={(url) => {
+                      if (url && !formImages.includes(url)) {
+                        setFormImages(prev => [...prev, url]);
+                        toast.success('Imagen añadida a la galería del producto');
+                      }
+                    }}
+                  />
+                  <div className="flex items-center gap-2 pt-1">
                     <input
                       type="url"
                       value={manualImageUrl}

@@ -171,6 +171,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
                 alt={`${productName} - Vista ${currentIndex + 1}`}
                 fill
                 priority={currentIndex === 0 && priority}
+                unoptimized={Boolean(currentUrl && (currentUrl.includes('cloudinary.com') || currentUrl.startsWith('http')))}
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 className="object-cover w-full h-full pointer-events-none transition-transform duration-700 ease-out group-hover/gallery:scale-105"
                 onError={() => handleImageError(currentUrl)}
@@ -288,6 +289,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
                     src={getOptimizedCloudinaryUrl(thumbUrl, 160)}
                     alt={`${productName} miniatura ${idx + 1}`}
                     fill
+                    unoptimized={Boolean(thumbUrl && (thumbUrl.includes('cloudinary.com') || thumbUrl.startsWith('http')))}
                     sizes="60px"
                     className="object-cover w-full h-full"
                     onError={() => handleImageError(thumbUrl)}

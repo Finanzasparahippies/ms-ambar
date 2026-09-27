@@ -182,6 +182,7 @@ const TourPage = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [couponError, setCouponError] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [activeAllowedRows, setActiveAllowedRows] = useState<string[]>([]);
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isFlyerModalOpen, setIsFlyerModalOpen] = useState(false);
@@ -191,6 +192,14 @@ const TourPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [createdTickets, setCreatedTickets] = useState<any[]>([]);
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError('');
+    setActiveAllowedRows([]);
+    showAlert('Cupón removido. Todas las zonas y filas vuelven a estar disponibles a tarifa normal.', 'Cupón Removido', 'info');
+  };
 
   const handleValidateCoupon = async (overrideCode?: any, overrideEmail?: any) => {
     const codeToUse = typeof overrideCode === 'string' ? overrideCode.trim() : (couponCode || '').trim();
@@ -206,12 +215,31 @@ const TourPage = () => {
       });
       if (res.data.valid) {
         setAppliedCoupon(res.data);
-        showAlert(res.data.message || "Cupón VIP validado correctamente", "¡Cupón Aplicado!", "success");
+        const rows: string[] = res.data.active_allowed_rows || [];
+        setActiveAllowedRows(rows);
+
+        // Si el cupón exige fila designada y el usuario ya tenía asientos en otra fila, filtrar o reubicar
+        if (res.data.allowed_mode === 'DESIGNATED_ROW' && rows.length > 0) {
+          const normAllowed = new Set(rows.map((r: string) => String(r).toLowerCase().replace(/^fila\s+/i, '').trim()));
+          setSelectedSeats(prev => {
+            const filtered = prev.filter(s => {
+              const seatRowNorm = String(s.row || '').toLowerCase().replace(/^fila\s+/i, '').trim();
+              return normAllowed.has(seatRowNorm);
+            });
+            if (filtered.length < prev.length) {
+              showAlert(`Tu cortesía está asignada a la ${rows[0]}. Por favor selecciona tu asiento en esta fila.`, 'Asiento Asignado a Cortesía', 'info');
+            }
+            return filtered;
+          });
+        }
+
+        showAlert(res.data.message || "Cupón validado correctamente", "¡Cupón Aplicado!", "success");
       }
     } catch (err: any) {
       const msg = err.response?.data?.error || "El código de cupón no es válido o ha expirado.";
       setCouponError(msg);
       setAppliedCoupon(null);
+      setActiveAllowedRows([]);
       showAlert(msg, "Error de Cupón", "error");
     } finally {
       setIsValidatingCoupon(false);
@@ -773,6 +801,7 @@ const TourPage = () => {
                               theme={theme}
                               elements={elements}
                               allowZoom={allowCanvasZoom}
+                              restrictedRows={activeAllowedRows}
                             />
                           </div>
                         )}
@@ -1025,6 +1054,83 @@ const TourPage = () => {
                           </div>
                         )}
                       </>
+                    )}
+                  </div>
+
+                  {/* ══════ WIDGET PROACTIVO DE CUPONES / CORTESÍAS (PRE-SEAT REDEMPTION) ══════ */}
+                  <div className="mb-5 space-y-2 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 p-3.5 xs:p-4 rounded-2xl transition-all">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Sparkles size={13} className="text-amber-500 animate-pulse" />
+                        <span>¿Tienes un cupón o cortesía VIP?</span>
+                      </label>
+                      {appliedCoupon && (
+                        <span className="text-[9px] font-black uppercase tracking-wider text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          Activo
+                        </span>
+                      )}
+                    </div>
+
+                    {!appliedCoupon ? (
+                      <div className="space-y-2">
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={couponCode}
+                            onChange={e => {
+                              setCouponCode(e.target.value);
+                              setCouponError('');
+                            }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleValidateCoupon();
+                              }
+                            }}
+                            placeholder="Ej. PRENSA_VIP, AMBAR2026..."
+                            className="flex-1 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/15 focus:border-amber-400 rounded-xl px-3.5 py-2 text-xs font-medium focus:outline-none transition-colors text-slate-900 dark:text-white uppercase tracking-wider"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleValidateCoupon()}
+                            disabled={isValidatingCoupon || !couponCode.trim()}
+                            className="px-4 py-2 bg-slate-900 dark:bg-amber-honey dark:text-slate-950 text-white font-black text-xs uppercase tracking-wider rounded-xl hover:bg-slate-800 dark:hover:bg-amber-gold disabled:opacity-40 transition-all active:scale-95 shrink-0"
+                          >
+                            {isValidatingCoupon ? 'Validando...' : 'Aplicar'}
+                          </button>
+                        </div>
+                        {couponError && (
+                          <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 leading-tight">
+                            {couponError}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400 font-bold">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle size={15} className="text-emerald-500" />
+                            <span className="tracking-wide">
+                              {appliedCoupon.code} • {appliedCoupon.discount_type === 'free_vip' || appliedCoupon.is_complimentary ? '100% Cortesía' : `${appliedCoupon.discount_value}% Desc.`}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleRemoveCoupon}
+                            className="text-[10px] font-black uppercase tracking-wider text-rose-500 hover:text-rose-600 dark:text-rose-400 dark:hover:text-rose-300 transition-colors flex items-center gap-0.5 ml-2"
+                            title="Quitar cupón"
+                          >
+                            <X size={12} /> Quitar
+                          </button>
+                        </div>
+
+                        {appliedCoupon.allowed_mode === 'DESIGNATED_ROW' && activeAllowedRows.length > 0 && (
+                          <div className="text-[10px] text-amber-600 dark:text-amber-400 font-extrabold flex items-center gap-1 pt-0.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping inline-block" />
+                            <span>Fila de cortesía asignada: <strong>{activeAllowedRows.join(', ')}</strong></span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
@@ -1374,7 +1480,7 @@ const TourPage = () => {
                           <CheckCircle size={14} className="text-emerald-500" />
                           {appliedCoupon.discount_type === 'free_vip' ? '¡Entrada VIP Gratuita (100% Descuento)!' : '¡Cupón VIP Aplicado!'}
                         </span>
-                        <button type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); }} className="text-[10px] text-emerald-800 dark:text-emerald-300 underline">Quitar</button>
+                        <button type="button" onClick={handleRemoveCoupon} className="text-[10px] text-emerald-800 dark:text-emerald-300 underline font-bold">Quitar</button>
                       </div>
                     )}
                     {couponError && (

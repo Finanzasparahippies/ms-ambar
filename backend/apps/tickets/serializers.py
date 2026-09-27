@@ -96,7 +96,12 @@ class CouponSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Coupon
-        fields = ['id', 'code', 'discount_type', 'discount_value', 'max_uses', 'times_used', 'is_active', 'event', 'event_title', 'assigned_email', 'expiration_date', 'created_at']
+        fields = [
+            'id', 'code', 'discount_type', 'discount_value', 'max_uses', 'times_used',
+            'is_active', 'event', 'event_title', 'assigned_email', 'allowed_emails',
+            'requires_seat', 'is_complimentary', 'complimentary_allocation_mode',
+            'expiration_date', 'created_at'
+        ]
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -128,6 +133,7 @@ class EventSerializer(serializers.ModelSerializer):
             'stripe_product_id', 'stripe_price_id',
             'base_price', 'numbered_seat_base_price', 'price_with_fee',
             'theme_config',
+            'complimentary_rows_priority',
             'primary_color', 'secondary_color', 'background_start', 'background_end',
             'accent_color', 'card_background', 'text_color', 'particle_shape', 'particle_density', 'particle_speed', 'particle_color', 'particle_shadow',
             'card_style', 'background_pattern', 'font_preset', 'custom_css', 'section_themes'

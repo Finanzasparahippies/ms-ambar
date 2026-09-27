@@ -53,6 +53,7 @@ interface SeatingChartProps {
   selectedIds?: string[];
   activeTool?: string;
   allowZoom?: boolean;
+  restrictedRows?: string[];
 }
 
 const SeatingChart: React.FC<SeatingChartProps> = ({
@@ -66,7 +67,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   onChartClick,
   selectedIds: externalSelectedIds = [],
   activeTool = 'select',
-  allowZoom = true
+  allowZoom = true,
+  restrictedRows = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -456,12 +458,28 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.restore();
     });
 
+    // Normalizar filas restringidas para matching exacto ('Fila G' -> 'g', 'G' -> 'g')
+    const hasRowRestriction = Array.isArray(restrictedRows) && restrictedRows.length > 0;
+    const normalizedRestrictedRows = new Set(
+      hasRowRestriction
+        ? restrictedRows.map(r => String(r || '').toLowerCase().replace(/^fila\s+/i, '').trim())
+        : []
+    );
+
     // Render Seats
     seats.forEach(seat => {
       ctx.save(); ctx.translate(seat.x, seat.y); ctx.rotate((seat.angle || 0) * Math.PI / 180);
       const isSelected = selectedSet.has(String(seat.id));
       const isHovered = hoveredId === String(seat.id);
       const isOccupied = seat.status === 'occupied' || seat.status === 'reserved';
+
+      // Verificar si el asiento pertenece a la fila permitida por cortesía
+      const seatRowNorm = String(seat.row || '').toLowerCase().replace(/^fila\s+/i, '').trim();
+      const isAllowedByRestriction = !hasRowRestriction || normalizedRestrictedRows.has(seatRowNorm);
+
+      if (hasRowRestriction && !isAllowedByRestriction) {
+        ctx.globalAlpha = 0.25;
+      }
       
       let fillColor: string;
       let strokeColor: string;
@@ -491,12 +509,25 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         }
       }
 
+      // Halo / Resplandor Ámbar para fila designada de cortesía activa
+      if (hasRowRestriction && isAllowedByRestriction && !isOccupied && !isSelected) {
+        ctx.save();
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = '#F59E0B';
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(-12, -12, 24, 24, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
+
       if (isSelected) {
         fillColor = '#2563EB';
         strokeColor = '#ffffff';
         ctx.shadowBlur = 14;
         ctx.shadowColor = '#2563EB';
-      } else if (isHovered && !isOccupied) {
+      } else if (isHovered && !isOccupied && isAllowedByRestriction) {
         fillColor = '#38bdf8';
         strokeColor = '#ffffff';
         ctx.shadowBlur = 8;

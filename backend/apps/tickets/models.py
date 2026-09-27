@@ -6,6 +6,7 @@ class Theater(models.Model):
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255, blank=True, default='')
     layout = models.JSONField(help_text="JSON representation of sections and rows", null=True, blank=True, default=dict)
+    complimentary_rows_priority = models.JSONField(default=list, blank=True, help_text="Lista priorizada de filas designadas para cortesía (ej. ['Fila G', 'Fila H'])")
 
     def __str__(self):
         return self.name
@@ -426,6 +427,7 @@ class Event(models.Model):
     font_preset = models.CharField(max_length=50, choices=FONT_PRESET_CHOICES, blank=True, null=True, help_text="Preset de fuentes tipográficas")
     custom_css = models.TextField(blank=True, null=True, help_text="CSS personalizado para este evento específico")
     section_themes = models.JSONField(default=dict, blank=True, null=True, help_text="Configuración visual granular por sección (Hero, Boletos, Mapa, Contacto, Tarot, etc.)")
+    complimentary_rows_priority = models.JSONField(default=list, blank=True, help_text="Lista priorizada de filas para cortesía en este evento (sobrescribe la del teatro si se define)")
 
     stripe_product_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del producto en Stripe para este evento")
     stripe_price_id = models.CharField(max_length=255, blank=True, null=True, help_text="ID del precio en Stripe (solo para Meet & Greet o general)")
@@ -827,6 +829,11 @@ class Coupon(models.Model):
         ('percentage', 'Porcentaje de Descuento'),
         ('fixed', 'Monto Fijo de Descuento'),
     ]
+    ALLOCATION_MODES = [
+        ('OPEN', 'Asignación Abierta (Cualquier Fila/Zona)'),
+        ('DESIGNATED_ROW', 'Fila Designada Específica (Prioridad)'),
+    ]
+
     code = models.CharField(max_length=50, unique=True, help_text="Código único del cupón (ej. VIP-AMBAR-2026)")
     discount_type = models.CharField(max_length=20, choices=COUPON_TYPES, default='free_vip')
     discount_value = models.DecimalField(max_digits=7, decimal_places=2, default=100.00, help_text="Porcentaje (0-100) o monto fijo en MXN")
@@ -835,6 +842,15 @@ class Coupon(models.Model):
     is_active = models.BooleanField(default=True)
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True, related_name='coupons', help_text="Evento específico (opcional)")
     assigned_email = models.EmailField(null=True, blank=True, help_text="Correo electrónico exclusivo al que está asignado este cupón (opcional)")
+    allowed_emails = models.JSONField(default=list, blank=True, help_text="Lista de correos autorizados para redimir este cupón")
+    requires_seat = models.BooleanField(default=True, help_text="Indica si el cupón requiere reservar asiento numerado en el mapa")
+    is_complimentary = models.BooleanField(default=False, help_text="Marca el cupón como cortesía de cortesía/prensa/invitados especiales")
+    complimentary_allocation_mode = models.CharField(
+        max_length=20,
+        choices=ALLOCATION_MODES,
+        default='OPEN',
+        help_text="Modo de asignación de asiento para cortesías"
+    )
     expiration_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -853,6 +869,13 @@ class Coupon(models.Model):
                 return False, f"Este cupón es exclusivo y personal. Ingresa el correo del invitado ({self.assigned_email}) para validar."
             if self.assigned_email.strip().lower() != user_email.strip().lower():
                 return False, f"Este cupón exclusivo fue asignado a {self.assigned_email} y no es válido para {user_email}."
+        if self.allowed_emails and isinstance(self.allowed_emails, list) and len(self.allowed_emails) > 0:
+            if not user_email:
+                return False, "Este cupón requiere que proporciones un correo autorizado de la lista de invitados."
+            clean_email = user_email.strip().lower()
+            clean_allowed = [str(em).strip().lower() for em in self.allowed_emails if em]
+            if clean_email not in clean_allowed:
+                return False, f"El correo {user_email} no está en la lista de invitados autorizados para este cupón."
         return True, "Cupón válido."
 
     def __str__(self):

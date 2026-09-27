@@ -58,9 +58,9 @@ class EventAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
 
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
-    list_display = ('code', 'discount_type', 'discount_value', 'times_used', 'max_uses', 'is_active', 'event', 'expiration_date')
-    list_filter = ('discount_type', 'is_active', 'event')
-    search_fields = ('code',)
+    list_display = ('code', 'discount_type', 'discount_value', 'is_complimentary', 'complimentary_allocation_mode', 'times_used', 'max_uses', 'is_active', 'event', 'expiration_date')
+    list_filter = ('discount_type', 'is_complimentary', 'complimentary_allocation_mode', 'is_active', 'event')
+    search_fields = ('code', 'assigned_email')
 
 
 @admin.register(Seat)

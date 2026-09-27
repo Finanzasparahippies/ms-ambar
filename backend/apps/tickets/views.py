@@ -27,43 +27,14 @@ class CouponViewSet(viewsets.ModelViewSet):
         event_id = request.data.get('event_id')
         user_email = request.data.get('email') or request.data.get('user_email')
 
-        if not code:
-            return Response({'error': 'Debes proporcionar un código de cupón.'}, status=status.HTTP_400_BAD_REQUEST)
+        from apps.tickets.services.coupon_validator import validate_coupon_comprehensive
+        result = validate_coupon_comprehensive(code=code, event_id=event_id, email=user_email)
 
-        try:
-            coupon = Coupon.objects.get(code__iexact=code)
-        except Coupon.DoesNotExist:
-            return Response({'error': 'El código de cupón ingresado no existe o no es válido.'}, status=status.HTTP_404_NOT_FOUND)
+        if not result.get('valid'):
+            error_status = status.HTTP_404_NOT_FOUND if 'no existe' in result.get('error', '').lower() else status.HTTP_400_BAD_REQUEST
+            return Response({'error': result.get('error')}, status=error_status)
 
-        if event_id:
-            try:
-                event = Event.objects.get(id=event_id)
-                valid, msg = coupon.is_valid_for_event(event, user_email=user_email)
-                if not valid:
-                    return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
-            except Event.DoesNotExist:
-                return Response({'error': 'Evento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-        else:
-            if not coupon.is_active:
-                return Response({'error': 'Este cupón no está activo.'}, status=status.HTTP_400_BAD_REQUEST)
-            if coupon.expiration_date and timezone.now() > coupon.expiration_date:
-                return Response({'error': 'Este cupón ha expirado.'}, status=status.HTTP_400_BAD_REQUEST)
-            if coupon.times_used >= coupon.max_uses:
-                return Response({'error': 'Este cupón ha alcanzado su límite de usos.'}, status=status.HTTP_400_BAD_REQUEST)
-            if coupon.assigned_email:
-                if not user_email:
-                    return Response({'error': f'Este cupón es exclusivo. Debes ingresar el correo del invitado ({coupon.assigned_email}) para usarlo.'}, status=status.HTTP_400_BAD_REQUEST)
-                if coupon.assigned_email.strip().lower() != user_email.strip().lower():
-                    return Response({'error': f'Este cupón exclusivo fue asignado a {coupon.assigned_email}.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response({
-            'valid': True,
-            'code': coupon.code,
-            'discount_type': coupon.discount_type,
-            'discount_value': float(coupon.discount_value),
-            'assigned_email': coupon.assigned_email,
-            'message': 'Cupón VIP de entrada gratuita validado exitosamente.' if coupon.discount_type == 'free_vip' else 'Cupón validado correctamente.'
-        })
+        return Response(result, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='send_email', permission_classes=[permissions.IsAdminUser])
     def send_email(self, request, pk=None):
@@ -559,6 +530,12 @@ class TicketViewSet(viewsets.ModelViewSet):
             if occupied_seat_ids:
                 return Response({'error': 'Uno o más asientos ya están reservados o pagados.'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Prevención de Asiento Huérfano (Orphan Seat Prevention)
+            from apps.tickets.services.coupon_validator import check_orphan_seats
+            no_orphans, orphan_err = check_orphan_seats(event, [int(s) for s in seat_ids if str(s).isdigit()])
+            if not no_orphans:
+                return Response({'error': orphan_err}, status=status.HTTP_400_BAD_REQUEST)
+
             for s_id in seat_ids:
                 try:
                     seat = Seat.objects.get(id=s_id)
@@ -600,7 +577,17 @@ class TicketViewSet(viewsets.ModelViewSet):
                         created_vip_tickets.append(ticket)
                         logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: Sin asiento, Tipo: VIP")
                 else:
-                    for seat in seats:
+                    # Bloquear atómicamente los asientos y re-verificar ocupación bajo lock
+                    locked_seats = list(Seat.objects.select_for_update().filter(id__in=[s.id for s in seats]))
+                    already_taken = Ticket.objects.filter(
+                        event=event,
+                        seat__in=locked_seats,
+                        status__in=['paid', 'reserved']
+                    ).exists()
+                    if already_taken:
+                        return Response({'error': 'Uno o más asientos acaban de ser ocupados por otra orden.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                    for seat in locked_seats:
                         ticket = Ticket.objects.create(
                             event=event,
                             seat=seat,
