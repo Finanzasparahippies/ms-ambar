@@ -17,7 +17,9 @@ export interface Theater {
   id: number;
   name: string;
   location: string;
-  layout: any; // Ideally this should be typed further if structure is known
+  layout?: any;
+  seats?: any[];
+  complimentary_rows_priority?: string[];
 }
 
 export interface Event {
@@ -44,6 +46,7 @@ export interface Event {
   timezone?: string;
   local_date?: string;
   local_doors_open?: string;
+  complimentary_rows_priority?: string[];
 }
 
 export interface Ticket {
@@ -194,6 +197,11 @@ export interface Coupon {
   event: number | null;
   event_title?: string | null;
   assigned_email?: string | null;
+  allowed_emails?: string[];
+  requires_seat?: boolean;
+  is_complimentary?: boolean;
+  complimentary_allocation_mode?: 'OPEN' | 'DESIGNATED_ROW';
+  complimentary_rows_priority?: string[];
   expiration_date?: string | null;
   created_at?: string;
 }

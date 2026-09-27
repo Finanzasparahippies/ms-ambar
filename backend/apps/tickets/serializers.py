@@ -100,6 +100,7 @@ class CouponSerializer(serializers.ModelSerializer):
             'id', 'code', 'discount_type', 'discount_value', 'max_uses', 'times_used',
             'is_active', 'event', 'event_title', 'assigned_email', 'allowed_emails',
             'requires_seat', 'is_complimentary', 'complimentary_allocation_mode',
+            'complimentary_rows_priority',
             'expiration_date', 'created_at'
         ]
 

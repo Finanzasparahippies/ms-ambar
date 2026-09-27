@@ -851,6 +851,11 @@ class Coupon(models.Model):
         default='OPEN',
         help_text="Modo de asignación de asiento para cortesías"
     )
+    complimentary_rows_priority = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Lista priorizada de filas designadas para este cupón (ej. ['Fila G', 'Fila H'])"
+    )
     expiration_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -864,18 +869,23 @@ class Coupon(models.Model):
             return False, "Este cupón ha alcanzado su límite máximo de usos."
         if event and self.event and self.event_id != event.id:
             return False, "Este cupón no es válido para este evento."
+
+        # Validación estricta de seguridad sin fuga de correos autorizados
+        authorized_emails = set()
         if self.assigned_email:
+            authorized_emails.add(self.assigned_email.strip().lower())
+        if self.allowed_emails and isinstance(self.allowed_emails, list):
+            for em in self.allowed_emails:
+                if em and isinstance(em, str):
+                    authorized_emails.add(em.strip().lower())
+
+        if authorized_emails:
             if not user_email:
-                return False, f"Este cupón es exclusivo y personal. Ingresa el correo del invitado ({self.assigned_email}) para validar."
-            if self.assigned_email.strip().lower() != user_email.strip().lower():
-                return False, f"Este cupón exclusivo fue asignado a {self.assigned_email} y no es válido para {user_email}."
-        if self.allowed_emails and isinstance(self.allowed_emails, list) and len(self.allowed_emails) > 0:
-            if not user_email:
-                return False, "Este cupón requiere que proporciones un correo autorizado de la lista de invitados."
-            clean_email = user_email.strip().lower()
-            clean_allowed = [str(em).strip().lower() for em in self.allowed_emails if em]
-            if clean_email not in clean_allowed:
-                return False, f"El correo {user_email} no está en la lista de invitados autorizados para este cupón."
+                return False, "Este cupón requiere ingresar un correo electrónico autorizado para su validación."
+            clean_email = str(user_email).strip().lower()
+            if clean_email not in authorized_emails:
+                return False, "El correo electrónico ingresado no está autorizado para canjear este cupón."
+
         return True, "Cupón válido."
 
     def __str__(self):

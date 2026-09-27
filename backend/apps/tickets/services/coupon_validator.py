@@ -22,26 +22,30 @@ def normalize_row_name(row_str: str) -> str:
     return s
 
 
-def get_complimentary_rows_priority(event: Event) -> List[str]:
+def get_complimentary_rows_priority(event: Optional[Event] = None, coupon: Optional[Coupon] = None) -> List[str]:
     """
-    Obtiene la lista priorizada de filas para cortesía desde el Evento o su Teatro asociado.
+    Obtiene la lista priorizada de filas para cortesía desde el Cupón, el Evento o su Teatro asociado.
     """
-    if event.complimentary_rows_priority and isinstance(event.complimentary_rows_priority, list) and len(event.complimentary_rows_priority) > 0:
-        return event.complimentary_rows_priority
+    if coupon and coupon.complimentary_rows_priority and isinstance(coupon.complimentary_rows_priority, list) and len(coupon.complimentary_rows_priority) > 0:
+        return coupon.complimentary_rows_priority
 
-    if event.theater and event.theater.complimentary_rows_priority and isinstance(event.theater.complimentary_rows_priority, list):
-        return event.theater.complimentary_rows_priority
+    if event:
+        if event.complimentary_rows_priority and isinstance(event.complimentary_rows_priority, list) and len(event.complimentary_rows_priority) > 0:
+            return event.complimentary_rows_priority
+
+        if event.theater and event.theater.complimentary_rows_priority and isinstance(event.theater.complimentary_rows_priority, list):
+            return event.theater.complimentary_rows_priority
 
     return []
 
 
-def determine_active_complimentary_row(event: Event) -> Tuple[Optional[str], List[str]]:
+def determine_active_complimentary_row(event: Event, coupon: Optional[Coupon] = None) -> Tuple[Optional[str], List[str]]:
     """
     Calcula la fila activa con asientos disponibles siguiendo la lista de prioridad.
     Si la primera fila está llena, desborda automáticamente a la siguiente fila de la lista.
     Retorna: (active_row_name, list_of_all_allowed_rows_available)
     """
-    priority_list = get_complimentary_rows_priority(event)
+    priority_list = get_complimentary_rows_priority(event, coupon)
     if not priority_list or not event.theater:
         return None, []
 
@@ -152,14 +156,15 @@ def validate_coupon_comprehensive(code: str, event_id: Optional[int] = None, ema
     # Validar condiciones de base
     is_valid, msg = coupon.is_valid_for_event(event, user_email=clean_email or None)
     if not is_valid:
-        return {'valid': False, 'error': msg}
+        has_email_restriction = bool(coupon.assigned_email) or (isinstance(coupon.allowed_emails, list) and len(coupon.allowed_emails) > 0)
+        requires_email = has_email_restriction and not clean_email
+        return {'valid': False, 'error': msg, 'requires_email': requires_email}
 
     response_data: Dict[str, Any] = {
         'valid': True,
         'code': coupon.code,
         'discount_type': coupon.discount_type,
         'discount_value': float(coupon.discount_value),
-        'assigned_email': coupon.assigned_email,
         'is_complimentary': coupon.is_complimentary,
         'requires_seat': coupon.requires_seat,
         'allowed_mode': coupon.complimentary_allocation_mode,
@@ -172,7 +177,7 @@ def validate_coupon_comprehensive(code: str, event_id: Optional[int] = None, ema
 
     # Si es modo DESIGNATED_ROW y hay un evento con teatro, calcular la fila activa
     if coupon.complimentary_allocation_mode == 'DESIGNATED_ROW' and event and event.theater:
-        active_row, allowed_rows = determine_active_complimentary_row(event)
+        active_row, allowed_rows = determine_active_complimentary_row(event, coupon)
         response_data['active_allowed_rows'] = allowed_rows
         if active_row:
             response_data['message'] = f"Cortesía VIP activada. Por favor selecciona tu asiento en la {active_row}."

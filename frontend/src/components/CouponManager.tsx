@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,6 +18,11 @@ import {
   Percent,
   DollarSign,
   Calendar,
+  Layers,
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  ShieldCheck,
 } from 'lucide-react';
 import { showAlert, showConfirm, showToast } from '../lib/notifications';
 
@@ -33,6 +38,11 @@ export interface Coupon {
   event: number | null;
   event_title?: string | null;
   assigned_email?: string | null;
+  allowed_emails?: string[];
+  requires_seat?: boolean;
+  is_complimentary?: boolean;
+  complimentary_allocation_mode?: 'OPEN' | 'DESIGNATED_ROW';
+  complimentary_rows_priority?: string[];
   expiration_date?: string | null;
   created_at?: string;
 }
@@ -42,11 +52,24 @@ export interface EventOption {
   title: string;
   artist?: string;
   date?: string;
+  theater?: number | any;
+  theater_name?: string;
+  complimentary_rows_priority?: string[];
+}
+
+export interface TheaterOption {
+  id: number;
+  name: string;
+  location?: string;
+  layout?: any;
+  seats?: any[];
+  complimentary_rows_priority?: string[];
 }
 
 interface CouponManagerProps {
   coupons: Coupon[];
   events: EventOption[];
+  theaters?: TheaterOption[];
   apiUrl: string;
   onRefresh: () => void;
 }
@@ -59,6 +82,7 @@ interface CouponManagerProps {
 export const CouponManager: React.FC<CouponManagerProps> = ({
   coupons = [],
   events = [],
+  theaters = [],
   apiUrl,
   onRefresh
 }) => {
@@ -77,6 +101,14 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   const [maxUses, setMaxUses] = useState('1');
   const [eventId, setEventId] = useState<string>('');
   const [assignedEmail, setAssignedEmail] = useState('');
+  const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
+  const [emailInputText, setEmailInputText] = useState('');
+  const [isComplimentary, setIsComplimentary] = useState(false);
+  const [requiresSeat, setRequiresSeat] = useState(true);
+  const [allocationMode, setAllocationMode] = useState<'OPEN' | 'DESIGNATED_ROW'>('OPEN');
+  const [complimentaryRows, setComplimentaryRows] = useState<string[]>([]);
+  const [rowInputText, setRowInputText] = useState('');
+  const [syncRowsToEvent, setSyncRowsToEvent] = useState(false);
   const [expirationDate, setExpirationDate] = useState('');
   const [isActive, setIsActive] = useState(true);
 
@@ -100,6 +132,122 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     return { Authorization: `Bearer ${token}` };
   };
 
+  // ── Helpers para Múltiples Correos Autorizados ──
+  const handleAddAllowedEmail = (raw?: string) => {
+    const textToProcess = raw !== undefined ? raw : emailInputText;
+    if (!textToProcess.trim()) return;
+
+    // Acepta múltiples correos separados por comas, puntos y comas o saltos de línea
+    const splitEmails = textToProcess
+      .split(/[\s,;]+/)
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e.length > 0 && e.includes('@'));
+
+    if (splitEmails.length === 0) {
+      showToast.error('Ingresa una dirección de correo válida (ej. usuario@dominio.com).');
+      return;
+    }
+
+    setAllowedEmails(prev => {
+      const set = new Set(prev);
+      splitEmails.forEach(e => set.add(e));
+      return Array.from(set);
+    });
+    setEmailInputText('');
+  };
+
+  const handleRemoveAllowedEmail = (emailToRemove: string) => {
+    setAllowedEmails(prev => prev.filter(e => e !== emailToRemove));
+  };
+
+  // ── Helpers para Selector de Filas Designadas ──
+  const handleAddRow = (raw?: string) => {
+    const row = (raw !== undefined ? raw : rowInputText).trim();
+    if (!row) return;
+
+    const formattedRow = row.toLowerCase().startsWith('fila ') || row.toLowerCase().startsWith('mesa ')
+      ? row
+      : `Fila ${row.toUpperCase()}`;
+
+    setComplimentaryRows(prev => {
+      if (prev.includes(formattedRow)) return prev;
+      return [...prev, formattedRow];
+    });
+    setRowInputText('');
+  };
+
+  const handleRemoveRow = (rowToRemove: string) => {
+    setComplimentaryRows(prev => prev.filter(r => r !== rowToRemove));
+  };
+
+  const handleMoveRow = (index: number, direction: 'up' | 'down') => {
+    setComplimentaryRows(prev => {
+      const next = [...prev];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      const temp = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = temp;
+      return next;
+    });
+  };
+
+  // ── Detección de Filas Disponibles en Teatros y Eventos ──
+  const availableTheaterRows = useMemo(() => {
+    const rowsSet = new Set<string>();
+
+    if (eventId) {
+      const selectedEvent = events.find(ev => String(ev.id) === eventId);
+      if (selectedEvent) {
+        if (selectedEvent.complimentary_rows_priority && Array.isArray(selectedEvent.complimentary_rows_priority)) {
+          selectedEvent.complimentary_rows_priority.forEach(r => rowsSet.add(r));
+        }
+
+        const theaterId = typeof selectedEvent.theater === 'object' && selectedEvent.theater
+          ? selectedEvent.theater.id
+          : selectedEvent.theater;
+
+        const theater = theaters?.find(t => String(t.id) === String(theaterId));
+        if (theater) {
+          if (theater.complimentary_rows_priority && Array.isArray(theater.complimentary_rows_priority)) {
+            theater.complimentary_rows_priority.forEach(r => rowsSet.add(r));
+          }
+          if (theater.seats && Array.isArray(theater.seats)) {
+            theater.seats.forEach((s: any) => {
+              if (s.row) rowsSet.add(s.row.startsWith('Fila ') ? s.row : `Fila ${s.row}`);
+            });
+          }
+          if (theater.layout?.seats && Array.isArray(theater.layout.seats)) {
+            theater.layout.seats.forEach((s: any) => {
+              if (s.row) rowsSet.add(s.row.startsWith('Fila ') ? s.row : `Fila ${s.row}`);
+            });
+          }
+        }
+      }
+    }
+
+    if (theaters && theaters.length > 0) {
+      theaters.forEach(t => {
+        if (t.seats && Array.isArray(t.seats)) {
+          t.seats.forEach((s: any) => {
+            if (s.row) rowsSet.add(s.row.startsWith('Fila ') ? s.row : `Fila ${s.row}`);
+          });
+        }
+        if (t.layout?.seats && Array.isArray(t.layout.seats)) {
+          t.layout.seats.forEach((s: any) => {
+            if (s.row) rowsSet.add(s.row.startsWith('Fila ') ? s.row : `Fila ${s.row}`);
+          });
+        }
+      });
+    }
+
+    if (rowsSet.size === 0) {
+      ['Fila A', 'Fila B', 'Fila C', 'Fila D', 'Fila E', 'Fila F', 'Fila G', 'Fila H'].forEach(r => rowsSet.add(r));
+    }
+
+    return Array.from(rowsSet).sort();
+  }, [eventId, events, theaters]);
+
   // Reset del formulario para nuevo cupón
   const openCreateModal = () => {
     setEditingCoupon(null);
@@ -109,6 +257,14 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     setMaxUses('1');
     setEventId('');
     setAssignedEmail('');
+    setAllowedEmails([]);
+    setEmailInputText('');
+    setIsComplimentary(true);
+    setRequiresSeat(true);
+    setAllocationMode('OPEN');
+    setComplimentaryRows([]);
+    setRowInputText('');
+    setSyncRowsToEvent(false);
     setExpirationDate('');
     setIsActive(true);
     setFormError(null);
@@ -124,7 +280,22 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     setMaxUses(String(coupon.max_uses));
     setEventId(coupon.event ? String(coupon.event) : '');
     setAssignedEmail(coupon.assigned_email || '');
-    
+
+    // Emails múltiples
+    const emailsList = coupon.allowed_emails && Array.isArray(coupon.allowed_emails) && coupon.allowed_emails.length > 0
+      ? coupon.allowed_emails
+      : (coupon.assigned_email ? [coupon.assigned_email] : []);
+    setAllowedEmails(emailsList);
+    setEmailInputText('');
+
+    // Configuración de cortesía y filas
+    setIsComplimentary(Boolean(coupon.is_complimentary || coupon.discount_type === 'free_vip'));
+    setRequiresSeat(coupon.requires_seat !== false);
+    setAllocationMode(coupon.complimentary_allocation_mode || 'OPEN');
+    setComplimentaryRows(coupon.complimentary_rows_priority || []);
+    setRowInputText('');
+    setSyncRowsToEvent(false);
+
     // Formatear fecha para el input datetime-local (YYYY-MM-THH:mm)
     if (coupon.expiration_date) {
       const d = new Date(coupon.expiration_date);
@@ -152,13 +323,18 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     setLoading(true);
     setFormError(null);
 
-    const payload = {
+    const payload: any = {
       code: code.trim().toUpperCase(),
       discount_type: discountType,
       discount_value: discountType === 'free_vip' ? 100 : parseFloat(discountValue || '0'),
       max_uses: parseInt(maxUses || '1', 10),
       event: eventId ? parseInt(eventId, 10) : null,
-      assigned_email: assignedEmail.trim() || null,
+      assigned_email: allowedEmails.length > 0 ? allowedEmails[0] : (assignedEmail.trim() || null),
+      allowed_emails: allowedEmails,
+      is_complimentary: isComplimentary || discountType === 'free_vip',
+      requires_seat: requiresSeat,
+      complimentary_allocation_mode: allocationMode,
+      complimentary_rows_priority: complimentaryRows,
       expiration_date: expirationDate ? new Date(expirationDate).toISOString() : null,
       is_active: isActive
     };
@@ -172,6 +348,19 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
         await axios.post(`${apiUrl}/tickets/coupons/`, payload, { headers });
         showToast.success('Cupón creado exitosamente.');
       }
+
+      // Sincronizar filas prioritarias con el evento si fue solicitado
+      if (syncRowsToEvent && eventId && complimentaryRows.length > 0) {
+        try {
+          await axios.patch(`${apiUrl}/tickets/events/${eventId}/`, {
+            complimentary_rows_priority: complimentaryRows
+          }, { headers });
+          showToast.success('Filas prioritarias sincronizadas con el evento.');
+        } catch (eventErr) {
+          console.error('Error al sincronizar filas con el evento:', eventErr);
+        }
+      }
+
       setIsModalOpen(false);
       onRefresh();
     } catch (err: any) {
@@ -474,28 +663,61 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                         )}
                       </td>
 
-                      {/* Monto / Porcentaje */}
+                      {/* Monto / Porcentaje & Cortesía */}
                       <td className="py-4 px-4">
-                        {coupon.discount_type === 'free_vip' ? (
-                          <span className="text-amber-300 font-bold text-xs bg-amber-950/40 px-2 py-1 rounded border border-amber-800/40">
-                            Entrada VIP Gratis
-                          </span>
-                        ) : coupon.discount_type === 'percentage' ? (
-                          <span className="text-zinc-200 font-bold">
-                            {coupon.discount_value}% Descuento
-                          </span>
-                        ) : (
-                          <span className="text-zinc-200 font-bold">
-                            ${Number(coupon.discount_value).toFixed(2)} MXN
-                          </span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {coupon.discount_type === 'free_vip' ? (
+                            <span className="text-amber-300 font-bold text-xs bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40 w-fit">
+                              Entrada VIP Gratis
+                            </span>
+                          ) : coupon.discount_type === 'percentage' ? (
+                            <span className="text-zinc-200 font-bold">
+                              {coupon.discount_value}% Descuento
+                            </span>
+                          ) : (
+                            <span className="text-zinc-200 font-bold">
+                              ${Number(coupon.discount_value).toFixed(2)} MXN
+                            </span>
+                          )}
+
+                          {coupon.is_complimentary && (
+                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20 w-fit">
+                              ★ Cortesía VIP
+                            </span>
+                          )}
+
+                          {coupon.complimentary_allocation_mode === 'DESIGNATED_ROW' && (
+                            <span className="text-[10px] text-amber-300/80 font-mono flex items-center gap-1">
+                              <Layers size={10} />
+                              {coupon.complimentary_rows_priority && coupon.complimentary_rows_priority.length > 0
+                                ? coupon.complimentary_rows_priority.join(', ')
+                                : 'Fila Designada'}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
-                      {/* Exclusividad por Correo (assigned_email) */}
+                      {/* Exclusividad por Correo (Múltiples o Único) */}
                       <td className="py-4 px-4">
-                        {coupon.assigned_email ? (
+                        {coupon.allowed_emails && coupon.allowed_emails.length > 0 ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5 text-xs text-purple-300 bg-purple-950/40 px-2.5 py-1 rounded-md border border-purple-800/40 w-fit">
+                              <Lock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                              <span className="font-semibold" title={coupon.allowed_emails.join(', ')}>
+                                {coupon.allowed_emails.length === 1
+                                  ? coupon.allowed_emails[0]
+                                  : `${coupon.allowed_emails.length} invitados autorizados`}
+                              </span>
+                            </div>
+                            {coupon.allowed_emails.length > 1 && (
+                              <span className="text-[10px] text-zinc-500 truncate max-w-[170px]" title={coupon.allowed_emails.join(', ')}>
+                                {coupon.allowed_emails.slice(0, 2).join(', ')}...
+                              </span>
+                            )}
+                          </div>
+                        ) : coupon.assigned_email ? (
                           <div className="flex items-center gap-1.5 text-xs text-purple-300 bg-purple-950/40 px-2.5 py-1 rounded-md border border-purple-800/40 w-fit">
-                            <Lock className="w-3.5 h-3.5 text-purple-400" />
+                            <Lock className="w-3.5 h-3.5 text-purple-400 shrink-0" />
                             <span className="truncate max-w-[160px]" title={coupon.assigned_email}>
                               {coupon.assigned_email}
                             </span>
@@ -687,22 +909,79 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                   </div>
                 )}
 
-                {/* Correo Asignado Exclusivo (Security Feature) */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-purple-400 mb-1 flex items-center justify-between">
-                    <span>Correo de Invitado (Opcional - Intransferible)</span>
-                    <Lock className="w-3.5 h-3.5 text-purple-400" />
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="ejemplo@invitado.com (Vacío = Público)"
-                    value={assignedEmail}
-                    onChange={e => setAssignedEmail(e.target.value)}
-                    className="w-full bg-zinc-950 border border-purple-900/50 rounded-lg px-3 py-2 text-sm text-purple-200 placeholder-zinc-600 focus:outline-none focus:border-purple-500"
-                  />
-                  <p className="text-[11px] text-zinc-500 mt-1">
-                    🛡️ Si especificas un correo, solo esa persona podrá validar y canjear el cupón en el checkout.
+                {/* ══════ CORREOS AUTORIZADOS (MÚLTIPLES INVITADOS VIP / NOMINATIVO) ══════ */}
+                <div className="bg-zinc-950/70 border border-purple-900/40 p-3.5 rounded-xl space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Correos Autorizados (Nominativo / Intransferible)</span>
+                    </label>
+                    <span className="text-[10px] font-mono text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                      {allowedEmails.length === 0 ? 'Público / Abierto' : `${allowedEmails.length} autorizado(s)`}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Ingresa o pega múltiples correos separados por comas, espacios o saltos de línea. Los cupones nominativos son intransferibles y la plataforma protegerá la privacidad sin exponer los correos en pantalla.
                   </p>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="invitado@ejemplo.com, vip@prensa.com..."
+                      value={emailInputText}
+                      onChange={e => setEmailInputText(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAllowedEmail();
+                        }
+                      }}
+                      className="flex-1 bg-zinc-900 border border-purple-900/60 rounded-lg px-3 py-2 text-xs text-purple-200 placeholder-zinc-600 focus:outline-none focus:border-purple-500 font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleAddAllowedEmail()}
+                      disabled={!emailInputText.trim()}
+                      className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer shrink-0"
+                    >
+                      + Agregar
+                    </button>
+                  </div>
+
+                  {/* Chips de Correos Agregados */}
+                  {allowedEmails.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1.5 bg-zinc-900/50 rounded-lg border border-purple-950">
+                        {allowedEmails.map((em) => (
+                          <span
+                            key={em}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-purple-950/60 border border-purple-700/50 rounded-md text-xs font-mono text-purple-200 group"
+                          >
+                            <Mail size={11} className="text-purple-400" />
+                            <span>{em}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveAllowedEmail(em)}
+                              className="text-purple-400 hover:text-rose-400 p-0.5 rounded transition-colors cursor-pointer ml-0.5"
+                              title="Eliminar este correo"
+                            >
+                              <X size={12} />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setAllowedEmails([])}
+                          className="text-[10px] text-zinc-500 hover:text-rose-400 underline transition-colors"
+                        >
+                          Limpiar lista de correos
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Límite de Usos y Evento */}
@@ -737,6 +1016,232 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* ══════ CONFIGURACIÓN DE CORTESÍA VIP & SELECTOR DE FILAS DESIGNADAS ══════ */}
+                <div className="bg-zinc-950/80 border border-amber-500/20 p-4 rounded-xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-zinc-800/80 pb-2">
+                    <label className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-amber-500" />
+                      <span>Cortesía VIP & Asignación de Asientos</span>
+                    </label>
+                    {isComplimentary && (
+                      <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                        Cortesía Activa
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Toggles de Cortesía y Asiento */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="flex items-center gap-3 p-2.5 bg-zinc-900/60 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={isComplimentary}
+                        onChange={e => setIsComplimentary(e.target.checked)}
+                        className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-zinc-200 block">Es Cortesía VIP / Prensa</span>
+                        <span className="text-[10px] text-zinc-500 block">100% Bonificación para invitados especiales</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2.5 bg-zinc-900/60 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={requiresSeat}
+                        onChange={e => setRequiresSeat(e.target.checked)}
+                        className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-zinc-200 block">Requiere Asiento Numerado</span>
+                        <span className="text-[10px] text-zinc-500 block">Reserva un lugar físico en el mapa interactivo</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* Modo de Asignación de Asientos */}
+                  {requiresSeat && (
+                    <div className="space-y-3 pt-1">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Modo de Asignación de Asiento
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setAllocationMode('OPEN')}
+                          className={`p-2.5 rounded-lg border text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            allocationMode === 'OPEN'
+                              ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span>Asignación Libre / Abierta</span>
+                          <span className="text-[10px] font-normal text-zinc-500">El invitado elige cualquier asiento disponible</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setAllocationMode('DESIGNATED_ROW')}
+                          className={`p-2.5 rounded-lg border text-xs font-bold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                            allocationMode === 'DESIGNATED_ROW'
+                              ? 'bg-amber-500/20 border-amber-500 text-amber-300'
+                              : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:border-zinc-700'
+                          }`}
+                        >
+                          <span className="flex items-center gap-1">
+                            <Layers size={13} />
+                            <span>Fila Designada Específica</span>
+                          </span>
+                          <span className="text-[10px] font-normal text-zinc-500">Prioridad con desborde automático</span>
+                        </button>
+                      </div>
+
+                      {/* ── SELECTOR DE FILAS DESIGNADAS (PRIORIDAD CON DESBORDE) ── */}
+                      {allocationMode === 'DESIGNATED_ROW' && (
+                        <div className="p-3.5 bg-amber-950/20 border border-amber-500/30 rounded-xl space-y-3 animate-fadeIn">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                              <Layers size={13} className="text-amber-400" />
+                              <span>Lista Priorizada de Filas de Cortesía</span>
+                            </label>
+                            <span className="text-[10px] font-mono text-amber-400/80">
+                              {complimentaryRows.length} fila(s) asignada(s)
+                            </span>
+                          </div>
+
+                          <p className="text-[11px] text-zinc-400 leading-relaxed">
+                            El sistema otorgará asientos primero en la <strong>1ª Fila Prioritaria</strong>. Cuando esta fila se agote en el evento, el mapa desbloqueará automáticamente la siguiente fila de la lista de prioridad.
+                          </p>
+
+                          {/* Filas Actualmente Seleccionadas en Orden de Prioridad */}
+                          {complimentaryRows.length > 0 ? (
+                            <div className="space-y-1.5 bg-zinc-900/60 p-2.5 rounded-lg border border-amber-900/40">
+                              {complimentaryRows.map((rowName, idx) => (
+                                <div
+                                  key={rowName}
+                                  className="flex items-center justify-between px-3 py-1.5 bg-zinc-950 border border-amber-500/30 rounded-lg text-xs"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-black uppercase ${
+                                      idx === 0
+                                        ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
+                                        : 'bg-zinc-800 text-zinc-400'
+                                    }`}>
+                                      {idx === 0 ? '1ª Prioridad' : `${idx + 1}ª Desborde`}
+                                    </span>
+                                    <span className="font-bold text-zinc-100">{rowName}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveRow(idx, 'up')}
+                                      disabled={idx === 0}
+                                      className="p-1 text-zinc-400 hover:text-amber-400 disabled:opacity-20 cursor-pointer"
+                                      title="Subir prioridad"
+                                    >
+                                      <ChevronUp size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMoveRow(idx, 'down')}
+                                      disabled={idx === complimentaryRows.length - 1}
+                                      className="p-1 text-zinc-400 hover:text-amber-400 disabled:opacity-20 cursor-pointer"
+                                      title="Bajar prioridad"
+                                    >
+                                      <ChevronDown size={14} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveRow(rowName)}
+                                      className="p-1 text-rose-400 hover:text-rose-300 cursor-pointer ml-1"
+                                      title="Quitar fila"
+                                    >
+                                      <X size={14} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="py-2.5 text-center text-xs text-amber-400/70 border border-dashed border-amber-500/30 rounded-lg">
+                              Aún no has agregado filas designadas. Elige una fila abajo o escribe el nombre.
+                            </div>
+                          )}
+
+                          {/* Botones rápidos de filas detectadas en el teatro */}
+                          {availableTheaterRows.length > 0 && (
+                            <div className="space-y-1.5 pt-1">
+                              <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                                Filas detectadas en el recinto / teatro:
+                              </span>
+                              <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                                {availableTheaterRows.map(row => {
+                                  const isSelected = complimentaryRows.includes(row);
+                                  return (
+                                    <button
+                                      key={row}
+                                      type="button"
+                                      onClick={() => isSelected ? handleRemoveRow(row) : handleAddRow(row)}
+                                      className={`px-2.5 py-1 rounded text-xs font-medium border transition-all cursor-pointer ${
+                                        isSelected
+                                          ? 'bg-amber-500 text-slate-950 font-bold border-amber-400'
+                                          : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:border-amber-500/50'
+                                      }`}
+                                    >
+                                      {isSelected ? `✓ ${row}` : `+ ${row}`}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Input manual para otra fila o mesa personalizada */}
+                          <div className="flex gap-2 pt-1">
+                            <input
+                              type="text"
+                              placeholder="Ej. Fila G, Fila H, Mesa 4..."
+                              value={rowInputText}
+                              onChange={e => setRowInputText(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddRow();
+                                }
+                              }}
+                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleAddRow()}
+                              disabled={!rowInputText.trim()}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                            >
+                              + Añadir
+                            </button>
+                          </div>
+
+                          {/* Checkbox para sincronizar con el Evento seleccionado */}
+                          {eventId && (
+                            <label className="flex items-center gap-2 pt-2 border-t border-amber-500/20 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={syncRowsToEvent}
+                                onChange={e => setSyncRowsToEvent(e.target.checked)}
+                                className="w-3.5 h-3.5 accent-amber-500 rounded cursor-pointer"
+                              />
+                              <span className="text-[11px] text-amber-300 font-medium">
+                                Guardar y sincronizar también estas filas prioritarias en la configuración del Evento
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Expiración y Estado */}
@@ -833,10 +1338,33 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                     placeholder="invitado@ejemplo.com"
                     value={emailRecipient}
                     onChange={e => setEmailRecipient(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-purple-500"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-purple-500 font-mono"
                   />
+                  {selectedCouponForEmail.allowed_emails && selectedCouponForEmail.allowed_emails.length > 0 && (
+                    <div className="space-y-1 mt-2">
+                      <span className="text-[10px] text-zinc-400 block font-semibold">
+                        Seleccionar de invitados autorizados:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCouponForEmail.allowed_emails.map((em: string) => (
+                          <button
+                            key={em}
+                            type="button"
+                            onClick={() => setEmailRecipient(em)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
+                              emailRecipient === em
+                                ? 'bg-purple-600 text-white border-purple-400'
+                                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-purple-500'
+                            }`}
+                          >
+                            {em}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <p className="text-[11px] text-zinc-500 mt-1">
-                    * Al enviar, si el cupón no está asignado, se bloqueará exclusivamente a este correo.
+                    * Al enviar, el correo recibirá una invitación formal con su enlace seguro de canje.
                   </p>
                 </div>
 

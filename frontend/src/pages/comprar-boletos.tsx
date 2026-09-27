@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Calendar, CalendarX,
   CheckCircle, Info,
-  MapPin, Maximize2,
+  Mail, MapPin, Maximize2,
   Minus, Plus,
   ShieldCheck,
   Sparkles,
@@ -182,6 +182,8 @@ const TourPage = () => {
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [couponError, setCouponError] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [couponEmailInput, setCouponEmailInput] = useState('');
+  const [couponRequiresEmail, setCouponRequiresEmail] = useState(false);
   const [activeAllowedRows, setActiveAllowedRows] = useState<string[]>([]);
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
@@ -197,13 +199,16 @@ const TourPage = () => {
     setAppliedCoupon(null);
     setCouponCode('');
     setCouponError('');
+    setCouponRequiresEmail(false);
     setActiveAllowedRows([]);
     showAlert('Cupón removido. Todas las zonas y filas vuelven a estar disponibles a tarifa normal.', 'Cupón Removido', 'info');
   };
 
   const handleValidateCoupon = async (overrideCode?: any, overrideEmail?: any) => {
     const codeToUse = typeof overrideCode === 'string' ? overrideCode.trim() : (couponCode || '').trim();
-    const emailToUse = typeof overrideEmail === 'string' ? overrideEmail.trim() : (email || '').trim();
+    const emailToUse = typeof overrideEmail === 'string'
+      ? overrideEmail.trim()
+      : (couponEmailInput || email || '').trim();
     if (!codeToUse) return;
     setIsValidatingCoupon(true);
     setCouponError('');
@@ -215,6 +220,7 @@ const TourPage = () => {
       });
       if (res.data.valid) {
         setAppliedCoupon(res.data);
+        setCouponRequiresEmail(false);
         const rows: string[] = res.data.active_allowed_rows || [];
         setActiveAllowedRows(rows);
 
@@ -237,10 +243,14 @@ const TourPage = () => {
       }
     } catch (err: any) {
       const msg = err.response?.data?.error || "El código de cupón no es válido o ha expirado.";
+      const reqEmail = Boolean(err.response?.data?.requires_email || msg.toLowerCase().includes('correo'));
+      if (reqEmail) {
+        setCouponRequiresEmail(true);
+      }
       setCouponError(msg);
       setAppliedCoupon(null);
       setActiveAllowedRows([]);
-      showAlert(msg, "Error de Cupón", "error");
+      showAlert(msg, "Validación de Cupón", reqEmail ? "info" : "error");
     } finally {
       setIsValidatingCoupon(false);
     }
@@ -257,6 +267,7 @@ const TourPage = () => {
       if (urlEmail && typeof urlEmail === 'string') {
         cleanEmail = urlEmail.trim();
         setEmail(cleanEmail);
+        setCouponEmailInput(cleanEmail);
       }
       handleValidateCoupon(cleanCoupon, cleanEmail || undefined);
     }
@@ -1072,7 +1083,7 @@ const TourPage = () => {
                     </div>
 
                     {!appliedCoupon ? (
-                      <div className="space-y-2">
+                      <div className="space-y-2.5">
                         <div className="flex gap-2">
                           <input
                             type="text"
@@ -1099,6 +1110,55 @@ const TourPage = () => {
                             {isValidatingCoupon ? 'Validando...' : 'Aplicar'}
                           </button>
                         </div>
+
+                        {/* Input condicional de correo para cupones personales/exclusivos */}
+                        {(couponRequiresEmail || couponEmailInput) && (
+                          <div className="p-2.5 bg-amber-500/10 border border-amber-500/25 rounded-xl space-y-1.5 animate-fadeIn">
+                            <label className="text-[10px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                              <Mail size={12} />
+                              <span>Ingresa tu correo autorizado para validar este cupón:</span>
+                            </label>
+                            <div className="flex gap-2">
+                              <input
+                                type="email"
+                                value={couponEmailInput}
+                                onChange={e => {
+                                  setCouponEmailInput(e.target.value);
+                                  setEmail(e.target.value);
+                                  setCouponError('');
+                                }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleValidateCoupon(undefined, e.currentTarget.value);
+                                  }
+                                }}
+                                placeholder="tu-correo@ejemplo.com"
+                                className="flex-1 bg-white dark:bg-white/5 border border-amber-400/50 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleValidateCoupon(undefined, couponEmailInput)}
+                                disabled={isValidatingCoupon || !couponEmailInput.trim()}
+                                className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg transition-colors shrink-0"
+                              >
+                                Validar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {!couponRequiresEmail && !couponEmailInput && (
+                          <button
+                            type="button"
+                            onClick={() => setCouponRequiresEmail(true)}
+                            className="text-[10px] text-slate-500 dark:text-slate-400 hover:text-amber-500 underline flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                          >
+                            <Mail size={11} />
+                            <span>¿Tu cupón es personal / exclusivo? Ingresar correo</span>
+                          </button>
+                        )}
+
                         {couponError && (
                           <p className="text-[10px] font-bold text-rose-600 dark:text-rose-400 leading-tight">
                             {couponError}
@@ -1450,7 +1510,7 @@ const TourPage = () => {
                   </div>
 
                   {/* VIP Coupon Code Input */}
-                  <div className="space-y-1.5 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 p-4 rounded-2xl">
+                  <div className="space-y-2 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 p-4 rounded-2xl">
                     <label className="text-[9.5px] uppercase font-black tracking-widest text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                       <Sparkles size={12} className="text-amber-500 animate-pulse" /> Código de Cupón / Entrada VIP
                     </label>
@@ -1467,13 +1527,45 @@ const TourPage = () => {
                       />
                       <button
                         type="button"
-                        onClick={() => handleValidateCoupon()}
+                        onClick={() => handleValidateCoupon(undefined, email || couponEmailInput)}
                         disabled={isValidatingCoupon || !couponCode.trim()}
                         className="px-4 py-2.5 bg-slate-900 dark:bg-white dark:text-slate-950 text-white font-black text-xs uppercase tracking-wider rounded-xl hover:bg-slate-800 disabled:opacity-40 transition-all active:scale-95"
                       >
                         {isValidatingCoupon ? 'Validando...' : 'Aplicar'}
                       </button>
                     </div>
+
+                    {/* Email requerido en modal si el cupón lo necesita y aún no hay correo */}
+                    {(couponRequiresEmail || (!appliedCoupon && !email && couponEmailInput)) && (
+                      <div className="p-2.5 bg-amber-500/10 border border-amber-500/25 rounded-xl space-y-1.5 animate-fadeIn">
+                        <label className="text-[10px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                          <Mail size={12} />
+                          <span>Correo de validación para este cupón:</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="email"
+                            value={couponEmailInput || email}
+                            onChange={e => {
+                              setCouponEmailInput(e.target.value);
+                              setEmail(e.target.value);
+                              setCouponError('');
+                            }}
+                            placeholder="tu-correo@ejemplo.com"
+                            className="flex-1 bg-white dark:bg-white/5 border border-amber-400/50 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleValidateCoupon(undefined, couponEmailInput || email)}
+                            disabled={isValidatingCoupon || !(couponEmailInput || email).trim()}
+                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-lg transition-colors shrink-0"
+                          >
+                            Validar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     {appliedCoupon && (
                       <div className="mt-2 p-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400 font-bold">
                         <span className="flex items-center gap-1.5">

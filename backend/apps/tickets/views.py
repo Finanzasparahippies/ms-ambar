@@ -32,7 +32,10 @@ class CouponViewSet(viewsets.ModelViewSet):
 
         if not result.get('valid'):
             error_status = status.HTTP_404_NOT_FOUND if 'no existe' in result.get('error', '').lower() else status.HTTP_400_BAD_REQUEST
-            return Response({'error': result.get('error')}, status=error_status)
+            return Response({
+                'error': result.get('error'),
+                'requires_email': bool(result.get('requires_email', False))
+            }, status=error_status)
 
         return Response(result, status=status.HTTP_200_OK)
 

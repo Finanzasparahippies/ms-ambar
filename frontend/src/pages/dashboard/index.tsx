@@ -4096,6 +4096,7 @@ export default function AdminDashboard() {
                   <CouponManager
                     coupons={coupons}
                     events={events}
+                    theaters={theaters}
                     apiUrl={API_URL}
                     onRefresh={() => fetchTabData('coupons')}
                   />
