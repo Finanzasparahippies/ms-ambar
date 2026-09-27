@@ -327,6 +327,35 @@ FONT_PRESET_CHOICES = [
 ]
 
 
+def sanitize_event_media_path(instance, filename, prefix='event_flyers'):
+    """
+    Sanitiza nombres de archivo para Cloudinary y almacenamiento local:
+    - Remueve acentos, espacios y caracteres especiales con slugify
+    - Incorpora un identificador único seguro (UUID hex) para prevenir colisiones
+    - Asegura extensiones limpias (.jpg, .png, .webp)
+    """
+    import os
+    import uuid
+    from django.utils.text import slugify
+
+    base, ext = os.path.splitext(filename)
+    clean_ext = ext.lower().strip() if ext else '.jpg'
+    clean_base = slugify(base)
+    if not clean_base:
+        clean_base = 'event_media'
+    clean_base = clean_base[:60]
+    unique_suffix = uuid.uuid4().hex[:8]
+    return f"{prefix}/{clean_base}_{unique_suffix}{clean_ext}"
+
+
+def event_image_upload_path(instance, filename):
+    return sanitize_event_media_path(instance, filename, prefix='events')
+
+
+def event_flyer_upload_path(instance, filename):
+    return sanitize_event_media_path(instance, filename, prefix='event_flyers')
+
+
 class Event(models.Model):
     EVENT_TYPES = [
         ('concert', 'Concierto / Venue'),
@@ -344,9 +373,10 @@ class Event(models.Model):
     venue_name = models.CharField(max_length=255, blank=True, default='')
     venue_address = models.CharField(max_length=255, blank=True, default='')
     theater = models.ForeignKey('Theater', on_delete=models.CASCADE, null=True, blank=True, related_name='events')
-    image = models.ImageField(upload_to='events/', null=True, blank=True)
+    image = models.ImageField(max_length=500, upload_to=event_image_upload_path, null=True, blank=True)
     flyer = models.ImageField(
-        upload_to='event_flyers/',
+        max_length=500,
+        upload_to=event_flyer_upload_path,
         null=True,
         blank=True,
         help_text="Imagen del flyer oficial del evento. Se muestra en la landing page y en la página de compra de boletos."
@@ -424,6 +454,45 @@ class Event(models.Model):
             'custom_css': (self.custom_css or '') + ('\n' + site_theme['custom_css'] if site_theme['custom_css'] else ''),
             'section_themes': merged_section_themes,
         }
+
+    def get_flyer_url(self):
+        """
+        Retorna la URL pública y segura del flyer, resolviendo Cloudinary
+        o devolviendo None si no está configurado.
+        """
+        if not self.flyer:
+            return None
+        val_str = getattr(self.flyer, 'name', None) or str(self.flyer)
+        if not val_str:
+            return None
+        if val_str.startswith('http://') or val_str.startswith('https://'):
+            return val_str
+        try:
+            return self.flyer.url
+        except Exception:
+            from django.conf import settings
+            cloud_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '')
+            if cloud_name:
+                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{val_str.lstrip('/')}"
+            return None
+
+    def get_image_url(self):
+        """Retorna la URL pública y segura de la imagen del evento."""
+        if not self.image:
+            return None
+        val_str = getattr(self.image, 'name', None) or str(self.image)
+        if not val_str:
+            return None
+        if val_str.startswith('http://') or val_str.startswith('https://'):
+            return val_str
+        try:
+            return self.image.url
+        except Exception:
+            from django.conf import settings
+            cloud_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '')
+            if cloud_name:
+                return f"https://res.cloudinary.com/{cloud_name}/image/upload/{val_str.lstrip('/')}"
+            return None
 
     def save(self, *args, **kwargs):
         if self.theater:

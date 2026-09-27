@@ -14,6 +14,7 @@ import CanvasParticles from '../components/CanvasParticles';
 import ThemedSection from '../components/ThemedSection';
 import { useEventTheme } from '../context/EventThemeContext';
 import api from '../lib/api';
+import HeroBanner from '../components/HeroBanner';
 
 
 
@@ -337,14 +338,16 @@ const Home = () => {
       if (evRes.data && Array.isArray(evRes.data) && evRes.data.length > 0) {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const upcoming = evRes.data
-          .filter((e: any) => e.is_active !== false)
+        const activeEvents = evRes.data.filter((e: any) => e.is_active !== false);
+        const upcoming = activeEvents
           .map((e: any) => ({ ...e, dateObj: new Date(e.date) }))
           .filter((e: any) => e.dateObj >= startOfToday)
           .sort((a: any, b: any) => a.dateObj.getTime() - b.dateObj.getTime());
 
         if (upcoming.length > 0) {
           setNextEvent(upcoming[0]);
+        } else if (activeEvents.length > 0) {
+          setNextEvent(activeEvents[0]);
         } else {
           setNextEvent(null);
         }
@@ -493,7 +496,7 @@ const Home = () => {
       </ThemedSection>
 
       {/* ─── HADAS EN EL DESIERTO (GLOWY FASHION SHOWCASE) ─── */}
-      {nextEvent?.flyer_url && (
+      {nextEvent && (
         <ThemedSection sectionKey="events_grid" className="pb-16 md:pb-24 bg-[#06070b]">
           <div className="max-w-[1400px] mx-auto px-6 md:px-10">
             <motion.div
@@ -513,7 +516,7 @@ const Home = () => {
                   <div className="inline-flex items-center gap-2 bg-pink-500/15 border border-pink-400/30 px-3.5 py-1.5 rounded-full w-fit backdrop-blur-md shadow-lg shadow-pink-500/10">
                     <Sparkles size={12} className="text-pink-300 animate-pulse" />
                     <span className="text-[10px] font-black uppercase tracking-[0.25em] text-pink-200">
-                      🦋 Concierto Oficial
+                      🦋 {nextEvent.event_type === 'meet_greet' ? 'Convivencia M&G Oficial' : 'Concierto Oficial'}
                     </span>
                   </div>
                 </div>
@@ -556,7 +559,10 @@ const Home = () => {
                     </div> */}
 
                     <p className="text-xs text-pink-200/70 font-normal tracking-normal pt-1 flex items-center justify-center lg:justify-start gap-1.5">
-                      📍 <strong className="text-white">{nextEvent.venue_name || 'London Pub'}</strong> — <span className="italic">{nextEvent.venue_address || 'Av. Tamaulipas 11, Centro, Hermosillo, Sonora'}</span>
+                      📍 <strong className="text-white">{nextEvent.venue_name || nextEvent.theater_name || 'Recinto Oficial'}</strong>
+                      {(nextEvent.venue_address || nextEvent.theater_location) && (
+                        <> — <span className="italic">{nextEvent.venue_address || nextEvent.theater_location}</span></>
+                      )}
                     </p>
                   </div>
 
@@ -639,22 +645,13 @@ const Home = () => {
 
               {/* Right Column: Flyer Poster Container */}
               <div className="w-full h-[500px] sm:h-[600px] lg:h-[720px] overflow-hidden rounded-3xl order-1 lg:order-2 lg:col-span-5 z-20 flex justify-center lg:justify-end">
-                <div className="relative w-full h-full max-w-[420px] lg:max-w-none rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.7)] border border-pink-400/30 group/flyer bg-black/40">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent z-10 pointer-events-none" />
-                  <img
-                    src={nextEvent.flyer_url}
-                    alt={`Flyer: ${nextEvent.title}`}
-                    className="w-full h-full object-contain object-center group-hover/flyer:scale-[1.03] transition-transform duration-1000 ease-out"
-                  />
-                  <div className="absolute bottom-5 left-5 z-20">
-                    <span className="text-[9px] font-black uppercase tracking-[0.3em] text-pink-300">
-                      Hadas en el Desierto
-                    </span>
-                    <p className="text-xs font-bold text-white uppercase italic">
-                      Sábado 3 Oct • London Pub
-                    </p>
-                  </div>
-                </div>
+                <HeroBanner
+                  flyerUrl={nextEvent.flyer_url || nextEvent.image_url || nextEvent.flyer || nextEvent.image}
+                  title={nextEvent.title}
+                  subtitle={nextEvent.title}
+                  dateVenueText={`${getFormattedEventDate(nextEvent.date)} • ${nextEvent.venue_name || nextEvent.theater_name || 'Sede Oficial'}`}
+                  priority={true}
+                />
               </div>
             </motion.div>
           </div>

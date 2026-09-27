@@ -39,22 +39,24 @@ class EnvironmentMediaCloudinaryStorage(MediaCloudinaryStorage):
         # 1. Si ya es una URL absoluta o vino anidada con otra URL, limpiar y devolver
         if 'https://res.cloudinary.com' in name or 'http://res.cloudinary.com' in name:
             parts = name.split('https://res.cloudinary.com')
-            return f"https://res.cloudinary.com{parts[-1]}"
+            clean_url = f"https://res.cloudinary.com{parts[-1]}"
+            return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
         if name.startswith('http://') or name.startswith('https://'):
             return name
 
         # 2. Si ya contiene el prefijo de entorno o el prefijo de galería heredado, no anteponer PREFIX
         prefix = settings.CLOUDINARY_STORAGE.get('PREFIX', '')
-        if prefix and name.startswith(prefix):
-            clean_name = name
-        elif name.startswith('ms-ambar/') or name.startswith('ms_ambar/'):
-            clean_name = name
+        clean_name = name.strip()
+        if prefix and clean_name.startswith(prefix):
+            pass
+        elif clean_name.startswith('ms-ambar/') or clean_name.startswith('ms_ambar/'):
+            pass
         elif prefix:
-            clean_name = prefix + name
-        else:
-            clean_name = name
+            clean_name = f"{prefix}{clean_name.lstrip('/')}"
 
-        return cloudinary.utils.cloudinary_url(clean_name)[0]
+        # Generar URL segura de Cloudinary
+        cld_url, _ = cloudinary.utils.cloudinary_url(clean_name, secure=True)
+        return cld_url
 
 
 _ENSURED_FOLDERS = set()

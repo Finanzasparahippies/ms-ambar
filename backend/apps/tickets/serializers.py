@@ -3,14 +3,57 @@ from .models import Event, Theater, Seat, Ticket, GADeclaration, SiteSettings, C
 from .fees import calculate_total_with_fee, get_fee_config
 
 
-class SafeImageField(serializers.ImageField):
+class HybridImageField(serializers.ImageField):
+    """
+    Soporta tanto archivos binarios (multipart upload) como URLs directas
+    en string (Cloudinary o CDN tras optimización), garantizando siempre
+    la entrega de URLs seguras absolutas en la API.
+    """
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            return data
+        return super().to_internal_value(data)
+
     def to_representation(self, value):
-        if not value or not getattr(value, 'name', None):
+        if not value:
             return None
+
+        val_str = getattr(value, 'name', None) or str(value) or ''
+
+        # 1. Si ya contiene una URL de Cloudinary (o vino anidada con prefijos de entorno), limpiarla
+        if 'https://res.cloudinary.com' in val_str or 'http://res.cloudinary.com' in val_str:
+            parts = val_str.split('https://res.cloudinary.com')
+            clean_url = f"https://res.cloudinary.com{parts[-1]}"
+            return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
+
+        if val_str.startswith('http://') or val_str.startswith('https://'):
+            return val_str
+
+        # 2. Si es un FieldFile con storage
         try:
-            return super().to_representation(value)
-        except (ValueError, AttributeError):
-            return None
+            url = getattr(value, 'url', None)
+            if url and isinstance(url, str):
+                if 'https://res.cloudinary.com' in url or 'http://res.cloudinary.com' in url:
+                    parts = url.split('https://res.cloudinary.com')
+                    clean_url = f"https://res.cloudinary.com{parts[-1]}"
+                    return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
+                return url
+        except Exception:
+            pass
+
+        # 3. Construir URL limpia sin prefijos duplicados
+        from django.conf import settings
+        cloud_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '')
+        if cloud_name and val_str:
+            clean_path = val_str.lstrip('/')
+            prefix = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('PREFIX', '')
+            if prefix and not clean_path.startswith(prefix) and not clean_path.startswith('ms_ambar/') and not clean_path.startswith('ms-ambar/'):
+                clean_path = f"{prefix}{clean_path}"
+            return f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
+        return str(value)
+
+
+SafeImageField = HybridImageField
 
 
 class SeatSerializer(serializers.ModelSerializer):
@@ -45,8 +88,8 @@ class CouponSerializer(serializers.ModelSerializer):
 class EventSerializer(serializers.ModelSerializer):
     theater_name = serializers.SerializerMethodField()
     theater_location = serializers.SerializerMethodField()
-    image = SafeImageField(required=False, allow_null=True)
-    flyer = SafeImageField(required=False, allow_null=True)
+    image = HybridImageField(required=False, allow_null=True)
+    flyer = HybridImageField(required=False, allow_null=True)
     image_url = serializers.SerializerMethodField()
     flyer_url = serializers.SerializerMethodField()
     base_price = serializers.SerializerMethodField()
@@ -77,6 +120,50 @@ class EventSerializer(serializers.ModelSerializer):
             'venue_address': {'required': False, 'allow_blank': True},
         }
 
+    def _resolve_media_url(self, value, fallback=None):
+        if not value:
+            return fallback
+
+        val_str = getattr(value, 'name', None) or str(value) or ''
+        if not val_str:
+            return fallback
+
+        # 1. Si ya es una URL absoluta de Cloudinary
+        if 'https://res.cloudinary.com' in val_str or 'http://res.cloudinary.com' in val_str:
+            parts = val_str.split('https://res.cloudinary.com')
+            clean_url = f"https://res.cloudinary.com{parts[-1]}"
+            return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
+
+        if val_str.startswith('http://') or val_str.startswith('https://'):
+            return val_str
+
+        # 2. Intentar resolver vía storage del FieldFile
+        try:
+            url = getattr(value, 'url', None)
+            if url and isinstance(url, str):
+                if 'https://res.cloudinary.com' in url or 'http://res.cloudinary.com' in url:
+                    parts = url.split('https://res.cloudinary.com')
+                    clean_url = f"https://res.cloudinary.com{parts[-1]}"
+                    return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
+                request = self.context.get('request')
+                if request and not url.startswith('http'):
+                    return request.build_absolute_uri(url)
+                return url
+        except Exception:
+            pass
+
+        # 3. Fallback inteligente a Cloudinary URL con prefijo
+        from django.conf import settings
+        cloud_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '')
+        if cloud_name and val_str:
+            clean_path = val_str.lstrip('/')
+            prefix = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('PREFIX', '')
+            if prefix and not clean_path.startswith(prefix) and not clean_path.startswith('ms_ambar/') and not clean_path.startswith('ms-ambar/'):
+                clean_path = f"{prefix}{clean_path}"
+            return f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
+
+        return fallback
+
     def get_theater_name(self, obj):
         return obj.theater.name if obj.theater else None
 
@@ -84,22 +171,12 @@ class EventSerializer(serializers.ModelSerializer):
         return obj.theater.location if obj.theater else None
 
     def get_image_url(self, obj):
-        request = self.context.get('request')
-        if obj.image and getattr(obj.image, 'name', None) and request:
-            try:
-                return request.build_absolute_uri(obj.image.url)
-            except (ValueError, AttributeError):
-                return None
-        return None
+        return self._resolve_media_url(obj.image, fallback=None)
 
     def get_flyer_url(self, obj):
-        request = self.context.get('request')
-        if obj.flyer and getattr(obj.flyer, 'name', None) and request:
-            try:
-                return request.build_absolute_uri(obj.flyer.url)
-            except (ValueError, AttributeError):
-                return None
-        return None
+        if not obj.flyer:
+            return None
+        return self._resolve_media_url(obj.flyer, fallback='/static/images/placeholder-event.webp')
 
     def get_base_price(self, obj):
         return obj.base_price
