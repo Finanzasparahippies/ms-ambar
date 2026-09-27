@@ -62,6 +62,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = ({
         alt={title ? `Flyer: ${title}` : 'Flyer oficial del evento'}
         fill
         priority={priority}
+        unoptimized={typeof imgSrc === 'string' && (imgSrc.includes('cloudinary.com') || imgSrc.startsWith('http'))}
         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 500px"
         className={`w-full h-full object-contain object-center group-hover/flyer:scale-[1.03] transition-all duration-700 ease-out ${
           isLoading ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'

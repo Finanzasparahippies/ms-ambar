@@ -24,10 +24,14 @@ class HybridImageField(serializers.ImageField):
 
         val_str = getattr(value, 'name', None) or str(value) or ''
 
-        # 1. Si ya contiene una URL de Cloudinary (o vino anidada con prefijos de entorno), limpiarla
-        if 'https://res.cloudinary.com' in val_str or 'http://res.cloudinary.com' in val_str:
-            parts = val_str.split('https://res.cloudinary.com')
-            clean_url = f"https://res.cloudinary.com{parts[-1]}"
+        import re
+
+        # 1. Si ya contiene res.cloudinary.com, asegurar esquema https limpio y sin dobles barras
+        if 'res.cloudinary.com' in val_str:
+            idx = val_str.find('res.cloudinary.com')
+            path_part = val_str[idx + len('res.cloudinary.com'):]
+            clean_url = f"https://res.cloudinary.com{path_part}"
+            clean_url = re.sub(r'(https://res\.cloudinary\.com)/+', r'\1/', clean_url)
             return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
 
         if val_str.startswith('http://') or val_str.startswith('https://'):
@@ -37,9 +41,11 @@ class HybridImageField(serializers.ImageField):
         try:
             url = getattr(value, 'url', None)
             if url and isinstance(url, str):
-                if 'https://res.cloudinary.com' in url or 'http://res.cloudinary.com' in url:
-                    parts = url.split('https://res.cloudinary.com')
-                    clean_url = f"https://res.cloudinary.com{parts[-1]}"
+                if 'res.cloudinary.com' in url:
+                    idx = url.find('res.cloudinary.com')
+                    path_part = url[idx + len('res.cloudinary.com'):]
+                    clean_url = f"https://res.cloudinary.com{path_part}"
+                    clean_url = re.sub(r'(https://res\.cloudinary\.com)/+', r'\1/', clean_url)
                     return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
                 return url
         except (ValueError, AttributeError):
@@ -56,6 +62,7 @@ class HybridImageField(serializers.ImageField):
             prefix = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('PREFIX', '')
             if prefix and not clean_path.startswith(prefix) and not clean_path.startswith('ms_ambar/') and not clean_path.startswith('ms-ambar/'):
                 clean_path = f"{prefix}{clean_path}"
+            clean_path = re.sub(r'/+', '/', clean_path)
             return f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
         return str(value)
 
@@ -138,10 +145,14 @@ class EventSerializer(serializers.ModelSerializer):
         if not val_str:
             return fallback
 
-        # 1. Si ya es una URL absoluta de Cloudinary
-        if 'https://res.cloudinary.com' in val_str or 'http://res.cloudinary.com' in val_str:
-            parts = val_str.split('https://res.cloudinary.com')
-            clean_url = f"https://res.cloudinary.com{parts[-1]}"
+        import re
+
+        # 1. Si ya es una URL de Cloudinary, normalizar a https y limpiar dobles barras
+        if 'res.cloudinary.com' in val_str:
+            idx = val_str.find('res.cloudinary.com')
+            path_part = val_str[idx + len('res.cloudinary.com'):]
+            clean_url = f"https://res.cloudinary.com{path_part}"
+            clean_url = re.sub(r'(https://res\.cloudinary\.com)/+', r'\1/', clean_url)
             return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
 
         if val_str.startswith('http://') or val_str.startswith('https://'):
@@ -151,9 +162,11 @@ class EventSerializer(serializers.ModelSerializer):
         try:
             url = getattr(value, 'url', None)
             if url and isinstance(url, str):
-                if 'https://res.cloudinary.com' in url or 'http://res.cloudinary.com' in url:
-                    parts = url.split('https://res.cloudinary.com')
-                    clean_url = f"https://res.cloudinary.com{parts[-1]}"
+                if 'res.cloudinary.com' in url:
+                    idx = url.find('res.cloudinary.com')
+                    path_part = url[idx + len('res.cloudinary.com'):]
+                    clean_url = f"https://res.cloudinary.com{path_part}"
+                    clean_url = re.sub(r'(https://res\.cloudinary\.com)/+', r'\1/', clean_url)
                     return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
                 request = self.context.get('request')
                 if request and not url.startswith('http'):
@@ -173,6 +186,7 @@ class EventSerializer(serializers.ModelSerializer):
             prefix = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('PREFIX', '')
             if prefix and not clean_path.startswith(prefix) and not clean_path.startswith('ms_ambar/') and not clean_path.startswith('ms-ambar/'):
                 clean_path = f"{prefix}{clean_path}"
+            clean_path = re.sub(r'/+', '/', clean_path)
             return f"https://res.cloudinary.com/{cloud_name}/image/upload/{clean_path}"
 
         return fallback

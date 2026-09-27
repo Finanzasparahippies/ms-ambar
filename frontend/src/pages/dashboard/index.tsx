@@ -2035,16 +2035,22 @@ export default function AdminDashboard() {
 
     try {
       if (campId) {
-        await axios.patch(`${API_URL}/blog/campaigns/${campId}/`, formData, { headers });
+        const patchRes = await axios.patch(`${API_URL}/blog/campaigns/${campId}/`, formData, { headers });
         setCampSuccessMsg('¡Campaña de correos actualizada con éxito!');
+        if (patchRes.data && patchRes.data.id) {
+          setCampaigns(prev => prev.map(c => c.id === patchRes.data.id ? patchRes.data : c));
+        }
       } else {
-        await axios.post(`${API_URL}/blog/campaigns/`, formData, { headers });
+        const postRes = await axios.post(`${API_URL}/blog/campaigns/`, formData, { headers });
         setCampSuccessMsg('¡Campaña de correos creada con éxito!');
+        if (postRes.data && postRes.data.id) {
+          setCampaigns(prev => [postRes.data, ...prev]);
+        }
       }
       setIsCampaignModalOpen(false);
       localStorage.removeItem('ms_ambar_campaign_draft');
       setHasDraft(false);
-      fetchDashboardData();
+      fetchTabData('campaigns');
     } catch (err: any) {
       console.error(err);
       if (err.response?.status === 401) {
@@ -2065,7 +2071,8 @@ export default function AdminDashboard() {
     const headers = { Authorization: `Bearer ${token}` };
     try {
       await axios.delete(`${API_URL}/blog/campaigns/${id}/`, { headers });
-      fetchDashboardData();
+      setCampaigns(prev => prev.filter(c => c.id !== id));
+      fetchTabData('campaigns');
     } catch (err) {
       console.error('Error eliminando campaña:', err);
     }
@@ -2080,7 +2087,7 @@ export default function AdminDashboard() {
     try {
       await axios.post(`${API_URL}/blog/campaigns/${id}/send_campaign/`, {}, { headers });
       showToast.success('¡Envío de campaña iniciado con éxito!');
-      fetchDashboardData();
+      fetchTabData('campaigns');
     } catch (err: any) {
       console.error(err);
       showAlert(err.response?.data?.error || 'Error al enviar la campaña.', "Error de Envío", "error");
@@ -2459,14 +2466,20 @@ export default function AdminDashboard() {
 
     try {
       if (editingEvent) {
-        await axios.patch(`${API_URL}/tickets/events/${editingEvent.id}/`, formData, { headers });
+        const patchRes = await axios.patch(`${API_URL}/tickets/events/${editingEvent.id}/`, formData, { headers });
         setEventSuccessMsg('¡Evento actualizado con éxito!');
+        if (patchRes.data && patchRes.data.id) {
+          setEvents(prev => prev.map(ev => ev.id === patchRes.data.id ? patchRes.data : ev));
+        }
       } else {
-        await axios.post(`${API_URL}/tickets/events/`, formData, { headers });
+        const postRes = await axios.post(`${API_URL}/tickets/events/`, formData, { headers });
         setEventSuccessMsg('¡Evento creado con éxito!');
+        if (postRes.data && postRes.data.id) {
+          setEvents(prev => [postRes.data, ...prev]);
+        }
       }
       setIsEventModalOpen(false);
-      fetchDashboardData();
+      fetchTabData('events');
     } catch (err: unknown) {
       console.error('Error al guardar el evento:', err);
       let errorText = 'Error al guardar el evento.';
@@ -2497,7 +2510,8 @@ export default function AdminDashboard() {
     const headers = { Authorization: `Bearer ${token}` };
     try {
       await axios.delete(`${API_URL}/tickets/events/${id}/`, { headers });
-      fetchDashboardData();
+      setEvents(prev => prev.filter(ev => ev.id !== id));
+      fetchTabData('events');
     } catch (err) {
       console.error('Error eliminando evento:', err);
     }
@@ -2507,8 +2521,10 @@ export default function AdminDashboard() {
     const token = localStorage.getItem('token');
     const headers = { Authorization: `Bearer ${token}` };
     try {
-      await axios.patch(`${API_URL}/tickets/events/${event.id}/`, { is_active: !event.is_active }, { headers });
-      fetchDashboardData();
+      const nextActive = !event.is_active;
+      await axios.patch(`${API_URL}/tickets/events/${event.id}/`, { is_active: nextActive }, { headers });
+      setEvents(prev => prev.map(ev => ev.id === event.id ? { ...ev, is_active: nextActive } : ev));
+      fetchTabData('events');
     } catch (err) {
       console.error('Error al cambiar estado del evento:', err);
     }
@@ -4080,7 +4096,7 @@ export default function AdminDashboard() {
                     coupons={coupons}
                     events={events}
                     apiUrl={API_URL}
-                    onRefresh={fetchDashboardData}
+                    onRefresh={() => fetchTabData('coupons')}
                   />
                 </motion.div>
               )}

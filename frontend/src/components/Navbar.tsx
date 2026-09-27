@@ -121,21 +121,22 @@ const Navbar = () => {
         pointerEvents: isVisible ? 'auto' : 'none',
       }}
     >
-      <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-5 flex justify-between items-center w-full">
-        <Link href="/" className="flex items-center gap-4 group">
-          <div className="w-10 h-10 bg-amber-honey/10 border border-amber-honey/20 rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20 transition-all duration-300 group-hover:rotate-12 overflow-hidden p-1.5 animate-pulse">
-            <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain" />
+      <div className="max-w-[1200px] mx-auto px-6 md:px-8 py-5 flex items-center justify-between gap-4 w-full">
+        {/* Aislamiento del Logotipo contra compresión y colapso de viewport */}
+        <Link href="/" className="shrink-0 relative min-w-[120px] flex items-center gap-3 md:gap-4 group">
+          <div className="w-10 h-10 shrink-0 bg-amber-honey/10 border border-amber-honey/20 rounded-full flex items-center justify-center shadow-lg shadow-amber-honey/20 transition-all duration-300 group-hover:rotate-12 overflow-hidden p-1.5 animate-pulse">
+            <img src="/logos/ms_ambar_monograma_b.png" alt="Ms Ambar" className="w-full h-full object-contain shrink-0" />
           </div>
-          <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-6 w-auto object-contain hover:opacity-85 transition-opacity" />
+          <img src="/logos/ms_ambar_logo_b.png" alt="Ms Ambar" className="h-6 w-auto shrink-0 object-contain hover:opacity-85 transition-opacity" />
         </Link>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex gap-6 items-center">
+        <div className="hidden md:flex gap-4 lg:gap-6 items-center min-w-0 shrink">
           {navLinks.map((link) => (
             <Link
               key={link.name}
               href={link.href}
-              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
+              className={`text-[10px] uppercase font-bold tracking-[0.3em] transition-all hover:text-amber-honey whitespace-nowrap shrink-0 ${router.pathname === link.href ? 'text-amber-honey' : 'opacity-60'
                 }`}
             >
               {link.name}
@@ -157,7 +158,7 @@ const Navbar = () => {
             transition={{ duration: 0.5, ease: 'easeInOut' }}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.92 }}
-            className={`relative p-2.5 rounded-full border transition-all flex items-center justify-center ${
+            className={`shrink-0 relative p-2.5 rounded-full border transition-all flex items-center justify-center ${
               cartItemsCount > 0
                 ? 'bg-amber-honey/15 border-amber-honey text-amber-honey shadow-lg shadow-amber-honey/20'
                 : 'bg-[#181028] border-purple-500/30 text-purple-200 hover:text-white hover:bg-purple-600/30 hover:border-purple-400/50'
@@ -177,17 +178,17 @@ const Navbar = () => {
             )}
           </motion.button>
 
-          <div className="h-6 w-px bg-white/10 mx-1" />
+          <div className="h-6 w-px bg-white/10 mx-1 shrink-0" />
 
-          {/* Dynamic Authentication Controls */}
+          {/* Dynamic Authentication Controls (Encapsulado en sub-contenedor shrink-0) */}
           {isAuthenticated ? (
-            <div className="flex items-center gap-3">
+            <div className="shrink-0 flex items-center gap-2 lg:gap-3">
               {isAdmin && (
                 <>
                   {/* Nectar Studio Designer — admins only */}
                   <Link
                     href="/designer"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/designer'
+                    className={`shrink-0 text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/designer'
                       ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40'
                       : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white hover:border-purple-400'
                       }`}
@@ -198,7 +199,7 @@ const Navbar = () => {
                   {/* Ticket Scanner — staff only */}
                   <Link
                     href="/dashboard/scan-tickets"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/dashboard/scan-tickets'
+                    className={`shrink-0 text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname === '/dashboard/scan-tickets'
                       ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40'
                       : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white hover:border-purple-400'
                       }`}
@@ -209,7 +210,7 @@ const Navbar = () => {
                   {/* Admin Dashboard */}
                   <Link
                     href="/dashboard"
-                    className={`text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
+                    className={`shrink-0 text-[9px] uppercase font-black tracking-widest flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-all ${router.pathname.startsWith('/dashboard') && router.pathname !== '/dashboard/scan-tickets'
                       ? 'bg-purple-600 text-white border-purple-400 shadow-md shadow-purple-600/40'
                       : 'text-purple-200 bg-[#1e1338] border-purple-500/30 hover:bg-purple-600/30 hover:text-white hover:border-purple-400'
                       }`}
@@ -220,7 +221,7 @@ const Navbar = () => {
               )}
               <button
                 onClick={handleLogout}
-                className="text-[9px] uppercase font-black tracking-widest opacity-60 hover:opacity-100 hover:text-red-400 transition-colors flex items-center gap-1"
+                className="shrink-0 text-[9px] uppercase font-black tracking-widest opacity-60 hover:opacity-100 hover:text-red-400 transition-colors flex items-center gap-1"
                 title="Cerrar Sesión"
               >
                 <LogOut size={12} /> Salir
@@ -229,7 +230,7 @@ const Navbar = () => {
           ) : (
             <Link
               href="/login"
-              className="text-[9px] uppercase font-black tracking-widest text-purple-200 hover:text-white transition-all bg-[#1e1338] border border-purple-500/40 px-4 py-2 rounded-full hover:bg-purple-600/30 hover:border-purple-400 shadow-sm"
+              className="shrink-0 text-[9px] uppercase font-black tracking-widest text-purple-200 hover:text-white transition-all bg-[#1e1338] border border-purple-500/40 px-4 py-2 rounded-full hover:bg-purple-600/30 hover:border-purple-400 shadow-sm"
             >
               Login
             </Link>
@@ -237,7 +238,7 @@ const Navbar = () => {
         </div>
 
         {/* Mobile controls */}
-        <div className="flex md:hidden items-center gap-3">
+        <div className="flex md:hidden items-center gap-3 shrink-0">
           {/* Mobile Cart Trigger */}
           <motion.button
             id="mobile-navbar-cart-icon"

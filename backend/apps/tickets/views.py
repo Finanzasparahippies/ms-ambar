@@ -101,6 +101,27 @@ class EventViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
 
+    def _invalidate_event_caches(self, event_id=None):
+        from django.core.cache import cache
+        cache.delete('active_events')
+        cache.delete('ms_ambar_active_events_public')
+        cache.delete('ms_ambar_active_theme_global')
+        if event_id:
+            cache.delete(f'event_{event_id}')
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self._invalidate_event_caches(instance.id)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self._invalidate_event_caches(instance.id)
+
+    def perform_destroy(self, instance):
+        event_id = instance.id
+        super().perform_destroy(instance)
+        self._invalidate_event_caches(event_id)
+
     @action(detail=False, methods=['get', 'post'], url_path='cloudinary-signature', permission_classes=[permissions.IsAdminUser])
     def cloudinary_signature(self, request):
         """
