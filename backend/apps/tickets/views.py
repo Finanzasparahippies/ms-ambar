@@ -112,11 +112,25 @@ class EventViewSet(viewsets.ModelViewSet):
         subfolder = request.query_params.get('subfolder', 'event_flyers').strip('/')
         target_folder = f"{env_folder}/{subfolder}" if subfolder else env_folder
 
-        from config.cloudinary_storage import generate_cloudinary_signature
-        sig_data = generate_cloudinary_signature()
-        sig_data['default_folder'] = target_folder
-        sig_data['folder'] = target_folder
-        return Response(sig_data)
+        import logging
+        logger = logging.getLogger('apps.tickets')
+        try:
+            from config.cloudinary_storage import generate_cloudinary_signature
+            sig_data = generate_cloudinary_signature()
+            if not sig_data.get('signature'):
+                return Response(
+                    {"error": "Configuración de Cloudinary incompleta en el servidor.", "detail": "API_SECRET o CLOUD_NAME no configurados."},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE
+                )
+            sig_data['default_folder'] = target_folder
+            sig_data['folder'] = target_folder
+            return Response(sig_data)
+        except Exception as exc:
+            logger.error(f"Error generando firma de Cloudinary en EventViewSet: {exc}", exc_info=True)
+            return Response(
+                {"error": "Falla interna al generar firma de Cloudinary.", "detail": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'])
     def seats(self, request, pk=None):

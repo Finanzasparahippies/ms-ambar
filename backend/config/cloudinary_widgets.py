@@ -60,8 +60,11 @@ class CloudinaryMediaLibraryWidget(forms.ClearableFileInput):
                 url_candidate = value.url if hasattr(value, 'url') else None
                 if url_candidate and (url_candidate.startswith('http://') or url_candidate.startswith('https://')):
                     preview_url = url_candidate
-            except Exception:
+            except (ValueError, AttributeError):
                 pass
+            except Exception as e:
+                import logging
+                logging.getLogger('config.cloudinary').debug(f"Error al evaluar value.url en widget: {e}")
 
             # 2. Si no se resolvió con .url, procesar el valor como string
             if not preview_url:
@@ -220,8 +223,15 @@ if (!window._cldInitialized) {{
             const res = await fetch('/admin/cloudinary/signature/', {{
                 headers: {{ 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }}
             }});
-            return res.ok ? await res.json() : null;
-        }} catch {{ return null; }}
+            if (!res.ok) {{
+                console.error('[CloudinaryWidget] Error HTTP al obtener firma:', res.status, res.statusText);
+                return null;
+            }}
+            return await res.json();
+        }} catch (fetchErr) {{
+            console.error('[CloudinaryWidget] Error de red al solicitar firma:', fetchErr);
+            return null;
+        }}
     }}
 
     window.cldOpenMediaLibrary = async function(fieldId) {{

@@ -42,8 +42,11 @@ class HybridImageField(serializers.ImageField):
                     clean_url = f"https://res.cloudinary.com{parts[-1]}"
                     return clean_url.replace('/ms_ambar/prod/ms-ambar/', '/ms-ambar/').replace('/ms_ambar/staging/ms-ambar/', '/ms-ambar/')
                 return url
-        except Exception:
+        except (ValueError, AttributeError):
             pass
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').debug(f"Error accediendo a value.url en HybridImageField: {exc}")
 
         # 3. Construir URL limpia sin prefijos duplicados
         from django.conf import settings
@@ -156,8 +159,11 @@ class EventSerializer(serializers.ModelSerializer):
                 if request and not url.startswith('http'):
                     return request.build_absolute_uri(url)
                 return url
-        except Exception:
+        except (ValueError, AttributeError):
             pass
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').debug(f"Error accediendo a value.url en _resolve_media_url: {exc}")
 
         # 3. Fallback inteligente a Cloudinary URL con prefijo
         from django.conf import settings
@@ -186,12 +192,22 @@ class EventSerializer(serializers.ModelSerializer):
         return self._resolve_media_url(obj.flyer, fallback='/static/images/placeholder-event.webp')
 
     def get_local_date(self, obj):
-        ld = obj.get_local_date()
-        return ld.isoformat() if ld else None
+        try:
+            ld = obj.get_local_date()
+            return ld.isoformat() if ld else None
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').warning(f"Error al serializar local_date para Event #{obj.id}: {exc}")
+            return obj.date.isoformat() if obj.date else None
 
     def get_local_doors_open(self, obj):
-        ldo = obj.get_local_doors_open()
-        return ldo.isoformat() if ldo else None
+        try:
+            ldo = obj.get_local_doors_open()
+            return ldo.isoformat() if ldo else None
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').warning(f"Error al serializar local_doors_open para Event #{obj.id}: {exc}")
+            return obj.doors_open.isoformat() if obj.doors_open else None
 
     def get_base_price(self, obj):
         return obj.base_price

@@ -2444,9 +2444,24 @@ export default function AdminDashboard() {
       }
       setIsEventModalOpen(false);
       fetchDashboardData();
-    } catch (err: any) {
-      console.error(err);
-      setEventErrorMsg(err.response?.data ? JSON.stringify(err.response.data) : 'Error al guardar el evento.');
+    } catch (err: unknown) {
+      console.error('Error al guardar el evento:', err);
+      let errorText = 'Error al guardar el evento.';
+      if (axios.isAxiosError(err) && err.response?.data) {
+        const data = err.response.data;
+        if (typeof data === 'string') {
+          errorText = data;
+        } else if (typeof data === 'object') {
+          const messages = Object.entries(data).map(([field, msgs]) => {
+            const joined = Array.isArray(msgs) ? msgs.join(', ') : String(msgs);
+            return `${field}: ${joined}`;
+          });
+          errorText = messages.join(' | ');
+        }
+      } else if (err instanceof Error) {
+        errorText = err.message;
+      }
+      setEventErrorMsg(errorText);
     } finally {
       setEventLoading(false);
     }

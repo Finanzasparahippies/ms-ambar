@@ -104,12 +104,15 @@ export const EventMediaField: React.FC<EventMediaFieldProps> = ({
       ml.show({
         folder: sigData.default_folder ? { path: sigData.default_folder, resource_type: 'image' } : undefined,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error al inicializar Cloudinary Media Library:', err);
-      toast.error(
-        err.response?.data?.error || 'No se pudo abrir la biblioteca de Cloudinary. Verifica permisos de administrador.',
-        { id: toastId }
-      );
+      let errorMsg = 'No se pudo abrir la biblioteca de Cloudinary. Verifica permisos de administrador.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.detail || err.response?.data?.error || err.message || errorMsg;
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+      toast.error(errorMsg, { id: toastId });
     } finally {
       setIsOpeningCloudinary(false);
     }
@@ -160,10 +163,15 @@ export const EventMediaField: React.FC<EventMediaFieldProps> = ({
         onFileChange(selected, preview);
         toast('Se usará el archivo local para subida directa estándar.', { id: toastId, icon: '📁' });
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.warn('Fallo optimización en servidor, recurriendo a subida directa multipart:', err);
-      // Fallback gracioso: mantener archivo binario
-      toast('Optimizador no disponible; se enviará como archivo local directo.', { id: toastId, icon: 'ℹ️' });
+      let detailMsg = 'Optimizador no disponible; se enviará como archivo local directo.';
+      if (axios.isAxiosError(err) && err.response?.data) {
+        detailMsg = err.response.data?.detail || err.response.data?.error || detailMsg;
+      } else if (err instanceof Error) {
+        detailMsg = `${detailMsg} (${err.message})`;
+      }
+      toast(detailMsg, { id: toastId, icon: 'ℹ️' });
     } finally {
       setIsOptimizing(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

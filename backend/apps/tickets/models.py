@@ -474,11 +474,15 @@ class Event(models.Model):
             return val_str
         try:
             return self.flyer.url
-        except Exception:
+        except (ValueError, AttributeError):
             from django.conf import settings
             cloud_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '')
             if cloud_name:
                 return f"https://res.cloudinary.com/{cloud_name}/image/upload/{val_str.lstrip('/')}"
+            return None
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').debug(f"Error accediendo a self.flyer.url: {exc}")
             return None
 
     def get_image_url(self):
@@ -492,11 +496,15 @@ class Event(models.Model):
             return val_str
         try:
             return self.image.url
-        except Exception:
+        except (ValueError, AttributeError):
             from django.conf import settings
             cloud_name = getattr(settings, 'CLOUDINARY_STORAGE', {}).get('CLOUD_NAME', '')
             if cloud_name:
                 return f"https://res.cloudinary.com/{cloud_name}/image/upload/{val_str.lstrip('/')}"
+            return None
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').debug(f"Error accediendo a self.image.url: {exc}")
             return None
 
     def save(self, *args, **kwargs):
@@ -618,10 +626,22 @@ class Event(models.Model):
         if not self.date:
             return None
         import zoneinfo
+        from django.utils import timezone as dj_timezone
         try:
             tz = zoneinfo.ZoneInfo(self.timezone or 'America/Hermosillo')
-            return self.date.astimezone(tz)
-        except Exception:
+            dt = self.date
+            if dj_timezone.is_naive(dt):
+                dt = dj_timezone.make_aware(dt, dj_timezone.utc)
+            return dt.astimezone(tz)
+        except (zoneinfo.ZoneInfoNotFoundError, ValueError, TypeError) as tz_err:
+            import logging
+            logging.getLogger('apps.tickets').warning(
+                f"Error al convertir fecha a timezone '{self.timezone}' en Event #{self.id}: {tz_err}"
+            )
+            return self.date
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').error(f"Error inesperado convirtiendo fecha en Event #{self.id}: {exc}")
             return self.date
 
     def get_local_doors_open(self):
@@ -629,10 +649,22 @@ class Event(models.Model):
         if not self.doors_open:
             return None
         import zoneinfo
+        from django.utils import timezone as dj_timezone
         try:
             tz = zoneinfo.ZoneInfo(self.timezone or 'America/Hermosillo')
-            return self.doors_open.astimezone(tz)
-        except Exception:
+            dt = self.doors_open
+            if dj_timezone.is_naive(dt):
+                dt = dj_timezone.make_aware(dt, dj_timezone.utc)
+            return dt.astimezone(tz)
+        except (zoneinfo.ZoneInfoNotFoundError, ValueError, TypeError) as tz_err:
+            import logging
+            logging.getLogger('apps.tickets').warning(
+                f"Error al convertir doors_open a timezone '{self.timezone}' en Event #{self.id}: {tz_err}"
+            )
+            return self.doors_open
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').error(f"Error inesperado convirtiendo doors_open en Event #{self.id}: {exc}")
             return self.doors_open
 
     def __str__(self):

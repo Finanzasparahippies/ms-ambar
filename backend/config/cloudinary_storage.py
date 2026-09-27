@@ -71,9 +71,16 @@ def ensure_cloudinary_folder(folder_path: str) -> None:
         return
     try:
         import cloudinary.api
+        import cloudinary.exceptions
         cloudinary.api.create_folder(folder_path)
-    except Exception:
+    except cloudinary.exceptions.AlreadyExists:
         pass
+    except (cloudinary.exceptions.AuthorizationRequired, cloudinary.exceptions.GeneralError) as cld_err:
+        import logging
+        logging.getLogger('config.cloudinary').warning(f"No se pudo asegurar carpeta '{folder_path}' en Cloudinary: {cld_err}")
+    except Exception as exc:
+        import logging
+        logging.getLogger('config.cloudinary').debug(f"Verificación de carpeta '{folder_path}' en Cloudinary: {exc}")
     finally:
         _ENSURED_FOLDERS.add(folder_path)
 
@@ -92,7 +99,17 @@ def generate_cloudinary_signature(params: Optional[Dict[str, Any]] = None) -> Di
         payload.update(params)
 
     api_secret = settings.CLOUDINARY_STORAGE.get('API_SECRET', '')
-    signature = cloudinary.utils.api_sign_request(payload, api_secret)
+    if not api_secret:
+        import logging
+        logging.getLogger('config.cloudinary').warning("CLOUDINARY_STORAGE['API_SECRET'] no está configurado.")
+        signature = ""
+    else:
+        try:
+            signature = cloudinary.utils.api_sign_request(payload, api_secret)
+        except Exception as e:
+            import logging
+            logging.getLogger('config.cloudinary').error(f"Falla al firmar payload de Cloudinary: {e}")
+            signature = ""
 
     return {
         'cloud_name': settings.CLOUDINARY_STORAGE.get('CLOUD_NAME', ''),
@@ -112,7 +129,14 @@ def cloudinary_signature_view(request: HttpRequest) -> JsonResponse:
     parámetros y firma criptográfica para el Cloudinary Media Library Widget.
     """
     if not (request.user.is_authenticated and request.user.is_staff):
-        return JsonResponse({'error': 'Permiso denegado.'}, status=403)
+        return JsonResponse({'error': 'Permiso denegado. Se requiere cuenta de administrador.'}, status=403)
 
-    data = generate_cloudinary_signature()
-    return JsonResponse(data)
+    try:
+        data = generate_cloudinary_signature()
+        if not data.get('signature'):
+            return JsonResponse({'error': 'Configuración de Cloudinary incompleta en el servidor.'}, status=503)
+        return JsonResponse(data)
+    except Exception as exc:
+        import logging
+        logging.getLogger('config.cloudinary').error(f"Error generando firma de Cloudinary: {exc}", exc_info=True)
+        return JsonResponse({'error': 'Error interno al generar firma de Cloudinary.', 'detail': str(exc)}, status=500)
