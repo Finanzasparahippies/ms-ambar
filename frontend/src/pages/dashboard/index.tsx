@@ -1019,6 +1019,7 @@ export default function AdminDashboard() {
 
   // ─── Theaters State (Nectar Pro) ───
   const [theaters, setTheaters] = useState<Theater[]>([]);
+  const [loadingTheaters, setLoadingTheaters] = useState(false);
   const [isTheaterModalOpen, setIsTheaterModalOpen] = useState(false);
   const [editingTheater, setEditingTheater] = useState<Theater | null>(null);
   const [theaterName, setTheaterName] = useState('');
@@ -1027,6 +1028,22 @@ export default function AdminDashboard() {
   const [theaterSuccessMsg, setTheaterSuccessMsg] = useState<string | null>(null);
   const [theaterErrorMsg, setTheaterErrorMsg] = useState<string | null>(null);
   const [theaterSyncStatus, setTheaterSyncStatus] = useState<Record<number, 'idle' | 'loading' | 'success' | 'error'>>({});
+
+  const ensureTheatersLoaded = async (force = false) => {
+    if (!force && theaters.length > 0) return theaters;
+    setLoadingTheaters(true);
+    try {
+      const res = await api.get('/tickets/theaters/');
+      const data = Array.isArray(res.data) ? res.data : [];
+      setTheaters(data);
+      return data;
+    } catch (err) {
+      console.error('[Dashboard] Error cargando teatros/recintos:', err);
+      return [];
+    } finally {
+      setLoadingTheaters(false);
+    }
+  };
 
   // ─── Site Settings State (Dynamic Texts) ───
   const [siteSettingsSubtitle, setSiteSettingsSubtitle] = useState('Selecciona tu concierto, explora el mapa de asientos interactivo y reserva tus boletos oficiales.');
@@ -1160,8 +1177,7 @@ export default function AdminDashboard() {
         setProducts(Array.isArray(pRes.data) ? pRes.data : []);
         setCategories(Array.isArray(cRes.data) ? cRes.data : []);
       } else if (tabName === 'theaters') {
-        const res = await api.get('/tickets/theaters/');
-        setTheaters(Array.isArray(res.data) ? res.data : []);
+        await ensureTheatersLoaded(true);
       } else if (tabName === 'contracts') {
         const res = await api.get('/bookings/contracts/');
         setContracts(Array.isArray(res.data) ? res.data : []);
@@ -1176,11 +1192,13 @@ export default function AdminDashboard() {
         setMarketingLists(Array.isArray(listRes.data) ? listRes.data : []);
         fetchSubscribersData();
       } else if (tabName === 'events') {
-        const [evRes, stRes] = await Promise.all([
+        const [evRes, stRes, thRes] = await Promise.all([
           api.get('/tickets/events/').catch(() => ({ data: [] })),
-          api.get('/tickets/settings/').catch(() => ({ data: null }))
+          api.get('/tickets/settings/').catch(() => ({ data: null })),
+          api.get('/tickets/theaters/').catch(() => ({ data: [] }))
         ]);
         setEvents(Array.isArray(evRes.data) ? evRes.data : []);
+        setTheaters(Array.isArray(thRes.data) ? thRes.data : []);
         if (stRes?.data) {
           if (typeof stRes.data.allow_canvas_zoom === 'boolean') setAllowCanvasZoom(stRes.data.allow_canvas_zoom);
           if (stRes.data.tickets_page_subtitle) setSiteSettingsSubtitle(stRes.data.tickets_page_subtitle);
@@ -2281,7 +2299,7 @@ export default function AdminDashboard() {
         setTheaterSuccessMsg('¡Teatro creado! Ábrelo en Nectar Studio para diseñar su planta.');
       }
       setIsTheaterModalOpen(false);
-      fetchDashboardData();
+      await ensureTheatersLoaded(true);
     } catch (err: any) {
       setTheaterErrorMsg(err.response?.data ? (typeof err.response.data === 'object' ? JSON.stringify(err.response.data) : String(err.response.data)) : 'Error al procesar el teatro.');
     } finally {
@@ -2294,7 +2312,7 @@ export default function AdminDashboard() {
     if (!isConfirmed) return;
     try {
       await axios.delete(`${API_URL}/tickets/theaters/${id}/`);
-      fetchDashboardData();
+      await ensureTheatersLoaded(true);
     } catch (err) { console.error('Error eliminando teatro:', err); }
   };
 
@@ -2312,6 +2330,7 @@ export default function AdminDashboard() {
 
   // ─── Events Form & Action Handlers ───
   const openEventCreateModal = () => {
+    ensureTheatersLoaded();
     setEditingEvent(null);
     setEventTitle('');
     setEventArtist('');
@@ -2337,6 +2356,7 @@ export default function AdminDashboard() {
   };
 
   const openEventEditModal = (event: any) => {
+    ensureTheatersLoaded();
     setEditingEvent(event);
     setEventTitle(event.title);
     setEventArtist(event.artist);
@@ -2350,7 +2370,10 @@ export default function AdminDashboard() {
     }
     setEventDate(formattedDate);
     setEventType(event.event_type || 'concert');
-    setEventTheater(event.theater ? String(event.theater) : '');
+    const rawTheaterId = typeof event.theater === 'object' && event.theater !== null
+      ? (event.theater.id ?? '')
+      : (event.theater ?? '');
+    setEventTheater(rawTheaterId ? String(rawTheaterId) : '');
     setEventMgPrice(String(event.mg_price || '0'));
     setEventMgLimit(String(event.mg_limit || '0'));
     setEventPriceMultiplier(String(event.price_multiplier || '1.0'));
@@ -5755,17 +5778,61 @@ export default function AdminDashboard() {
 
                         {/* Conditional Theater (Only for concert) */}
                         {eventType === 'concert' && (
-                          <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">Teatro / Recinto *</label>
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#F4F6F0]/60 block">
+                                Teatro / Recinto *
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => ensureTheatersLoaded(true)}
+                                disabled={loadingTheaters}
+                                className="text-[8px] font-black uppercase tracking-wider text-amber-honey hover:underline flex items-center gap-1 disabled:opacity-50 transition-opacity"
+                                title="Actualizar lista de teatros disponibles"
+                              >
+                                {loadingTheaters ? (
+                                  <>
+                                    <div className="w-2.5 h-2.5 border border-amber-honey border-t-transparent rounded-full animate-spin" />
+                                    <span>Cargando...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span>↻ Recargar Recintos</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
                             <select
-                              required value={eventTheater} onChange={(e) => setEventTheater(e.target.value)}
-                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all [color-scheme:dark]"
+                              required
+                              value={eventTheater}
+                              onChange={(e) => setEventTheater(e.target.value)}
+                              disabled={loadingTheaters && theaters.length === 0}
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold outline-none focus:border-amber-honey transition-all [color-scheme:dark] disabled:opacity-50"
                             >
-                              <option value="">-- Selecciona un Recinto --</option>
+                              <option value="">
+                                {loadingTheaters ? '-- Cargando teatros y recintos... --' : '-- Selecciona un Recinto --'}
+                              </option>
                               {theaters.map((t: any) => (
-                                <option key={t.id} value={t.id}>{t.name} ({t.location})</option>
+                                <option key={t.id} value={String(t.id)}>
+                                  {t.name} {t.location ? `(${t.location})` : ''}
+                                </option>
                               ))}
                             </select>
+                            {theaters.length === 0 && !loadingTheaters && (
+                              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[10px] flex items-center justify-between">
+                                <span>No se detectaron recintos configurados en el sistema.</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsEventModalOpen(false);
+                                    setActiveTab('theaters');
+                                  }}
+                                  className="underline font-bold hover:text-white ml-2 whitespace-nowrap"
+                                >
+                                  Ir a pestaña Teatros
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
 
