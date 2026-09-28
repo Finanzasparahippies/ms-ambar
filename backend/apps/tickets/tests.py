@@ -770,3 +770,121 @@ class TicketsAppTests(APITestCase):
         )
         actual_price = get_ticket_actual_price(ticket)
         self.assertEqual(actual_price, 400.00)
+
+    def test_complimentary_rows_priority_overflow(self):
+        """Verify determine_active_complimentary_row cascades to next priority row when row 1 is saturated."""
+        from apps.tickets.services.coupon_validator import determine_active_complimentary_row
+        from apps.tickets.models import Coupon
+
+        coupon = Coupon.objects.create(
+            code="VIP-PRESS-2026",
+            discount_type="free_vip",
+            is_complimentary=True,
+            complimentary_allocation_mode="DESIGNATED_ROW",
+            complimentary_rows_priority=["A", "B"],
+            max_uses=10,
+            event=self.event
+        )
+
+        # Row A has 5 seats. Initially, Row A is the active complimentary row
+        active_row, allowed_rows = determine_active_complimentary_row(self.event, coupon)
+        self.assertEqual(active_row, "Fila A")
+
+        # Fill all seats in Row A
+        row_a_seats = Seat.objects.filter(theater=self.theater, row="A")
+        for s in row_a_seats:
+            Ticket.objects.create(
+                event=self.event,
+                seat=s,
+                user_email=f"guest_{s.id}@example.com",
+                status="paid"
+            )
+
+        # Now Row A is saturated -> automatically overflow to Row B!
+        active_row_overflow, allowed_rows_overflow = determine_active_complimentary_row(self.event, coupon)
+        self.assertEqual(active_row_overflow, "Fila B")
+
+    def test_check_orphan_seats_prevents_single_gap(self):
+        """Verify check_orphan_seats detects and rejects selections leaving exactly 1 seat free in a table."""
+        from apps.tickets.services.coupon_validator import check_orphan_seats
+
+        # Create a 4-seat table
+        table_seats = []
+        for i in range(1, 5):
+            s = Seat.objects.create(
+                theater=self.theater,
+                section="Zona Mesas",
+                row="Mesa 99",
+                number=i,
+                base_price=500,
+                status="available"
+            )
+            table_seats.append(s)
+
+        # Selecting 3 seats out of 4 leaves exactly 1 isolated orphan seat
+        candidate_ids = [table_seats[0].id, table_seats[1].id, table_seats[2].id]
+        is_valid, err_msg = check_orphan_seats(self.event, candidate_ids)
+        self.assertFalse(is_valid)
+        self.assertIn("huérfano", err_msg.lower())
+
+        # Selecting 2 seats leaves 2 seats -> perfectly valid
+        valid_candidates = [table_seats[0].id, table_seats[1].id]
+        is_valid_2, _ = check_orphan_seats(self.event, valid_candidates)
+        self.assertTrue(is_valid_2)
+
+    def test_event_seats_endpoint_serializes_row_label_and_complimentary_flag(self):
+        """Verify /api/tickets/events/{id}/seats/?coupon=CODE returns row_label and is_complimentary_eligible."""
+        from apps.tickets.models import Coupon
+        Coupon.objects.create(
+            code="PRESS-VIP-ROW-A",
+            discount_type="free_vip",
+            is_complimentary=True,
+            complimentary_allocation_mode="DESIGNATED_ROW",
+            complimentary_rows_priority=["A"],
+            max_uses=10,
+            event=self.event
+        )
+
+        url = f"{reverse('event-seats', kwargs={'pk': self.event.pk})}?coupon=PRESS-VIP-ROW-A"
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get('is_complimentary_active'))
+
+        seats_data = response.data.get('seats', [])
+        self.assertTrue(len(seats_data) > 0)
+
+        for s in seats_data:
+            self.assertIn('row_label', s)
+            if s['row'] == 'A':
+                self.assertTrue(s['is_complimentary_eligible'])
+                self.assertEqual(s['row_label'], 'Fila A')
+            else:
+                self.assertFalse(s['is_complimentary_eligible'])
+
+    def test_checkout_rejects_unauthorized_complimentary_row(self):
+        """Verify checkout cancels ineligible seat selection with clear instruction banner text."""
+        from apps.tickets.models import Coupon
+        coupon = Coupon.objects.create(
+            code="VIP-ROW-A-ONLY",
+            discount_type="free_vip",
+            is_complimentary=True,
+            complimentary_allocation_mode="DESIGNATED_ROW",
+            complimentary_rows_priority=["A"],
+            max_uses=5,
+            event=self.event
+        )
+
+        seat_in_row_b = Seat.objects.filter(theater=self.theater, row="B").first()
+        url = reverse('ticket-checkout')
+        data = {
+            'event_id': self.event.id,
+            'seat_ids': [seat_in_row_b.id],
+            'coupon_code': 'VIP-ROW-A-ONLY',
+            'email': 'unauthorized_row@example.com',
+            'name': 'Press Guest'
+        }
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('Este cupón de cortesía es válido exclusivamente en la', response.data['error'])
+

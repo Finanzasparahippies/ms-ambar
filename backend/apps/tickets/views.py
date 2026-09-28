@@ -169,7 +169,26 @@ class EventViewSet(viewsets.ModelViewSet):
             status__in=['paid', 'reserved']
         ).values_list('seat_id', flat=True)
         
-        serializer = SeatSerializer(seats, many=True)
+        # Check if coupon is passed in query params
+        coupon_code = request.query_params.get('coupon') or request.query_params.get('coupon_code')
+        user_email = request.query_params.get('email') or request.query_params.get('user_email')
+        allowed_complimentary_rows = []
+        is_complimentary_active = False
+        active_row_name = None
+
+        if coupon_code:
+            from apps.tickets.services.coupon_validator import validate_coupon_comprehensive
+            coupon_res = validate_coupon_comprehensive(code=coupon_code, event_id=event.id, email=user_email)
+            if coupon_res.get('valid') and coupon_res.get('allowed_mode') == 'DESIGNATED_ROW':
+                allowed_complimentary_rows = coupon_res.get('active_allowed_rows', [])
+                active_row_name = coupon_res.get('active_row_name')
+                is_complimentary_active = bool(allowed_complimentary_rows)
+
+        serializer = SeatSerializer(
+            seats,
+            many=True,
+            context={'allowed_complimentary_rows': allowed_complimentary_rows, 'request': request}
+        )
         data = serializer.data
         
         # Add status and dynamic pricing to each seat with logger traces
@@ -208,7 +227,10 @@ class EventViewSet(viewsets.ModelViewSet):
         return Response({
             "seats": data,
             "elements": theater.layout.get('map_elements', []) if isinstance(theater.layout, dict) else [],
-            "bounds": theater.get_layout_bounds()
+            "bounds": theater.get_layout_bounds(),
+            "active_allowed_rows": allowed_complimentary_rows,
+            "active_row_name": active_row_name,
+            "is_complimentary_active": is_complimentary_active
         })
 
 class TheaterViewSet(viewsets.ModelViewSet):
@@ -546,6 +568,19 @@ class TicketViewSet(viewsets.ModelViewSet):
                 except Seat.DoesNotExist:
                     return Response({'error': f'Asiento con ID {s_id} no existe.'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Validación de fila designada para cupones de cortesía
+            if coupon_obj and coupon_obj.is_complimentary and coupon_obj.complimentary_allocation_mode == 'DESIGNATED_ROW':
+                from apps.tickets.services.coupon_validator import determine_active_complimentary_row, normalize_row_name
+                active_row_name, allowed_rows = determine_active_complimentary_row(event, coupon_obj)
+                if allowed_rows:
+                    norm_allowed = set(normalize_row_name(r) for r in allowed_rows)
+                    for s in seats:
+                        if normalize_row_name(s.row) not in norm_allowed:
+                            target_row_display = active_row_name or (allowed_rows[0] if allowed_rows else 'la fila designada')
+                            return Response({
+                                'error': f"Este cupón de cortesía es válido exclusivamente en la {target_row_display}. Selecciona un asiento iluminado."
+                            }, status=status.HTTP_400_BAD_REQUEST)
+
         # --- CASO A: REDENCIÓN DE CUPÓN DE ENTRADA GRATUITA VIP ($0) ---
         if is_free_vip and coupon_obj:
             import uuid
@@ -554,7 +589,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             with transaction.atomic():
                 # Re-check and lock coupon to prevent concurrent over-redemption
-                coupon_locked = Coupon.objects.select_for_update().get(id=coupon_obj.id)
+                coupon_locked = Coupon.objects.select_for_update(nowait=False).get(id=coupon_obj.id)
                 if coupon_locked.times_used >= coupon_locked.max_uses:
                     return Response({'error': 'Este cupón acaba de alcanzar su límite máximo de redenciones.'}, status=status.HTTP_400_BAD_REQUEST)
                 coupon_locked.times_used += 1
@@ -581,7 +616,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                         logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: Sin asiento, Tipo: VIP")
                 else:
                     # Bloquear atómicamente los asientos y re-verificar ocupación bajo lock
-                    locked_seats = list(Seat.objects.select_for_update().filter(id__in=[s.id for s in seats]))
+                    locked_seats = list(Seat.objects.select_for_update(nowait=False).filter(id__in=[s.id for s in seats]))
                     already_taken = Ticket.objects.filter(
                         event=event,
                         seat__in=locked_seats,

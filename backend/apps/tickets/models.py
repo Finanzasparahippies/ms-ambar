@@ -11,11 +11,25 @@ class Theater(models.Model):
     def __str__(self):
         return self.name
 
+    @property
+    def layout_matrix(self):
+        """Alias para self.layout para contratos de API y compatibilidad Nectar Studio."""
+        return self.layout
+
+    @layout_matrix.setter
+    def layout_matrix(self, val):
+        self.layout = val
+
     def sanitize_42_tables_layout(self):
         """
         Sincroniza el layout de forma 100% dinámica respetando todas las mesas y asientos
         configurados en Nectar Studio Designer sin limitaciones fijas.
         """
+        if isinstance(self.layout, dict):
+            # Sincronizar complimentary_rows_priority si viene dentro del layout
+            layout_priority = self.layout.get('complimentary_rows_priority')
+            if isinstance(layout_priority, list) and layout_priority and not self.complimentary_rows_priority:
+                self.complimentary_rows_priority = layout_priority
         return
 
     def get_layout_bounds(self, seat_padding=20):
@@ -127,8 +141,8 @@ class Theater(models.Model):
             created_count = len(seats_data)
 
             for seat_data in seats_data:
-                sec = seat_data.get('section', 'General')
-                rw = str(seat_data.get('row', '1'))
+                sec = str(seat_data.get('section', 'General')).strip() or 'General'
+                rw = str(seat_data.get('row', '1')).strip() or '1'
                 try:
                     num = int(seat_data.get('number', 1))
                 except (ValueError, TypeError):
@@ -142,9 +156,28 @@ class Theater(models.Model):
                 cat = seat_data.get('category', 'standard')
                 st = seat_data.get('status', 'available')
                 price = seat_data.get('base_price', 1000)
-                sx = seat_data.get('x', 0)
-                sy = seat_data.get('y', 0)
-                ang = seat_data.get('angle', 0)
+
+                try:
+                    sx = float(seat_data.get('x', 0))
+                    if math.isnan(sx) or math.isinf(sx):
+                        sx = 0.0
+                except (ValueError, TypeError):
+                    sx = 0.0
+
+                try:
+                    sy = float(seat_data.get('y', 0))
+                    if math.isnan(sy) or math.isinf(sy):
+                        sy = 0.0
+                except (ValueError, TypeError):
+                    sy = 0.0
+
+                try:
+                    ang = float(seat_data.get('angle', 0))
+                    if math.isnan(ang) or math.isinf(ang):
+                        ang = 0.0
+                except (ValueError, TypeError):
+                    ang = 0.0
+
                 clr = seat_data.get('color', '')
 
                 s_id = seat_data.get('id')

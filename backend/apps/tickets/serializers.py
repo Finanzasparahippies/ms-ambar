@@ -71,9 +71,38 @@ SafeImageField = HybridImageField
 
 
 class SeatSerializer(serializers.ModelSerializer):
+    row_label = serializers.SerializerMethodField()
+    is_complimentary_eligible = serializers.SerializerMethodField()
+
     class Meta:
         model = Seat
-        fields = ['id', 'section', 'row', 'number', 'category', 'status', 'base_price', 'x', 'y', 'angle', 'color']
+        fields = [
+            'id', 'section', 'row', 'number', 'category', 'status',
+            'base_price', 'x', 'y', 'angle', 'color', 'row_label',
+            'is_complimentary_eligible'
+        ]
+
+    def get_row_label(self, obj):
+        r = str(obj.row or '').strip()
+        if not r:
+            return ''
+        low = r.lower()
+        if low.startswith('mesa') or low.startswith('table'):
+            return r if low.startswith('mesa') else f"Mesa {r[5:].strip()}"
+        if low.startswith('fila'):
+            return r
+        return f"Fila {r.upper()}"
+
+    def get_is_complimentary_eligible(self, obj):
+        allowed_rows = self.context.get('allowed_complimentary_rows')
+        if not allowed_rows or not isinstance(allowed_rows, list):
+            return False
+        from apps.tickets.services.coupon_validator import normalize_row_name
+        seat_norm = normalize_row_name(obj.row)
+        for allowed in allowed_rows:
+            if normalize_row_name(allowed) == seat_norm:
+                return True
+        return False
 
 
 class GADeclarationSerializer(serializers.ModelSerializer):

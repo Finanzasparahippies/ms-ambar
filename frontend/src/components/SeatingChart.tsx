@@ -7,20 +7,24 @@ import {
   LayoutBounds
 } from '../utils/seatingBounds';
 
-interface Seat {
+export interface Seat {
   id: string | number;
   x: number;
   y: number;
   row: string;
+  row_label?: string;
   number: number;
   status: 'available' | 'occupied' | 'selected' | 'reserved';
   category: string;
   angle: number;
   color?: string;
   base_price?: number | string;
+  table_id?: string | number;
+  tableId?: string | number;
+  is_complimentary_eligible?: boolean;
 }
 
-interface MapElement {
+export interface MapElement {
   id: string;
   type?: 'rect' | 'icon' | 'text' | 'circle' | 'table' | 'rounded' | string;
   x: number;
@@ -54,6 +58,9 @@ interface SeatingChartProps {
   activeTool?: string;
   allowZoom?: boolean;
   restrictedRows?: string[];
+  onInvalidSelectionAttempt?: (seat: Seat, activeRows: string[]) => void;
+  orphanSeatIds?: (string | number)[];
+  highlightPulseTrigger?: number;
 }
 
 const SeatingChart: React.FC<SeatingChartProps> = ({
@@ -68,7 +75,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   selectedIds: externalSelectedIds = [],
   activeTool = 'select',
   allowZoom = true,
-  restrictedRows = []
+  restrictedRows = [],
+  onInvalidSelectionAttempt,
+  orphanSeatIds = [],
+  highlightPulseTrigger = 0
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -117,6 +127,22 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const lastTouchDistRef = useRef<number | null>(null);
+  const pulseEndTimeRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (highlightPulseTrigger) {
+      pulseEndTimeRef.current = Date.now() + 2500;
+    }
+  }, [highlightPulseTrigger]);
+
+  const orphanSeatSet = useMemo(() => new Set((orphanSeatIds || []).map(id => String(id))), [orphanSeatIds]);
+
+  const hasRowRestriction = useMemo(() => Array.isArray(restrictedRows) && restrictedRows.length > 0, [restrictedRows]);
+  const normalizedRestrictedRows = useMemo(() => new Set(
+    hasRowRestriction
+      ? restrictedRows.map(r => String(r || '').toLowerCase().replace(/^fila\s+/i, '').trim())
+      : []
+  ), [hasRowRestriction, restrictedRows]);
 
   useEffect(() => { setSeats(initialSeats); }, [initialSeats]);
   useEffect(() => { setElements(initialElements); }, [initialElements]);
@@ -458,14 +484,6 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.restore();
     });
 
-    // Normalizar filas restringidas para matching exacto ('Fila G' -> 'g', 'G' -> 'g')
-    const hasRowRestriction = Array.isArray(restrictedRows) && restrictedRows.length > 0;
-    const normalizedRestrictedRows = new Set(
-      hasRowRestriction
-        ? restrictedRows.map(r => String(r || '').toLowerCase().replace(/^fila\s+/i, '').trim())
-        : []
-    );
-
     // Render Seats
     seats.forEach(seat => {
       ctx.save(); ctx.translate(seat.x, seat.y); ctx.rotate((seat.angle || 0) * Math.PI / 180);
@@ -509,15 +527,45 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         }
       }
 
-      // Halo / Resplandor Ámbar para fila designada de cortesía activa
+      // Halo / Resplandor Ámbar Pulsante para fila designada de cortesía activa
+      const now = Date.now();
+      const isHighPulse = pulseEndTimeRef.current > now;
+      const pulseNorm = 0.5 + 0.5 * Math.sin(now / (isHighPulse ? 140 : 320));
+
       if (hasRowRestriction && isAllowedByRestriction && !isOccupied && !isSelected) {
         ctx.save();
-        ctx.shadowBlur = 12;
+        const haloSize = 22 + pulseNorm * (isHighPulse ? 10 : 5);
+        const haloBlur = isHighPulse ? (18 + pulseNorm * 14) : (10 + pulseNorm * 6);
+        ctx.shadowBlur = haloBlur;
         ctx.shadowColor = '#F59E0B';
-        ctx.strokeStyle = '#F59E0B';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = isHighPulse ? '#FEF08A' : '#F59E0B';
+        ctx.lineWidth = isHighPulse ? 3 : 2;
         ctx.beginPath();
-        ctx.roundRect(-12, -12, 24, 24, 7);
+        ctx.roundRect(-haloSize / 2, -haloSize / 2, haloSize, haloSize, 7);
+        ctx.stroke();
+
+        if (isHighPulse) {
+          ctx.strokeStyle = 'rgba(245, 158, 11, 0.45)';
+          ctx.lineWidth = 1.5;
+          const outerSize = haloSize + 8;
+          ctx.beginPath();
+          ctx.roundRect(-outerSize / 2, -outerSize / 2, outerSize, outerSize, 9);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      // Regla Anti-Asiento Huérfano: Resaltar en ámbar preventivo si este asiento quedaría aislado
+      const isOrphanSeat = orphanSeatSet.has(String(seat.id));
+      if (isOrphanSeat && !isSelected) {
+        ctx.save();
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = '#D97706';
+        ctx.strokeStyle = '#D97706';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.roundRect(-14, -14, 28, 28, 8);
         ctx.stroke();
         ctx.restore();
       }
@@ -679,6 +727,13 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         setIsPanning(true);
       } else {
         if (hitSeat && hitSeat.status === 'available') {
+          const seatRowNorm = String(hitSeat.row || '').toLowerCase().replace(/^fila\s+/i, '').trim();
+          const isAllowed = !hasRowRestriction || normalizedRestrictedRows.has(seatRowNorm) || !!hitSeat.is_complimentary_eligible;
+          if (hasRowRestriction && !isAllowed) {
+            pulseEndTimeRef.current = Date.now() + 2500;
+            onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);
+            return;
+          }
           const id = String(hitSeat.id);
           const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
           setSelectedIds(newSelection); onSelect?.(newSelection);
@@ -785,6 +840,13 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         setSelectionRect({ x, y, w: 0, h: 0 });
       } else {
         if (hitSeat && hitSeat.status === 'available') {
+          const seatRowNorm = String(hitSeat.row || '').toLowerCase().replace(/^fila\s+/i, '').trim();
+          const isAllowed = !hasRowRestriction || normalizedRestrictedRows.has(seatRowNorm) || !!hitSeat.is_complimentary_eligible;
+          if (hasRowRestriction && !isAllowed) {
+            pulseEndTimeRef.current = Date.now() + 2500;
+            onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);
+            return;
+          }
           const id = String(hitSeat.id);
           const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
           setSelectedIds(newSelection); onSelect?.(newSelection);

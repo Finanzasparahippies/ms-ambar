@@ -185,6 +185,7 @@ const TourPage = () => {
   const [couponEmailInput, setCouponEmailInput] = useState('');
   const [couponRequiresEmail, setCouponRequiresEmail] = useState(false);
   const [activeAllowedRows, setActiveAllowedRows] = useState<string[]>([]);
+  const [activeRowName, setActiveRowName] = useState<string>('');
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isFlyerModalOpen, setIsFlyerModalOpen] = useState(false);
@@ -201,6 +202,7 @@ const TourPage = () => {
     setCouponError('');
     setCouponRequiresEmail(false);
     setActiveAllowedRows([]);
+    setActiveRowName('');
     showAlert('Cupón removido. Todas las zonas y filas vuelven a estar disponibles a tarifa normal.', 'Cupón Removido', 'info');
   };
 
@@ -223,6 +225,8 @@ const TourPage = () => {
         setCouponRequiresEmail(false);
         const rows: string[] = res.data.active_allowed_rows || [];
         setActiveAllowedRows(rows);
+        const resolvedRowName = res.data.active_row_name || (rows.length > 0 ? rows[0] : '');
+        setActiveRowName(resolvedRowName);
 
         // Si el cupón exige fila designada y el usuario ya tenía asientos en otra fila, filtrar o reubicar
         if (res.data.allowed_mode === 'DESIGNATED_ROW' && rows.length > 0) {
@@ -233,7 +237,8 @@ const TourPage = () => {
               return normAllowed.has(seatRowNorm);
             });
             if (filtered.length < prev.length) {
-              showAlert(`Tu cortesía está asignada a la ${rows[0]}. Por favor selecciona tu asiento en esta fila.`, 'Asiento Asignado a Cortesía', 'info');
+              const displayLabel = resolvedRowName || rows[0];
+              showAlert(`Tu cortesía está asignada a la ${displayLabel}. Por favor selecciona tu asiento en esta fila.`, 'Asiento Asignado a Cortesía', 'info');
             }
             return filtered;
           });
@@ -427,6 +432,95 @@ const TourPage = () => {
       return seats.find(s => String(s.id) === id);
     }).filter(Boolean);
     setSelectedSeats(selectedObjects);
+  };
+
+  const handleInvalidSeatAttempt = (seat: any, allowedRows: string[]) => {
+    const rawLabel = activeRowName || (allowedRows.length > 0 ? allowedRows[0] : 'fila designada');
+    const displayLabel = rawLabel.toLowerCase().startsWith('fila') || rawLabel.toLowerCase().startsWith('mesa')
+      ? rawLabel
+      : `Fila ${rawLabel}`;
+    showAlert(
+      `Este cupón de cortesía es válido exclusivamente en la [${displayLabel}]. Selecciona un asiento iluminado.`,
+      'Zona Restringida por Cortesía',
+      'warning'
+    );
+  };
+
+  // ── Regla Anti-Asiento Huérfano (Orphan Seat Detection) ──
+  const orphanSeatIds = useMemo(() => {
+    if (!selectedSeats || selectedSeats.length === 0 || !seats || seats.length === 0) return [];
+
+    const selectedSet = new Set(selectedSeats.map(s => String(s.id)));
+    const orphans: string[] = [];
+
+    // 1. Detección por Mesa
+    const tableSeatsMap: { [tableId: string]: any[] } = {};
+    const rowSeatsMap: { [row: string]: any[] } = {};
+
+    seats.forEach(s => {
+      const tid = s.tableId || s.table_id || s.element_id;
+      if (tid) {
+        const key = String(tid);
+        if (!tableSeatsMap[key]) tableSeatsMap[key] = [];
+        tableSeatsMap[key].push(s);
+      }
+      if (s.row) {
+        const rKey = String(s.row).trim().toUpperCase();
+        if (!rowSeatsMap[rKey]) rowSeatsMap[rKey] = [];
+        rowSeatsMap[rKey].push(s);
+      }
+    });
+
+    // Validar mesas: si queda exactamente 1 asiento libre en la mesa
+    Object.values(tableSeatsMap).forEach(tableSeats => {
+      const availableUnselected = tableSeats.filter(s => {
+        const isOccupied = s.status === 'occupied' || s.status === 'reserved';
+        return !isOccupied && !selectedSet.has(String(s.id));
+      });
+      const selectedInTable = tableSeats.filter(s => selectedSet.has(String(s.id)));
+      if (selectedInTable.length > 0 && availableUnselected.length === 1) {
+        orphans.push(String(availableUnselected[0].id));
+      }
+    });
+
+    // Validar filas contiguas: si queda 1 asiento libre aislado entre ocupados/seleccionados
+    Object.values(rowSeatsMap).forEach(rowSeats => {
+      const sorted = [...rowSeats].sort((a, b) => (Number(a.number) || 0) - (Number(b.number) || 0));
+      for (let i = 0; i < sorted.length; i++) {
+        const curr = sorted[i];
+        const isOccupied = curr.status === 'occupied' || curr.status === 'reserved';
+        const isSelected = selectedSet.has(String(curr.id));
+        if (isOccupied || isSelected) continue;
+
+        const left = i > 0 ? sorted[i - 1] : null;
+        const right = i < sorted.length - 1 ? sorted[i + 1] : null;
+        const leftTaken = !left || left.status === 'occupied' || left.status === 'reserved' || selectedSet.has(String(left.id));
+        const rightTaken = !right || right.status === 'occupied' || right.status === 'reserved' || selectedSet.has(String(right.id));
+
+        if (leftTaken && rightTaken) {
+          const leftUser = left && selectedSet.has(String(left.id));
+          const rightUser = right && selectedSet.has(String(right.id));
+          if (leftUser || rightUser) {
+            orphans.push(String(curr.id));
+          }
+        }
+      }
+    });
+
+    return Array.from(new Set(orphans));
+  }, [seats, selectedSeats]);
+
+  const handleProceedToCheckout = () => {
+    if (isCurrentEventPast) return;
+    if (orphanSeatIds.length > 0) {
+      showAlert(
+        'Tu selección actual deja 1 asiento libre aislado en el recinto. Por favor selecciona asientos contiguos antes de proceder al pago.',
+        'Restricción de Asiento Huérfano',
+        'warning'
+      );
+      return;
+    }
+    setIsCheckoutOpen(true);
   };
 
   const getSeatBasePrice = (seat?: any) => {
@@ -772,50 +866,114 @@ const TourPage = () => {
                     )}
 
                     {ticketMode === 'seat' ? (
-                      <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                        <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-xs font-black uppercase tracking-wider text-white/70">
-                          <div className="flex flex-wrap items-center gap-4">
-                            <span className="flex items-center gap-1.5">
-                              <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
-                            </span>
-                          </div>
-                          <span className="text-xs tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
-                            Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
-                          </span>
-                        </div>
-
-                        {isLoading ? (
-                          <div className="h-[30rem] lg:h-[36.25rem] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
-                            <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-                            <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
-                          </div>
-                        ) : (
-                          <div className={cn(
-                            "h-[25rem] xs:h-[30rem] lg:h-[36.25rem] relative w-full overflow-hidden",
-                            isCurrentEventPast && "pointer-events-none opacity-85"
-                          )}>
-                            {isCurrentEventPast && (
-                              <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
-                                <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
-                                  <p className="text-xs font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
-                                  <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
-                                </div>
+                      <div className="space-y-3">
+                        {/* ── Banner de Guía para Cupón de Cortesía Activo ── */}
+                        {appliedCoupon?.allowed_mode === 'DESIGNATED_ROW' && activeAllowedRows.length > 0 && (
+                          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 border-2 border-amber-400/60 shadow-[0_0_25px_rgba(245,158,11,0.25)] flex items-center gap-3.5 backdrop-blur-md animate-fade-in">
+                            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/25 border border-amber-400/50 text-amber-400 shrink-0">
+                              <Sparkles size={20} className="animate-spin-slow" />
+                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">
+                                  Cortesía VIP Activa
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/30 text-amber-200 border border-amber-400/40">
+                                  Asignación Automática
+                                </span>
                               </div>
-                            )}
-                            <SeatingChart
-                              seats={seats}
-                              onSelect={handleSelectionChange}
-                              selectedIds={selectedSeats.map(s => String(s.id))}
-                              theme={theme}
-                              elements={elements}
-                              allowZoom={allowCanvasZoom}
-                              restrictedRows={activeAllowedRows}
-                            />
+                              <p className="text-xs md:text-sm font-bold text-white mt-0.5 leading-snug">
+                                Este cupón de cortesía es válido exclusivamente en la{' '}
+                                <strong className="text-amber-300 underline underline-offset-4 decoration-amber-400/60 decoration-2">
+                                  {activeRowName || (activeAllowedRows[0]?.toLowerCase().startsWith('fila') ? activeAllowedRows[0] : `Fila ${activeAllowedRows[0]}`)}
+                                </strong>
+                                . Selecciona un asiento iluminado.
+                              </p>
+                            </div>
                           </div>
                         )}
+
+                        {/* ── Banner de Prevención de Asiento Huérfano (Anti-Orphan Alert) ── */}
+                        {orphanSeatIds.length > 0 && (
+                          <div className="p-3.5 rounded-2xl bg-amber-950/70 border border-amber-500/50 text-amber-200 shadow-xl backdrop-blur-md flex items-start gap-3 animate-fade-in">
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 text-sm font-bold mt-0.5">
+                              ⚠️
+                            </div>
+                            <div className="text-xs leading-relaxed flex-1">
+                              <span className="font-black uppercase tracking-wider text-amber-300 block mb-0.5">
+                                Regla de Adyacencia: Asiento Aislado Detectado
+                              </span>
+                              Tu selección actual deja un asiento libre aislado en el recinto. Te sugerimos seleccionar asientos contiguos para evitar restricciones antes del checkout.
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
+                          <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-xs font-black uppercase tracking-wider text-white/70">
+                            <div className="flex flex-wrap items-center gap-4">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
+                              </span>
+                              {appliedCoupon?.allowed_mode === 'DESIGNATED_ROW' && activeAllowedRows.length > 0 && (
+                                <span className="flex items-center gap-1.5 text-amber-300 font-black">
+                                  <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400" />
+                                  </span>
+                                  Fila VIP Permitida
+                                </span>
+                              )}
+                              {orphanSeatIds.length > 0 && (
+                                <span className="flex items-center gap-1.5 text-amber-400 font-black">
+                                  <span className="w-3 h-3 rounded-full border-2 border-dashed border-amber-500 bg-amber-500/20" />
+                                  Asiento Aislado
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
+                              Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
+                            </span>
+                          </div>
+
+                          {isLoading ? (
+                            <div className="h-[30rem] lg:h-[36.25rem] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
+                              <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+                              <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
+                            </div>
+                          ) : (
+                            <div className={cn(
+                              "h-[25rem] xs:h-[30rem] lg:h-[36.25rem] relative w-full overflow-hidden",
+                              isCurrentEventPast && "pointer-events-none opacity-85"
+                            )}>
+                              {isCurrentEventPast && (
+                                <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
+                                  <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
+                                    <p className="text-xs font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
+                                    <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
+                                  </div>
+                                </div>
+                              )}
+                              <SeatingChart
+                                seats={seats}
+                                onSelect={handleSelectionChange}
+                                selectedIds={selectedSeats.map(s => String(s.id))}
+                                theme={theme}
+                                elements={elements}
+                                allowZoom={allowCanvasZoom}
+                                restrictedRows={activeAllowedRows}
+                                orphanSeatIds={orphanSeatIds}
+                                onInvalidSelectionAttempt={handleInvalidSeatAttempt}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">
@@ -1214,7 +1372,7 @@ const TourPage = () => {
               <div className="mt-6 w-full">
                 <PremiumCTAButton
                   disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
-                  onClick={() => !isCurrentEventPast && setIsCheckoutOpen(true)}
+                  onClick={handleProceedToCheckout}
                 >
                   <span className="text-sm md:text-base font-black uppercase tracking-[0.2em] block">
                     {isCurrentEventPast ? 'Venta Finalizada' : (baseTotal === 0 && appliedCoupon ? 'Reclamar Entrada VIP' : 'Proceder al Pago')}
@@ -1307,7 +1465,7 @@ const TourPage = () => {
               </p>
             </div>
             <button
-              onClick={() => setIsCheckoutOpen(true)}
+              onClick={handleProceedToCheckout}
               className="bg-gradient-to-r from-amber-400 via-amber-honey to-amber-600 text-black font-black uppercase tracking-widest text-xs px-6 py-3.5 rounded-xl shadow-lg shadow-amber-honey/20 active:scale-95 transition-all flex items-center gap-2"
             >
               <ShieldCheck size={16} />

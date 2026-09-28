@@ -17,7 +17,7 @@ import {
 import api from '../lib/api';
 import { cn, getApiUrl } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { showConfirm } from '../lib/notifications';
+import { showConfirm, showAlert } from '../lib/notifications';
 
 /** Decodes a JWT payload without verifying the signature (client-side only). */
 function decodeJwtPayload(token: string): Record<string, any> | null {
@@ -640,9 +640,88 @@ export default function DesignerPage() {
     if (!selectedTheaterId) return;
     setIsSaving(true);
     try {
-      await api.patch(`/tickets/theaters/${selectedTheaterId}/`, {
-        layout: { map_elements: elements, seats: seats }
+      // 1. Validación defensiva de asientos sin fila asignada
+      const seatsWithoutRow = seats.filter(s => !s.row || String(s.row).trim() === '');
+      if (seatsWithoutRow.length > 0) {
+        showAlert(
+          `Error de validación: Se detectaron ${seatsWithoutRow.length} asiento(s) sin fila o mesa asignada. Por favor asigna un identificador de fila antes de desplegar.`,
+          'Asientos Sin Fila',
+          'error'
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      // 2. Validación defensiva de coordenadas numéricas inválidas (NaN o no numéricas)
+      const seatsWithNaN = seats.filter(s => isNaN(Number(s.x)) || isNaN(Number(s.y)) || isNaN(Number(s.angle || 0)));
+      if (seatsWithNaN.length > 0) {
+        showAlert(
+          `Error de validación: Se detectaron ${seatsWithNaN.length} asiento(s) con coordenadas inválidas (NaN).`,
+          'Coordenadas Inválidas',
+          'error'
+        );
+        setIsSaving(false);
+        return;
+      }
+
+      // 3. Normalización y saneamiento de metadatos (row_id, row_label, is_complimentary_tier, complimentary_priority)
+      const sanitizedSeats = seats.map(s => {
+        const cleanRow = String(s.row || '').trim();
+        const rowId = cleanRow.toLowerCase().replace(/[^a-z0-9_]/g, '') || '1';
+        const isTable = cleanRow.toLowerCase().startsWith('mesa') || cleanRow.toLowerCase().startsWith('table');
+        const rowLabel = isTable
+          ? cleanRow
+          : cleanRow.toLowerCase().startsWith('fila')
+            ? cleanRow
+            : `Fila ${cleanRow.toUpperCase()}`;
+
+        return {
+          ...s,
+          x: Math.round(Number(s.x) || 0),
+          y: Math.round(Number(s.y) || 0),
+          angle: Math.round(Number(s.angle) || 0),
+          row: cleanRow,
+          row_id: rowId,
+          row_label: rowLabel,
+          is_complimentary_tier: Boolean(s.is_complimentary_tier),
+          complimentary_priority: Number(s.complimentary_priority || 0)
+        };
       });
+
+      // 4. Compilar lista priorizada de filas/mesas de cortesía ordenadas
+      const compRowsMap = new Map<string, number>();
+      sanitizedSeats.forEach(s => {
+        if (s.is_complimentary_tier && s.row_label) {
+          const p = s.complimentary_priority || 999;
+          if (!compRowsMap.has(s.row_label) || p < compRowsMap.get(s.row_label)!) {
+            compRowsMap.set(s.row_label, p);
+          }
+        }
+      });
+      elements.forEach(el => {
+        if (el.is_complimentary_tier && el.label) {
+          const p = el.complimentary_priority || 999;
+          const lbl = el.label.trim();
+          if (!compRowsMap.has(lbl) || p < compRowsMap.get(lbl)!) {
+            compRowsMap.set(lbl, p);
+          }
+        }
+      });
+
+      const priorityList = Array.from(compRowsMap.entries())
+        .sort((a, b) => a[1] - b[1])
+        .map(([label]) => label);
+
+      await api.patch(`/tickets/theaters/${selectedTheaterId}/`, {
+        layout: {
+          map_elements: elements,
+          seats: sanitizedSeats,
+          complimentary_rows_priority: priorityList
+        },
+        complimentary_rows_priority: priorityList
+      });
+
+      setSeats(sanitizedSeats);
       setSaveStatus('success');
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (error: any) {
@@ -859,6 +938,25 @@ export default function DesignerPage() {
 
     if (key === 'angle' && selectedElement && ((selectedElement as any).type === 'table' || (selectedElement as any).tableShape || seats.some(s => s.tableId === selectedElement.id))) {
       recalculateTableSeats(selectedElement, (selectedElement as any).tableShape || 'circle', (selectedElement as any).capacity || 4, undefined, undefined, elements, (selectedElement as any).seatArrangement || '4_sides', value as number);
+      return;
+    }
+
+    if (key === 'is_complimentary_tier' || key === 'complimentary_priority') {
+      const selectedTableIds = new Set(elements.filter(el => selectedIds.includes(String(el.id))).map(el => String(el.id)));
+      const selectedTableLabels = new Set(elements.filter(el => selectedIds.includes(String(el.id))).map(el => String(el.label || '').trim().toLowerCase()));
+
+      const newSeats = seats.map(s => {
+        const isDirectlySelected = selectedIds.includes(String(s.id));
+        const belongsToSelectedTable = (s.tableId && selectedTableIds.has(String(s.tableId))) ||
+          (s.row && selectedTableLabels.has(String(s.row).trim().toLowerCase()));
+        if (isDirectlySelected || belongsToSelectedTable) {
+          return { ...s, [key]: value };
+        }
+        return s;
+      });
+      const newEls = elements.map(el => selectedIds.includes(String(el.id)) ? { ...el, [key]: value } : el);
+      setSeats(newSeats);
+      setElements(newEls);
       return;
     }
 
@@ -1100,6 +1198,69 @@ export default function DesignerPage() {
                           <div className="space-y-2"><span className="text-[8px] font-bold uppercase tracking-widest text-white/20">Label / Group</span><div className="flex items-center gap-3"><Type size={14} className="text-amber-honey" /><input type="text" value={selectedIds.length > 1 ? 'MULTIPLE' : (firstSelected.label || firstSelected.row || '')} onChange={(e) => updateSelectedProperty(firstSelected.row ? 'row' : 'label', e.target.value)} onBlur={commitPropertyChange} className={cn("bg-transparent text-[11px] font-bold outline-none w-full", isDark ? "text-white" : "text-slate-900")} /></div></div>
                           {!(firstSelected as any).row && (
                             <div className="flex items-center justify-between"><span className="text-[8px] font-bold uppercase tracking-widest text-white/20">General Admission</span><button onClick={() => { updateSelectedProperty('isGA', !(firstSelected as any).isGA); commitPropertyChange(); }} className={cn("w-10 h-5 rounded-full relative transition-all", (firstSelected as any).isGA ? "bg-amber-honey" : "bg-white/10")}><div className={cn("absolute top-1 w-3 h-3 rounded-full transition-all", (firstSelected as any).isGA ? "right-1 bg-nature-night" : "left-1 bg-white")} /></button></div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Complimentary Tier & Allocation Priority */}
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30 flex items-center gap-1.5">
+                            <Shield size={12} className="text-amber-honey" />
+                            Cortesías VIP & Prioridad
+                          </label>
+                          {(firstSelected as any).is_complimentary_tier && (
+                            <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-honey/20 text-amber-honey border border-amber-honey/30">
+                              Prioridad P{(firstSelected as any).complimentary_priority || 1}
+                            </span>
+                          )}
+                        </div>
+                        <div className={cn("p-5 rounded-2xl border space-y-4", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}>
+                          <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                              <span className={cn("text-[9px] font-bold uppercase tracking-wider block", isDark ? "text-white/80" : "text-slate-800")}>Fila / Mesa de Cortesía</span>
+                              <span className={cn("text-[8px] block", isDark ? "text-white/40" : "text-slate-400")}>Elegible para cupones VIP con fila designada</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextVal = !(firstSelected as any).is_complimentary_tier;
+                                updateSelectedProperty('is_complimentary_tier', nextVal);
+                                if (nextVal && !(firstSelected as any).complimentary_priority) {
+                                  updateSelectedProperty('complimentary_priority', 1);
+                                }
+                                commitPropertyChange();
+                              }}
+                              className={cn("w-10 h-5 rounded-full relative transition-all", (firstSelected as any).is_complimentary_tier ? "bg-amber-honey" : "bg-white/10")}
+                            >
+                              <div className={cn("absolute top-1 w-3 h-3 rounded-full transition-all", (firstSelected as any).is_complimentary_tier ? "right-1 bg-nature-night" : "left-1 bg-white")} />
+                            </button>
+                          </div>
+
+                          {(firstSelected as any).is_complimentary_tier && (
+                            <div className="space-y-2 pt-3 border-t border-white/10">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[8px] font-bold uppercase tracking-widest text-amber-honey">Orden de Prioridad (Overflow)</span>
+                                <span className="text-[10px] font-mono font-black text-amber-honey">Rank #{(firstSelected as any).complimentary_priority || 1}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="20"
+                                  value={(firstSelected as any).complimentary_priority || 1}
+                                  onChange={(e) => {
+                                    const val = Math.max(1, parseInt(e.target.value) || 1);
+                                    updateSelectedProperty('complimentary_priority', val);
+                                  }}
+                                  onBlur={commitPropertyChange}
+                                  className={cn("w-full px-3 py-2 rounded-xl border text-xs font-bold font-mono outline-none", isDark ? "bg-black/60 border-white/10 text-amber-honey focus:border-amber-honey" : "bg-white border-slate-200 text-amber-600 focus:border-amber-500")}
+                                />
+                              </div>
+                              <span className={cn("text-[8px] block leading-tight", isDark ? "text-white/30" : "text-slate-400")}>
+                                Al agotarse los asientos libres de Prioridad 1, el motor desborda automáticamente a Prioridad 2.
+                              </span>
+                            </div>
                           )}
                         </div>
                       </div>
