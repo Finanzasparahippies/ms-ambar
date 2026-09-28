@@ -742,7 +742,7 @@ export default function DesignerPage() {
         const targetY = Math.round(els.reduce((sum, el) => sum + el.y, 0) / els.length);
         els.forEach(el => {
           const dy = targetY - el.y;
-          tableDyMap.set(el.id, dy);
+          tableDyMap.set(String(el.id), dy);
           el.y = targetY;
         });
         alignedRowsCount++;
@@ -750,10 +750,16 @@ export default function DesignerPage() {
     });
 
     currentSeats = currentSeats.map(seat => {
-      const tid = seat.tableId || seat.table_id;
+      let tid = seat.tableId || seat.table_id;
+      if (!tid || !tableDyMap.has(String(tid))) {
+        const nearbyTable = currentElements.find(el => isTableEl(el) && Math.hypot(el.x - seat.x, el.y - seat.y) <= 75);
+        if (nearbyTable) {
+          tid = nearbyTable.id;
+        }
+      }
       if (tid && tableDyMap.has(String(tid))) {
         const dy = tableDyMap.get(String(tid))!;
-        return { ...seat, y: Math.round(seat.y + dy) };
+        return { ...seat, tableId: tid, table_id: tid, y: Math.round(seat.y + dy) };
       }
       return seat;
     });
@@ -930,12 +936,23 @@ export default function DesignerPage() {
 
     // Aplicar actualizaciones a seats (hijos de mesas y standalone)
     currentSeats = currentSeats.map(seat => {
-      const tid = seat.tableId || seat.table_id;
+      let tid = seat.tableId || seat.table_id;
+      // Fallback geométrico defensivo: si no tiene tid válido o no se encuentra en tableUpdates,
+      // asociar a la mesa físicamente más cercana (<= 75px de radio)
+      if (!tid || !tableUpdates.has(String(tid))) {
+        const nearbyTable = tableElements.find(t => Math.hypot(t.x - seat.x, t.y - seat.y) <= 75);
+        if (nearbyTable) {
+          tid = nearbyTable.id;
+        }
+      }
+
       if (tid && tableUpdates.has(String(tid))) {
         const update = tableUpdates.get(String(tid))!;
         totalSeatsAssigned++;
         return {
           ...seat,
+          tableId: tid,
+          table_id: tid,
           row: update.row,
           row_label: update.row_label,
           row_id: update.row_id,

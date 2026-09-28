@@ -451,17 +451,22 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
     // ─── Render Row Bands & Guides (when showRowLabels is true) ───
     if (showRowLabels) {
-      const rowBoundsMap = new Map<string, {
+      interface RowGuideEntry {
         minX: number;
         maxX: number;
         minY: number;
         maxY: number;
+        tablesTotalY: number;
+        tablesCount: number;
+        standaloneTotalY: number;
+        standaloneCount: number;
         isVIP: boolean;
         priority?: number;
         count: number;
-      }>();
+      }
+      const rowBoundsMap = new Map<string, RowGuideEntry>();
 
-      // Collect elements grouped by row
+      // 1. Recorrer elementos (mesas y bloques principales) agrupados por fila
       elements.forEach(el => {
         const rowKey = String(el.row || '').trim();
         if (!rowKey) return;
@@ -469,6 +474,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         const halfH = (el.h || 100) / 2 + 25;
         const entry = rowBoundsMap.get(rowKey) || {
           minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity,
+          tablesTotalY: 0, tablesCount: 0,
+          standaloneTotalY: 0, standaloneCount: 0,
           isVIP: !!el.is_complimentary_tier, priority: el.complimentary_priority,
           count: 0
         };
@@ -476,18 +483,33 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         entry.maxX = Math.max(entry.maxX, el.x + halfW);
         entry.minY = Math.min(entry.minY, el.y - halfH);
         entry.maxY = Math.max(entry.maxY, el.y + halfH);
+        entry.tablesTotalY += el.y;
+        entry.tablesCount++;
         entry.count++;
         if (el.is_complimentary_tier) entry.isVIP = true;
-        if (el.complimentary_priority) entry.priority = el.complimentary_priority;
+        if (el.complimentary_priority && (!entry.priority || el.complimentary_priority < entry.priority)) {
+          entry.priority = el.complimentary_priority;
+        }
         rowBoundsMap.set(rowKey, entry);
       });
 
-      // Collect standalone seats grouped by row
+      // 2. Recorrer ÚNICAMENTE asientos verdaderamente independientes (standalone)
+      // Los asientos vinculados a mesas están delimitados por sus mesas para evitar que asientos con row stale desalineen la fila
+      const knownTableIds = new Set(elements.map(e => String(e.id)));
       seats.forEach(s => {
         const rowKey = String(s.row || '').trim();
         if (!rowKey || rowKey.toLowerCase().startsWith('mesa')) return;
+
+        const tid = s.tableId || s.table_id;
+        const isChildOfTable = (tid && knownTableIds.has(String(tid))) ||
+          elements.some(el => (el.type === 'table' || el.tableShape) && Math.hypot(el.x - s.x, el.y - s.y) <= 75);
+
+        if (isChildOfTable) return;
+
         const entry = rowBoundsMap.get(rowKey) || {
           minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity,
+          tablesTotalY: 0, tablesCount: 0,
+          standaloneTotalY: 0, standaloneCount: 0,
           isVIP: !!s.is_complimentary_tier, priority: s.complimentary_priority,
           count: 0
         };
@@ -495,6 +517,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         entry.maxX = Math.max(entry.maxX, s.x + 20);
         entry.minY = Math.min(entry.minY, s.y - 20);
         entry.maxY = Math.max(entry.maxY, s.y + 20);
+        entry.standaloneTotalY += s.y;
+        entry.standaloneCount++;
         entry.count++;
         if (s.is_complimentary_tier) entry.isVIP = true;
         rowBoundsMap.set(rowKey, entry);
@@ -503,7 +527,13 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       // Draw Row Guides & Badges
       rowBoundsMap.forEach((bounds, rowName) => {
         if (bounds.minX === Infinity) return;
-        const centerY = (bounds.minY + bounds.maxY) / 2;
+        // Si la fila tiene mesas, la altura de la guía es el promedio exacto de las mesas
+        const centerY = bounds.tablesCount > 0
+          ? (bounds.tablesTotalY / bounds.tablesCount)
+          : bounds.standaloneCount > 0
+            ? (bounds.standaloneTotalY / bounds.standaloneCount)
+            : (bounds.minY + bounds.maxY) / 2;
+
         const leftX = bounds.minX - 65;
         const rightX = bounds.maxX + 65;
 

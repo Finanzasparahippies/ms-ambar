@@ -409,8 +409,21 @@ const TourPage = () => {
       .then(res => {
         const data = res.data;
         if (data.seats) {
-          setSeats(data.seats);
-          setElements(data.elements || []);
+          const els = data.elements || [];
+          const tables = els.filter((e: any) => e.type === 'table' || e.tableShape || String(e.label || '').trim().toLowerCase().startsWith('mesa'));
+          if (tables.length > 0) {
+            const tableIds = new Set(tables.map((t: any) => String(t.id)));
+            // Filtrar asientos huérfanos que no pertenecen a ninguna mesa del layout activo
+            const validSeats = data.seats.filter((s: any) => {
+              const tid = s.tableId || s.table_id;
+              if (tid && tableIds.has(String(tid))) return true;
+              return tables.some((t: any) => Math.hypot(t.x - s.x, t.y - s.y) <= 75);
+            });
+            setSeats(validSeats.length > 0 ? validSeats : data.seats);
+          } else {
+            setSeats(data.seats);
+          }
+          setElements(els);
         } else {
           setSeats(data);
           setElements([]);
