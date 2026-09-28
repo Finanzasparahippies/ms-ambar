@@ -178,6 +178,9 @@ def send_welcome_email(subscriber):
               Ver Próximas Fechas del Tour
             </a>
           </div>
+
+          <!-- Invisible Gmail quote-breaker divider -->
+          <div style="display:none!important;font-size:0;max-height:0;line-height:0;opacity:0;mso-hide:all;">{uuid.uuid4().hex}</div>
           
           <!-- Footer -->
           <div style="text-align: center; border-top: 1px solid rgba(244, 246, 240, 0.06); padding-top: 25px; margin-top: 45px; color: rgba(244, 246, 240, 0.35); font-size: 11px; line-height: 1.6;">

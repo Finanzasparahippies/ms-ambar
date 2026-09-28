@@ -3,6 +3,7 @@ import io
 import logging
 import re
 import math
+import uuid
 from django.utils.timezone import localtime
 from email.mime.image import MIMEImage
 from django.conf import settings
@@ -240,49 +241,80 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
       </table>
     """ if selected_image else ""
 
+    # Preheader invisible y divisor de hilo único anti-recorte para Gmail
+    preheader_text = f"Tu invitación exclusiva y cupón {coupon.code} para Ms Ambar"
+    thread_breaker_id = uuid.uuid4().hex
+
     html_content = f"""
-    <div style="font-family: 'Playfair Display', Georgia, serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #f3f4f6; border: 1px solid #d97706; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-      <h2 style="color: #f59e0b; text-align: center; margin-top: 0; font-size: 26px; letter-spacing: 3px;">MS AMBAR</h2>
-      <hr style="border: 0; border-top: 1px solid rgba(217, 119, 6, 0.4); margin: 20px 0;" />
-      {image_html}
-      <h3 style="color: #ffffff; text-align: center; font-size: 20px;">¡Tienes una Invitación Exclusiva!</h3>
-      <p style="font-size: 15px; line-height: 1.7; color: #d1d5db; text-align: center;">
-        Se ha emitido un cupón exclusivo asignado especialmente a tu correo (<strong>{recipient_email}</strong>) para disfrutar de los eventos de <strong>Ms Ambar</strong>.
-      </p>
-      {f'<blockquote style="background: rgba(217,119,6,0.1); border-left: 4px solid #d97706; padding: 14px; margin: 20px 0; color: #fbbf24; font-style: italic; border-radius: 4px;">"{custom_note}"</blockquote>' if custom_note else ''}
-      <div style="background: #18181b; border: 2px dashed #f59e0b; border-radius: 12px; padding: 24px; text-align: center; margin: 25px 0;">
-        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; display: block; margin-bottom: 8px;">Código de Cupón Personal</span>
-        <span style="font-size: 30px; font-weight: 900; color: #f59e0b; letter-spacing: 4px; font-family: monospace;">{coupon.code}</span>
-        <div style="margin-top: 12px; font-size: 14px; color: #e5e7eb;">
-          <strong>Beneficio:</strong> {discount_desc}
-        </div>
-        <div style="margin-top: 6px; font-size: 11px; color: #f59e0b;">
-          🛡️ Intransferible — Válido únicamente para {recipient_email}
-        </div>
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&display=swap');
+      </style>
+    </head>
+    <body style="background-color: #050505; margin: 0; padding: 30px 10px; -webkit-font-smoothing: antialiased;">
+      <!-- Gmail Preheader & Space Padding -->
+      <div style="display: none; font-size: 1px; color: #050505; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+        {preheader_text} &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
       </div>
-      <div style="text-align: center; margin: 32px 0;">
-        <a href="{checkout_url}" style="background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; text-decoration: none; padding: 16px 36px; font-size: 14px; font-weight: bold; border-radius: 30px; display: inline-block; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(217, 119, 6, 0.5);">
-          RECLAMAR MI BENEFICIO
-        </a>
+
+      <div style="font-family: 'Playfair Display', Georgia, serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #f3f4f6; border: 1px solid #d97706; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <h2 style="color: #f59e0b; text-align: center; margin-top: 0; font-size: 26px; letter-spacing: 3px;">MS AMBAR</h2>
+        <hr style="border: 0; border-top: 1px solid rgba(217, 119, 6, 0.4); margin: 20px 0;" />
+        {image_html}
+        <h3 style="color: #ffffff; text-align: center; font-size: 20px;">¡Tienes una Invitación Exclusiva!</h3>
+        <p style="font-size: 15px; line-height: 1.7; color: #d1d5db; text-align: center;">
+          Se ha emitido un cupón exclusivo asignado especialmente a tu correo (<strong>{recipient_email}</strong>) para disfrutar de los eventos de <strong>Ms Ambar</strong>.
+        </p>
+        {f'<blockquote style="background: rgba(217,119,6,0.1); border-left: 4px solid #d97706; padding: 14px; margin: 20px 0; color: #fbbf24; font-style: italic; border-radius: 4px;">"{custom_note}"</blockquote>' if custom_note else ''}
+        <div style="background: #18181b; border: 2px dashed #f59e0b; border-radius: 12px; padding: 24px; text-align: center; margin: 25px 0;">
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #9ca3af; display: block; margin-bottom: 8px;">Código de Cupón Personal</span>
+          <span style="font-size: 30px; font-weight: 900; color: #f59e0b; letter-spacing: 4px; font-family: monospace;">{coupon.code}</span>
+          <div style="margin-top: 12px; font-size: 14px; color: #e5e7eb;">
+            <strong>Beneficio:</strong> {discount_desc}
+          </div>
+          <div style="margin-top: 6px; font-size: 11px; color: #f59e0b;">
+            🛡️ Intransferible — Válido únicamente para {recipient_email}
+          </div>
+        </div>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="{checkout_url}" style="background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; text-decoration: none; padding: 16px 36px; font-size: 14px; font-weight: bold; border-radius: 30px; display: inline-block; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(217, 119, 6, 0.5);">
+            RECLAMAR MI BENEFICIO
+          </a>
+        </div>
+        <p style="font-size: 12px; color: #6b7280; text-align: center; margin-bottom: 0;">
+          Si tienes problemas con el botón, copia y abre este enlace:<br />
+          <a href="{checkout_url}" style="color: #f59e0b; word-break: break-all;">{checkout_url}</a>
+        </p>
+        
+        <!-- Gmail quote-breaker anti-trim divider -->
+        <div style="display:none!important;font-size:0;max-height:0;line-height:0;opacity:0;mso-hide:all;">{thread_breaker_id}</div>
       </div>
-      <p style="font-size: 12px; color: #6b7280; text-align: center; margin-bottom: 0;">
-        Si tienes problemas con el botón, copia y abre este enlace:<br />
-        <a href="{checkout_url}" style="color: #f59e0b; word-break: break-all;">{checkout_url}</a>
-      </p>
-    </div>
+    </body>
+    </html>
     """
+
+    # Minificación segura para mantener el peso del correo muy por debajo del umbral de 102KB
+    html_minified = re.sub(r'>\s+<', '><', html_content)
+    html_minified = re.sub(r'[ \t]+', ' ', html_minified).strip()
+
+    unique_message_id = f"<{uuid.uuid4()}@msambar.com>"
 
     try:
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[recipient_email]
+            to=[recipient_email],
+            headers={'Message-ID': unique_message_id}
         )
-        msg.attach_alternative(html_content, "text/html")
+        msg.attach_alternative(html_minified, "text/html")
         if async_send:
             dispatch_email_async(msg)
-            logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Correo de cupón encolado asíncronamente.")
+            logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Correo de cupón encolado asíncronamente con Message-ID: {unique_message_id}")
             return True, "Email encolado para despacho asíncrono."
 
         msg.send(fail_silently=False)
