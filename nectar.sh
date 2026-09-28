@@ -218,6 +218,7 @@ show_help() {
     echo "  makemigrations-prod     - Generate database migrations (Prod)"
     echo "  migrate-prod            - Run database migrations in prod"
     echo "  shell-prod              - Open backend python shell in prod"
+    echo "  manage-prod             - Run arbitrary manage.py command in prod"
     echo "  collectstatic           - Compile static assets in prod"
     echo "  pycheck-prod            - Run Python syntax check (Prod)"
     echo "  test-frontend-prod      - Run Jest unit tests in Production frontend"
@@ -487,6 +488,9 @@ case $COMMAND in
         ;;
     shell-prod)
         run_django_cmd_prod shell "$@"
+        ;;
+    manage-prod)
+        run_django_cmd_prod "$@"
         ;;
     collectstatic)
         echo "Running collectstatic..."
