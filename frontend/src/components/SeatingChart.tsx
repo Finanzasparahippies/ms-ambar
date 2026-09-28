@@ -557,14 +557,31 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         }
 
         // Right Badge Pill
+        ctx.fillStyle = bounds.isVIP
+          ? (theme === 'dark' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.15)')
+          : (theme === 'dark' ? 'rgba(15, 23, 42, 0.9)' : 'rgba(241, 245, 249, 0.95)');
+        ctx.strokeStyle = bounds.isVIP ? '#F59E0B' : (theme === 'dark' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.22)');
+        ctx.lineWidth = bounds.isVIP ? 2 : 1;
+        if (bounds.isVIP) {
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = '#F59E0B';
+        }
+
         ctx.font = '900 10.5px Outfit, sans-serif';
         ctx.beginPath();
         ctx.roundRect(rightX - badgeW / 2, centerY - badgeH / 2, badgeW, badgeH, 12);
         ctx.fill();
         ctx.stroke();
 
+        ctx.shadowBlur = 0;
         ctx.fillStyle = bounds.isVIP ? '#F59E0B' : (theme === 'dark' ? '#F8FAFC' : '#0F172A');
         ctx.fillText(displayLabel, rightX, centerY);
+
+        if (bounds.isVIP) {
+          ctx.font = '800 7.5px Outfit, sans-serif';
+          ctx.fillStyle = '#FEF08A';
+          ctx.fillText(`VIP • P${bounds.priority || 1}`, rightX, centerY - 16);
+        }
 
         ctx.restore();
       });

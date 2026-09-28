@@ -43,6 +43,7 @@ export interface VenueRowSummary {
   priority: number;
   tableIds: string[];
   seatIds: string[];
+  avgY?: number;
 }
 
 /**
@@ -177,6 +178,7 @@ export default function DesignerPage() {
   // ─── Row Management & Guides States ───
   const [showRowLabels, setShowRowLabels] = useState<boolean>(true);
   const [rowManagerModalOpen, setRowManagerModalOpen] = useState<boolean>(false);
+  const [autoAlignOnDetect, setAutoAlignOnDetect] = useState<boolean>(true);
 
   // ─── Theater Management Modal (Nectar Studio Pro) ───
   const [theaterModal, setTheaterModal] = useState<{ isOpen: boolean; mode: 'create' | 'edit' }>({ isOpen: false, mode: 'create' });
@@ -630,24 +632,39 @@ export default function DesignerPage() {
     return res;
   };
 
-  // ─── Resumen Dinámico de Filas del Recinto ───
+  // ─── Resumen Dinámico de Filas del Recinto (Ordenamiento Espacial Y) ───
   const venueRowsSummary: VenueRowSummary[] = useMemo(() => {
-    const map = new Map<string, VenueRowSummary>();
+    const map = new Map<string, VenueRowSummary & { totalY: number; countY: number }>();
+
+    const isTableEl = (el: any) =>
+      el.type === 'table' ||
+      el.type === 'square' ||
+      el.type === 'rect_table' ||
+      !!el.tableShape ||
+      !!el.table_shape ||
+      (el.label && String(el.label).toLowerCase().startsWith('mesa'));
 
     elements.forEach(el => {
       const r = String(el.row || '').trim();
       if (!r) return;
-      const entry: VenueRowSummary = map.get(r) || {
+      const entry = map.get(r) || {
         name: r,
         tablesCount: 0,
         seatsCount: 0,
         isVIP: !!el.is_complimentary_tier,
         priority: el.complimentary_priority || 99,
         tableIds: [] as string[],
-        seatIds: [] as string[]
+        seatIds: [] as string[],
+        totalY: 0,
+        countY: 0,
+        avgY: 0
       };
-      if (el.type === 'table') entry.tablesCount++;
+      if (isTableEl(el)) entry.tablesCount++;
       entry.tableIds.push(String(el.id));
+      if (el.y !== undefined) {
+        entry.totalY += el.y;
+        entry.countY += 1;
+      }
       if (el.is_complimentary_tier) entry.isVIP = true;
       if (el.complimentary_priority && el.complimentary_priority < entry.priority) {
         entry.priority = el.complimentary_priority;
@@ -658,17 +675,24 @@ export default function DesignerPage() {
     seats.forEach(s => {
       const r = String(s.row || '').trim();
       if (!r) return;
-      const entry: VenueRowSummary = map.get(r) || {
+      const entry = map.get(r) || {
         name: r,
         tablesCount: 0,
         seatsCount: 0,
         isVIP: !!s.is_complimentary_tier,
         priority: s.complimentary_priority || 99,
         tableIds: [] as string[],
-        seatIds: [] as string[]
+        seatIds: [] as string[],
+        totalY: 0,
+        countY: 0,
+        avgY: 0
       };
       entry.seatsCount++;
       entry.seatIds.push(String(s.id));
+      if (s.y !== undefined && (!s.tableId && !s.table_id)) {
+        entry.totalY += s.y;
+        entry.countY += 1;
+      }
       if (s.is_complimentary_tier) entry.isVIP = true;
       if (s.complimentary_priority && s.complimentary_priority < entry.priority) {
         entry.priority = s.complimentary_priority;
@@ -676,19 +700,84 @@ export default function DesignerPage() {
       map.set(r, entry);
     });
 
-    return Array.from(map.values()).sort((a, b) => {
-      if (a.isVIP && !b.isVIP) return -1;
-      if (!a.isVIP && b.isVIP) return 1;
-      return a.priority - b.priority || a.name.localeCompare(b.name, undefined, { numeric: true });
+    return Array.from(map.values()).map(e => ({
+      ...e,
+      avgY: e.countY > 0 ? e.totalY / e.countY : 0
+    })).sort((a, b) => {
+      // Ordenamiento espacial consistente: orden de visualización de arriba hacia abajo (Y)
+      if (Math.abs(a.avgY - b.avgY) > 25) {
+        return a.avgY - b.avgY;
+      }
+      return a.name.localeCompare(b.name, undefined, { numeric: true });
     });
   }, [elements, seats]);
 
+  // ─── Alineación Láser de Coordenadas Y por Fila Existente ───
+  const alignRowsCenterY = () => {
+    let currentElements = [...elements];
+    let currentSeats = [...seats];
+    let alignedRowsCount = 0;
+
+    const isTableEl = (el: any) =>
+      el.type === 'table' ||
+      el.type === 'square' ||
+      el.type === 'rect_table' ||
+      !!el.tableShape ||
+      !!el.table_shape ||
+      (el.label && String(el.label).toLowerCase().startsWith('mesa'));
+
+    const rowGroups = new Map<string, any[]>();
+    currentElements.forEach(el => {
+      const r = String(el.row || '').trim();
+      if (r && isTableEl(el)) {
+        if (!rowGroups.has(r)) rowGroups.set(r, []);
+        rowGroups.get(r)!.push(el);
+      }
+    });
+
+    const tableDyMap = new Map<string, number>();
+
+    rowGroups.forEach((els) => {
+      if (els.length > 0) {
+        const targetY = Math.round(els.reduce((sum, el) => sum + el.y, 0) / els.length);
+        els.forEach(el => {
+          const dy = targetY - el.y;
+          tableDyMap.set(el.id, dy);
+          el.y = targetY;
+        });
+        alignedRowsCount++;
+      }
+    });
+
+    currentSeats = currentSeats.map(seat => {
+      const tid = seat.tableId || seat.table_id;
+      if (tid && tableDyMap.has(String(tid))) {
+        const dy = tableDyMap.get(String(tid))!;
+        return { ...seat, y: Math.round(seat.y + dy) };
+      }
+      return seat;
+    });
+
+    setElements(currentElements);
+    setSeats(currentSeats);
+    addToHistory(currentSeats, currentElements);
+    showAlert(`✨ Se alinearon ${alignedRowsCount} filas horizontalmente a su centro.`, 'Alineación Láser Exitosa', 'success');
+  };
+
   // ─── Motor de Detección y Agrupación Automática de Filas por Coordenadas (Y) ───
-  const autoDetectAndGroupRows = (format: 'numeric' | 'alpha' = 'numeric') => {
+  const autoDetectAndGroupRows = (format: 'numeric' | 'alpha' = 'numeric', autoAlignY: boolean = true) => {
     let currentElements = [...elements];
     let currentSeats = [...seats];
 
-    const tableElements = currentElements.filter(e => e.type === 'table');
+    const isTableEl = (e: any) =>
+      e.type === 'table' ||
+      e.type === 'square' ||
+      e.type === 'rect_table' ||
+      !!e.tableShape ||
+      !!e.table_shape ||
+      (e.label && String(e.label).trim().toLowerCase().startsWith('mesa'));
+
+    const tableElements = currentElements.filter(isTableEl);
     const standaloneSeats = currentSeats.filter(s => !s.tableId && !s.table_id);
 
     let rowsAssignedCount = 0;
@@ -707,14 +796,20 @@ export default function DesignerPage() {
     };
 
     if (tableElements.length > 0) {
-      // 1. Agrupar mesas por bandas horizontales usando tolerancia vertical (Y +- 50px)
+      // 1. Agrupar mesas por bandas horizontales usando clustering 1D adaptativo en Y
       const sortedTables = [...tableElements].sort((a, b) => a.y - b.y || a.x - b.x);
       const bands: (typeof tableElements)[] = [];
 
       sortedTables.forEach(table => {
         let matchedBand = bands.find(band => {
           const avgY = band.reduce((acc, t) => acc + t.y, 0) / band.length;
-          return Math.abs(table.y - avgY) <= 50;
+          const minBandY = Math.min(...band.map(t => t.y));
+          const maxBandY = Math.max(...band.map(t => t.y));
+
+          const distToAvg = Math.abs(table.y - avgY);
+          const withinBandSpan = table.y >= minBandY - 55 && table.y <= maxBandY + 55;
+
+          return distToAvg <= 75 || withinBandSpan;
         });
 
         if (matchedBand) {
@@ -724,23 +819,47 @@ export default function DesignerPage() {
         }
       });
 
-      // Ordenar bandas de arriba hacia abajo (Y ascendente)
-      bands.sort((b1, b2) => {
+      // Segunda pasada de consolidación / merge defensivo para evitar fragmentación de filas
+      let mergedBands: (typeof tableElements)[] = [];
+      bands.forEach(band => {
+        const bandAvgY = band.reduce((acc, t) => acc + t.y, 0) / band.length;
+        const existingBand = mergedBands.find(b => {
+          const bAvgY = b.reduce((acc, t) => acc + t.y, 0) / b.length;
+          return Math.abs(bandAvgY - bAvgY) <= 75;
+        });
+
+        if (existingBand) {
+          existingBand.push(...band);
+        } else {
+          mergedBands.push([...band]);
+        }
+      });
+
+      // Ordenar las bandas estrictamente de arriba hacia abajo (Y ascendente)
+      mergedBands.sort((b1, b2) => {
         const avgY1 = b1.reduce((acc, t) => acc + t.y, 0) / b1.length;
         const avgY2 = b2.reduce((acc, t) => acc + t.y, 0) / b2.length;
         return avgY1 - avgY2;
       });
 
-      const tableRowMap = new Map<string, { row: string; row_label: string; row_id: string }>();
+      const tableRowMap = new Map<string, { row: string; row_label: string; row_id: string; targetY?: number; dy?: number }>();
 
-      bands.forEach((band, bandIdx) => {
+      mergedBands.forEach((band, bandIdx) => {
         band.sort((a, b) => a.x - b.x);
         const rowIdentifier = format === 'alpha' ? getAlphaLabel(bandIdx + 1) : String(bandIdx + 1);
         const rowName = `Fila ${rowIdentifier}`;
         const rowId = `row_${rowIdentifier.toLowerCase()}`;
+        const targetRowY = Math.round(band.reduce((acc, t) => acc + t.y, 0) / band.length);
 
         band.forEach(table => {
-          tableRowMap.set(table.id, { row: rowName, row_label: rowName, row_id: rowId });
+          const dy = autoAlignY ? (targetRowY - table.y) : 0;
+          tableRowMap.set(table.id, {
+            row: rowName,
+            row_label: rowName,
+            row_id: rowId,
+            targetY: autoAlignY ? targetRowY : undefined,
+            dy
+          });
           tablesAssignedCount++;
         });
       });
@@ -752,7 +871,8 @@ export default function DesignerPage() {
             ...el,
             row: mapping.row,
             row_label: mapping.row_label,
-            row_id: mapping.row_id
+            row_id: mapping.row_id,
+            y: mapping.targetY !== undefined ? mapping.targetY : el.y
           };
         }
         return el;
@@ -767,13 +887,14 @@ export default function DesignerPage() {
             ...seat,
             row: mapping.row,
             row_label: mapping.row_label,
-            row_id: mapping.row_id
+            row_id: mapping.row_id,
+            y: mapping.dy ? Math.round(seat.y + mapping.dy) : seat.y
           };
         }
         return seat;
       });
 
-      rowsAssignedCount = bands.length;
+      rowsAssignedCount = mergedBands.length;
     }
 
     if (standaloneSeats.length > 0) {
@@ -783,7 +904,7 @@ export default function DesignerPage() {
       sortedSeats.forEach(seat => {
         let matchedBand = seatBands.find(band => {
           const avgY = band.reduce((acc, s) => acc + s.y, 0) / band.length;
-          return Math.abs(seat.y - avgY) <= 25;
+          return Math.abs(seat.y - avgY) <= 35;
         });
 
         if (matchedBand) {
@@ -793,25 +914,41 @@ export default function DesignerPage() {
         }
       });
 
-      seatBands.sort((b1, b2) => {
+      let mergedSeatBands: (typeof standaloneSeats)[] = [];
+      seatBands.forEach(band => {
+        const bandAvgY = band.reduce((acc, s) => acc + s.y, 0) / band.length;
+        const existing = mergedSeatBands.find(b => {
+          const bAvgY = b.reduce((acc, s) => acc + s.y, 0) / b.length;
+          return Math.abs(bandAvgY - bAvgY) <= 35;
+        });
+        if (existing) {
+          existing.push(...band);
+        } else {
+          mergedSeatBands.push([...band]);
+        }
+      });
+
+      mergedSeatBands.sort((b1, b2) => {
         const avgY1 = b1.reduce((acc, s) => acc + s.y, 0) / b1.length;
         const avgY2 = b2.reduce((acc, s) => acc + s.y, 0) / b2.length;
         return avgY1 - avgY2;
       });
 
-      const seatRowMap = new Map<string, { row: string; row_label: string; row_id: string; number: number }>();
-      seatBands.forEach((band, bandIdx) => {
+      const seatRowMap = new Map<string, { row: string; row_label: string; row_id: string; number: number; targetY?: number }>();
+      mergedSeatBands.forEach((band, bandIdx) => {
         band.sort((a, b) => a.x - b.x);
         const rowIdentifier = format === 'alpha' ? getAlphaLabel(rowsAssignedCount + bandIdx + 1) : String(rowsAssignedCount + bandIdx + 1);
         const rowName = `Fila ${rowIdentifier}`;
         const rowId = `row_${rowIdentifier.toLowerCase()}`;
+        const targetRowY = Math.round(band.reduce((acc, s) => acc + s.y, 0) / band.length);
 
         band.forEach((seat, seatIdx) => {
           seatRowMap.set(String(seat.id), {
             row: rowName,
             row_label: rowName,
             row_id: rowId,
-            number: seatIdx + 1
+            number: seatIdx + 1,
+            targetY: autoAlignY ? targetRowY : undefined
           });
           seatsAssignedCount++;
         });
@@ -825,13 +962,14 @@ export default function DesignerPage() {
             row: mapping.row,
             row_label: mapping.row_label,
             row_id: mapping.row_id,
-            number: mapping.number
+            number: mapping.number,
+            y: mapping.targetY !== undefined ? mapping.targetY : seat.y
           };
         }
         return seat;
       });
 
-      rowsAssignedCount += seatBands.length;
+      rowsAssignedCount += mergedSeatBands.length;
     }
 
     setElements(currentElements);
@@ -840,7 +978,7 @@ export default function DesignerPage() {
     setShowRowLabels(true);
 
     showAlert(
-      `⚡ Detección automática completada: Se organizaron ${rowsAssignedCount} filas ordenadas de arriba hacia abajo (${tablesAssignedCount} mesas, ${seatsAssignedCount} asientos).`,
+      `⚡ Detección automática completada: Se organizaron ${rowsAssignedCount} filas ordenadas de arriba hacia abajo (${tablesAssignedCount} mesas, ${seatsAssignedCount} asientos)${autoAlignY ? ' y se alinearon horizontalmente.' : '.'}`,
       'Filas Asignadas con Éxito',
       'success'
     );
@@ -1831,15 +1969,36 @@ export default function DesignerPage() {
                   <p className={cn("text-[8px] leading-relaxed", isDark ? "text-white/50" : "text-slate-600")}>
                     Agrupa automáticamente todas las mesas y asientos alineados por coordenadas Y (arriba hacia abajo).
                   </p>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <label className={cn("text-[8px] font-bold uppercase tracking-wider cursor-pointer flex items-center gap-1.5", isDark ? "text-white/70" : "text-slate-700")}>
+                      <input
+                        type="checkbox"
+                        checked={autoAlignOnDetect}
+                        onChange={(e) => setAutoAlignOnDetect(e.target.checked)}
+                        className="rounded accent-amber-honey cursor-pointer"
+                      />
+                      <span>Alinear Y Láser</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={alignRowsCenterY}
+                      className="text-[8px] font-bold uppercase text-amber-honey hover:underline tracking-wider"
+                      title="Alinear mesas de las filas ya configuradas al centro Y"
+                    >
+                      Alinear Ahora
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <button
-                      onClick={() => autoDetectAndGroupRows('numeric')}
+                      onClick={() => autoDetectAndGroupRows('numeric', autoAlignOnDetect)}
                       className="py-2.5 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider bg-amber-honey text-nature-night shadow-glow hover:scale-105 transition-all text-center"
                     >
                       1, 2, 3...
                     </button>
                     <button
-                      onClick={() => autoDetectAndGroupRows('alpha')}
+                      onClick={() => autoDetectAndGroupRows('alpha', autoAlignOnDetect)}
                       className={cn("py-2.5 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider border hover:scale-105 transition-all text-center", isDark ? "bg-white/5 border-white/10 text-white hover:bg-white/10" : "bg-white border-slate-200 text-slate-800")}
                     >
                       A, B, C...
@@ -2294,18 +2453,26 @@ export default function DesignerPage() {
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Detección Rápida:</span>
                   <button
-                    onClick={() => autoDetectAndGroupRows('numeric')}
+                    onClick={() => autoDetectAndGroupRows('numeric', autoAlignOnDetect)}
                     className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-honey/15 text-amber-honey border border-amber-honey/30 hover:bg-amber-honey hover:text-nature-night transition-all flex items-center gap-1.5"
                   >
                     <Zap size={12} />
                     Numérico (Fila 1, 2, 3...)
                   </button>
                   <button
-                    onClick={() => autoDetectAndGroupRows('alpha')}
+                    onClick={() => autoDetectAndGroupRows('alpha', autoAlignOnDetect)}
                     className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white transition-all flex items-center gap-1.5"
                   >
                     <Zap size={12} />
                     Alfabético (Fila A, B, C...)
+                  </button>
+                  <button
+                    onClick={alignRowsCenterY}
+                    className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 text-amber-honey border border-amber-honey/20 hover:bg-amber-honey/20 transition-all flex items-center gap-1.5"
+                    title="Alinear las coordenadas Y de las mesas de cada fila existente"
+                  >
+                    <Layers size={12} />
+                    Alinear Filas Láser
                   </button>
                 </div>
 
