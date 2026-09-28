@@ -764,25 +764,98 @@ export default function DesignerPage() {
     showAlert(`✨ Se alinearon ${alignedRowsCount} filas horizontalmente a su centro.`, 'Alineación Láser Exitosa', 'success');
   };
 
-  // ─── Motor de Detección y Agrupación Automática de Filas por Coordenadas (Y) ───
+  // ─── Motor Unificado de Detección y Agrupación Espacial por Bandas Horizontales ───
   const autoDetectAndGroupRows = (format: 'numeric' | 'alpha' = 'numeric', autoAlignY: boolean = true) => {
     let currentElements = [...elements];
     let currentSeats = [...seats];
 
+    // Helper exhaustivo para identificar si un elemento actúa como mesa o grupo de asientos
     const isTableEl = (e: any) =>
       e.type === 'table' ||
       e.type === 'square' ||
       e.type === 'rect_table' ||
       !!e.tableShape ||
       !!e.table_shape ||
-      (e.label && String(e.label).trim().toLowerCase().startsWith('mesa'));
+      (e.label && String(e.label).trim().toLowerCase().startsWith('mesa')) ||
+      currentSeats.some(s => String(s.tableId) === String(e.id) || String(s.table_id) === String(e.id));
 
+    // Mesas identificadas
     const tableElements = currentElements.filter(isTableEl);
-    const standaloneSeats = currentSeats.filter(s => !s.tableId && !s.table_id);
+    const tableElementIds = new Set(tableElements.map(e => String(e.id)));
 
-    let rowsAssignedCount = 0;
-    let tablesAssignedCount = 0;
-    let seatsAssignedCount = 0;
+    // Asientos standalone (que no pertenecen a ninguna mesa conocida)
+    const standaloneSeats = currentSeats.filter(s => {
+      const tid = s.tableId || s.table_id;
+      return !tid || !tableElementIds.has(String(tid));
+    });
+
+    // Representamos cada unidad espacial de fila: mesa o asiento independiente
+    interface SpatialUnit {
+      id: string;
+      kind: 'table' | 'standalone_seat';
+      x: number;
+      y: number;
+      item: any;
+    }
+
+    const units: SpatialUnit[] = [
+      ...tableElements.map(t => ({ id: String(t.id), kind: 'table' as const, x: t.x, y: t.y, item: t })),
+      ...standaloneSeats.map(s => ({ id: String(s.id), kind: 'standalone_seat' as const, x: s.x, y: s.y, item: s }))
+    ];
+
+    if (units.length === 0) {
+      showAlert('No se encontraron mesas ni asientos para organizar.', 'Sin Elementos', 'error');
+      return;
+    }
+
+    // 1. Ordenar todas las unidades de menor a mayor Y (de arriba hacia abajo)
+    units.sort((a, b) => a.y - b.y || a.x - b.x);
+
+    // 2. Agrupamiento adaptativo en bandas horizontales unificadas (1D Single-Linkage Clustering)
+    const bands: SpatialUnit[][] = [];
+
+    units.forEach(unit => {
+      let matchedBand = bands.find(band => {
+        const avgY = band.reduce((acc, u) => acc + u.y, 0) / band.length;
+        const minY = Math.min(...band.map(u => u.y));
+        const maxY = Math.max(...band.map(u => u.y));
+
+        const distToAvg = Math.abs(unit.y - avgY);
+        const withinSpan = unit.y >= minY - 55 && unit.y <= maxY + 55;
+
+        // Tolerancia máxima entre centros de fila contiguos: 75px
+        return distToAvg <= 75 || withinSpan;
+      });
+
+      if (matchedBand) {
+        matchedBand.push(unit);
+      } else {
+        bands.push([unit]);
+      }
+    });
+
+    // 3. Segunda pasada: Consolidación defensiva de bandas contiguas
+    let mergedBands: SpatialUnit[][] = [];
+    bands.forEach(band => {
+      const bandAvgY = band.reduce((acc, u) => acc + u.y, 0) / band.length;
+      const existing = mergedBands.find(b => {
+        const bAvgY = b.reduce((acc, u) => acc + u.y, 0) / b.length;
+        return Math.abs(bandAvgY - bAvgY) <= 75;
+      });
+
+      if (existing) {
+        existing.push(...band);
+      } else {
+        mergedBands.push([...band]);
+      }
+    });
+
+    // 4. Ordenar las bandas consolidadas estrictamente de arriba hacia abajo (Y ascendente)
+    mergedBands.sort((b1, b2) => {
+      const avgY1 = b1.reduce((acc, u) => acc + u.y, 0) / b1.length;
+      const avgY2 = b2.reduce((acc, u) => acc + u.y, 0) / b2.length;
+      return avgY1 - avgY2;
+    });
 
     const getAlphaLabel = (idx: number) => {
       let label = '';
@@ -795,182 +868,93 @@ export default function DesignerPage() {
       return label;
     };
 
-    if (tableElements.length > 0) {
-      // 1. Agrupar mesas por bandas horizontales usando clustering 1D adaptativo en Y
-      const sortedTables = [...tableElements].sort((a, b) => a.y - b.y || a.x - b.x);
-      const bands: (typeof tableElements)[] = [];
+    let totalTablesAssigned = 0;
+    let totalSeatsAssigned = 0;
 
-      sortedTables.forEach(table => {
-        let matchedBand = bands.find(band => {
-          const avgY = band.reduce((acc, t) => acc + t.y, 0) / band.length;
-          const minBandY = Math.min(...band.map(t => t.y));
-          const maxBandY = Math.max(...band.map(t => t.y));
+    const tableUpdates = new Map<string, { row: string; row_label: string; row_id: string; targetY?: number; dy?: number }>();
+    const seatUpdates = new Map<string, { row: string; row_label: string; row_id: string; number?: number; targetY?: number; dy?: number }>();
 
-          const distToAvg = Math.abs(table.y - avgY);
-          const withinBandSpan = table.y >= minBandY - 55 && table.y <= maxBandY + 55;
+    mergedBands.forEach((band, bandIdx) => {
+      // Ordenar unidades dentro de la fila de izquierda a derecha (X ascendente)
+      band.sort((a, b) => a.x - b.x);
 
-          return distToAvg <= 75 || withinBandSpan;
-        });
+      const rowIdentifier = format === 'alpha' ? getAlphaLabel(bandIdx + 1) : String(bandIdx + 1);
+      const rowName = `Fila ${rowIdentifier}`;
+      const rowId = `row_${rowIdentifier.toLowerCase()}`;
+      const targetRowY = Math.round(band.reduce((acc, u) => acc + u.y, 0) / band.length);
 
-        if (matchedBand) {
-          matchedBand.push(table);
-        } else {
-          bands.push([table]);
-        }
-      });
+      let seatInRowNumber = 1;
 
-      // Segunda pasada de consolidación / merge defensivo para evitar fragmentación de filas
-      let mergedBands: (typeof tableElements)[] = [];
-      bands.forEach(band => {
-        const bandAvgY = band.reduce((acc, t) => acc + t.y, 0) / band.length;
-        const existingBand = mergedBands.find(b => {
-          const bAvgY = b.reduce((acc, t) => acc + t.y, 0) / b.length;
-          return Math.abs(bandAvgY - bAvgY) <= 75;
-        });
-
-        if (existingBand) {
-          existingBand.push(...band);
-        } else {
-          mergedBands.push([...band]);
-        }
-      });
-
-      // Ordenar las bandas estrictamente de arriba hacia abajo (Y ascendente)
-      mergedBands.sort((b1, b2) => {
-        const avgY1 = b1.reduce((acc, t) => acc + t.y, 0) / b1.length;
-        const avgY2 = b2.reduce((acc, t) => acc + t.y, 0) / b2.length;
-        return avgY1 - avgY2;
-      });
-
-      const tableRowMap = new Map<string, { row: string; row_label: string; row_id: string; targetY?: number; dy?: number }>();
-
-      mergedBands.forEach((band, bandIdx) => {
-        band.sort((a, b) => a.x - b.x);
-        const rowIdentifier = format === 'alpha' ? getAlphaLabel(bandIdx + 1) : String(bandIdx + 1);
-        const rowName = `Fila ${rowIdentifier}`;
-        const rowId = `row_${rowIdentifier.toLowerCase()}`;
-        const targetRowY = Math.round(band.reduce((acc, t) => acc + t.y, 0) / band.length);
-
-        band.forEach(table => {
+      band.forEach(unit => {
+        if (unit.kind === 'table') {
+          const table = unit.item;
           const dy = autoAlignY ? (targetRowY - table.y) : 0;
-          tableRowMap.set(table.id, {
+          tableUpdates.set(String(table.id), {
             row: rowName,
             row_label: rowName,
             row_id: rowId,
             targetY: autoAlignY ? targetRowY : undefined,
             dy
           });
-          tablesAssignedCount++;
-        });
-      });
-
-      currentElements = currentElements.map(el => {
-        const mapping = tableRowMap.get(el.id);
-        if (mapping) {
-          return {
-            ...el,
-            row: mapping.row,
-            row_label: mapping.row_label,
-            row_id: mapping.row_id,
-            y: mapping.targetY !== undefined ? mapping.targetY : el.y
-          };
-        }
-        return el;
-      });
-
-      currentSeats = currentSeats.map(seat => {
-        const tid = seat.tableId || seat.table_id;
-        if (tid && tableRowMap.has(String(tid))) {
-          const mapping = tableRowMap.get(String(tid))!;
-          seatsAssignedCount++;
-          return {
-            ...seat,
-            row: mapping.row,
-            row_label: mapping.row_label,
-            row_id: mapping.row_id,
-            y: mapping.dy ? Math.round(seat.y + mapping.dy) : seat.y
-          };
-        }
-        return seat;
-      });
-
-      rowsAssignedCount = mergedBands.length;
-    }
-
-    if (standaloneSeats.length > 0) {
-      const sortedSeats = [...standaloneSeats].sort((a, b) => a.y - b.y || a.x - b.x);
-      const seatBands: (typeof standaloneSeats)[] = [];
-
-      sortedSeats.forEach(seat => {
-        let matchedBand = seatBands.find(band => {
-          const avgY = band.reduce((acc, s) => acc + s.y, 0) / band.length;
-          return Math.abs(seat.y - avgY) <= 35;
-        });
-
-        if (matchedBand) {
-          matchedBand.push(seat);
-        } else {
-          seatBands.push([seat]);
-        }
-      });
-
-      let mergedSeatBands: (typeof standaloneSeats)[] = [];
-      seatBands.forEach(band => {
-        const bandAvgY = band.reduce((acc, s) => acc + s.y, 0) / band.length;
-        const existing = mergedSeatBands.find(b => {
-          const bAvgY = b.reduce((acc, s) => acc + s.y, 0) / b.length;
-          return Math.abs(bandAvgY - bAvgY) <= 35;
-        });
-        if (existing) {
-          existing.push(...band);
-        } else {
-          mergedSeatBands.push([...band]);
-        }
-      });
-
-      mergedSeatBands.sort((b1, b2) => {
-        const avgY1 = b1.reduce((acc, s) => acc + s.y, 0) / b1.length;
-        const avgY2 = b2.reduce((acc, s) => acc + s.y, 0) / b2.length;
-        return avgY1 - avgY2;
-      });
-
-      const seatRowMap = new Map<string, { row: string; row_label: string; row_id: string; number: number; targetY?: number }>();
-      mergedSeatBands.forEach((band, bandIdx) => {
-        band.sort((a, b) => a.x - b.x);
-        const rowIdentifier = format === 'alpha' ? getAlphaLabel(rowsAssignedCount + bandIdx + 1) : String(rowsAssignedCount + bandIdx + 1);
-        const rowName = `Fila ${rowIdentifier}`;
-        const rowId = `row_${rowIdentifier.toLowerCase()}`;
-        const targetRowY = Math.round(band.reduce((acc, s) => acc + s.y, 0) / band.length);
-
-        band.forEach((seat, seatIdx) => {
-          seatRowMap.set(String(seat.id), {
+          totalTablesAssigned++;
+        } else if (unit.kind === 'standalone_seat') {
+          const seat = unit.item;
+          const dy = autoAlignY ? (targetRowY - seat.y) : 0;
+          seatUpdates.set(String(seat.id), {
             row: rowName,
             row_label: rowName,
             row_id: rowId,
-            number: seatIdx + 1,
-            targetY: autoAlignY ? targetRowY : undefined
+            number: seatInRowNumber++,
+            targetY: autoAlignY ? targetRowY : undefined,
+            dy
           });
-          seatsAssignedCount++;
-        });
-      });
-
-      currentSeats = currentSeats.map(seat => {
-        if (seatRowMap.has(String(seat.id))) {
-          const mapping = seatRowMap.get(String(seat.id))!;
-          return {
-            ...seat,
-            row: mapping.row,
-            row_label: mapping.row_label,
-            row_id: mapping.row_id,
-            number: mapping.number,
-            y: mapping.targetY !== undefined ? mapping.targetY : seat.y
-          };
+          totalSeatsAssigned++;
         }
-        return seat;
       });
+    });
 
-      rowsAssignedCount += mergedSeatBands.length;
-    }
+    // Aplicar actualizaciones a elements
+    currentElements = currentElements.map(el => {
+      const update = tableUpdates.get(String(el.id));
+      if (update) {
+        return {
+          ...el,
+          row: update.row,
+          row_label: update.row_label,
+          row_id: update.row_id,
+          y: update.targetY !== undefined ? update.targetY : el.y
+        };
+      }
+      return el;
+    });
+
+    // Aplicar actualizaciones a seats (hijos de mesas y standalone)
+    currentSeats = currentSeats.map(seat => {
+      const tid = seat.tableId || seat.table_id;
+      if (tid && tableUpdates.has(String(tid))) {
+        const update = tableUpdates.get(String(tid))!;
+        totalSeatsAssigned++;
+        return {
+          ...seat,
+          row: update.row,
+          row_label: update.row_label,
+          row_id: update.row_id,
+          y: update.dy ? Math.round(seat.y + update.dy) : seat.y
+        };
+      }
+      if (seatUpdates.has(String(seat.id))) {
+        const update = seatUpdates.get(String(seat.id))!;
+        return {
+          ...seat,
+          row: update.row,
+          row_label: update.row_label,
+          row_id: update.row_id,
+          number: update.number !== undefined ? update.number : seat.number,
+          y: update.targetY !== undefined ? update.targetY : seat.y
+        };
+      }
+      return seat;
+    });
 
     setElements(currentElements);
     setSeats(currentSeats);
@@ -978,7 +962,7 @@ export default function DesignerPage() {
     setShowRowLabels(true);
 
     showAlert(
-      `⚡ Detección automática completada: Se organizaron ${rowsAssignedCount} filas ordenadas de arriba hacia abajo (${tablesAssignedCount} mesas, ${seatsAssignedCount} asientos)${autoAlignY ? ' y se alinearon horizontalmente.' : '.'}`,
+      `⚡ Detección automática completada: Se organizaron ${mergedBands.length} filas unificadas ordenadas de arriba hacia abajo (${totalTablesAssigned} mesas, ${totalSeatsAssigned} asientos)${autoAlignY ? ' con alineación láser.' : '.'}`,
       'Filas Asignadas con Éxito',
       'success'
     );
