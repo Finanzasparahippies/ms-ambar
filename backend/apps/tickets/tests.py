@@ -1122,7 +1122,8 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(pricing['total_seats_count'], 2)
         self.assertEqual(pricing['covered_count'], 1)
         self.assertEqual(pricing['payable_count'], 1)
-        self.assertEqual(pricing['subtotal'], seat2.base_price * self.event.price_multiplier)
+        expected_subtotal = round(float(seat2.base_price) * float(self.event.price_multiplier), 2)
+        self.assertEqual(pricing['subtotal'], expected_subtotal)
         self.assertTrue(pricing['is_hybrid_order'])
         self.assertFalse(pricing['is_free_order'])
         self.assertGreater(pricing['grand_total'], pricing['subtotal'])  # Incluye comisión de pasarela
@@ -1170,9 +1171,8 @@ class TicketsAppTests(APITestCase):
             event=self.event,
             seat=self.seat_vip,
             user_email="fan@example.com",
-            user_name="Fan",
             status="paid",
-            coupon=coupon,
+            used_coupon=coupon,
             stripe_session_id="free_vip_test_session_1"
         )
 

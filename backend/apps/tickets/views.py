@@ -772,7 +772,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                     'tickets': serializer.data,
                     'pricing': pricing,
                     'message': '¡Felicidades! Tu entrada VIP gratuita ha sido reservada con éxito.'
-                }, status=status.HTTP_201_CREATED)
+                }, status=status.HTTP_200_OK)
 
         # --- CASO B: TOTAL > $0.00 MXN (ORDEN HÍBRIDA O REGULAR CON STRIPE) ---
         from apps.shop.utils import create_ticket_checkout_session
