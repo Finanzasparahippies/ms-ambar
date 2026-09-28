@@ -200,6 +200,12 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
         elif coupon.event.image and hasattr(coupon.event.image, 'url'):
             selected_image = coupon.event.image.url
 
+    # Optimización inteligente para Cloudinary (calidad y formato automático sin distorsión)
+    if selected_image and ("res.cloudinary.com" in selected_image or "/upload/" in selected_image):
+        if "/upload/" in selected_image and "f_auto" not in selected_image:
+            parts = selected_image.split("/upload/", 1)
+            selected_image = f"{parts[0]}/upload/f_auto,q_auto,w_800/{parts[1]}"
+
     discount_desc = "100% de descuento (Entrada VIP Gratuita)" if coupon.discount_type == 'free_vip' else (
         f"{coupon.discount_value}% de descuento" if coupon.discount_type == 'percentage' else f"${coupon.discount_value} MXN de descuento"
     )
@@ -225,9 +231,13 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
     )
 
     image_html = f"""
-      <div style="text-align: center; margin-bottom: 24px;">
-        <img src="{selected_image}" alt="Ms Ambar Evento" style="max-width: 100%; width: 100%; max-height: 380px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(217, 119, 6, 0.4); display: block; margin: 0 auto; box-shadow: 0 8px 24px rgba(0,0,0,0.6);" />
-      </div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 24px auto;">
+        <tr>
+          <td align="center" style="padding: 0;">
+            <img src="{selected_image}" alt="Ms Ambar Evento" width="536" style="width: 100%; max-width: 536px; height: auto; display: block; margin: 0 auto; border-radius: 12px; border: 1px solid rgba(217, 119, 6, 0.4); box-shadow: 0 8px 24px rgba(0,0,0,0.6);" />
+          </td>
+        </tr>
+      </table>
     """ if selected_image else ""
 
     html_content = f"""

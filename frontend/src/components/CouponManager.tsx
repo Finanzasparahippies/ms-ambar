@@ -825,14 +825,15 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
       {/* ── MODAL: Creación y Edición de Cupones ── */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-amber-500/30 rounded-2xl p-6 w-full max-w-lg shadow-2xl space-y-6 text-zinc-200"
+              className="bg-zinc-900 border border-amber-500/30 rounded-2xl w-full max-w-lg max-h-[90vh] shadow-2xl flex flex-col text-zinc-200 overflow-hidden my-auto"
             >
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
+              {/* Modal Header Sticky */}
+              <div className="flex items-center justify-between border-b border-zinc-800 p-5 shrink-0 bg-zinc-900/95 backdrop-blur-xs">
                 <h3 className="text-lg font-bold text-amber-400 flex items-center gap-2">
                   <Tag className="w-5 h-5" />
                   {editingCoupon ? 'Editar Cupón' : 'Crear Nuevo Cupón'}
@@ -843,13 +844,15 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
               </div>
 
               {formError && (
-                <div className="bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 text-xs text-rose-400 flex items-center gap-2">
+                <div className="mx-5 mt-4 bg-rose-500/10 border border-rose-500/30 rounded-lg p-3 text-xs text-rose-400 flex items-center gap-2 shrink-0">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   {formError}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Form Scrollable Body */}
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
                 {/* Código */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
@@ -1287,9 +1290,10 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                     </label>
                   </div>
                 </div>
+                </div>
 
-                {/* Submit Buttons */}
-                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+                {/* Submit Buttons Sticky Footer */}
+                <div className="flex justify-end gap-3 p-5 border-t border-zinc-800 bg-zinc-900/95 backdrop-blur-xs shrink-0">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
@@ -1314,14 +1318,15 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
       {/* ── MODAL: Envío por Correo Electrónico ── */}
       <AnimatePresence>
         {isEmailModalOpen && selectedCouponForEmail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-zinc-900 border border-purple-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-5 text-zinc-200"
+              className="bg-zinc-900 border border-purple-500/30 rounded-2xl w-full max-w-md max-h-[90vh] shadow-2xl flex flex-col text-zinc-200 overflow-hidden my-auto"
             >
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              {/* Header Sticky */}
+              <div className="flex items-center justify-between border-b border-zinc-800 p-5 shrink-0 bg-zinc-900/95 backdrop-blur-xs">
                 <h3 className="text-lg font-bold text-purple-400 flex items-center gap-2">
                   <Mail className="w-5 h-5" />
                   Enviar Cupón por Correo
@@ -1331,121 +1336,125 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                 </button>
               </div>
 
-              <div className="bg-purple-950/30 border border-purple-800/40 rounded-xl p-3 text-xs space-y-1">
-                <p className="font-bold text-purple-300">
-                  Cupón: <span className="font-mono text-amber-400">{selectedCouponForEmail.code}</span>
-                </p>
-                <p className="text-zinc-400">
-                  Beneficio:{' '}
-                  {selectedCouponForEmail.discount_type === 'free_vip'
-                    ? 'Entrada VIP Gratuita (100%)'
-                    : `${selectedCouponForEmail.discount_value}% Descuento`}
-                </p>
-              </div>
-
-              <form onSubmit={handleSendEmail} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                    Correo del Destinatario *
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="invitado@ejemplo.com"
-                    value={emailRecipient}
-                    onChange={e => setEmailRecipient(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-purple-500 font-mono"
-                  />
-                  {selectedCouponForEmail.allowed_emails && selectedCouponForEmail.allowed_emails.length > 0 && (
-                    <div className="space-y-1 mt-2">
-                      <span className="text-[10px] text-zinc-400 block font-semibold">
-                        Seleccionar de invitados autorizados:
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedCouponForEmail.allowed_emails.map((em: string) => (
-                          <button
-                            key={em}
-                            type="button"
-                            onClick={() => setEmailRecipient(em)}
-                            className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
-                              emailRecipient === em
-                                ? 'bg-purple-600 text-white border-purple-400'
-                                : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-purple-500'
-                            }`}
-                          >
-                            {em}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-[11px] text-zinc-500 mt-1">
-                    * Al enviar, el correo recibirá una invitación formal con su enlace seguro de canje.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                    Nota Personalizada (Opcional)
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Ej. ¡Hola Carlos! Te invitamos formalmente a nuestro concierto VIP de Ms Ambar..."
-                    value={emailNote}
-                    onChange={e => setEmailNote(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-200 focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-
-                {/* Imagen del Correo (Cloudinary / Flyer) */}
-                <div className="pt-2 border-t border-zinc-800/80 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                      <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
-                      Imagen / Banner del Correo
-                    </label>
-                    {selectedCouponForEmail.event && (() => {
-                      const associatedEv = events.find(ev => ev.id === selectedCouponForEmail.event);
-                      const flyerUrl = associatedEv?.flyer || associatedEv?.image;
-                      if (!flyerUrl) return null;
-                      return (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEmailImageUrl(flyerUrl);
-                            setEmailImageFile(null);
-                            setEmailImagePreview(flyerUrl);
-                          }}
-                          className="text-[10px] text-purple-400 hover:text-purple-300 font-medium underline cursor-pointer"
-                        >
-                          Usar Flyer Oficial
-                        </button>
-                      );
-                    })()}
+              {/* Form Scrollable Body */}
+              <form onSubmit={handleSendEmail} className="flex flex-col flex-1 overflow-hidden">
+                <div className="p-5 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+                  <div className="bg-purple-950/30 border border-purple-800/40 rounded-xl p-3 text-xs space-y-1">
+                    <p className="font-bold text-purple-300">
+                      Cupón: <span className="font-mono text-amber-400">{selectedCouponForEmail.code}</span>
+                    </p>
+                    <p className="text-zinc-400">
+                      Beneficio:{' '}
+                      {selectedCouponForEmail.discount_type === 'free_vip'
+                        ? 'Entrada VIP Gratuita (100%)'
+                        : `${selectedCouponForEmail.discount_value}% Descuento`}
+                    </p>
                   </div>
 
-                  <CloudinaryMediaPicker
-                    category="Cupones"
-                    subfolder="coupon_invites"
-                    aspectRatio="video"
-                    file={emailImageFile}
-                    preview={emailImagePreview}
-                    valueUrl={emailImageUrl}
-                    onFileChange={(f, p) => {
-                      setEmailImageFile(f);
-                      setEmailImagePreview(p);
-                    }}
-                    onUrlChange={(url) => {
-                      setEmailImageUrl(url);
-                      setEmailImagePreview(url);
-                    }}
-                  />
-                  <p className="text-[10px] text-zinc-500">
-                    Opcional: Si no seleccionas una imagen, se enviará el correo con el diseño minimalista de Ms Ambar.
-                  </p>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                      Correo del Destinatario *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="invitado@ejemplo.com"
+                      value={emailRecipient}
+                      onChange={e => setEmailRecipient(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-purple-500 font-mono"
+                    />
+                    {selectedCouponForEmail.allowed_emails && selectedCouponForEmail.allowed_emails.length > 0 && (
+                      <div className="space-y-1 mt-2">
+                        <span className="text-[10px] text-zinc-400 block font-semibold">
+                          Seleccionar de invitados autorizados:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedCouponForEmail.allowed_emails.map((em: string) => (
+                            <button
+                              key={em}
+                              type="button"
+                              onClick={() => setEmailRecipient(em)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
+                                emailRecipient === em
+                                  ? 'bg-purple-600 text-white border-purple-400'
+                                  : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-purple-500'
+                              }`}
+                            >
+                              {em}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                      * Al enviar, el correo recibirá una invitación formal con su enlace seguro de canje.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                      Nota Personalizada (Opcional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Ej. ¡Hola Carlos! Te invitamos formalmente a nuestro concierto VIP de Ms Ambar..."
+                      value={emailNote}
+                      onChange={e => setEmailNote(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-200 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  {/* Imagen del Correo (Cloudinary / Flyer) */}
+                  <div className="pt-2 border-t border-zinc-800/80 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
+                        Imagen / Banner del Correo
+                      </label>
+                      {selectedCouponForEmail.event && (() => {
+                        const associatedEv = events.find(ev => ev.id === selectedCouponForEmail.event);
+                        const flyerUrl = associatedEv?.flyer || associatedEv?.image;
+                        if (!flyerUrl) return null;
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEmailImageUrl(flyerUrl);
+                              setEmailImageFile(null);
+                              setEmailImagePreview(flyerUrl);
+                            }}
+                            className="text-[10px] text-purple-400 hover:text-purple-300 font-medium underline cursor-pointer"
+                          >
+                            Usar Flyer Oficial
+                          </button>
+                        );
+                      })()}
+                    </div>
+
+                    <CloudinaryMediaPicker
+                      category="Cupones"
+                      subfolder="coupon_invites"
+                      aspectRatio="auto"
+                      file={emailImageFile}
+                      preview={emailImagePreview}
+                      valueUrl={emailImageUrl}
+                      onFileChange={(f, p) => {
+                        setEmailImageFile(f);
+                        setEmailImagePreview(p);
+                      }}
+                      onUrlChange={(url) => {
+                        setEmailImageUrl(url);
+                        setEmailImagePreview(url);
+                      }}
+                    />
+                    <p className="text-[10px] text-zinc-500">
+                      Opcional: Si no seleccionas una imagen, se enviará el correo con el diseño minimalista de Ms Ambar.
+                    </p>
+                  </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+                {/* Footer Sticky */}
+                <div className="flex justify-end gap-3 p-5 border-t border-zinc-800 bg-zinc-900/95 backdrop-blur-xs shrink-0">
                   <button
                     type="button"
                     onClick={() => setIsEmailModalOpen(false)}
