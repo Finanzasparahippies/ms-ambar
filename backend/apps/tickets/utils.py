@@ -210,6 +210,23 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
     discount_desc = "100% de descuento (Entrada VIP Gratuita)" if coupon.discount_type == 'free_vip' else (
         f"{coupon.discount_value}% de descuento" if coupon.discount_type == 'percentage' else f"${coupon.discount_value} MXN de descuento"
     )
+    # Resolver nombre del destinatario (Nombre de usuario registrado o dejar en blanco si no tiene)
+    recipient_display_name = ''
+    try:
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user_obj = User.objects.filter(email__iexact=recipient_email).first()
+        if user_obj:
+            full_name = f"{user_obj.first_name} {user_obj.last_name}".strip()
+            if full_name:
+                recipient_display_name = full_name
+            elif user_obj.first_name:
+                recipient_display_name = user_obj.first_name.strip()
+            elif user_obj.username and not user_obj.username.startswith('guest_'):
+                recipient_display_name = user_obj.username.strip()
+    except Exception as e:
+        logger.warning(f"[DELIVERY/SMTP] No se pudo resolver nombre de usuario para {recipient_email}: {e}")
+
     # Identificador único para evitar colapso de conversaciones en Gmail
     unique_tag = uuid.uuid4().hex[:6].upper()
     subject = f"🎟️ Tu Invitación Exclusiva ({coupon.code}) [{unique_tag}]"
@@ -218,9 +235,11 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
     if coupon.event:
         checkout_url += f"&event={coupon.event.id}"
 
+    greeting_text = f"¡Hola {recipient_display_name}!\n\n" if recipient_display_name else "¡Hola!\n\n"
+
     text_content = (
-        f"¡Hola!\n\n"
-        f"Has recibido una invitación exclusiva de Ms Ambar:\n\n"
+        greeting_text
+        + f"Has recibido una invitación exclusiva de Ms Ambar:\n\n"
         f"Código de Cupón: {coupon.code}\n"
         f"Beneficio: {discount_desc}\n"
         + (f"Evento: {coupon.event.title}\n" if coupon.event else "")
@@ -249,8 +268,13 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
       </div>
     """ if custom_note else ""
 
+    header_title_html = f"""
+      <h2 style="color: #f59e0b; text-align: center; margin-top: 0; font-size: 24px; letter-spacing: 2px; text-transform: uppercase; word-break: break-word;">{recipient_display_name}</h2>
+      <hr style="border: 0; border-top: 1px solid rgba(217, 119, 6, 0.4); margin: 20px 0;" />
+    """ if recipient_display_name else ""
+
     # Preheader invisible para vista previa en la bandeja de entrada
-    preheader_text = f"Invitación y beneficio exclusivo con código {coupon.code} para Ms Ambar"
+    preheader_text = f"Invitación y beneficio exclusivo con código {coupon.code}" + (f" para {recipient_display_name}" if recipient_display_name else " para ti")
 
     html_content = f"""
     <!DOCTYPE html>
@@ -271,8 +295,7 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
         <tr>
           <td align="center" style="padding: 0;">
             <div style="font-family: 'Playfair Display', Georgia, serif; max-width: 600px; width: 100%; margin: 0 auto; background: #0d0d0d; color: #f3f4f6; border: 1px solid #d97706; border-radius: 16px; padding: 32px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-              <h2 style="color: #f59e0b; text-align: center; margin-top: 0; font-size: 26px; letter-spacing: 3px;">MS AMBAR</h2>
-              <hr style="border: 0; border-top: 1px solid rgba(217, 119, 6, 0.4); margin: 20px 0;" />
+              {header_title_html}
               {image_html}
               <h3 style="color: #ffffff; text-align: center; font-size: 20px; margin-top: 10px;">¡Tienes una Invitación Exclusiva!</h3>
               <p style="font-size: 15px; line-height: 1.7; color: #d1d5db; text-align: center;">
