@@ -893,6 +893,18 @@ class Coupon(models.Model):
         blank=True,
         help_text="Lista priorizada de filas designadas para este cupón (ej. ['Fila G', 'Fila H'])"
     )
+    max_tickets = models.PositiveIntegerField(
+        default=1,
+        help_text="Número máximo de boletos o asientos cubiertos por cortesía en una misma orden (ej. 1 boleto)"
+    )
+    max_uses_per_email = models.PositiveIntegerField(
+        default=1,
+        help_text="Límite máximo de canjes permitidos por cada correo electrónico"
+    )
+    allow_mixed_checkout = models.BooleanField(
+        default=True,
+        help_text="Permite comprar boletos adicionales pagados en la misma orden que el cupón de cortesía"
+    )
     expiration_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -922,6 +934,21 @@ class Coupon(models.Model):
             clean_email = str(user_email).strip().lower()
             if clean_email not in authorized_emails:
                 return False, "El correo electrónico ingresado no está autorizado para canjear este cupón."
+
+        # Validación de límite de canjes por correo electrónico
+        if user_email and self.max_uses_per_email:
+            clean_email = str(user_email).strip().lower()
+            times_used_by_email = self.tickets.filter(
+                user_email__iexact=clean_email,
+                status__in=['paid', 'reserved']
+            ).values('stripe_session_id').distinct().count()
+            if times_used_by_email == 0:
+                times_used_by_email = self.tickets.filter(
+                    user_email__iexact=clean_email,
+                    status__in=['paid', 'reserved']
+                ).count()
+            if times_used_by_email >= self.max_uses_per_email:
+                return False, f"El correo {clean_email} ya ha alcanzado el límite máximo de {self.max_uses_per_email} canje(s) para este cupón."
 
         return True, "Cupón válido."
 

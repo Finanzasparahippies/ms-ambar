@@ -121,30 +121,59 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
 
     # --- Aplicar descuento de Cupón a los line_items si existe ---
     if coupon:
-        raw_total = sum((item['price_data']['unit_amount'] / 100.0) * item['quantity'] for item in line_items)
-        disc_multiplier = 1.0
-        if coupon.discount_type == 'percentage':
+        is_comp = bool(getattr(coupon, 'is_complimentary', False) or coupon.discount_type == 'free_vip')
+        max_tickets = int(getattr(coupon, 'max_tickets', 1) or 1)
+
+        if is_comp:
+            # En órdenes de cortesía o híbridas, las primeras `max_tickets` butacas tienen costo $0
+            comp_assigned = 0
+            for item in line_items:
+                qty = item['quantity']
+                if comp_assigned < max_tickets:
+                    take = min(qty, max_tickets - comp_assigned)
+                    comp_assigned += take
+                    if take == qty:
+                        item['price_data']['unit_amount'] = 0
+                        if 'product_data' in item['price_data']:
+                            item['price_data']['product_data']['name'] += f" (Cortesía VIP - {coupon.code})"
+                    else:
+                        # Dividir item si la cantidad es mayor a lo cubierto
+                        item['quantity'] = qty - take
+                        # Item cubierto con 0
+                        covered_item = {
+                            'price_data': dict(item['price_data']),
+                            'quantity': take
+                        }
+                        covered_item['price_data']['unit_amount'] = 0
+                        if 'product_data' in covered_item['price_data']:
+                            covered_item['price_data']['product_data']['name'] += f" (Cortesía VIP - {coupon.code})"
+                        # Solo nos interesa lo cobrable para Stripe
+                elif 'product_data' in item['price_data']:
+                    item['price_data']['product_data']['name'] += " (Regular)"
+        elif coupon.discount_type == 'percentage':
             pct = float(coupon.discount_value or 0)
             disc_multiplier = max(0.0, (100.0 - pct) / 100.0)
+            for item in line_items:
+                orig_cents = item['price_data']['unit_amount']
+                item['price_data']['unit_amount'] = max(0, int(round(orig_cents * disc_multiplier)))
+                if 'product_data' in item['price_data']:
+                    item['price_data']['product_data']['name'] += f" (Cupón {coupon.code})"
         elif coupon.discount_type == 'fixed':
             fixed_val = float(coupon.discount_value or 0)
-            if raw_total > 0:
-                disc_multiplier = max(0.0, raw_total - fixed_val) / raw_total
-            else:
-                disc_multiplier = 0.0
-        elif coupon.discount_type == 'free_vip':
-            disc_multiplier = 0.0
+            raw_total = sum((item['price_data']['unit_amount'] / 100.0) * item['quantity'] for item in line_items)
+            disc_multiplier = max(0.0, raw_total - fixed_val) / raw_total if raw_total > 0 else 0.0
+            for item in line_items:
+                orig_cents = item['price_data']['unit_amount']
+                item['price_data']['unit_amount'] = max(0, int(round(orig_cents * disc_multiplier)))
+                if 'product_data' in item['price_data']:
+                    item['price_data']['product_data']['name'] += f" (Cupón {coupon.code})"
 
-        for item in line_items:
-            orig_cents = item['price_data']['unit_amount']
-            new_cents = max(0, int(round(orig_cents * disc_multiplier)))
-            item['price_data']['unit_amount'] = new_cents
-            if 'product_data' in item['price_data']:
-                item['price_data']['product_data']['name'] += f" (Cupón {coupon.code})"
+    # Stripe no acepta items con unit_amount = 0 en modo payment regular. Filtramos items pagables para Stripe:
+    payable_line_items = [it for it in line_items if it['price_data']['unit_amount'] > 0]
 
     # Calculate subtotal of base ticket items and add Stripe platform service fee line item
     total_base_amount = 0.0
-    for item in line_items:
+    for item in payable_line_items:
         unit_price = item['price_data']['unit_amount'] / 100.0
         qty = item['quantity']
         total_base_amount += unit_price * qty
@@ -165,7 +194,7 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
         fee_info = calculate_total_with_fee(total_base_amount)
         service_fee_amount = fee_info['service_fee']
         if service_fee_amount > 0:
-            line_items.append({
+            payable_line_items.append({
                 'price_data': {
                     'currency': 'mxn',
                     'unit_amount': int(round(service_fee_amount * 100)),
@@ -179,33 +208,30 @@ def create_ticket_checkout_session(event, seats, user_email, success_url, cancel
 
     import logging
     logger = logging.getLogger('apps.shop')
-    logger.info(f"[StripeCheckout Debug] Event ID={event.id} ({event.title}): total_base_amount=${total_base_amount} MXN, service_fee=${service_fee_amount} MXN, grand_total=${fee_info['total'] if total_base_amount > 0 else 0} MXN, line_items_count={len(line_items)}")
+    logger.info(f"[StripeCheckout Debug] Event ID={event.id} ({event.title}): total_base_amount=${total_base_amount} MXN, service_fee=${service_fee_amount} MXN, grand_total=${fee_info['total'] if total_base_amount > 0 else 0} MXN, line_items_count={len(payable_line_items)}")
+
+    meta_payload = {
+        'event_id': str(event.id),
+        'seat_ids': ",".join([str(s.id) for s in seats]),
+        'user_email': user_email,
+        'phone': phone,
+        'has_mg': str(has_mg),
+        'quantity': str(quantity),
+        'coupon_id': str(coupon.id) if coupon else '',
+        'coupon_code': coupon.code if coupon else '',
+        'type': 'ticket_purchase'
+    }
 
     session_data = {
         'payment_method_types': ['card'],
-        'line_items': line_items,
+        'line_items': payable_line_items,
         'mode': 'payment',
-        'success_url': success_url + "?success=true&session_id={CHECKOUT_SESSION_ID}",        'cancel_url': cancel_url,
+        'success_url': success_url + "?success=true&session_id={CHECKOUT_SESSION_ID}",
+        'cancel_url': cancel_url,
         'customer_email': user_email,
-        'metadata': {
-            'event_id': event.id,
-            'seat_ids': ",".join([str(s.id) for s in seats]),
-            'user_email': user_email,
-            'phone': phone,
-            'has_mg': str(has_mg),
-            'quantity': str(quantity),
-            'type': 'ticket_purchase'
-        },
+        'metadata': meta_payload,
         'payment_intent_data': {
-            'metadata': {
-                'event_id': event.id,
-                'seat_ids': ",".join([str(s.id) for s in seats]),
-                'user_email': user_email,
-                'phone': phone,
-                'has_mg': str(has_mg),
-                'quantity': str(quantity),
-                'type': 'ticket_purchase'
-            }
+            'metadata': meta_payload
         },
     }
     

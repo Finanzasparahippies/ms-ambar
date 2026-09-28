@@ -248,10 +248,18 @@ def handle_successful_payment(session):
                     ticket.user_email = user_email
                     ticket.user_phone = phone
                     ticket.has_mg = has_mg
-                    if not ticket.amount_paid:
+                    if ticket.amount_paid is None:
                         from apps.dashboard.views import get_ticket_actual_price
                         ticket.amount_paid = get_ticket_actual_price(ticket)
                     ticket.save()
+
+                    coupon_id = metadata.get('coupon_id')
+                    if coupon_id and not ticket_already_paid:
+                        try:
+                            from apps.tickets.models import Coupon
+                            Coupon.objects.filter(id=coupon_id).update(times_used=models.F('times_used') + 1)
+                        except Exception as e:
+                            logger.warning(f"Error updating coupon times_used in webhook: {e}")
                 else:
                     from apps.dashboard.views import get_ticket_actual_price
                     ticket = Ticket.objects.create(

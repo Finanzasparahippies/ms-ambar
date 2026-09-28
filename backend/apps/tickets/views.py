@@ -523,96 +523,34 @@ class TicketViewSet(viewsets.ModelViewSet):
         is_seatless = request.data.get('is_seatless', False)
 
         if not email or not event_id:
+            logger.warning(f"[CHECKOUT/REJECTED] Email o ID de evento faltante. Email: {email}, EventID: {event_id}")
             return Response({'error': 'Email y ID de evento son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             event = Event.objects.get(id=event_id)
         except Event.DoesNotExist:
+            logger.warning(f"[CHECKOUT/REJECTED] Evento #{event_id} no encontrado.")
             return Response({'error': 'Evento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
         start_of_today = timezone.localtime(timezone.now()).replace(hour=0, minute=0, second=0, microsecond=0)
         if event.date < start_of_today:
+            logger.warning(f"[CHECKOUT/REJECTED] Intento de compra en evento finalizado #{event_id} por {email}")
             return Response({'error': 'Este evento ya ha finalizado. La venta de boletos se encuentra cerrada.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # --- Validar Cupón si se proporcionó ---
+        # --- 1. Validar Cupón si se proporcionó ---
         coupon_obj = None
-        is_free_vip = False
-
         if coupon_code:
             try:
                 coupon_obj = Coupon.objects.get(code__iexact=coupon_code.strip())
                 valid, msg = coupon_obj.is_valid_for_event(event, user_email=email)
                 if not valid:
+                    logger.warning(f"[CHECKOUT/REJECTED] Cupón inválido para {email}: {msg}")
                     return Response({'error': msg}, status=status.HTTP_400_BAD_REQUEST)
-                if coupon_obj.discount_type == 'free_vip' or float(coupon_obj.discount_value) >= 100:
-                    is_free_vip = True
             except Coupon.DoesNotExist:
+                logger.warning(f"[CHECKOUT/REJECTED] Código de cupón no existe: {coupon_code}")
                 return Response({'error': 'El código de cupón ingresado no existe.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # [CHECKOUT/INIT] Logger trace calculations
-        total_base_amount = 0.0
-        if event.event_type == 'meet_greet' or is_seatless:
-            qty = int(quantity)
-            if event.event_type == 'meet_greet':
-                total_base_amount = float(event.mg_price) * qty
-            else:
-                seatless_price = getattr(event, 'seatless_ticket_price', 500)
-                multiplier = getattr(event, 'price_multiplier', 1.0)
-                raw_price = float(seatless_price) * float(multiplier)
-                dynamic_price = event.get_dynamic_price(raw_price) if hasattr(event, 'get_dynamic_price') else raw_price
-                total_base_amount = dynamic_price * qty
-                if has_mg and float(event.mg_price) > 0:
-                    total_base_amount += float(event.mg_price) * qty
-        else:
-            for s_id in seat_ids:
-                try:
-                    seat = Seat.objects.get(id=s_id)
-                    event_num_price = float(getattr(event, 'numbered_ticket_price', 0) or 0)
-                    seat_db_price = float(seat.base_price or 0) if seat else 0
-
-                    if event_num_price > 0:
-                        if seat_db_price > 0 and seat_db_price not in [500.0, 1000.0]:
-                            seat_base = event_num_price * (seat_db_price / 1000.0)
-                        else:
-                            seat_base = event_num_price
-                    elif seat_db_price > 0:
-                         seat_base = seat_db_price
-                    else:
-                         seat_base = 1000.0
-                    raw_seat_price = seat_base * float(getattr(event, 'price_multiplier', 1.0) or 1.0)
-                    dynamic_price = event.get_dynamic_price(raw_seat_price) if hasattr(event, 'get_dynamic_price') else raw_seat_price
-                    total_base_amount += dynamic_price
-                except Seat.DoesNotExist:
-                    logger.warning(f"Seat ID no encontrado durante cálculo de precio: {seat_id}")
-            if has_mg and float(event.mg_price) > 0:
-                total_base_amount += float(event.mg_price) * len(seat_ids)
-
-        if coupon_obj:
-            if coupon_obj.discount_type == 'percentage':
-                pct = float(coupon_obj.discount_value or 0)
-                disc_multiplier = max(0.0, (100.0 - pct) / 100.0)
-                total_base_amount *= disc_multiplier
-            elif coupon_obj.discount_type == 'fixed':
-                fixed_val = float(coupon_obj.discount_value or 0)
-                total_base_amount = max(0.0, total_base_amount - fixed_val)
-            elif coupon_obj.discount_type == 'free_vip':
-                total_base_amount = 0.0
-
-        pass_fees_to_buyer = True
-        try:
-            site_settings = SiteSettings.get()
-            pass_fees_to_buyer = getattr(site_settings, 'pass_fees_to_buyer', True)
-        except Exception as e:
-            logger.warning(f"Fallo al obtener SiteSettings para pass_fees_to_buyer, usando default (True): {e}", exc_info=True)
-
-        total_with_fees = total_base_amount
-        if pass_fees_to_buyer and total_base_amount > 0:
-            from apps.tickets.fees import calculate_total_with_fee
-            fee_info = calculate_total_with_fee(total_base_amount)
-            total_with_fees = fee_info['total']
-
-        logger.info(f"[CHECKOUT/INIT] [Email: {email} | EventID: {event.id} | TicketUUID: - | StripeID: -] Iniciando proceso de compra. Asientos: {seat_ids}. Total estimado (base + cargos): ${total_with_fees:.2f} MXN")
-
+        # --- 2. Resolver Butacas o Boletos Generales ---
         seats = []
         if event.event_type == 'meet_greet' or is_seatless:
             qty = int(quantity)
@@ -625,7 +563,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Este evento no permite la venta de boletos numerados reservables.'}, status=status.HTTP_400_BAD_REQUEST)
             if not seat_ids:
                 return Response({'error': 'Debes seleccionar al menos un asiento o elegir la opción de boleto general sin asiento.'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
             occupied_seat_ids = Ticket.objects.filter(
                 event=event,
                 seat_id__in=seat_ids,
@@ -633,12 +571,14 @@ class TicketViewSet(viewsets.ModelViewSet):
             ).values_list('seat_id', flat=True)
 
             if occupied_seat_ids:
+                logger.warning(f"[CHECKOUT/REJECTED] Asientos ocupados {list(occupied_seat_ids)} intentados por {email}")
                 return Response({'error': 'Uno o más asientos ya están reservados o pagados.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Prevención de Asiento Huérfano (Orphan Seat Prevention)
             from apps.tickets.services.coupon_validator import check_orphan_seats
             no_orphans, orphan_err = check_orphan_seats(event, [int(s) for s in seat_ids if str(s).isdigit()], coupon=coupon_obj)
             if not no_orphans:
+                logger.warning(f"[CHECKOUT/REJECTED] Regla de asiento huérfano bloqueó compra: {orphan_err}")
                 return Response({'error': orphan_err}, status=status.HTTP_400_BAD_REQUEST)
 
             for s_id in seat_ids:
@@ -646,37 +586,101 @@ class TicketViewSet(viewsets.ModelViewSet):
                     seat = Seat.objects.get(id=s_id)
                     seats.append(seat)
                 except Seat.DoesNotExist:
+                    logger.warning(f"[CHECKOUT/REJECTED] Asiento con ID {s_id} no existe.")
                     return Response({'error': f'Asiento con ID {s_id} no existe.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Validación de fila designada para cupones de cortesía
+            # Validación y ordenamiento de fila designada para cupones de cortesía
             if coupon_obj and coupon_obj.is_complimentary and coupon_obj.complimentary_allocation_mode == 'DESIGNATED_ROW':
                 from apps.tickets.services.coupon_validator import determine_active_complimentary_row, normalize_row_name, is_seat_in_priority
                 active_row_name, allowed_rows = determine_active_complimentary_row(event, coupon_obj)
                 if allowed_rows:
                     norm_allowed = set(normalize_row_name(r) for r in allowed_rows)
+                    matching_seats = []
+                    other_seats = []
                     for s in seats:
                         seat_norm = normalize_row_name(s.row)
                         is_match = (
                             seat_norm in norm_allowed
                             or any(is_seat_in_priority(s.row, r) for r in allowed_rows)
                         )
-                        if not is_match:
-                            target_row_display = active_row_name or (allowed_rows[0] if allowed_rows else 'la fila designada')
-                            return Response({
-                                'error': f"Este cupón de cortesía es válido exclusivamente en la {target_row_display}. Selecciona un asiento iluminado."
-                            }, status=status.HTTP_400_BAD_REQUEST)
+                        if is_match:
+                            matching_seats.append(s)
+                        else:
+                            other_seats.append(s)
 
-        # --- CASO A: REDENCIÓN DE CUPÓN DE ENTRADA GRATUITA VIP ($0) ---
-        if is_free_vip and coupon_obj:
+                    req_matches = min(len(seats), getattr(coupon_obj, 'max_tickets', 1) or 1)
+                    if len(matching_seats) < req_matches:
+                        target_row_display = active_row_name or (allowed_rows[0] if allowed_rows else 'la fila designada')
+                        err_msg = f"Este cupón de cortesía es válido exclusivamente en la {target_row_display}. Selecciona un asiento iluminado."
+                        logger.warning(f"[CHECKOUT/REJECTED] Email: {email} | Error: {err_msg}")
+                        return Response({
+                            'error_code': 'DESIGNATED_ROW_REQUIRED',
+                            'error': err_msg,
+                            'detail': err_msg
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
+                    # Colocar los asientos designados primero para absorber la cortesía
+                    seats = matching_seats + other_seats
+
+        # --- 3. Motor de Precios Unitarios y Liquidación Híbrida ---
+        pass_fees_to_buyer = True
+        try:
+            site_settings = SiteSettings.get()
+            pass_fees_to_buyer = getattr(site_settings, 'pass_fees_to_buyer', True)
+        except Exception as e:
+            logger.warning(f"Fallo al obtener SiteSettings para pass_fees_to_buyer, usando default (True): {e}")
+
+        from apps.tickets.services.pricing_engine import calculate_ticket_order_pricing
+        pricing = calculate_ticket_order_pricing(
+            event=event,
+            seats=seats,
+            quantity=quantity,
+            has_mg=has_mg,
+            coupon=coupon_obj,
+            is_seatless=is_seatless,
+            pass_fees_to_buyer=pass_fees_to_buyer
+        )
+
+        if not pricing.get('success'):
+            error_code = pricing.get('error_code', 'INVALID_ORDER')
+            error_msg = pricing.get('error', 'Error en el cálculo de precios.')
+            logger.warning(f"[CHECKOUT/REJECTED] Email: {email} | Error: {error_msg} | ErrorCode: {error_code}")
+            return Response({
+                'error_code': error_code,
+                'error': error_msg,
+                'detail': error_msg,
+                'max_tickets': pricing.get('max_tickets', 1)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        logger.info(
+            f"[CHECKOUT/INIT] [Email: {email} | EventID: {event.id} | TicketUUID: - | StripeID: -] "
+            f"Iniciando proceso de compra. Asientos: {seat_ids}. Total estimado (base + cargos): ${pricing['grand_total']:.2f} MXN"
+        )
+
+        # --- CASO A: TOTAL == $0.00 MXN (100% CORTESÍA / BYPASS STRIPE) ---
+        if pricing.get('is_free_order') and coupon_obj:
             import uuid
             import threading
             from apps.tickets.utils import send_ticket_email
 
             with transaction.atomic():
-                # Re-check and lock coupon to prevent concurrent over-redemption
                 coupon_locked = Coupon.objects.select_for_update(nowait=False).get(id=coupon_obj.id)
                 if coupon_locked.times_used >= coupon_locked.max_uses:
+                    logger.warning(f"[CHECKOUT/REJECTED] Cupón {coupon_locked.code} alcanzó límite máximo de usos durante atomic lock.")
                     return Response({'error': 'Este cupón acaba de alcanzar su límite máximo de redenciones.'}, status=status.HTTP_400_BAD_REQUEST)
+
+                # Validar límite de canjes por correo bajo lock
+                if coupon_locked.max_uses_per_email:
+                    email_redemptions = coupon_locked.tickets.filter(
+                        user_email__iexact=email.strip().lower(),
+                        status__in=['paid', 'reserved']
+                    ).values('stripe_session_id').distinct().count()
+                    if email_redemptions >= coupon_locked.max_uses_per_email:
+                        logger.warning(f"[CHECKOUT/REJECTED] Email {email} superó límite de canjes ({coupon_locked.max_uses_per_email}) para cupón {coupon_locked.code}")
+                        return Response({
+                            'error': f"El correo {email} ya ha alcanzado el límite máximo de {coupon_locked.max_uses_per_email} canje(s) para este cupón."
+                        }, status=status.HTTP_400_BAD_REQUEST)
+
                 coupon_locked.times_used += 1
                 coupon_locked.save()
 
@@ -700,7 +704,6 @@ class TicketViewSet(viewsets.ModelViewSet):
                         created_vip_tickets.append(ticket)
                         logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: Sin asiento, Tipo: VIP")
                 else:
-                    # Bloquear atómicamente los asientos y re-verificar ocupación bajo lock
                     locked_seats = list(Seat.objects.select_for_update(nowait=False).filter(id__in=[s.id for s in seats]))
                     already_taken = Ticket.objects.filter(
                         event=event,
@@ -708,6 +711,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                         status__in=['paid', 'reserved']
                     ).exists()
                     if already_taken:
+                        logger.warning(f"[CHECKOUT/REJECTED] Asientos ocupados concurrentemente durante lock: {[s.id for s in locked_seats]}")
                         return Response({'error': 'Uno o más asientos acaban de ser ocupados por otra orden.'}, status=status.HTTP_400_BAD_REQUEST)
 
                     for seat in locked_seats:
@@ -763,17 +767,18 @@ class TicketViewSet(viewsets.ModelViewSet):
                     'status': 'success',
                     'session_id': vip_session_id,
                     'session_url': None,
+                    'redirect_url': f"/orden-completada/?session_id={vip_session_id}",
                     'tickets': serializer.data,
+                    'pricing': pricing,
                     'message': '¡Felicidades! Tu entrada VIP gratuita ha sido reservada con éxito.'
-                }, status=status.HTTP_200_OK)
+                }, status=status.HTTP_201_CREATED)
 
-        # --- CASO B: PROCESO ESTÁNDAR / MOCK STRIPE CHECKOUT ---
+        # --- CASO B: TOTAL > $0.00 MXN (ORDEN HÍBRIDA O REGULAR CON STRIPE) ---
         from apps.shop.utils import create_ticket_checkout_session
 
         success_url = f"{settings.FRONTEND_URL}/comprar-boletos"
         cancel_url = f"{settings.FRONTEND_URL}/comprar-boletos"
 
-        # Determinar si usar Stripe real o mock
         use_mock = False
         if getattr(settings, 'TESTING', False):
             use_mock = True
@@ -789,6 +794,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
         session_id = None
         session_url = None
+        client_secret = None
 
         if not use_mock:
             try:
@@ -806,6 +812,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                 )
                 session_id = session.id
                 session_url = session.url
+                client_secret = getattr(session, 'client_secret', None) or session_id
             except Exception as e:
                 delivery_logger.warning(f"Error creating Stripe checkout session, falling back to mock: {e}")
                 use_mock = True
@@ -818,49 +825,54 @@ class TicketViewSet(viewsets.ModelViewSet):
             mock_session_id = f"mock_{uuid.uuid4().hex}"
             session_id = mock_session_id
             session_url = f"{success_url}?success=true&session_id={mock_session_id}"
+            client_secret = mock_session_id
 
             created_mock_tickets = []
 
-            if event.event_type == 'meet_greet' or is_seatless:
-                from apps.dashboard.views import get_ticket_actual_price
-                for _ in range(int(quantity)):
-                    ticket = Ticket.objects.create(
-                        event=event,
-                        seat=None,
-                        ga_zone=None,
-                        used_coupon=coupon_obj,
-                        user_email=email,
-                        user_phone=phone,
-                        status='paid',
-                        has_mg=True if event.event_type == 'meet_greet' else has_mg,
-                        stripe_session_id=mock_session_id
-                    )
-                    ticket.amount_paid = get_ticket_actual_price(ticket)
-                    ticket.save()
-                    created_mock_tickets.append(ticket)
-                    tipo_boleto = "VIP" if ticket.has_mg else "Seatless"
-                    logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: Sin asiento, Tipo: {tipo_boleto}")
-            else:
-                from apps.dashboard.views import get_ticket_actual_price
-                for seat in seats:
-                    ticket = Ticket.objects.create(
-                        event=event,
-                        seat=seat,
-                        ga_zone=None,
-                        used_coupon=coupon_obj,
-                        user_email=email,
-                        user_phone=phone,
-                        status='paid',
-                        has_mg=has_mg,
-                        stripe_session_id=mock_session_id
-                    )
-                    ticket.amount_paid = get_ticket_actual_price(ticket)
-                    ticket.save()
-                    created_mock_tickets.append(ticket)
-                    tipo_boleto = "VIP" if ticket.has_mg else "General"
-                    logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: {tipo_boleto}")
+            with transaction.atomic():
+                if coupon_obj:
+                    coupon_locked = Coupon.objects.select_for_update(nowait=False).get(id=coupon_obj.id)
+                    coupon_locked.times_used += 1
+                    coupon_locked.save()
 
-            # Registrar al comprador en la lista de marketing del evento
+                if event.event_type == 'meet_greet' or is_seatless:
+                    for item in pricing['items']:
+                        is_comp = item['is_complimentary']
+                        ticket = Ticket.objects.create(
+                            event=event,
+                            seat=None,
+                            ga_zone=None,
+                            used_coupon=coupon_obj if is_comp else None,
+                            user_email=email,
+                            user_phone=phone,
+                            status='paid',
+                            has_mg=True if event.event_type == 'meet_greet' else has_mg,
+                            stripe_session_id=mock_session_id,
+                            amount_paid=0.00 if is_comp else item['final_price']
+                        )
+                        created_mock_tickets.append(ticket)
+                        tipo_boleto = "VIP" if (is_comp or ticket.has_mg) else "Seatless"
+                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: Sin asiento, Tipo: {tipo_boleto}")
+                else:
+                    for item in pricing['items']:
+                        seat = item['seat']
+                        is_comp = item['is_complimentary']
+                        ticket = Ticket.objects.create(
+                            event=event,
+                            seat=seat,
+                            ga_zone=None,
+                            used_coupon=coupon_obj if is_comp else None,
+                            user_email=email,
+                            user_phone=phone,
+                            status='paid',
+                            has_mg=has_mg,
+                            stripe_session_id=mock_session_id,
+                            amount_paid=0.00 if is_comp else item['final_price']
+                        )
+                        created_mock_tickets.append(ticket)
+                        tipo_boleto = "VIP" if (is_comp or ticket.has_mg) else "General"
+                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: {tipo_boleto}")
+
             try:
                 from apps.blog.utils import add_buyer_to_event_marketing_list
                 add_buyer_to_event_marketing_list(email, event)
@@ -868,77 +880,76 @@ class TicketViewSet(viewsets.ModelViewSet):
                 delivery_logger.warning(f"Error registering mock buyer to marketing list: {e}")
 
             delivery_logger.info(
-                f"[Checkout/Mock] Creados {len(created_mock_tickets)} boleto(s) para {email}. "
-                f"Iniciando entrega SMTP..."
+                f"[Checkout/Mock] Creados {len(created_mock_tickets)} boleto(s) para {email}. Iniciando entrega SMTP..."
             )
 
             mock_ticket_ids = [t.id for t in created_mock_tickets]
 
-            # --- ENTREGA SINCRÓNICA EN MODO TESTING O HILO SEPARADO EN PRODUCCIÓN ---
             def deliver_tickets(ticket_ids_list):
                 from django.db import close_old_connections
                 close_old_connections()
                 try:
                     tickets_to_send = Ticket.objects.filter(id__in=ticket_ids_list).select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon')
                     for t in tickets_to_send:
-                        delivery_logger.info(
-                            f"[Delivery] Enviando boleto {t.token} → {t.user_email}"
-                        )
                         try:
                             send_ticket_email(t)
-                            delivery_logger.info(
-                                f"[Delivery] ✅ Boleto {t.token} entregado exitosamente a {t.user_email}"
-                            )
+                            delivery_logger.info(f"[Delivery] ✅ Boleto {t.token} entregado exitosamente a {t.user_email}")
                         except Exception as exc:
-                            delivery_logger.error(
-                                f"[Delivery] ❌ FALLA al enviar boleto {t.token} a {t.user_email}: {exc}",
-                                exc_info=True
-                            )
+                            delivery_logger.error(f"[Delivery] ❌ FALLA al enviar boleto {t.token} a {t.user_email}: {exc}", exc_info=True)
                 finally:
                     close_old_connections()
 
             if getattr(settings, 'TESTING', False):
                 deliver_tickets(mock_ticket_ids)
             else:
-                delivery_thread = threading.Thread(
+                threading.Thread(
                     target=deliver_tickets,
                     args=(mock_ticket_ids,),
-                    daemon=False,  # Non-daemon: Docker captura los logs correctamente
+                    daemon=False,
                     name=f"ticket-delivery-{mock_session_id[:8]}"
-                )
-                delivery_thread.start()
-            # No bloqueamos la respuesta — el cliente recibe 200 inmediatamente
+                ).start()
         else:
-            # Standard Stripe pre-creation of reserved tickets for concert
+            # Pre-creación de boletos reservados para Stripe Real
             if event.event_type != 'meet_greet' and not is_seatless:
-                for seat in seats:
+                for item in pricing['items']:
+                    seat = item['seat']
+                    is_comp = item['is_complimentary']
                     Ticket.objects.create(
                         event=event,
                         seat=seat,
                         ga_zone=None,
+                        used_coupon=coupon_obj if is_comp else None,
                         user_email=email,
                         user_phone=phone,
                         status='reserved',
                         has_mg=has_mg,
-                        stripe_session_id=session_id
+                        stripe_session_id=session_id,
+                        amount_paid=0.00 if is_comp else None
                     )
             elif is_seatless and event.event_type != 'meet_greet':
-                for _ in range(int(quantity)):
+                for item in pricing['items']:
+                    is_comp = item['is_complimentary']
                     Ticket.objects.create(
                         event=event,
                         seat=None,
                         ga_zone=None,
+                        used_coupon=coupon_obj if is_comp else None,
                         user_email=email,
                         user_phone=phone,
                         status='reserved',
                         has_mg=has_mg,
-                        stripe_session_id=session_id
+                        stripe_session_id=session_id,
+                        amount_paid=0.00 if is_comp else None
                     )
 
+        serializer_data = self.get_serializer(created_mock_tickets, many=True).data if use_mock else []
         return Response({
             'status': 'success',
             'session_id': session_id,
-            'session_url': session_url
+            'session_url': session_url,
+            'client_secret': client_secret,
+            'pricing': pricing,
+            'tickets': serializer_data
         }, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'], url_path='by_session')
@@ -950,7 +961,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         tickets = Ticket.objects.filter(stripe_session_id=session_id)
         
         # Sync fallback: check Stripe directly if webhook was delayed/blocked
-        if not session_id.startswith('mock_'):
+        if not session_id.startswith('mock_') and not session_id.startswith('free_vip_'):
             is_unpaid = not tickets.exists() or any(t.status == 'reserved' for t in tickets)
             if is_unpaid:
                 try:

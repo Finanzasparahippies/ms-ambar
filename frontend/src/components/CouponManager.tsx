@@ -45,6 +45,9 @@ export interface Coupon {
   is_complimentary?: boolean;
   complimentary_allocation_mode?: 'OPEN' | 'DESIGNATED_ROW';
   complimentary_rows_priority?: string[];
+  max_tickets?: number;
+  max_uses_per_email?: number;
+  allow_mixed_checkout?: boolean;
   expiration_date?: string | null;
   created_at?: string;
 }
@@ -103,6 +106,9 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   const [discountType, setDiscountType] = useState<'free_vip' | 'percentage' | 'fixed'>('free_vip');
   const [discountValue, setDiscountValue] = useState('100');
   const [maxUses, setMaxUses] = useState('1');
+  const [maxUsesPerEmail, setMaxUsesPerEmail] = useState('1');
+  const [maxTickets, setMaxTickets] = useState('1');
+  const [allowMixedCheckout, setAllowMixedCheckout] = useState(true);
   const [eventId, setEventId] = useState<string>('');
   const [assignedEmail, setAssignedEmail] = useState('');
   const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
@@ -264,6 +270,9 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     setDiscountType('free_vip');
     setDiscountValue('100');
     setMaxUses('1');
+    setMaxUsesPerEmail('1');
+    setMaxTickets('1');
+    setAllowMixedCheckout(true);
     setEventId('');
     setAssignedEmail('');
     setAllowedEmails([]);
@@ -287,6 +296,9 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     setDiscountType(coupon.discount_type);
     setDiscountValue(String(coupon.discount_value));
     setMaxUses(String(coupon.max_uses));
+    setMaxUsesPerEmail(String(coupon.max_uses_per_email ?? 1));
+    setMaxTickets(String(coupon.max_tickets ?? 1));
+    setAllowMixedCheckout(coupon.allow_mixed_checkout !== false);
     setEventId(coupon.event ? String(coupon.event) : '');
     setAssignedEmail(coupon.assigned_email || '');
 
@@ -337,6 +349,9 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
       discount_type: discountType,
       discount_value: discountType === 'free_vip' ? 100 : parseFloat(discountValue || '0'),
       max_uses: parseInt(maxUses || '1', 10),
+      max_uses_per_email: parseInt(maxUsesPerEmail || '1', 10),
+      max_tickets: parseInt(maxTickets || '1', 10),
+      allow_mixed_checkout: allowMixedCheckout,
       event: eventId ? parseInt(eventId, 10) : null,
       assigned_email: allowedEmails.length > 0 ? allowedEmails[0] : (assignedEmail.trim() || null),
       allowed_emails: allowedEmails,
@@ -864,9 +879,14 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
 
                       {/* Usos sobre Límite */}
                       <td className="py-4 px-4 text-center font-mono text-xs">
-                        <span className={isMaxedOut ? 'text-rose-400 font-bold' : 'text-zinc-300'}>
-                          {coupon.times_used} / {coupon.max_uses}
-                        </span>
+                        <div className="flex flex-col items-center">
+                          <span className={isMaxedOut ? 'text-rose-400 font-bold' : 'text-zinc-300'}>
+                            {coupon.times_used} / {coupon.max_uses}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 font-sans tracking-tight">
+                            {coupon.max_uses_per_email || 1}/email · {coupon.max_tickets || 1} boleto(s)
+                          </span>
+                        </div>
                       </td>
 
                       {/* Estado Toggle */}
@@ -1113,19 +1133,52 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                   )}
                 </div>
 
-                {/* Límite de Usos y Evento */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Límite de Usos, Canjes por Correo, Boletos por Orden y Evento */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                      Límite de Redenciones
+                      Redenciones Globales
                     </label>
                     <input
                       type="number"
                       min="1"
                       value={maxUses}
                       onChange={e => setMaxUses(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-amber-500"
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-amber-500 font-mono"
                     />
+                    <p className="text-[10px] text-zinc-500 mt-1">Límite total del cupón</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1">
+                      <Mail size={12} className="text-amber-500" />
+                      <span>Canjes por Correo</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={maxUsesPerEmail}
+                      onChange={e => setMaxUsesPerEmail(e.target.value)}
+                      placeholder="1"
+                      className="w-full bg-zinc-950 border border-amber-500/40 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                    <p className="text-[10px] text-zinc-500 mt-1">Máximo de canjes por email</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-amber-400 mb-1 flex items-center gap-1">
+                      <Tag size={12} className="text-amber-500" />
+                      <span>Boletos Cortesía / Orden</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={maxTickets}
+                      onChange={e => setMaxTickets(e.target.value)}
+                      placeholder="1"
+                      className="w-full bg-zinc-950 border border-amber-500/40 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                    <p className="text-[10px] text-zinc-500 mt-1">Asientos gratis por orden</p>
                   </div>
 
                   <div>
@@ -1144,6 +1197,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                         </option>
                       ))}
                     </select>
+                    <p className="text-[10px] text-zinc-500 mt-1">Ámbito de validez</p>
                   </div>
                 </div>
 
@@ -1161,8 +1215,8 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                     )}
                   </div>
 
-                  {/* Toggles de Cortesía y Asiento */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Toggles de Cortesía, Asiento y Checkout Híbrido */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label className="flex items-center gap-3 p-2.5 bg-zinc-900/60 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors">
                       <input
                         type="checkbox"
@@ -1171,8 +1225,8 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                         className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold text-zinc-200 block">Es Cortesía VIP / Prensa</span>
-                        <span className="text-[10px] text-zinc-500 block">100% Bonificación para invitados especiales</span>
+                        <span className="text-xs font-bold text-zinc-200 block">Cortesía VIP</span>
+                        <span className="text-[10px] text-zinc-500 block">100% Bonificación para invitados</span>
                       </div>
                     </label>
 
@@ -1184,8 +1238,21 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                         className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold text-zinc-200 block">Requiere Asiento Numerado</span>
-                        <span className="text-[10px] text-zinc-500 block">Reserva un lugar físico en el mapa interactivo</span>
+                        <span className="text-xs font-bold text-zinc-200 block">Asiento Numerado</span>
+                        <span className="text-[10px] text-zinc-500 block">Reserva lugar en mapa interactivo</span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2.5 bg-zinc-900/60 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={allowMixedCheckout}
+                        onChange={e => setAllowMixedCheckout(e.target.checked)}
+                        className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                      />
+                      <div>
+                        <span className="text-xs font-bold text-zinc-200 block">Checkout Híbrido</span>
+                        <span className="text-[10px] text-zinc-500 block">Permite pagar boletos extras juntos</span>
                       </div>
                     </label>
                   </div>

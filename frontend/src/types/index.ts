@@ -213,6 +213,9 @@ export interface Coupon {
   is_complimentary?: boolean;
   complimentary_allocation_mode?: 'OPEN' | 'DESIGNATED_ROW';
   complimentary_rows_priority?: string[];
+  max_tickets?: number;
+  max_uses_per_email?: number;
+  allow_mixed_checkout?: boolean;
   expiration_date?: string | null;
   created_at?: string;
 }

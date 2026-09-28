@@ -268,6 +268,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [lastMousePos, setLastMousePos] = useState({ x: 0, y: 0 });
   const lastTouchDistRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ clientX: number; clientY: number; time: number; hitSeat: Seat | null } | null>(null);
+  const touchMovedRef = useRef<boolean>(false);
   const pulseEndTimeRef = useRef<number>(0);
 
   useEffect(() => {
@@ -1116,25 +1118,23 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         }
         setIsPanning(true);
       } else {
-        if (hitSeat && hitSeat.status === 'available') {
-          const isAllowed = isSeatAllowedByRestriction(hitSeat, restrictedRows, normalizedRestrictedRows, elements);
-          if (hasRowRestriction && !isAllowed) {
-            pulseEndTimeRef.current = Date.now() + 2500;
-            onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);
-            return;
-          }
-          const id = String(hitSeat.id);
-          const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
-          setSelectedIds(newSelection); onSelect?.(newSelection);
-        } else {
-          setIsPanning(true);
-        }
+        // En modo reserva de cliente, guardamos el toque inicial para diferenciar PAN de TAP
+        touchStartRef.current = {
+          clientX: touch.clientX,
+          clientY: touch.clientY,
+          time: Date.now(),
+          hitSeat: hitSeat || null
+        };
+        touchMovedRef.current = false;
+        setIsPanning(true);
       }
     } else if (e.touches.length === 2) {
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
       lastTouchDistRef.current = dist;
+      touchStartRef.current = null;
+      touchMovedRef.current = true;
       setIsPanning(false);
     }
   };
@@ -1148,6 +1148,16 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const touch = e.touches[0];
       const { x, y } = getTouchCoords(e);
       setMousePos({ x, y });
+
+      if (touchStartRef.current) {
+        const delta = Math.hypot(
+          touch.clientX - touchStartRef.current.clientX,
+          touch.clientY - touchStartRef.current.clientY
+        );
+        if (delta > 8) {
+          touchMovedRef.current = true;
+        }
+      }
 
       if (draggedItem) {
         if (draggedItem.handle === 'br') {
@@ -1180,6 +1190,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         setLastMousePos({ x: touch.clientX, y: touch.clientY });
       }
     } else if (e.touches.length === 2 && lastTouchDistRef.current !== null && allowZoom) {
+      touchMovedRef.current = true;
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
@@ -1197,6 +1208,26 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
 
   const handleTouchEnd = () => {
     setIsPanning(false);
+
+    // Solo si el usuario NO arrastró la pantalla (desplazamiento < 8px) procesamos el TAP en el asiento
+    if (!isDesignMode && touchStartRef.current && !touchMovedRef.current) {
+      const hitSeat = touchStartRef.current.hitSeat;
+      if (hitSeat && hitSeat.status === 'available') {
+        const isAllowed = isSeatAllowedByRestriction(hitSeat, restrictedRows, normalizedRestrictedRows, elements);
+        if (hasRowRestriction && !isAllowed) {
+          pulseEndTimeRef.current = Date.now() + 2500;
+          onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);
+        } else {
+          const id = String(hitSeat.id);
+          const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
+          setSelectedIds(newSelection);
+          onSelect?.(newSelection);
+        }
+      }
+    }
+
+    touchStartRef.current = null;
+    touchMovedRef.current = false;
     if (draggedItem && onUpdate) onUpdate(seats, elements);
     setDraggedItem(null);
     lastTouchDistRef.current = null;

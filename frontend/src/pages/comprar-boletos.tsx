@@ -199,6 +199,7 @@ const TourPage = () => {
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [createdTickets, setCreatedTickets] = useState<any[]>([]);
   const [ticketPassModalData, setTicketPassModalData] = useState<{ ticket: any; seat?: any } | null>(null);
+  const [limitExceededModalData, setLimitExceededModalData] = useState<{ maxTickets: number; detail: string } | null>(null);
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
@@ -672,20 +673,68 @@ const TourPage = () => {
 
   const rawBaseTotal = seatsBaseTotal + mgBaseTotal;
 
-  // Aplicar Descuento de Cupón VIP
+  // Desglose de asientos con cupón / cortesía unitaria
+  const seatBreakdown = useMemo(() => {
+    if (ticketMode !== 'seat') return [];
+
+    // Priorizar asientos en fila designada si el cupón la especifica
+    const normAllowed = new Set(
+      (activeAllowedRows || []).map((r: string) => String(r).toLowerCase().replace(/^fila\s+/i, '').trim())
+    );
+
+    const sorted = [...selectedSeats].sort((a, b) => {
+      const aInRow = normAllowed.has(String(a.row || '').toLowerCase().replace(/^fila\s+/i, '').trim());
+      const bInRow = normAllowed.has(String(b.row || '').toLowerCase().replace(/^fila\s+/i, '').trim());
+      if (aInRow && !bInRow) return -1;
+      if (!aInRow && bInRow) return 1;
+      return 0;
+    });
+
+    const isCourtesy = Boolean(appliedCoupon && (appliedCoupon.is_complimentary || appliedCoupon.discount_type === 'free_vip'));
+    const maxTickets = Number(appliedCoupon?.max_tickets || 1);
+
+    return sorted.map((seat, index) => {
+      const originalPrice = getSeatBasePrice(seat);
+      const isComplimentary = isCourtesy && index < maxTickets;
+      const payablePrice = isComplimentary ? 0 : originalPrice;
+      return {
+        seat,
+        index,
+        originalPrice,
+        isComplimentary,
+        payablePrice,
+      };
+    });
+  }, [selectedSeats, appliedCoupon, activeAllowedRows, ticketMode, currentEvent]);
+
+  // Aplicar Descuento de Cupón VIP (Soporte Híbrido: Cortesía + Excedente Regular)
   const baseTotal = useMemo(() => {
     if (!appliedCoupon) return rawBaseTotal;
-    if (appliedCoupon.discount_type === 'free_vip' || Number(appliedCoupon.discount_value) >= 100) {
-      return 0;
+
+    const isCourtesy = Boolean(appliedCoupon.is_complimentary || appliedCoupon.discount_type === 'free_vip');
+    const maxTickets = Number(appliedCoupon.max_tickets || 1);
+
+    if (isCourtesy) {
+      if (ticketMode === 'seat') {
+        const payableSeatsSum = seatBreakdown.reduce((sum, item) => sum + item.payablePrice, 0);
+        return payableSeatsSum + mgBaseTotal;
+      } else {
+        const payableQty = Math.max(0, seatlessQuantity - maxTickets);
+        return (payableQty * getEffectiveSeatlessPrice()) + mgBaseTotal;
+      }
     }
+
     if (appliedCoupon.discount_type === 'percentage') {
-      return Math.max(0, rawBaseTotal * (1 - Number(appliedCoupon.discount_value) / 100));
+      const pct = Number(appliedCoupon.discount_value || 0);
+      return Math.max(0, rawBaseTotal * (1 - pct / 100));
     }
+
     if (appliedCoupon.discount_type === 'fixed') {
-      return Math.max(0, rawBaseTotal - Number(appliedCoupon.discount_value));
+      return Math.max(0, rawBaseTotal - Number(appliedCoupon.discount_value || 0));
     }
+
     return rawBaseTotal;
-  }, [rawBaseTotal, appliedCoupon]);
+  }, [rawBaseTotal, appliedCoupon, ticketMode, seatBreakdown, mgBaseTotal, seatlessQuantity]);
 
   const { base_price: checkoutBasePrice, service_fee: checkoutServiceFee, total: checkoutTotal } = calculateTotalWithFee(baseTotal);
 
@@ -732,7 +781,7 @@ const TourPage = () => {
         payload.quantity = seatlessQuantity;
         payload.is_seatless = true;
       } else {
-        payload.seat_ids = selectedSeats.map(s => s.id);
+        payload.seat_ids = seatBreakdown.map(item => item.seat.id);
         payload.quantity = 1;
         payload.is_seatless = false;
       }
@@ -741,6 +790,8 @@ const TourPage = () => {
 
       if (res.data.session_url) {
         window.location.href = res.data.session_url;
+      } else if (res.data.redirect_url) {
+        window.location.href = res.data.redirect_url;
       } else {
         setCreatedTickets(res.data.tickets || []);
         setCheckoutSuccess(true);
@@ -749,7 +800,15 @@ const TourPage = () => {
       }
     } catch (err: any) {
       console.error("Error during checkout:", err);
-      const errorMsg = err.response?.data?.error || "Hubo un error al procesar la reserva. Por favor intenta de nuevo.";
+      const data = err.response?.data;
+      if (data?.error_code === 'COMPLIMENTARY_ORDER_LIMIT_EXCEEDED' || data?.code === 'COMPLIMENTARY_ORDER_LIMIT_EXCEEDED') {
+        setLimitExceededModalData({
+          maxTickets: Number(data.max_tickets || appliedCoupon?.max_tickets || 1),
+          detail: data.detail || data.error || `El cupón solo cubre ${data.max_tickets || 1} asiento(s) de cortesía.`
+        });
+        return;
+      }
+      const errorMsg = data?.detail || data?.error || "Hubo un error al procesar la reserva. Por favor intenta de nuevo.";
       showAlert(errorMsg, "Error de Reserva", "error");
     } finally {
       setIsSubmitting(false);
@@ -1244,7 +1303,8 @@ const TourPage = () => {
                     ) : (
                       <>
                         <AnimatePresence mode="popLayout">
-                          {selectedSeats.map(seat => {
+                          {seatBreakdown.map(item => {
+                            const { seat, originalPrice, isComplimentary } = item;
                             const parts = getSeatAssignmentParts(seat);
                             const canonicalSeatDisplay = formatSeatAssignment(seat);
                             return (
@@ -1253,17 +1313,29 @@ const TourPage = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 hover:border-amber-400/40 transition-all group shadow-sm"
+                                className={`flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border transition-all group shadow-sm ${
+                                  isComplimentary
+                                    ? 'border-emerald-500/40 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05]'
+                                    : 'border-slate-200/80 dark:border-white/10 hover:border-amber-400/40'
+                                }`}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/30 text-amber-600 dark:text-amber-400 flex flex-col items-center justify-center font-black font-mono text-[10px] leading-tight shrink-0 shadow-inner">
+                                  <div className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center font-black font-mono text-[10px] leading-tight shrink-0 shadow-inner ${
+                                    isComplimentary
+                                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                      : 'bg-gradient-to-br from-amber-400/20 to-amber-600/10 border-amber-400/30 text-amber-600 dark:text-amber-400'
+                                  }`}>
                                     <span>{parts.rowText ? parts.rowText.replace(/^fila\s*:?\s*/i, '').trim().toUpperCase() : 'F'}</span>
                                     <span className="text-[9px] opacity-80">#{seat.number}</span>
                                   </div>
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                      <span className="inline-block text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20">
-                                        {seat.category || 'Reservado'}
+                                      <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${
+                                        isComplimentary
+                                          ? 'bg-emerald-400/15 text-emerald-700 dark:text-emerald-400 border-emerald-400/30'
+                                          : 'bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-400/20'
+                                      }`}>
+                                        {isComplimentary ? 'Cortesía VIP' : (seat.category || 'Reservado')}
                                       </span>
                                       <span className="text-[11px] font-black text-slate-800 dark:text-white font-mono tracking-tight">
                                         {canonicalSeatDisplay}
@@ -1288,9 +1360,27 @@ const TourPage = () => {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2.5 shrink-0">
-                                  <span className="font-black font-mono text-xs text-slate-900 dark:text-white">
-                                    ${getSeatBasePrice(seat).toLocaleString()} <span className="text-xs text-slate-400">MXN</span>
-                                  </span>
+                                  {isComplimentary ? (
+                                    <div className="flex flex-col items-end">
+                                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-mono tracking-wider">
+                                        <Sparkles size={10} className="text-amber-500" /> Cortesía: $0.00 MXN
+                                      </span>
+                                      <span className="text-[9px] line-through text-slate-400 font-mono">
+                                        ${originalPrice.toLocaleString()} MXN
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-end">
+                                      <span className="font-black font-mono text-xs text-slate-900 dark:text-white">
+                                        ${originalPrice.toLocaleString()} <span className="text-xs text-slate-400">MXN</span>
+                                      </span>
+                                      {appliedCoupon && (
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                          Regular
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={() => setSelectedSeats(selectedSeats.filter(s => String(s.id) !== String(seat.id)))}
@@ -1304,6 +1394,22 @@ const TourPage = () => {
                             );
                           })}
                         </AnimatePresence>
+
+                        {/* Banner Informativo Híbrido: Cuando hay asientos cubiertos y asientos regulares */}
+                        {appliedCoupon && (appliedCoupon.is_complimentary || appliedCoupon.discount_type === 'free_vip') && selectedSeats.length > (appliedCoupon.max_tickets || 1) && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-2.5"
+                          >
+                            <Info size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-snug">
+                              <strong className="text-emerald-600 dark:text-emerald-400 font-black">
+                                {appliedCoupon.max_tickets || 1}
+                              </strong> de tus asientos seleccionados está cubierto por tu cortesía. El asiento restante será procesado con pago regular.
+                            </p>
+                          </motion.div>
+                        )}
 
                         {selectedSeats.length === 0 && (
                           <div className="py-8 text-center border border-dashed border-slate-200 dark:border-white/15 rounded-2xl bg-slate-50/50 dark:bg-white/[0.01]">
@@ -1464,7 +1570,16 @@ const TourPage = () => {
                   onClick={handleProceedToCheckout}
                 >
                   <span className="text-sm md:text-base font-black uppercase tracking-[0.2em] block">
-                    {isCurrentEventPast ? 'Venta Finalizada' : (baseTotal === 0 && appliedCoupon ? 'Reclamar Entrada VIP' : 'Proceder al Pago')}
+                    {isCurrentEventPast
+                      ? 'Venta Finalizada'
+                      : (baseTotal === 0 && appliedCoupon
+                        ? 'Reclamar Entrada VIP'
+                        : (checkoutTotal > 0
+                          ? `Pagar $${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`
+                          : 'Proceder al Pago'
+                        )
+                      )
+                    }
                   </span>
                 </PremiumCTAButton>
               </div>
@@ -1892,7 +2007,7 @@ const TourPage = () => {
                       ? 'Procesando...'
                       : (baseTotal === 0 && appliedCoupon
                         ? 'Reclamar Entrada VIP Gratuita'
-                        : 'Confirmar y Pagar Boletos'
+                        : `Pagar $${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`
                       )
                     }
                     {!isSubmitting ? <Sparkles size={16} className="shrink-0 animate-pulse" /> : null}
@@ -1938,6 +2053,7 @@ const TourPage = () => {
             </motion.div>
           </div>
         )}
+
         {/* Modal de Pase Digital (TicketQRModal) */}
         {ticketPassModalData && currentEvent && (
           <TicketQRModal
@@ -1947,6 +2063,64 @@ const TourPage = () => {
             event={currentEvent}
             seat={ticketPassModalData.seat}
           />
+        )}
+
+        {/* ─── MODAL LÍMITE DE CORTESÍA EXCEDIDO (COMPLIMENTARY_ORDER_LIMIT_EXCEEDED) ─── */}
+        {limitExceededModalData && (
+          <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white dark:bg-[#121418] border border-amber-500/40 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                  <AlertCircle size={26} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">
+                    Política de Cortesía
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 dark:text-white leading-tight">
+                    Límite de Cortesía Excedido
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {limitExceededModalData.detail}
+              </p>
+
+              <div className="space-y-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const maxT = limitExceededModalData.maxTickets || 1;
+                    setSelectedSeats(prev => prev.slice(0, maxT));
+                    setLimitExceededModalData(null);
+                    showAlert(`Se conservó ${maxT === 1 ? '1 asiento gratis' : `${maxT} asientos gratis`}.`, 'Asiento Ajustado', 'info');
+                  }}
+                  className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500 hover:bg-emerald-600 text-slate-950 flex items-center justify-center gap-2 transition-all active:scale-95 shadow-md shadow-emerald-500/20"
+                >
+                  <Check size={16} />
+                  <span>Dejar solo {limitExceededModalData.maxTickets} asiento{limitExceededModalData.maxTickets > 1 ? 's' : ''} gratis</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRemoveCoupon();
+                    setLimitExceededModalData(null);
+                  }}
+                  className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white flex items-center justify-center gap-2 transition-all active:scale-95"
+                >
+                  <X size={16} />
+                  <span>Retirar cupón (mantener boletos a tarifa regular)</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

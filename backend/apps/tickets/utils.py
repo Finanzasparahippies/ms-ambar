@@ -45,19 +45,19 @@ def format_seat_assignment(seat):
 
     parts = []
     if row_clean and not row_clean.lower().startswith('mesa'):
-        parts.append(f"Fila: {row_clean.upper()}")
+        parts.append(f"Fila {row_clean.upper()}")
 
     if table_label:
         pure_tbl = re.sub(r'^mesa\s*:?\s*', '', str(table_label), flags=re.IGNORECASE).strip()
         if pure_tbl:
-            parts.append(f"Mesa: {pure_tbl}")
+            parts.append(f"Mesa {pure_tbl}")
     elif row_raw.lower().startswith('mesa'):
         pure_tbl = re.sub(r'^mesa\s*:?\s*', '', row_raw, flags=re.IGNORECASE).strip()
         if pure_tbl:
-            parts.append(f"Mesa: {pure_tbl}")
+            parts.append(f"Mesa {pure_tbl}")
 
     pure_num = re.sub(r'^asiento\s*:?\s*', '', str(seat.number), flags=re.IGNORECASE).strip()
-    parts.append(f"Asiento: {pure_num}")
+    parts.append(f"Asiento {pure_num}")
     return " · ".join(parts)
 
 def generate_ticket_qr(ticket):
