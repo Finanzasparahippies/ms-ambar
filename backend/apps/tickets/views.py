@@ -44,19 +44,94 @@ class CouponViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], url_path='send_email', permission_classes=[permissions.IsAdminUser])
     def send_email(self, request, pk=None):
+        import re
         coupon = self.get_object()
-        recipient_email = request.data.get('email', '').strip()
+        raw_emails = request.data.get('emails') or request.data.get('email')
         custom_note = request.data.get('note', '').strip()
         image_url = request.data.get('image_url', '').strip() or None
+        recipient_name = request.data.get('recipient_name', '').strip() or None
 
-        if not recipient_email:
-            return Response({'error': 'Debes ingresar una dirección de correo de destino.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Normalizar lista de correos
+        email_list = []
+        if isinstance(raw_emails, list):
+            for em in raw_emails:
+                if isinstance(em, str):
+                    for sub_em in re.split(r'[\s,;]+', em):
+                        clean = sub_em.strip()
+                        if clean and '@' in clean:
+                            email_list.append(clean)
+        elif isinstance(raw_emails, str):
+            for sub_em in re.split(r'[\s,;]+', raw_emails):
+                clean = sub_em.strip()
+                if clean and '@' in clean:
+                    email_list.append(clean)
+
+        # Deduplicar preservando orden (case-insensitive)
+        seen = set()
+        clean_emails = []
+        for em in email_list:
+            low = em.lower()
+            if low not in seen:
+                seen.add(low)
+                clean_emails.append(em)
+
+        if not clean_emails:
+            return Response({'error': 'Debes ingresar al menos una dirección de correo válida.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Si hay un único destinatario, se respeta el recipient_name manual ingresado en el modal.
+        # Si hay múltiples destinatarios, recipient_name se fuerza a None para que el sistema busque el nombre
+        # registrado del usuario por email o lo deje en blanco.
+        if len(clean_emails) > 1:
+            recipient_name = None
+
+        # Asegurar que todos los destinatarios sean elegibles en allowed_emails si el cupón tiene restricciones
+        if coupon.assigned_email or (coupon.allowed_emails and len(coupon.allowed_emails) > 0):
+            current_allowed = set(em.strip().lower() for em in coupon.allowed_emails if em)
+            if coupon.assigned_email:
+                current_allowed.add(coupon.assigned_email.strip().lower())
+
+            modified = False
+            for em in clean_emails:
+                if em.lower() not in current_allowed:
+                    coupon.allowed_emails.append(em.strip())
+                    current_allowed.add(em.lower())
+                    modified = True
+            if modified:
+                coupon.save(update_fields=['allowed_emails'])
 
         from apps.tickets.utils import send_coupon_email
-        success, msg = send_coupon_email(coupon, recipient_email, custom_note, image_url=image_url, async_send=True)
-        if success:
-            return Response({'message': f'Cupón enviado exitosamente a {recipient_email}.'})
-        return Response({'error': f'Error al enviar el correo: {msg}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        sent_count = 0
+        errors = []
+
+        for em in clean_emails:
+            success, msg = send_coupon_email(
+                coupon=coupon,
+                recipient_email=em,
+                custom_note=custom_note,
+                image_url=image_url,
+                recipient_name=recipient_name,
+                async_send=True
+            )
+            if success:
+                sent_count += 1
+            else:
+                errors.append(f"{em}: {msg}")
+
+        if sent_count > 0:
+            if sent_count == 1:
+                detail_msg = f'Cupón enviado exitosamente a {clean_emails[0]}.'
+            else:
+                detail_msg = f'Cupón enviado exitosamente a {sent_count} destinatarios.'
+            if errors:
+                detail_msg += f' (No se pudo enviar a: {", ".join(errors)})'
+            return Response({
+                'message': detail_msg,
+                'sent_count': sent_count,
+                'recipients': clean_emails,
+                'errors': errors
+            }, status=status.HTTP_200_OK)
+
+        return Response({'error': f'Error al enviar correos: {", ".join(errors)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()

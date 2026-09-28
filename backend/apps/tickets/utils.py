@@ -180,14 +180,14 @@ def send_ticket_telegram(ticket):
     logger.info(f"[Ticket] Telegram delivery stub: {ticket.token}")
 
 
-def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, async_send=False):
+def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, recipient_name=None, async_send=False):
     """
     Despacha un correo electrónico elegante con la información del cupón, imagen opcional (Cloudinary/Flyer) y link de auto-aplicación.
-    Si el cupón no tenía correo asignado, lo asigna automáticamente al correo del destinatario para blindar el beneficio.
+    Si el cupón es exclusivo de un solo uso y no tenía correo asignado, lo asigna al destinatario.
     """
     logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email.strip()} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Iniciando pipeline de correo de cupón {coupon.code} para destinatario: {recipient_email.strip()}")
     recipient_email = recipient_email.strip()
-    if not coupon.assigned_email:
+    if not coupon.assigned_email and (not coupon.allowed_emails or len(coupon.allowed_emails) == 0) and coupon.max_uses == 1:
         coupon.assigned_email = recipient_email
         coupon.save(update_fields=['assigned_email'])
 
@@ -210,22 +210,28 @@ def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, a
     discount_desc = "100% de descuento (Entrada VIP Gratuita)" if coupon.discount_type == 'free_vip' else (
         f"{coupon.discount_value}% de descuento" if coupon.discount_type == 'percentage' else f"${coupon.discount_value} MXN de descuento"
     )
-    # Resolver nombre del destinatario (Nombre de usuario registrado o dejar en blanco si no tiene)
+    # Resolver nombre del destinatario:
+    # 1. Prioridad: recipient_name manual explícito (si fue proporcionado para destinatario único)
+    # 2. Búsqueda automática en User por correo electrónico
+    # 3. Fallback: vacío ('') para que no aparezca en el título
     recipient_display_name = ''
-    try:
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
-        user_obj = User.objects.filter(email__iexact=recipient_email).first()
-        if user_obj:
-            full_name = f"{user_obj.first_name} {user_obj.last_name}".strip()
-            if full_name:
-                recipient_display_name = full_name
-            elif user_obj.first_name:
-                recipient_display_name = user_obj.first_name.strip()
-            elif user_obj.username and not user_obj.username.startswith('guest_'):
-                recipient_display_name = user_obj.username.strip()
-    except Exception as e:
-        logger.warning(f"[DELIVERY/SMTP] No se pudo resolver nombre de usuario para {recipient_email}: {e}")
+    if recipient_name and str(recipient_name).strip():
+        recipient_display_name = str(recipient_name).strip()
+    else:
+        try:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user_obj = User.objects.filter(email__iexact=recipient_email).first()
+            if user_obj:
+                full_name = f"{user_obj.first_name} {user_obj.last_name}".strip()
+                if full_name:
+                    recipient_display_name = full_name
+                elif user_obj.first_name:
+                    recipient_display_name = user_obj.first_name.strip()
+                elif user_obj.username and not user_obj.username.startswith('guest_'):
+                    recipient_display_name = user_obj.username.strip()
+        except Exception as e:
+            logger.warning(f"[DELIVERY/SMTP] No se pudo resolver nombre de usuario para {recipient_email}: {e}")
 
     # Identificador único para evitar colapso de conversaciones en Gmail
     unique_tag = uuid.uuid4().hex[:6].upper()

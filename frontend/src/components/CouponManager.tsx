@@ -123,7 +123,9 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   // ── States para Modal de Envío por Correo ──
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedCouponForEmail, setSelectedCouponForEmail] = useState<Coupon | null>(null);
-  const [emailRecipient, setEmailRecipient] = useState('');
+  const [emailRecipients, setEmailRecipients] = useState<string[]>([]);
+  const [emailRecipientInput, setEmailRecipientInput] = useState('');
+  const [emailRecipientName, setEmailRecipientName] = useState('');
   const [emailNote, setEmailNote] = useState('');
   const [emailImageUrl, setEmailImageUrl] = useState<string | null>(null);
   const [emailImageFile, setEmailImageFile] = useState<File | null>(null);
@@ -458,11 +460,85 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   };
 
   /**
+   * Helpers para gestión de destinatarios del correo
+   */
+  const handleAddRecipientEmails = (rawText: string) => {
+    if (!rawText.trim()) return;
+    const splitted = rawText
+      .split(/[\s,;]+/)
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e.length > 0 && e.includes('@'));
+
+    if (splitted.length === 0) return;
+
+    setEmailRecipients(prev => {
+      const set = new Set(prev.map(e => e.toLowerCase()));
+      const next = [...prev];
+      for (const em of splitted) {
+        if (!set.has(em)) {
+          set.add(em);
+          next.push(em);
+        }
+      }
+      return next;
+    });
+    setEmailRecipientInput('');
+  };
+
+  const handleRemoveRecipientEmail = (emailToRemove: string) => {
+    setEmailRecipients(prev => prev.filter(e => e.toLowerCase() !== emailToRemove.toLowerCase()));
+  };
+
+  const handleToggleAllowedRecipient = (email: string) => {
+    const normalized = email.trim().toLowerCase();
+    setEmailRecipients(prev => {
+      const exists = prev.some(e => e.toLowerCase() === normalized);
+      if (exists) {
+        return prev.filter(e => e.toLowerCase() !== normalized);
+      }
+      return [...prev, email.trim()];
+    });
+  };
+
+  const handleSelectAllAllowedRecipients = () => {
+    if (!selectedCouponForEmail?.allowed_emails || selectedCouponForEmail.allowed_emails.length === 0) return;
+    setEmailRecipients(prev => {
+      const set = new Set(prev.map(e => e.toLowerCase()));
+      const next = [...prev];
+      for (const em of selectedCouponForEmail.allowed_emails) {
+        const clean = (em || '').trim();
+        if (clean && clean.includes('@') && !set.has(clean.toLowerCase())) {
+          set.add(clean.toLowerCase());
+          next.push(clean);
+        }
+      }
+      return next;
+    });
+  };
+
+  /**
    * Abrir Modal de Envío por Correo Electrónico
    */
   const openEmailModal = (coupon: Coupon) => {
     setSelectedCouponForEmail(coupon);
-    setEmailRecipient(coupon.assigned_email || '');
+
+    // Si tiene assigned_email o allowed_emails, pre-cargamos destinatarios elegibles
+    const initialRecipients: string[] = [];
+    if (coupon.assigned_email && coupon.assigned_email.trim()) {
+      initialRecipients.push(coupon.assigned_email.trim());
+    }
+    if (coupon.allowed_emails && Array.isArray(coupon.allowed_emails)) {
+      coupon.allowed_emails.forEach(em => {
+        const clean = (em || '').trim();
+        if (clean && clean.includes('@') && !initialRecipients.some(r => r.toLowerCase() === clean.toLowerCase())) {
+          initialRecipients.push(clean);
+        }
+      });
+    }
+
+    setEmailRecipients(initialRecipients);
+    setEmailRecipientInput('');
+    setEmailRecipientName('');
     setEmailNote('');
 
     // Pre-cargar flyer del evento si existe
@@ -480,25 +556,58 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
    */
   const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCouponForEmail || !emailRecipient.trim()) {
-      showToast.error('Ingresa una dirección de correo válida.');
+    if (!selectedCouponForEmail) return;
+
+    // Procesar cualquier texto remanente en el input de destinatarios
+    let targetRecipients = [...emailRecipients];
+    if (emailRecipientInput.trim()) {
+      const splitted = emailRecipientInput
+        .split(/[\s,;]+/)
+        .map(em => em.trim().toLowerCase())
+        .filter(em => em.length > 0 && em.includes('@'));
+
+      const set = new Set(targetRecipients.map(r => r.toLowerCase()));
+      for (const s of splitted) {
+        if (!set.has(s)) {
+          set.add(s);
+          targetRecipients.push(s);
+        }
+      }
+      setEmailRecipients(targetRecipients);
+      setEmailRecipientInput('');
+    }
+
+    if (targetRecipients.length === 0) {
+      showToast.error('Ingresa al menos una dirección de correo válida para el envío.');
       return;
     }
 
     setEmailSending(true);
     try {
       const headers = getAuthHeaders();
+      const payload: {
+        emails: string[];
+        recipient_name?: string;
+        note: string;
+        image_url: string | null;
+      } = {
+        emails: targetRecipients,
+        note: emailNote.trim(),
+        image_url: emailImageUrl || null
+      };
+
+      // Si solo hay un destinatario, se envía el recipient_name manual
+      if (targetRecipients.length === 1 && emailRecipientName.trim()) {
+        payload.recipient_name = emailRecipientName.trim();
+      }
+
       const res = await axios.post(
         `${apiUrl}/tickets/coupons/${selectedCouponForEmail.id}/send_email/`,
-        {
-          email: emailRecipient.trim(),
-          note: emailNote.trim(),
-          image_url: emailImageUrl || null
-        },
+        payload,
         { headers }
       );
       showAlert(
-        res.data.message || `Cupón enviado exitosamente a ${emailRecipient}.`,
+        res.data.message || `Cupón enviado exitosamente a ${targetRecipients.length} destinatario(s).`,
         '¡Correo Despachado!',
         'success'
       );
@@ -1351,45 +1460,143 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                     </p>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                      Correo del Destinatario *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="invitado@ejemplo.com"
-                      value={emailRecipient}
-                      onChange={e => setEmailRecipient(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-purple-500 font-mono"
-                    />
-                    {selectedCouponForEmail.allowed_emails && selectedCouponForEmail.allowed_emails.length > 0 && (
-                      <div className="space-y-1 mt-2">
-                        <span className="text-[10px] text-zinc-400 block font-semibold">
-                          Seleccionar de invitados autorizados:
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {selectedCouponForEmail.allowed_emails.map((em: string) => (
+                  {/* Destinatarios */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Destinatarios del Correo *
+                      </label>
+                      <span className="text-[11px] font-mono font-medium text-purple-400">
+                        {emailRecipients.length === 1
+                          ? '1 destinatario'
+                          : `${emailRecipients.length} destinatarios`}
+                      </span>
+                    </div>
+
+                    {/* Input para escribir o pegar correos */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="invitado@ejemplo.com, otro@ejemplo.com..."
+                        value={emailRecipientInput}
+                        onChange={e => setEmailRecipientInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ',') {
+                            e.preventDefault();
+                            handleAddRecipientEmails(emailRecipientInput);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (emailRecipientInput.trim()) {
+                            handleAddRecipientEmails(emailRecipientInput);
+                          }
+                        }}
+                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-purple-500 font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleAddRecipientEmails(emailRecipientInput)}
+                        disabled={!emailRecipientInput.trim()}
+                        className="px-3 py-2 bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+                      >
+                        Añadir
+                      </button>
+                    </div>
+
+                    {/* Chips de correos agregados actualmente */}
+                    {emailRecipients.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto custom-scrollbar p-2 bg-zinc-950/60 border border-zinc-800/80 rounded-lg">
+                        {emailRecipients.map(em => (
+                          <span
+                            key={em}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-mono bg-purple-950/70 border border-purple-500/40 text-purple-200 shadow-xs"
+                          >
+                            <span>{em}</span>
                             <button
-                              key={em}
                               type="button"
-                              onClick={() => setEmailRecipient(em)}
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
-                                emailRecipient === em
-                                  ? 'bg-purple-600 text-white border-purple-400'
-                                  : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-purple-500'
-                              }`}
+                              onClick={() => handleRemoveRecipientEmail(em)}
+                              className="text-purple-400 hover:text-white transition-colors cursor-pointer"
+                              title="Remover destinatario"
                             >
-                              {em}
+                              <X className="w-3 h-3" />
                             </button>
-                          ))}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Acciones rápidas de invitados autorizados en el cupón */}
+                    {selectedCouponForEmail.allowed_emails && selectedCouponForEmail.allowed_emails.length > 0 && (
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-zinc-400 font-semibold">
+                            Invitados autorizados en el cupón ({selectedCouponForEmail.allowed_emails.length}):
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleSelectAllAllowedRecipients}
+                            className="text-[10px] text-purple-400 hover:text-purple-300 font-medium underline cursor-pointer"
+                          >
+                            Seleccionar todos
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedCouponForEmail.allowed_emails.map((em: string) => {
+                            const isSelected = emailRecipients.some(
+                              r => r.toLowerCase() === (em || '').trim().toLowerCase()
+                            );
+                            return (
+                              <button
+                                key={em}
+                                type="button"
+                                onClick={() => handleToggleAllowedRecipient(em)}
+                                className={`px-2 py-0.5 rounded text-[10px] font-mono border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-purple-600 text-white border-purple-400'
+                                    : 'bg-zinc-950 border-zinc-800 text-zinc-400 hover:border-purple-500'
+                                }`}
+                              >
+                                {isSelected ? `✓ ${em}` : `+ ${em}`}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
-                    <p className="text-[11px] text-zinc-500 mt-1">
-                      * Al enviar, el correo recibirá una invitación formal con su enlace seguro de canje.
+
+                    <p className="text-[11px] text-zinc-500">
+                      * Puedes ingresar uno o múltiples correos separados por comas, espacios o saltos de línea.
                     </p>
                   </div>
+
+                  {/* Nombre del Destinatario (Solo cuando hay exactamente 1 destinatario) */}
+                  {emailRecipients.length === 1 ? (
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-amber-400">
+                          Nombre del Destinatario (Opcional)
+                        </label>
+                        <span className="text-[10px] text-amber-500/80 font-mono">1 Destinatario</span>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Ej. Carlos Mendoza"
+                        value={emailRecipientName}
+                        onChange={e => setEmailRecipientName(e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-amber-500"
+                      />
+                      <p className="text-[11px] text-zinc-500 mt-1">
+                        Aparecerá en el título superior del correo. Si se deja en blanco, el correo no mostrará nombre en el título.
+                      </p>
+                    </div>
+                  ) : emailRecipients.length > 1 ? (
+                    <div className="p-3 bg-purple-950/20 border border-purple-900/40 rounded-lg text-xs text-purple-300 flex items-start gap-2">
+                      <span className="text-sm">ℹ️</span>
+                      <p className="leading-relaxed">
+                        <strong>Envío múltiple ({emailRecipients.length} destinatarios):</strong> El sistema intentará resolver automáticamente el nombre registrado de cada destinatario. Si algún correo no tiene cuenta o nombre, su título quedará limpio en blanco.
+                      </p>
+                    </div>
+                  ) : null}
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">
