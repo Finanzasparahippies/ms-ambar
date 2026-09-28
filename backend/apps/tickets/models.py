@@ -223,11 +223,10 @@ class Theater(models.Model):
             # Clean up stale seats not present in active_ids before bulk operations to avoid unique constraint conflicts
             stale_seats = Seat.objects.filter(theater=self).exclude(id__in=active_ids)
             if stale_seats.exists():
-                # Desvincular boletos cancelados o huérfanos para permitir el saneamiento estricto de capacidad
                 from apps.tickets.models import Ticket
                 Ticket.objects.filter(seat__in=stale_seats, status__in=['cancelled', 'expired']).delete()
-                Ticket.objects.filter(seat__in=stale_seats).update(seat=None)
-                stale_seats.delete()
+                # Solo purgar asientos obsoletos que no tengan boletos activos/pagados
+                stale_seats.filter(ticket__isnull=True).delete()
 
             if seats_to_update:
                 Seat.objects.bulk_update(
