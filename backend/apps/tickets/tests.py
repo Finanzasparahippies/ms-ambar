@@ -1096,5 +1096,108 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(formatted, "Fila F · Mesa 5 · Asiento 13")
         self.assertNotIn("Fila Fila", formatted)
 
+    def test_pricing_engine_unit_hybrid_settlement(self):
+        """Valida que una cortesía con max_tickets=1 cubra exactamente 1 asiento ($0) y cobre el segundo ($500)"""
+        from apps.tickets.services.pricing_engine import calculate_ticket_order_pricing
+
+        seat1 = self.event_seat
+        seat2 = Seat.objects.create(
+            theater=self.theater,
+            section="Preferente",
+            row="A",
+            number=2,
+            base_price=500,
+            x=10,
+            y=10
+        )
+        coupon = Coupon.objects.create(
+            code="UNIT-VIP-TEST",
+            discount_type="free_vip",
+            is_complimentary=True,
+            max_tickets=1,
+            allow_mixed_checkout=True,
+            event=self.event
+        )
+
+        pricing = calculate_ticket_order_pricing(
+            event=self.event,
+            seats=[seat1, seat2],
+            coupon=coupon,
+            pass_fees_to_buyer=True
+        )
+
+        self.assertTrue(pricing['success'])
+        self.assertEqual(pricing['total_seats_count'], 2)
+        self.assertEqual(pricing['covered_count'], 1)
+        self.assertEqual(pricing['payable_count'], 1)
+        self.assertEqual(pricing['subtotal'], 500.0)
+        self.assertTrue(pricing['is_hybrid_order'])
+        self.assertFalse(pricing['is_free_order'])
+        self.assertGreater(pricing['grand_total'], 500.0)  # Incluye comisión de pasarela
+
+    def test_pricing_engine_exclusivity_limit_exceeded(self):
+        """Valida que si allow_mixed_checkout=False y se seleccionan más asientos que max_tickets, rechaza semánticamente"""
+        from apps.tickets.services.pricing_engine import calculate_ticket_order_pricing
+
+        seat1 = self.event_seat
+        seat2 = Seat.objects.create(
+            theater=self.theater,
+            section="Preferente",
+            row="B",
+            number=2,
+            base_price=500,
+            x=15,
+            y=15
+        )
+        coupon = Coupon.objects.create(
+            code="STRICT-VIP-TEST",
+            discount_type="free_vip",
+            is_complimentary=True,
+            max_tickets=1,
+            allow_mixed_checkout=False,
+            event=self.event
+        )
+
+        pricing = calculate_ticket_order_pricing(
+            event=self.event,
+            seats=[seat1, seat2],
+            coupon=coupon
+        )
+
+        self.assertFalse(pricing['success'])
+        self.assertEqual(pricing['error_code'], 'COMPLIMENTARY_ORDER_LIMIT_EXCEEDED')
+
+    def test_coupon_max_uses_per_email(self):
+        """Valida que un cupón limite los canjes por correo electrónico según max_uses_per_email"""
+        coupon = Coupon.objects.create(
+            code="EMAIL-LIMIT-TEST",
+            discount_type="free_vip",
+            is_complimentary=True,
+            max_tickets=1,
+            max_uses_per_email=1,
+            event=self.event
+        )
+
+        # Primer uso: Válido
+        self.assertTrue(coupon.is_valid_for_event(self.event, user_email="fan@example.com"))
+
+        # Simular una orden previa con ese correo y cupón
+        Ticket.objects.create(
+            event=self.event,
+            seat=self.event_seat,
+            user_email="fan@example.com",
+            user_name="Fan",
+            status="paid",
+            coupon=coupon,
+            stripe_session_id="free_vip_test_session_1"
+        )
+
+        # Segundo uso con el mismo correo: Inválido por límite por correo
+        self.assertFalse(coupon.is_valid_for_event(self.event, user_email="fan@example.com"))
+
+        # Uso con otro correo: Válido
+        self.assertTrue(coupon.is_valid_for_event(self.event, user_email="otro@example.com"))
+
+
 
 

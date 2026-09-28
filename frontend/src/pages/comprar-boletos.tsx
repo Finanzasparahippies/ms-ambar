@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+  AlertCircle,
   Calendar, CalendarX,
-  CheckCircle, Info,
+  Check, CheckCircle, Info,
   Mail, MapPin, Maximize2,
   Minus, Plus,
   ShieldCheck,
