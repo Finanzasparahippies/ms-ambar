@@ -87,18 +87,160 @@ def get_complimentary_rows_priority(event: Optional[Event] = None, coupon: Optio
     return []
 
 
+def is_seat_in_priority(seat_row_str: str, target_tier: str) -> bool:
+    """
+    Normaliza y verifica coincidencia flexible entre el identificador de fila/mesa
+    del asiento y el target de prioridad del cupón/evento.
+    Soporta:
+      - 'Fila D' <-> 'D'
+      - 'Mesa 4' <-> 'MESA 4'
+      - 'Mesa 31' <-> '31'
+      - 'Zona D' / 'Tier 2' (coincidencia de subcadena flexible)
+    """
+    if not seat_row_str or not target_tier:
+        return False
+
+    clean_seat = unicodedata.normalize('NFKD', str(seat_row_str)).encode('ASCII', 'ignore').decode('utf-8').strip().upper()
+    clean_target = unicodedata.normalize('NFKD', str(target_tier)).encode('ASCII', 'ignore').decode('utf-8').strip().upper()
+
+    if clean_seat == clean_target:
+        return True
+
+    # Quitar prefijos 'FILA ' o 'FILA_'
+    norm_seat = re.sub(r'^FILA\s*[_#\-]?\s*', '', clean_seat).strip()
+    norm_target = re.sub(r'^FILA\s*[_#\-]?\s*', '', clean_target).strip()
+
+    if norm_seat == norm_target:
+        return True
+
+    # Quitar prefijo 'MESA ' o 'MESA_'
+    mesa_seat = re.sub(r'^MESA\s*[_#\-]?\s*', '', clean_seat).strip()
+    mesa_target = re.sub(r'^MESA\s*[_#\-]?\s*', '', clean_target).strip()
+
+    if mesa_seat == mesa_target:
+        return True
+
+    if clean_seat.startswith('MESA') and norm_target.isdigit() and mesa_seat == norm_target:
+        return True
+    if clean_target.startswith('MESA') and norm_seat.isdigit() and mesa_target == norm_seat:
+        return True
+
+    # Subcadena bidireccional (ej. 'ZONA D' vs 'D', 'TIER 2' vs 'TIER 2')
+    if len(clean_target) >= 2 and (clean_target in clean_seat or clean_seat in clean_target):
+        return True
+
+    return False
+
+
+def build_spatial_virtual_rows(seats: List[Seat], tolerance_y: float = 35.0) -> List[Dict[str, Any]]:
+    """
+    Agrupa asientos en bandas horizontales espaciales por coordenada Y (tolerancia ±35px).
+    Ordena las bandas de menor Y a mayor Y (frente/escenario hacia atrás).
+    Asigna a cada banda una letra ('A', 'B', 'C', 'D'...) y recopila las mesas físicas contenidas.
+    """
+    if not seats:
+        return []
+
+    # Filtrar asientos con coordenadas válidas
+    valid_seats = [s for s in seats if s.y is not None]
+    if not valid_seats:
+        return []
+
+    sorted_seats = sorted(valid_seats, key=lambda s: (s.y, s.x))
+    bands: List[List[Seat]] = []
+
+    for s in sorted_seats:
+        matched_band = None
+        for b in bands:
+            avg_y = sum(item.y for item in b) / len(b)
+            if abs(s.y - avg_y) <= tolerance_y:
+                matched_band = b
+                break
+        if matched_band is not None:
+            matched_band.append(s)
+        else:
+            bands.append([s])
+
+    bands.sort(key=lambda b: sum(item.y for item in b) / len(b))
+
+    result: List[Dict[str, Any]] = []
+    for idx, b in enumerate(bands):
+        n = idx + 1
+        letter = ""
+        while n > 0:
+            rem = (n - 1) % 26
+            letter = chr(65 + rem) + letter
+            n = (n - 1) // 26
+
+        table_rows = list(dict.fromkeys(s.row for s in b if s.row))
+        avg_y = sum(item.y for item in b) / len(b)
+
+        result.append({
+            'letter': letter,
+            'virtual_row': f"Fila {letter}",
+            'seats': b,
+            'table_rows': table_rows,
+            'avg_y': avg_y
+        })
+
+    return result
+
+
+def format_table_group_label(table_rows: List[str], virtual_row: Optional[str] = None) -> str:
+    """
+    Construye una etiqueta legible y concisa para un conjunto de mesas o filas.
+    Ej. ['Mesa 31', 'Mesa 32', 'Mesa 33', 'Mesa 34'] -> 'Mesas 31 a 34'
+    Con virtual_row: 'Fila D (Mesas 31 a 34)'
+    """
+    if not table_rows:
+        return virtual_row or ''
+
+    nums = []
+    for t in table_rows:
+        match = re.search(r'\d+', str(t))
+        if match:
+            nums.append(int(match.group()))
+
+    table_desc = ""
+    if len(nums) == len(table_rows) and len(nums) > 1:
+        nums.sort()
+        is_consecutive = all(nums[i] == nums[i - 1] + 1 for i in range(1, len(nums)))
+        if is_consecutive:
+            table_desc = f"Mesas {nums[0]} a {nums[-1]}"
+        else:
+            table_desc = f"Mesas {', '.join(str(n) for n in nums[:4])}"
+            if len(nums) > 4:
+                table_desc += "..."
+    elif len(table_rows) == 1:
+        table_desc = format_row_label(table_rows[0])
+    else:
+        table_desc = ", ".join(table_rows[:4])
+        if len(table_rows) > 4:
+            table_desc += "..."
+
+    if virtual_row and table_desc:
+        if "mesa" in table_desc.lower():
+            return f"{virtual_row} ({table_desc})"
+        return f"{virtual_row} - {table_desc}"
+    return virtual_row or table_desc
+
+
 def determine_active_complimentary_row(
     event: Event,
     coupon: Optional[Coupon] = None
 ) -> Tuple[Optional[str], List[str]]:
     """
-    Calcula la fila activa con asientos disponibles siguiendo la lista de prioridad.
-    Si la primera fila está llena (por compras o cortesías previas), desborda automáticamente
-    a la siguiente fila con inventario libre (Dynamic Overflow Adjustment).
+    Calcula la fila o grupo de mesas activo con asientos disponibles siguiendo la lista de prioridad.
+    Soporta:
+      a) Recintos tradicionales de butacas (Fila A, B, C...).
+      b) Recintos tipo cabaret/mesas (Mesa 1, Mesa 2...) con matching directo o agrupamiento espacial por Y.
+    Si la fila prioritaria se llena, desborda automáticamente a la siguiente (Dynamic Overflow).
+    Si la prioridad configurada no existe en el layout, registra advertencia defensiva y fallbackea
+    ordenadamente a la primera mesa/fila con asientos disponibles en lugar de colapsar la selección.
     Retorna: (active_row_name, list_of_all_allowed_rows_available)
     """
     priority_list = get_complimentary_rows_priority(event, coupon)
-    if not priority_list or not event.theater:
+    if not event.theater:
         return None, []
 
     # Obtener IDs de asientos ya ocupados o reservados en este evento
@@ -110,26 +252,96 @@ def determine_active_complimentary_row(
         ).values_list('seat_id', flat=True)
     )
 
-    all_seats = Seat.objects.filter(theater=event.theater).only('id', 'row', 'status')
+    all_seats = list(Seat.objects.filter(theater=event.theater).only('id', 'row', 'status', 'x', 'y'))
+    if not all_seats:
+        return None, []
 
-    for candidate_row in priority_list:
-        norm_candidate = normalize_row_name(candidate_row)
-        # Buscar asientos en esta fila
-        row_seats = [s for s in all_seats if normalize_row_name(s.row) == norm_candidate]
-        if not row_seats:
-            continue
+    # Detectar si el teatro usa filas de letras directas o mesas
+    has_letters = any(re.match(r'^(fila\s*)?[a-zA-Z]$', s.row.strip(), re.IGNORECASE) for s in all_seats if s.row)
+    spatial_bands = None
+    if not has_letters:
+        spatial_bands = build_spatial_virtual_rows(all_seats, tolerance_y=35.0)
 
-        available_in_row = [
-            s for s in row_seats
-            if s.id not in occupied_seat_ids and s.status == 'available'
-        ]
+    # 1. Intentar matching ordenado por la lista de prioridad
+    if priority_list:
+        for candidate_row in priority_list:
+            norm_candidate = normalize_row_name(candidate_row)
 
-        if len(available_in_row) > 0:
-            formatted_name = format_row_label(candidate_row)
-            return formatted_name, [candidate_row, formatted_name]
+            # A) Búsqueda directa por concordancia flexible
+            direct_row_seats = [
+                s for s in all_seats
+                if is_seat_in_priority(s.row, candidate_row) or normalize_row_name(s.row) == norm_candidate
+            ]
 
-    # Si todas las filas prioritarias se llenaron, retornamos la última fila para que el usuario visualice
-    last_row = priority_list[-1] if priority_list else None
+            # B) Si no hay match directo y tenemos bandas espaciales, buscar por alias virtual (ej. candidate='D')
+            band_match = None
+            if not direct_row_seats and spatial_bands:
+                cand_clean = re.sub(r'^FILA\s*', '', candidate_row.strip().upper())
+                for band in spatial_bands:
+                    if band['letter'] == cand_clean or is_seat_in_priority(band['virtual_row'], candidate_row):
+                        band_match = band
+                        direct_row_seats = band['seats']
+                        break
+
+            if not direct_row_seats:
+                continue
+
+            available_in_row = [
+                s for s in direct_row_seats
+                if s.id not in occupied_seat_ids and s.status == 'available'
+            ]
+
+            if len(available_in_row) > 0:
+                allowed = set()
+                allowed.add(candidate_row)
+                allowed.add(format_row_label(candidate_row))
+                for s in direct_row_seats:
+                    if s.row:
+                        allowed.add(s.row)
+                        allowed.add(normalize_row_name(s.row))
+
+                if band_match:
+                    allowed.add(band_match['letter'])
+                    allowed.add(band_match['virtual_row'])
+                    formatted_name = format_table_group_label(band_match['table_rows'], band_match['virtual_row'])
+                else:
+                    unique_rows = list(dict.fromkeys(s.row for s in direct_row_seats if s.row))
+                    if len(unique_rows) > 1:
+                        formatted_name = format_table_group_label(unique_rows, format_row_label(candidate_row))
+                    else:
+                        formatted_name = format_row_label(candidate_row)
+
+                return formatted_name, list(allowed)
+
+    # 2. FALLBACK DEFENSIVO: Si priority_list no produjo asientos libres o no coincidió
+    logger.warning(
+        "[COMPLIMENTARY/FALLBACK] Event ID=%s: La prioridad %s no produjo asientos libres en el teatro '%s'. "
+        "Activando fallback ordenado a la primera fila/mesa con disponibilidad.",
+        event.id, priority_list, event.theater.name
+    )
+
+    if spatial_bands:
+        for band in spatial_bands:
+            avail = [s for s in band['seats'] if s.id not in occupied_seat_ids and s.status == 'available']
+            if avail:
+                allowed = set([band['letter'], band['virtual_row']])
+                for s in band['seats']:
+                    if s.row:
+                        allowed.add(s.row)
+                        allowed.add(normalize_row_name(s.row))
+                formatted_name = format_table_group_label(band['table_rows'], band['virtual_row'])
+                return formatted_name, list(allowed)
+    else:
+        seats_by_row: Dict[str, List[Seat]] = {}
+        for s in all_seats:
+            seats_by_row.setdefault(s.row, []).append(s)
+        for r_name, r_seats in seats_by_row.items():
+            avail = [s for s in r_seats if s.id not in occupied_seat_ids and s.status == 'available']
+            if avail:
+                formatted_name = format_row_label(r_name)
+                return formatted_name, [r_name, formatted_name, normalize_row_name(r_name)]
+
+    last_row = priority_list[-1] if priority_list else (all_seats[0].row if all_seats else None)
     formatted_last = format_row_label(last_row) if last_row else None
     return formatted_last, ([last_row, formatted_last] if last_row and formatted_last else [])
 
@@ -250,7 +462,12 @@ def lock_and_validate_seats_atomic(
             if allowed_rows:
                 norm_allowed = set(normalize_row_name(r) for r in allowed_rows)
                 for seat in locked_seats:
-                    if normalize_row_name(seat.row) not in norm_allowed:
+                    seat_norm = normalize_row_name(seat.row)
+                    is_match = (
+                        seat_norm in norm_allowed
+                        or any(is_seat_in_priority(seat.row, r) for r in allowed_rows)
+                    )
+                    if not is_match:
                         target_row_display = active_row_name or (allowed_rows[0] if allowed_rows else 'la fila autorizada')
                         return {
                             'valid': False,

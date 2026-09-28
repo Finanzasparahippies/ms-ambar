@@ -570,12 +570,17 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             # Validación de fila designada para cupones de cortesía
             if coupon_obj and coupon_obj.is_complimentary and coupon_obj.complimentary_allocation_mode == 'DESIGNATED_ROW':
-                from apps.tickets.services.coupon_validator import determine_active_complimentary_row, normalize_row_name
+                from apps.tickets.services.coupon_validator import determine_active_complimentary_row, normalize_row_name, is_seat_in_priority
                 active_row_name, allowed_rows = determine_active_complimentary_row(event, coupon_obj)
                 if allowed_rows:
                     norm_allowed = set(normalize_row_name(r) for r in allowed_rows)
                     for s in seats:
-                        if normalize_row_name(s.row) not in norm_allowed:
+                        seat_norm = normalize_row_name(s.row)
+                        is_match = (
+                            seat_norm in norm_allowed
+                            or any(is_seat_in_priority(s.row, r) for r in allowed_rows)
+                        )
+                        if not is_match:
                             target_row_display = active_row_name or (allowed_rows[0] if allowed_rows else 'la fila designada')
                             return Response({
                                 'error': f"Este cupón de cortesía es válido exclusivamente en la {target_row_display}. Selecciona un asiento iluminado."

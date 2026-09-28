@@ -888,3 +888,130 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Este cupón de cortesía es válido exclusivamente en la', response.data['error'])
 
+    def test_cabaret_table_priority_matching(self):
+        """Verify determine_active_complimentary_row supports cabaret tables directly (e.g. Mesa 31, Mesa 32)."""
+        from apps.tickets.services.coupon_validator import determine_active_complimentary_row
+        from apps.tickets.models import Coupon, Theater, Event
+
+        cabaret_theater = Theater.objects.create(name="Cabaret Club Staging", capacity=16)
+        cabaret_event = Event.objects.create(
+            title="Cabaret Night",
+            theater=cabaret_theater,
+            date=timezone.now() + timezone.timedelta(days=7),
+            base_ticket_price=800
+        )
+
+        for t_num in [31, 32, 33, 34]:
+            for s_num in range(1, 5):
+                Seat.objects.create(
+                    theater=cabaret_theater,
+                    section="Mesas",
+                    row=f"Mesa {t_num}",
+                    number=s_num,
+                    base_price=800,
+                    status="available",
+                    y=850.0,
+                    x=100.0 * (t_num - 30)
+                )
+
+        coupon = Coupon.objects.create(
+            code="CABARET-VIP-TABLES",
+            discount_type="free_vip",
+            is_complimentary=True,
+            complimentary_allocation_mode="DESIGNATED_ROW",
+            complimentary_rows_priority=["Mesa 31", "Mesa 32"],
+            event=cabaret_event
+        )
+
+        active_row, allowed_rows = determine_active_complimentary_row(cabaret_event, coupon)
+        self.assertIn("Mesa 31", allowed_rows)
+        self.assertTrue(any("Mesa 31" in r or "mesa 31" in r for r in allowed_rows))
+
+    def test_spatial_virtual_row_resolution_for_cabaret(self):
+        """Verify when priority is ['D'], but layout only has tables, spatial clustering resolves to virtual Row D."""
+        from apps.tickets.services.coupon_validator import determine_active_complimentary_row
+        from apps.tickets.models import Coupon, Theater, Event
+
+        theater = Theater.objects.create(name="London Pub Spatial", capacity=16)
+        event = Event.objects.create(
+            title="London Pub Jazz",
+            theater=theater,
+            date=timezone.now() + timezone.timedelta(days=7),
+            base_ticket_price=600
+        )
+
+        # 4 bands of tables: Band 0 (Y=100 -> A), Band 1 (Y=250 -> B), Band 2 (Y=500 -> C), Band 3 (Y=850 -> D)
+        bands_data = [
+            (100.0, [1, 2]),
+            (250.0, [3, 4]),
+            (500.0, [5, 6]),
+            (850.0, [31, 32]), # Band 3 -> D
+        ]
+        for y_coord, tables in bands_data:
+            for t_num in tables:
+                for s_num in range(1, 3):
+                    Seat.objects.create(
+                        theater=theater,
+                        section="Mesas",
+                        row=f"Mesa {t_num}",
+                        number=s_num,
+                        base_price=600,
+                        status="available",
+                        y=y_coord,
+                        x=100.0 * s_num
+                    )
+
+        coupon = Coupon.objects.create(
+            code="VIP-ROW-D-CABARET",
+            discount_type="free_vip",
+            is_complimentary=True,
+            complimentary_allocation_mode="DESIGNATED_ROW",
+            complimentary_rows_priority=["D"],
+            event=event
+        )
+
+        active_row, allowed_rows = determine_active_complimentary_row(event, coupon)
+        # Should resolve to Fila D with Mesas 31 y 32!
+        self.assertIn("Fila D", active_row)
+        self.assertIn("Mesa 31", allowed_rows)
+        self.assertIn("Mesa 32", allowed_rows)
+
+    def test_defensive_fallback_when_priority_tier_not_found(self):
+        """Verify fallback to first available row when priority row does not exist in layout."""
+        from apps.tickets.services.coupon_validator import determine_active_complimentary_row
+        from apps.tickets.models import Coupon, Theater, Event
+
+        theater = Theater.objects.create(name="Staging Layout", capacity=4)
+        event = Event.objects.create(
+            title="Staging Show",
+            theater=theater,
+            date=timezone.now() + timezone.timedelta(days=7),
+            base_ticket_price=500
+        )
+
+        for i in range(1, 5):
+            Seat.objects.create(
+                theater=theater,
+                section="General",
+                row="Mesa 10",
+                number=i,
+                base_price=500,
+                status="available",
+                y=200.0,
+                x=100.0 * i
+            )
+
+        coupon = Coupon.objects.create(
+            code="MISCONFIGURED-TIER",
+            discount_type="free_vip",
+            is_complimentary=True,
+            complimentary_allocation_mode="DESIGNATED_ROW",
+            complimentary_rows_priority=["NonExistentRowZ"],
+            event=event
+        )
+
+        active_row, allowed_rows = determine_active_complimentary_row(event, coupon)
+        self.assertIsNotNone(active_row)
+        self.assertIn("Mesa 10", allowed_rows)
+
+
