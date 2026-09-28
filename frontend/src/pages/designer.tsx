@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import SeatingChart from '../components/SeatingChart';
@@ -12,7 +12,7 @@ import {
   AlignRight, AlignVerticalJustifyCenter,
   ChevronUp, ChevronDown as ChevronDownIcon,
   X, Info, Circle as CircleIcon, Triangle, Hexagon, Octagon,
-  Shield, Lock
+  Shield, Lock, Sparkles, ListFilter, Eye, EyeOff, Tag, ArrowUp, ArrowDown
 } from 'lucide-react';
 import api from '../lib/api';
 import { cn, getApiUrl } from '../lib/utils';
@@ -33,6 +33,16 @@ function decodeJwtPayload(token: string): Record<string, any> | null {
 function getAuthHeaders(): Record<string, string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+export interface VenueRowSummary {
+  name: string;
+  tablesCount: number;
+  seatsCount: number;
+  isVIP: boolean;
+  priority: number;
+  tableIds: string[];
+  seatIds: string[];
 }
 
 /**
@@ -163,6 +173,10 @@ export default function DesignerPage() {
     shape: 'square',
     arrangement: '4_sides'
   });
+
+  // ─── Row Management & Guides States ───
+  const [showRowLabels, setShowRowLabels] = useState<boolean>(true);
+  const [rowManagerModalOpen, setRowManagerModalOpen] = useState<boolean>(false);
 
   // ─── Theater Management Modal (Nectar Studio Pro) ───
   const [theaterModal, setTheaterModal] = useState<{ isOpen: boolean; mode: 'create' | 'edit' }>({ isOpen: false, mode: 'create' });
@@ -614,6 +628,304 @@ export default function DesignerPage() {
       res = String.fromCharCode(char) + res; i--;
     }
     return res;
+  };
+
+  // ─── Resumen Dinámico de Filas del Recinto ───
+  const venueRowsSummary: VenueRowSummary[] = useMemo(() => {
+    const map = new Map<string, VenueRowSummary>();
+
+    elements.forEach(el => {
+      const r = String(el.row || '').trim();
+      if (!r) return;
+      const entry: VenueRowSummary = map.get(r) || {
+        name: r,
+        tablesCount: 0,
+        seatsCount: 0,
+        isVIP: !!el.is_complimentary_tier,
+        priority: el.complimentary_priority || 99,
+        tableIds: [] as string[],
+        seatIds: [] as string[]
+      };
+      if (el.type === 'table') entry.tablesCount++;
+      entry.tableIds.push(String(el.id));
+      if (el.is_complimentary_tier) entry.isVIP = true;
+      if (el.complimentary_priority && el.complimentary_priority < entry.priority) {
+        entry.priority = el.complimentary_priority;
+      }
+      map.set(r, entry);
+    });
+
+    seats.forEach(s => {
+      const r = String(s.row || '').trim();
+      if (!r) return;
+      const entry: VenueRowSummary = map.get(r) || {
+        name: r,
+        tablesCount: 0,
+        seatsCount: 0,
+        isVIP: !!s.is_complimentary_tier,
+        priority: s.complimentary_priority || 99,
+        tableIds: [] as string[],
+        seatIds: [] as string[]
+      };
+      entry.seatsCount++;
+      entry.seatIds.push(String(s.id));
+      if (s.is_complimentary_tier) entry.isVIP = true;
+      if (s.complimentary_priority && s.complimentary_priority < entry.priority) {
+        entry.priority = s.complimentary_priority;
+      }
+      map.set(r, entry);
+    });
+
+    return Array.from(map.values()).sort((a, b) => {
+      if (a.isVIP && !b.isVIP) return -1;
+      if (!a.isVIP && b.isVIP) return 1;
+      return a.priority - b.priority || a.name.localeCompare(b.name, undefined, { numeric: true });
+    });
+  }, [elements, seats]);
+
+  // ─── Motor de Detección y Agrupación Automática de Filas por Coordenadas (Y) ───
+  const autoDetectAndGroupRows = (format: 'numeric' | 'alpha' = 'numeric') => {
+    let currentElements = [...elements];
+    let currentSeats = [...seats];
+
+    const tableElements = currentElements.filter(e => e.type === 'table');
+    const standaloneSeats = currentSeats.filter(s => !s.tableId && !s.table_id);
+
+    let rowsAssignedCount = 0;
+    let tablesAssignedCount = 0;
+    let seatsAssignedCount = 0;
+
+    const getAlphaLabel = (idx: number) => {
+      let label = '';
+      let n = idx;
+      while (n > 0) {
+        const rem = (n - 1) % 26;
+        label = String.fromCharCode(65 + rem) + label;
+        n = Math.floor((n - 1) / 26);
+      }
+      return label;
+    };
+
+    if (tableElements.length > 0) {
+      // 1. Agrupar mesas por bandas horizontales usando tolerancia vertical (Y +- 50px)
+      const sortedTables = [...tableElements].sort((a, b) => a.y - b.y || a.x - b.x);
+      const bands: (typeof tableElements)[] = [];
+
+      sortedTables.forEach(table => {
+        let matchedBand = bands.find(band => {
+          const avgY = band.reduce((acc, t) => acc + t.y, 0) / band.length;
+          return Math.abs(table.y - avgY) <= 50;
+        });
+
+        if (matchedBand) {
+          matchedBand.push(table);
+        } else {
+          bands.push([table]);
+        }
+      });
+
+      // Ordenar bandas de arriba hacia abajo (Y ascendente)
+      bands.sort((b1, b2) => {
+        const avgY1 = b1.reduce((acc, t) => acc + t.y, 0) / b1.length;
+        const avgY2 = b2.reduce((acc, t) => acc + t.y, 0) / b2.length;
+        return avgY1 - avgY2;
+      });
+
+      const tableRowMap = new Map<string, { row: string; row_label: string; row_id: string }>();
+
+      bands.forEach((band, bandIdx) => {
+        band.sort((a, b) => a.x - b.x);
+        const rowIdentifier = format === 'alpha' ? getAlphaLabel(bandIdx + 1) : String(bandIdx + 1);
+        const rowName = `Fila ${rowIdentifier}`;
+        const rowId = `row_${rowIdentifier.toLowerCase()}`;
+
+        band.forEach(table => {
+          tableRowMap.set(table.id, { row: rowName, row_label: rowName, row_id: rowId });
+          tablesAssignedCount++;
+        });
+      });
+
+      currentElements = currentElements.map(el => {
+        const mapping = tableRowMap.get(el.id);
+        if (mapping) {
+          return {
+            ...el,
+            row: mapping.row,
+            row_label: mapping.row_label,
+            row_id: mapping.row_id
+          };
+        }
+        return el;
+      });
+
+      currentSeats = currentSeats.map(seat => {
+        const tid = seat.tableId || seat.table_id;
+        if (tid && tableRowMap.has(String(tid))) {
+          const mapping = tableRowMap.get(String(tid))!;
+          seatsAssignedCount++;
+          return {
+            ...seat,
+            row: mapping.row,
+            row_label: mapping.row_label,
+            row_id: mapping.row_id
+          };
+        }
+        return seat;
+      });
+
+      rowsAssignedCount = bands.length;
+    }
+
+    if (standaloneSeats.length > 0) {
+      const sortedSeats = [...standaloneSeats].sort((a, b) => a.y - b.y || a.x - b.x);
+      const seatBands: (typeof standaloneSeats)[] = [];
+
+      sortedSeats.forEach(seat => {
+        let matchedBand = seatBands.find(band => {
+          const avgY = band.reduce((acc, s) => acc + s.y, 0) / band.length;
+          return Math.abs(seat.y - avgY) <= 25;
+        });
+
+        if (matchedBand) {
+          matchedBand.push(seat);
+        } else {
+          seatBands.push([seat]);
+        }
+      });
+
+      seatBands.sort((b1, b2) => {
+        const avgY1 = b1.reduce((acc, s) => acc + s.y, 0) / b1.length;
+        const avgY2 = b2.reduce((acc, s) => acc + s.y, 0) / b2.length;
+        return avgY1 - avgY2;
+      });
+
+      const seatRowMap = new Map<string, { row: string; row_label: string; row_id: string; number: number }>();
+      seatBands.forEach((band, bandIdx) => {
+        band.sort((a, b) => a.x - b.x);
+        const rowIdentifier = format === 'alpha' ? getAlphaLabel(rowsAssignedCount + bandIdx + 1) : String(rowsAssignedCount + bandIdx + 1);
+        const rowName = `Fila ${rowIdentifier}`;
+        const rowId = `row_${rowIdentifier.toLowerCase()}`;
+
+        band.forEach((seat, seatIdx) => {
+          seatRowMap.set(String(seat.id), {
+            row: rowName,
+            row_label: rowName,
+            row_id: rowId,
+            number: seatIdx + 1
+          });
+          seatsAssignedCount++;
+        });
+      });
+
+      currentSeats = currentSeats.map(seat => {
+        if (seatRowMap.has(String(seat.id))) {
+          const mapping = seatRowMap.get(String(seat.id))!;
+          return {
+            ...seat,
+            row: mapping.row,
+            row_label: mapping.row_label,
+            row_id: mapping.row_id,
+            number: mapping.number
+          };
+        }
+        return seat;
+      });
+
+      rowsAssignedCount += seatBands.length;
+    }
+
+    setElements(currentElements);
+    setSeats(currentSeats);
+    addToHistory(currentSeats, currentElements);
+    setShowRowLabels(true);
+
+    showAlert(
+      `⚡ Detección automática completada: Se organizaron ${rowsAssignedCount} filas ordenadas de arriba hacia abajo (${tablesAssignedCount} mesas, ${seatsAssignedCount} asientos).`,
+      'Filas Asignadas con Éxito',
+      'success'
+    );
+  };
+
+  // ─── Helpers de Gestión de Filas ───
+  const toggleRowVIP = (rowName: string, isVIP: boolean) => {
+    const updatedElements = elements.map(el => {
+      if (el.row === rowName) {
+        return {
+          ...el,
+          is_complimentary_tier: isVIP,
+          complimentary_priority: isVIP ? (el.complimentary_priority || 1) : undefined
+        };
+      }
+      return el;
+    });
+
+    const updatedSeats = seats.map(s => {
+      if (s.row === rowName) {
+        return {
+          ...s,
+          is_complimentary_tier: isVIP,
+          complimentary_priority: isVIP ? (s.complimentary_priority || 1) : undefined
+        };
+      }
+      return s;
+    });
+
+    setElements(updatedElements);
+    setSeats(updatedSeats);
+    addToHistory(updatedSeats, updatedElements);
+  };
+
+  const setRowPriority = (rowName: string, priority: number) => {
+    const clampedPriority = Math.max(1, priority);
+    const updatedElements = elements.map(el => {
+      if (el.row === rowName) {
+        return { ...el, complimentary_priority: clampedPriority };
+      }
+      return el;
+    });
+
+    const updatedSeats = seats.map(s => {
+      if (s.row === rowName) {
+        return { ...s, complimentary_priority: clampedPriority };
+      }
+      return s;
+    });
+
+    setElements(updatedElements);
+    setSeats(updatedSeats);
+    addToHistory(updatedSeats, updatedElements);
+  };
+
+  const selectRowOnCanvas = (rowName: string) => {
+    const matchedTableIds = elements.filter(el => el.row === rowName).map(el => String(el.id));
+    const matchedSeatIds = seats.filter(s => s.row === rowName).map(s => String(s.id));
+    const targetSelection = matchedTableIds.length > 0 ? matchedTableIds : matchedSeatIds;
+    setSelectedIds(targetSelection);
+    setActiveTool('select');
+  };
+
+  const renameRow = (oldRowName: string, newRowName: string) => {
+    const cleanNew = newRowName.trim();
+    if (!cleanNew) return;
+    const cleanId = `row_${cleanNew.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+
+    const updatedElements = elements.map(el => {
+      if (el.row === oldRowName) {
+        return { ...el, row: cleanNew, row_label: cleanNew, row_id: cleanId };
+      }
+      return el;
+    });
+
+    const updatedSeats = seats.map(s => {
+      if (s.row === oldRowName) {
+        return { ...s, row: cleanNew, row_label: cleanNew, row_id: cleanId };
+      }
+      return s;
+    });
+
+    setElements(updatedElements);
+    setSeats(updatedSeats);
+    addToHistory(updatedSeats, updatedElements);
   };
 
   const loadTheater = (theater: any) => {
@@ -1094,6 +1406,48 @@ export default function DesignerPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Gestor de Filas & Cortesías */}
+          {selectedTheaterId && (
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-white/5 border border-white/10">
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
+                onClick={() => setRowManagerModalOpen(true)}
+                title="Abrir Gestor de Filas y Prioridad de Cortesías"
+                className={cn(
+                  "h-8 px-3 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all flex items-center gap-1.5",
+                  venueRowsSummary.some((r: VenueRowSummary) => r.isVIP)
+                    ? "bg-amber-honey/20 border border-amber-honey/40 text-amber-honey shadow-sm shadow-amber-honey/10"
+                    : (isDark ? "bg-white/5 text-white/80 hover:bg-white/10" : "bg-slate-100 text-slate-700 hover:bg-slate-200")
+                )}
+              >
+                <Tag size={12} className="text-amber-honey" />
+                <span>Filas ({venueRowsSummary.length})</span>
+                {venueRowsSummary.filter((r: VenueRowSummary) => r.isVIP).length > 0 && (
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse ml-0.5" />
+                )}
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.96 }}
+                onClick={() => autoDetectAndGroupRows('numeric')}
+                title="Detectar y agrupar automáticamente mesas y asientos en filas horizontales (Y)"
+                className="h-8 px-2.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 bg-amber-honey text-nature-night hover:opacity-90 shadow-sm"
+              >
+                <Zap size={11} />
+                <span>Auto-Filas</span>
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                onClick={() => setShowRowLabels(!showRowLabels)}
+                title={showRowLabels ? "Ocultar indicadores de filas en el lienzo" : "Mostrar indicadores de filas en el lienzo"}
+                className={cn("w-8 h-8 rounded-lg flex items-center justify-center transition-all", showRowLabels ? "text-amber-honey bg-amber-honey/10" : "text-white/40 hover:text-white")}
+              >
+                {showRowLabels ? <Eye size={13} /> : <EyeOff size={13} />}
+              </motion.button>
+            </div>
+          )}
+
           {/* Vaciar Canvas / Lienzo Blanco */}
           {selectedTheaterId && (
             <motion.button
@@ -1126,7 +1480,7 @@ export default function DesignerPage() {
 
       <div className="flex-1 flex overflow-hidden">
         <main className="flex-1 relative">
-          <SeatingChart seats={seats} elements={elements} isDesignMode={true} theme={theme} selectedIds={selectedIds} activeTool={activeTool} occupancy={occupancySim} onUpdate={handleUpdate} onSelect={setSelectedIds} onChartClick={handleChartClick} />
+          <SeatingChart seats={seats} elements={elements} isDesignMode={true} theme={theme} selectedIds={selectedIds} activeTool={activeTool} occupancy={occupancySim} onUpdate={handleUpdate} onSelect={setSelectedIds} onChartClick={handleChartClick} showRowLabels={showRowLabels} />
 
           <div className="absolute top-6 left-6 flex flex-col gap-3 pointer-events-none">
             <div className={cn("px-4 py-2 backdrop-blur-xl border rounded-2xl flex items-center gap-3 shadow-lg w-fit", isDark ? "bg-black/40 border-white/10" : "bg-white/80 border-slate-200")}><div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" /><span className={cn("text-[10px] font-bold tracking-wider", isDark ? "text-white/50" : "text-slate-500")}>LIVE EDITING MODE</span></div>
@@ -1137,6 +1491,24 @@ export default function DesignerPage() {
                 <div className="flex justify-between items-center"><div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-red-500" /><span className={cn("text-[9px] font-bold uppercase tracking-wider", isDark ? "text-white/40" : "text-slate-500")}>Reserved/Sold</span></div><span className={cn("text-[10px] font-black", isDark ? "text-white" : "text-slate-900")}>{seats.filter(s => s.status !== 'available').length}</span></div>
                 <div className="h-px bg-white/5 my-1" />
                 <div className="flex justify-between items-center"><div className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-amber-honey" /><span className={cn("text-[9px] font-bold uppercase tracking-wider", isDark ? "text-white/40" : "text-slate-500")}>GA Capacity</span></div><span className={cn("text-[10px] font-black", isDark ? "text-white" : "text-slate-900")}>{elements.reduce((acc, el) => acc + (el.isGA ? (el.capacity || 0) : 0), 0)}</span></div>
+                <div className="h-px bg-white/5 my-1" />
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span className={cn("text-[9px] font-bold uppercase tracking-wider", isDark ? "text-white/40" : "text-slate-500")}>Filas Asignadas</span>
+                  </div>
+                  <span className={cn("text-[10px] font-black", isDark ? "text-white" : "text-slate-900")}>
+                    {venueRowsSummary.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setRowManagerModalOpen(true)}
+                  className="pointer-events-auto w-full py-2 px-3 mt-1 rounded-xl bg-amber-honey/15 hover:bg-amber-honey/25 border border-amber-honey/30 text-amber-honey text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                >
+                  <Tag size={12} />
+                  <span>Configurar Filas</span>
+                </button>
               </div>
             </div>
           </div>
@@ -1173,9 +1545,9 @@ export default function DesignerPage() {
           </AnimatePresence>
         </main>
 
-        <AnimatePresence>
-          {selectedIds.length > 0 && (
-            <motion.aside initial={{ x: 400, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 400, opacity: 0 }} className={cn("w-80 h-full max-h-screen border-l flex flex-col z-40 shadow-2xl overflow-hidden", isDark ? "bg-[#0b0d17]/90 border-white/10" : "bg-white/95 border-slate-200")}>
+        <AnimatePresence mode="wait">
+          {selectedIds.length > 0 ? (
+            <motion.aside key="selected-properties" initial={{ x: 400, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 400, opacity: 0 }} className={cn("w-80 h-full max-h-screen border-l flex flex-col z-40 shadow-2xl overflow-hidden", isDark ? "bg-[#0b0d17]/90 border-white/10" : "bg-white/95 border-slate-200")}>
               <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-8 pb-40">
                 <div className="flex items-center justify-between mb-8"><div className="flex flex-col"><h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-honey">Properties</h3><span className={cn("text-[8px] font-bold uppercase tracking-widest mt-1", isDark ? "text-white/20" : "text-slate-400")}>{selectedIds.length} Object(s) Selected</span></div><button onClick={() => { const ns = seats.filter(s => !selectedIds.includes(String(s.id))); const ne = elements.filter(e => !selectedIds.includes(String(e.id))); setSeats(ns); setElements(ne); setSelectedIds([]); addToHistory(ns, ne); }} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all"><Trash2 size={16} /></button></div>
                 <div className="space-y-10">
@@ -1414,6 +1786,170 @@ export default function DesignerPage() {
                         <div className="flex justify-between px-1"><label className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">Orientation</label><span className="text-[9px] font-black text-amber-honey">{firstSelected.angle || 0}°</span></div>
                         <div className={cn("p-6 rounded-2xl border", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}><input type="range" min="0" max="360" value={firstSelected.angle || 0} onChange={(e) => updateSelectedProperty('angle', parseInt(e.target.value))} onMouseUp={commitPropertyChange} className="w-full accent-amber-honey cursor-pointer" /></div>
                       </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.aside>
+          ) : (
+            <motion.aside
+              key="venue-row-control"
+              initial={{ x: 400, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 400, opacity: 0 }}
+              className={cn("w-80 h-full max-h-screen border-l flex flex-col z-40 shadow-2xl overflow-hidden", isDark ? "bg-[#0b0d17]/90 border-white/10" : "bg-white/95 border-slate-200")}
+            >
+              <div className="p-6 flex-1 overflow-y-auto custom-scrollbar space-y-6 pb-40">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-honey/15 flex items-center justify-center border border-amber-honey/30">
+                      <Layers size={16} className="text-amber-honey" />
+                    </div>
+                    <div>
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-honey">Filas & Estructura</h3>
+                      <span className={cn("text-[8px] font-bold uppercase tracking-wider block", isDark ? "text-white/30" : "text-slate-400")}>
+                        {venueRowsSummary.length} Filas Configuradas
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setRowManagerModalOpen(true)}
+                    className="p-2 rounded-xl border border-white/10 text-white/50 hover:text-white hover:bg-white/5 transition-all"
+                    title="Abrir Gestor Avanzado"
+                  >
+                    <Settings2 size={14} />
+                  </button>
+                </div>
+
+                {/* Auto Detection Card */}
+                <div className={cn("p-5 rounded-2xl border space-y-3", isDark ? "bg-amber-honey/5 border-amber-honey/25" : "bg-amber-50 border-amber-200")}>
+                  <div className="flex items-center gap-2">
+                    <Zap size={14} className="text-amber-honey" />
+                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-honey">Detección Automática</span>
+                  </div>
+                  <p className={cn("text-[8px] leading-relaxed", isDark ? "text-white/50" : "text-slate-600")}>
+                    Agrupa automáticamente todas las mesas y asientos alineados por coordenadas Y (arriba hacia abajo).
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      onClick={() => autoDetectAndGroupRows('numeric')}
+                      className="py-2.5 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider bg-amber-honey text-nature-night shadow-glow hover:scale-105 transition-all text-center"
+                    >
+                      1, 2, 3...
+                    </button>
+                    <button
+                      onClick={() => autoDetectAndGroupRows('alpha')}
+                      className={cn("py-2.5 px-2 rounded-xl text-[9px] font-black uppercase tracking-wider border hover:scale-105 transition-all text-center", isDark ? "bg-white/5 border-white/10 text-white hover:bg-white/10" : "bg-white border-slate-200 text-slate-800")}
+                    >
+                      A, B, C...
+                    </button>
+                  </div>
+                </div>
+
+                {/* Canvas Overlay Controls */}
+                <div className={cn("p-4 rounded-2xl border flex items-center justify-between", isDark ? "bg-white/5 border-white/5" : "bg-slate-50 border-slate-200")}>
+                  <div className="flex items-center gap-2.5">
+                    {showRowLabels ? <Eye size={14} className="text-amber-honey" /> : <EyeOff size={14} className="text-white/30" />}
+                    <div>
+                      <span className={cn("text-[9px] font-bold uppercase tracking-wider block", isDark ? "text-white/80" : "text-slate-800")}>
+                        Guías en Plano
+                      </span>
+                      <span className={cn("text-[7px] block", isDark ? "text-white/30" : "text-slate-400")}>
+                        Líneas y badges de fila
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRowLabels(!showRowLabels)}
+                    className={cn("w-9 h-5 rounded-full relative transition-all", showRowLabels ? "bg-amber-honey" : "bg-white/10")}
+                  >
+                    <div className={cn("absolute top-0.5 w-4 h-4 rounded-full transition-all", showRowLabels ? "right-0.5 bg-nature-night" : "left-0.5 bg-white")} />
+                  </button>
+                </div>
+
+                {/* Row Summary List */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/30">
+                      Filas ({venueRowsSummary.length})
+                    </span>
+                    <button
+                      onClick={() => setRowManagerModalOpen(true)}
+                      className="text-[8px] font-black uppercase tracking-wider text-amber-honey hover:underline flex items-center gap-1"
+                    >
+                      <Tag size={10} />
+                      Editar Todo
+                    </button>
+                  </div>
+
+                  {venueRowsSummary.length === 0 ? (
+                    <div className="p-6 text-center border border-dashed border-white/10 rounded-2xl space-y-2">
+                      <span className="text-[8px] text-white/40 block">
+                        No hay filas asignadas en este plano.
+                      </span>
+                      <button
+                        onClick={() => autoDetectAndGroupRows('numeric')}
+                        className="text-[9px] font-black uppercase tracking-widest text-amber-honey hover:underline"
+                      >
+                        ⚡ Asignar automáticamente
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[360px] overflow-y-auto custom-scrollbar pr-1">
+                      {venueRowsSummary.map((r: VenueRowSummary) => (
+                        <div
+                          key={r.name}
+                          className={cn(
+                            "p-3 rounded-xl border transition-all flex items-center justify-between gap-2",
+                            r.isVIP
+                              ? "bg-amber-honey/10 border-amber-honey/40"
+                              : isDark ? "bg-white/5 border-white/5 hover:border-white/15" : "bg-slate-50 border-slate-200"
+                          )}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-black font-mono text-white truncate">
+                                {r.name}
+                              </span>
+                              {r.isVIP && (
+                                <span className="text-[7px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-honey/20 text-amber-honey border border-amber-honey/30">
+                                  VIP P{r.priority}
+                                </span>
+                              )}
+                            </div>
+                            <span className={cn("text-[7px] block truncate mt-0.5", isDark ? "text-white/40" : "text-slate-400")}>
+                              {r.tablesCount > 0 ? `${r.tablesCount} Mesas • ` : ''}{r.seatsCount} Asientos
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            {/* Toggle VIP */}
+                            <button
+                              onClick={() => toggleRowVIP(r.name, !r.isVIP)}
+                              title={r.isVIP ? "Quitar estado VIP" : "Marcar como Fila VIP para Cortesías"}
+                              className={cn(
+                                "p-1.5 rounded-lg border transition-all",
+                                r.isVIP
+                                  ? "bg-amber-honey text-nature-night border-amber-honey"
+                                  : "border-white/10 text-white/30 hover:text-white"
+                              )}
+                            >
+                              <Shield size={12} />
+                            </button>
+
+                            {/* Select on Canvas */}
+                            <button
+                              onClick={() => selectRowOnCanvas(r.name)}
+                              title="Seleccionar en Plano"
+                              className="p-1.5 rounded-lg border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all"
+                            >
+                              <MousePointer2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1704,6 +2240,220 @@ export default function DesignerPage() {
                   <Plus size={16} />
                   Generar {tableMatrixModal.rows * tableMatrixModal.cols} Mesas ({tableMatrixModal.rows * tableMatrixModal.cols * tableMatrixModal.seatsCount} Asientos Total)
                 </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════ ROW MANAGER & COMPLIMENTARY TIERS MODAL ══════ */}
+      <AnimatePresence>
+        {rowManagerModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md"
+            onClick={(e) => { if (e.target === e.currentTarget) setRowManagerModalOpen(false); }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 20 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+              className={cn(
+                "w-full max-w-3xl rounded-[2.5rem] border p-8 shadow-2xl backdrop-blur-3xl flex flex-col max-h-[90vh]",
+                isDark ? "bg-[#0b0d17]/95 border-white/10" : "bg-white/95 border-slate-200"
+              )}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-6 border-b border-white/10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-amber-honey/15 rounded-2xl flex items-center justify-center border border-amber-honey/25">
+                    <Layers size={22} className="text-amber-honey" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-widest text-amber-honey">
+                      Gestor de Filas & Cortesías VIP
+                    </h3>
+                    <p className={cn("text-xs font-medium mt-0.5", isDark ? "text-white/40" : "text-slate-500")}>
+                      Organiza la jerarquía de filas, asigna prioridades de desborde y visualiza en plano
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setRowManagerModalOpen(false)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10 text-white/40 hover:text-white hover:bg-white/5 transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Quick Actions Bar */}
+              <div className="flex items-center justify-between py-4 border-b border-white/5 flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Detección Rápida:</span>
+                  <button
+                    onClick={() => autoDetectAndGroupRows('numeric')}
+                    className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-amber-honey/15 text-amber-honey border border-amber-honey/30 hover:bg-amber-honey hover:text-nature-night transition-all flex items-center gap-1.5"
+                  >
+                    <Zap size={12} />
+                    Numérico (Fila 1, 2, 3...)
+                  </button>
+                  <button
+                    onClick={() => autoDetectAndGroupRows('alpha')}
+                    className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/5 text-white/70 border border-white/10 hover:bg-white/10 hover:text-white transition-all flex items-center gap-1.5"
+                  >
+                    <Zap size={12} />
+                    Alfabético (Fila A, B, C...)
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowRowLabels(!showRowLabels)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all flex items-center gap-1.5",
+                      showRowLabels ? "bg-amber-honey/20 text-amber-honey border-amber-honey/40" : "bg-white/5 text-white/40 border-white/10"
+                    )}
+                  >
+                    {showRowLabels ? <Eye size={12} /> : <EyeOff size={12} />}
+                    {showRowLabels ? 'Guías Visibles' : 'Guías Ocultas'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Rows Table */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar my-4 space-y-3 pr-2">
+                {venueRowsSummary.length === 0 ? (
+                  <div className="p-12 text-center border border-dashed border-white/10 rounded-2xl space-y-4">
+                    <Layers size={36} className="text-amber-honey/40 mx-auto" />
+                    <div>
+                      <p className="text-sm font-bold text-white/80">No hay filas configuradas en este recinto</p>
+                      <p className="text-xs text-white/40 mt-1 max-w-md mx-auto">
+                        Utiliza los botones de detección automática de arriba para agrupar todas las mesas y asientos alineados por coordenadas.
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => autoDetectAndGroupRows('numeric')}
+                      className="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-amber-honey text-nature-night shadow-glow hover:scale-105 transition-all"
+                    >
+                      ⚡ Generar Filas Automáticas Ahora
+                    </button>
+                  </div>
+                ) : (
+                  venueRowsSummary.map((rowItem: VenueRowSummary, idx: number) => (
+                    <div
+                      key={rowItem.name}
+                      className={cn(
+                        "p-4 rounded-2xl border transition-all flex items-center justify-between gap-4",
+                        rowItem.isVIP
+                          ? "bg-amber-honey/5 border-amber-honey/30 hover:border-amber-honey/60"
+                          : isDark ? "bg-white/5 border-white/5 hover:border-white/15" : "bg-slate-50 border-slate-200 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-xs font-mono font-bold text-white/40">
+                          #{idx + 1}
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              defaultValue={rowItem.name}
+                              onBlur={(e) => {
+                                if (e.target.value !== rowItem.name) {
+                                  renameRow(rowItem.name, e.target.value);
+                                }
+                              }}
+                              className={cn(
+                                "text-sm font-bold font-mono px-2 py-1 rounded-lg border outline-none",
+                                isDark ? "bg-black/40 border-white/10 text-white focus:border-amber-honey" : "bg-white border-slate-200 text-slate-900 focus:border-amber-500"
+                              )}
+                            />
+                            {rowItem.isVIP && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-honey/20 text-amber-honey border border-amber-honey/30">
+                                ⭐ Cortesía VIP
+                              </span>
+                            )}
+                          </div>
+                          <span className={cn("text-[10px] block mt-1", isDark ? "text-white/40" : "text-slate-400")}>
+                            {rowItem.tablesCount > 0 ? `${rowItem.tablesCount} Mesas • ` : ''}{rowItem.seatsCount} Asientos vinculados
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        {/* VIP Toggle */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-white/50">Cortesía</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleRowVIP(rowItem.name, !rowItem.isVIP)}
+                            className={cn(
+                              "w-10 h-5 rounded-full relative transition-all",
+                              rowItem.isVIP ? "bg-amber-honey" : "bg-white/10"
+                            )}
+                          >
+                            <div className={cn(
+                              "absolute top-1 w-3 h-3 rounded-full transition-all",
+                              rowItem.isVIP ? "right-1 bg-nature-night" : "left-1 bg-white"
+                            )} />
+                          </button>
+                        </div>
+
+                        {/* Priority Selector (Only if VIP) */}
+                        {rowItem.isVIP && (
+                          <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/10">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-amber-honey">Prioridad</span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => setRowPriority(rowItem.name, Math.max(1, rowItem.priority - 1))}
+                                className="w-5 h-5 rounded flex items-center justify-center bg-white/10 hover:bg-white/20 text-white text-[10px]"
+                              >
+                                ▼
+                              </button>
+                              <span className="text-xs font-mono font-black text-amber-honey w-6 text-center">
+                                P{rowItem.priority}
+                              </span>
+                              <button
+                                onClick={() => setRowPriority(rowItem.name, rowItem.priority + 1)}
+                                className="w-5 h-5 rounded flex items-center justify-center bg-white/10 hover:bg-white/20 text-white text-[10px]"
+                              >
+                                ▲
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Select on Canvas Button */}
+                        <button
+                          onClick={() => {
+                            selectRowOnCanvas(rowItem.name);
+                            setRowManagerModalOpen(false);
+                          }}
+                          className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white transition-all flex items-center gap-1.5"
+                        >
+                          <Eye size={12} />
+                          Ver en Plano
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                <span className={cn("text-xs font-medium", isDark ? "text-white/40" : "text-slate-400")}>
+                  {venueRowsSummary.filter((r: VenueRowSummary) => r.isVIP).length} fila(s) habilitada(s) para cortesías con desborde en cadena.
+                </span>
+                <button
+                  onClick={() => setRowManagerModalOpen(false)}
+                  className="px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest bg-amber-honey text-nature-night shadow-glow hover:scale-105 transition-all"
+                >
+                  Listo
+                </button>
               </div>
             </motion.div>
           </motion.div>

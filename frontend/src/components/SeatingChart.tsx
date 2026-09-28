@@ -13,6 +13,7 @@ export interface Seat {
   y: number;
   row: string;
   row_label?: string;
+  row_id?: string;
   number: number;
   status: 'available' | 'occupied' | 'selected' | 'reserved';
   category: string;
@@ -22,6 +23,8 @@ export interface Seat {
   table_id?: string | number;
   tableId?: string | number;
   is_complimentary_eligible?: boolean;
+  is_complimentary_tier?: boolean;
+  complimentary_priority?: number;
 }
 
 export interface MapElement {
@@ -32,6 +35,11 @@ export interface MapElement {
   w?: number;
   h?: number;
   label?: string;
+  row?: string;
+  row_label?: string;
+  row_id?: string;
+  is_complimentary_tier?: boolean;
+  complimentary_priority?: number;
   icon?: 'stairs' | 'wc' | 'bar' | 'exit';
   color?: string;
   category?: string;
@@ -45,9 +53,9 @@ export interface MapElement {
   seat_arrangement?: string;
 }
 
-interface SeatingChartProps {
+export interface SeatingChartProps {
   seats: Seat[];
-  theme?: 'light' | 'dark';
+  theme?: 'light' | 'dark' | any;
   elements?: MapElement[];
   occupancy?: { [key: string]: number };
   isDesignMode?: boolean;
@@ -61,6 +69,7 @@ interface SeatingChartProps {
   onInvalidSelectionAttempt?: (seat: Seat, activeRows: string[]) => void;
   orphanSeatIds?: (string | number)[];
   highlightPulseTrigger?: number;
+  showRowLabels?: boolean;
 }
 
 const SeatingChart: React.FC<SeatingChartProps> = ({
@@ -78,7 +87,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   restrictedRows = [],
   onInvalidSelectionAttempt,
   orphanSeatIds = [],
-  highlightPulseTrigger = 0
+  highlightPulseTrigger = 0,
+  showRowLabels = true,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -320,6 +330,127 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     ctx.translate(transform.x * dpr, transform.y * dpr);
     ctx.scale(gridScale, gridScale);
 
+    // ─── Render Row Bands & Guides (when showRowLabels is true) ───
+    if (showRowLabels) {
+      const rowBoundsMap = new Map<string, {
+        minX: number;
+        maxX: number;
+        minY: number;
+        maxY: number;
+        isVIP: boolean;
+        priority?: number;
+        count: number;
+      }>();
+
+      // Collect elements grouped by row
+      elements.forEach(el => {
+        const rowKey = String(el.row || '').trim();
+        if (!rowKey) return;
+        const halfW = (el.w || 100) / 2 + 25;
+        const halfH = (el.h || 100) / 2 + 25;
+        const entry = rowBoundsMap.get(rowKey) || {
+          minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity,
+          isVIP: !!el.is_complimentary_tier, priority: el.complimentary_priority,
+          count: 0
+        };
+        entry.minX = Math.min(entry.minX, el.x - halfW);
+        entry.maxX = Math.max(entry.maxX, el.x + halfW);
+        entry.minY = Math.min(entry.minY, el.y - halfH);
+        entry.maxY = Math.max(entry.maxY, el.y + halfH);
+        entry.count++;
+        if (el.is_complimentary_tier) entry.isVIP = true;
+        if (el.complimentary_priority) entry.priority = el.complimentary_priority;
+        rowBoundsMap.set(rowKey, entry);
+      });
+
+      // Collect standalone seats grouped by row
+      seats.forEach(s => {
+        const rowKey = String(s.row || '').trim();
+        if (!rowKey || rowKey.toLowerCase().startsWith('mesa')) return;
+        const entry = rowBoundsMap.get(rowKey) || {
+          minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity,
+          isVIP: !!s.is_complimentary_tier, priority: s.complimentary_priority,
+          count: 0
+        };
+        entry.minX = Math.min(entry.minX, s.x - 20);
+        entry.maxX = Math.max(entry.maxX, s.x + 20);
+        entry.minY = Math.min(entry.minY, s.y - 20);
+        entry.maxY = Math.max(entry.maxY, s.y + 20);
+        entry.count++;
+        if (s.is_complimentary_tier) entry.isVIP = true;
+        rowBoundsMap.set(rowKey, entry);
+      });
+
+      // Draw Row Guides & Badges
+      rowBoundsMap.forEach((bounds, rowName) => {
+        if (bounds.minX === Infinity) return;
+        const centerY = (bounds.minY + bounds.maxY) / 2;
+        const leftX = bounds.minX - 65;
+        const rightX = bounds.maxX + 65;
+
+        ctx.save();
+        // Dashed horizontal guideline
+        ctx.setLineDash([5, 8]);
+        ctx.strokeStyle = bounds.isVIP
+          ? 'rgba(245, 158, 11, 0.4)'
+          : (theme === 'dark' ? 'rgba(255, 255, 255, 0.09)' : 'rgba(0, 0, 0, 0.09)');
+        ctx.lineWidth = bounds.isVIP ? 1.5 : 1;
+        ctx.beginPath();
+        ctx.moveTo(leftX + 45, centerY);
+        ctx.lineTo(rightX - 45, centerY);
+        ctx.stroke();
+
+        // Badge parameters
+        ctx.setLineDash([]);
+        const displayLabel = rowName.toUpperCase();
+        ctx.font = '900 10.5px Outfit, sans-serif';
+        const labelWidth = ctx.measureText(displayLabel).width;
+        const badgeW = Math.max(68, labelWidth + 24);
+        const badgeH = 24;
+
+        // Left Badge Pill
+        ctx.fillStyle = bounds.isVIP
+          ? (theme === 'dark' ? 'rgba(245, 158, 11, 0.18)' : 'rgba(245, 158, 11, 0.15)')
+          : (theme === 'dark' ? 'rgba(15, 23, 42, 0.9)' : 'rgba(241, 245, 249, 0.95)');
+        ctx.strokeStyle = bounds.isVIP ? '#F59E0B' : (theme === 'dark' ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.22)');
+        ctx.lineWidth = bounds.isVIP ? 2 : 1;
+
+        if (bounds.isVIP) {
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = '#F59E0B';
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(leftX - badgeW / 2, centerY - badgeH / 2, badgeW, badgeH, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = bounds.isVIP ? '#F59E0B' : (theme === 'dark' ? '#F8FAFC' : '#0F172A');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(displayLabel, leftX, centerY);
+
+        if (bounds.isVIP) {
+          ctx.font = '800 7.5px Outfit, sans-serif';
+          ctx.fillStyle = '#FEF08A';
+          ctx.fillText(`VIP • P${bounds.priority || 1}`, leftX, centerY - 16);
+        }
+
+        // Right Badge Pill
+        ctx.font = '900 10.5px Outfit, sans-serif';
+        ctx.beginPath();
+        ctx.roundRect(rightX - badgeW / 2, centerY - badgeH / 2, badgeW, badgeH, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = bounds.isVIP ? '#F59E0B' : (theme === 'dark' ? '#F8FAFC' : '#0F172A');
+        ctx.fillText(displayLabel, rightX, centerY);
+
+        ctx.restore();
+      });
+    }
+
     // Render Elements
     elements.forEach(el => {
       ctx.save(); ctx.translate(el.x, el.y); ctx.rotate((el.angle || 0) * Math.PI / 180);
@@ -457,10 +588,19 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         const headingColor = themeObj?.headingColor || themeObj?.primaryColor || (theme === 'dark' ? '#E5A93B' : '#000');
         const textColor = themeObj?.textColor || (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)');
 
+        const hasRowSubtitle = !!el.row && !el.isGA;
         ctx.font = '800 12px Outfit';
         ctx.fillStyle = isSelected ? '#000' : headingColor;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(el.label.toUpperCase(), 0, (el.isGA && el.capacity) ? -8 : 0);
+        ctx.fillText(el.label.toUpperCase(), 0, (el.isGA && el.capacity) ? -8 : (hasRowSubtitle ? -7 : 0));
+
+        if (hasRowSubtitle) {
+          ctx.font = '800 8px Outfit';
+          ctx.fillStyle = isSelected
+            ? 'rgba(0,0,0,0.7)'
+            : (el.is_complimentary_tier ? '#F59E0B' : (theme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)'));
+          ctx.fillText(String(el.row).toUpperCase(), 0, 9);
+        }
 
         if (el.isGA && el.capacity) {
           const sold = occupancy[el.id] || 0;
