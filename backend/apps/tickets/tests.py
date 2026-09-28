@@ -893,12 +893,11 @@ class TicketsAppTests(APITestCase):
         from apps.tickets.services.coupon_validator import determine_active_complimentary_row
         from apps.tickets.models import Coupon, Theater, Event
 
-        cabaret_theater = Theater.objects.create(name="Cabaret Club Staging", capacity=16)
+        cabaret_theater = Theater.objects.create(name="Cabaret Club Staging")
         cabaret_event = Event.objects.create(
             title="Cabaret Night",
             theater=cabaret_theater,
-            date=timezone.now() + timezone.timedelta(days=7),
-            base_ticket_price=800
+            date=timezone.now() + timezone.timedelta(days=7)
         )
 
         for t_num in [31, 32, 33, 34]:
@@ -932,12 +931,11 @@ class TicketsAppTests(APITestCase):
         from apps.tickets.services.coupon_validator import determine_active_complimentary_row
         from apps.tickets.models import Coupon, Theater, Event
 
-        theater = Theater.objects.create(name="London Pub Spatial", capacity=16)
+        theater = Theater.objects.create(name="London Pub Spatial")
         event = Event.objects.create(
             title="London Pub Jazz",
             theater=theater,
-            date=timezone.now() + timezone.timedelta(days=7),
-            base_ticket_price=600
+            date=timezone.now() + timezone.timedelta(days=7)
         )
 
         # 4 bands of tables: Band 0 (Y=100 -> A), Band 1 (Y=250 -> B), Band 2 (Y=500 -> C), Band 3 (Y=850 -> D)
@@ -981,12 +979,11 @@ class TicketsAppTests(APITestCase):
         from apps.tickets.services.coupon_validator import determine_active_complimentary_row
         from apps.tickets.models import Coupon, Theater, Event
 
-        theater = Theater.objects.create(name="Staging Layout", capacity=4)
+        theater = Theater.objects.create(name="Staging Layout")
         event = Event.objects.create(
             title="Staging Show",
             theater=theater,
-            date=timezone.now() + timezone.timedelta(days=7),
-            base_ticket_price=500
+            date=timezone.now() + timezone.timedelta(days=7)
         )
 
         for i in range(1, 5):

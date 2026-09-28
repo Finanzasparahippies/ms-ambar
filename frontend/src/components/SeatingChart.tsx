@@ -22,6 +22,7 @@ export interface Seat {
   base_price?: number | string;
   table_id?: string | number;
   tableId?: string | number;
+  section?: string;
   is_complimentary_eligible?: boolean;
   is_complimentary_tier?: boolean;
   complimentary_priority?: number;
@@ -35,6 +36,8 @@ export interface MapElement {
   w?: number;
   h?: number;
   label?: string;
+  name?: string;
+  tableNumber?: number | string;
   row?: string;
   row_label?: string;
   row_id?: string;
@@ -71,6 +74,122 @@ export interface SeatingChartProps {
   highlightPulseTrigger?: number;
   showRowLabels?: boolean;
 }
+
+/**
+ * Concordancia flexible para determinar si una mesa o elemento forma parte de las filas/mesas prioritarias de cortesía.
+ */
+export const isElementAllowedByRestriction = (
+  el: MapElement,
+  allowedRows: string[],
+  normalizedAllowedSet: Set<string>,
+  seats: Seat[]
+): boolean => {
+  if (!allowedRows || allowedRows.length === 0) return true;
+
+  // 1. Concordancia directa sobre atributos de la mesa (label, row, name, id)
+  const candidateTexts = [el.label, el.row, el.name, el.id].filter(Boolean) as string[];
+  for (const text of candidateTexts) {
+    const clean = text.trim().toLowerCase();
+    const cleanNoFila = clean.replace(/^fila\s+/i, '').trim();
+    const cleanNoMesa = clean.replace(/^mesa\s+/i, '').trim();
+
+    if (normalizedAllowedSet.has(clean) || normalizedAllowedSet.has(cleanNoFila) || normalizedAllowedSet.has(cleanNoMesa)) {
+      return true;
+    }
+
+    for (const raw of allowedRows) {
+      const rawClean = raw.trim().toLowerCase();
+      const rawNoFila = rawClean.replace(/^fila\s+/i, '').trim();
+      const rawNoMesa = rawClean.replace(/^mesa\s+/i, '').trim();
+      if (clean === rawClean || cleanNoFila === rawNoFila || cleanNoMesa === rawNoMesa) return true;
+      if (clean.includes(rawClean) || rawClean.includes(clean)) return true;
+    }
+  }
+
+  // 2. Concordancia por asientos hijos pertenecientes a esta mesa
+  const childSeats = seats.filter(s => s.tableId === el.id || (el.label && s.row === el.label));
+  if (childSeats.length > 0) {
+    return childSeats.some(s => {
+      if (s.is_complimentary_eligible) return true;
+      const sRow = String(s.row || '').trim().toLowerCase();
+      const sRowNoFila = sRow.replace(/^fila\s+/i, '').trim();
+      const sRowNoMesa = sRow.replace(/^mesa\s+/i, '').trim();
+
+      if (normalizedAllowedSet.has(sRow) || normalizedAllowedSet.has(sRowNoFila) || normalizedAllowedSet.has(sRowNoMesa)) {
+        return true;
+      }
+      for (const raw of allowedRows) {
+        const rawClean = raw.trim().toLowerCase();
+        const rawNoFila = rawClean.replace(/^fila\s+/i, '').trim();
+        const rawNoMesa = rawClean.replace(/^mesa\s+/i, '').trim();
+        if (sRow === rawClean || sRowNoFila === rawNoFila || sRowNoMesa === rawNoMesa) return true;
+        if (sRow.includes(rawClean) || rawClean.includes(sRow)) return true;
+      }
+      return false;
+    });
+  }
+
+  return false;
+};
+
+/**
+ * Concordancia flexible para determinar si un asiento individual es elegible por la restricción de cortesía.
+ */
+export const isSeatAllowedByRestriction = (
+  seat: Seat,
+  allowedRows: string[],
+  normalizedAllowedSet: Set<string>,
+  elements: MapElement[]
+): boolean => {
+  if (!allowedRows || allowedRows.length === 0) return true;
+  if (seat.is_complimentary_eligible) return true;
+
+  const candidateTexts = [seat.row, seat.section].filter(Boolean) as string[];
+  for (const text of candidateTexts) {
+    const clean = String(text).trim().toLowerCase();
+    const cleanNoFila = clean.replace(/^fila\s+/i, '').trim();
+    const cleanNoMesa = clean.replace(/^mesa\s+/i, '').trim();
+
+    if (normalizedAllowedSet.has(clean) || normalizedAllowedSet.has(cleanNoFila) || normalizedAllowedSet.has(cleanNoMesa)) {
+      return true;
+    }
+
+    for (const raw of allowedRows) {
+      const rawClean = raw.trim().toLowerCase();
+      const rawNoFila = rawClean.replace(/^fila\s+/i, '').trim();
+      const rawNoMesa = rawClean.replace(/^mesa\s+/i, '').trim();
+      if (clean === rawClean || cleanNoFila === rawNoFila || cleanNoMesa === rawNoMesa) return true;
+      if (clean.includes(rawClean) || rawClean.includes(clean)) return true;
+    }
+  }
+
+  // 3. Si el asiento tiene tableId, verificar la mesa padre
+  if (seat.tableId) {
+    const parentTable = elements.find(el => el.id === seat.tableId);
+    if (parentTable) {
+      const tableTexts = [parentTable.label, parentTable.row, parentTable.name].filter(Boolean) as string[];
+      for (const text of tableTexts) {
+        const clean = String(text).trim().toLowerCase();
+        const cleanNoFila = clean.replace(/^fila\s+/i, '').trim();
+        const cleanNoMesa = clean.replace(/^mesa\s+/i, '').trim();
+
+        if (normalizedAllowedSet.has(clean) || normalizedAllowedSet.has(cleanNoFila) || normalizedAllowedSet.has(cleanNoMesa)) {
+          return true;
+        }
+
+        for (const raw of allowedRows) {
+          const rawClean = raw.trim().toLowerCase();
+          const rawNoFila = rawClean.replace(/^fila\s+/i, '').trim();
+          const rawNoMesa = rawClean.replace(/^mesa\s+/i, '').trim();
+          if (clean === rawClean || cleanNoFila === rawNoFila || cleanNoMesa === rawNoMesa) return true;
+          if (clean.includes(rawClean) || rawClean.includes(clean)) return true;
+        }
+      }
+    }
+  }
+
+  return false;
+};
 
 const SeatingChart: React.FC<SeatingChartProps> = ({
   seats: initialSeats,
@@ -456,8 +575,28 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       ctx.save(); ctx.translate(el.x, el.y); ctx.rotate((el.angle || 0) * Math.PI / 180);
       const isSelected = selectedSet.has(el.id);
       const isHovered = hoveredId === el.id;
-      if (isSelected) { ctx.shadowBlur = 15; ctx.shadowColor = '#FFBF00'; }
-      else if (isHovered) { ctx.shadowBlur = 10; ctx.shadowColor = theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)'; }
+      const sides = el.sides ?? (el.type === 'circle' ? 0 : 4), w = el.w || 100, h = el.h || 100;
+      const shapeType = el.type || 'rect';
+      const isTable = shapeType === 'table' || !!el.tableShape || !!el.table_shape;
+      const isAllowedTable = !hasRowRestriction || isElementAllowedByRestriction(el, restrictedRows, normalizedRestrictedRows, seats);
+
+      if (hasRowRestriction && isTable && !isAllowedTable) {
+        ctx.globalAlpha = 0.25;
+      }
+
+      const now = Date.now();
+      const isHighPulse = pulseEndTimeRef.current > now;
+      const pulseNorm = 0.5 + 0.5 * Math.sin(now / (isHighPulse ? 140 : 320));
+
+      if (isSelected) {
+        ctx.shadowBlur = 15; ctx.shadowColor = '#FFBF00';
+      } else if (hasRowRestriction && isTable && isAllowedTable) {
+        const haloBlur = isHighPulse ? (24 + pulseNorm * 16) : (14 + pulseNorm * 8);
+        ctx.shadowBlur = haloBlur;
+        ctx.shadowColor = '#F59E0B';
+      } else if (isHovered) {
+        ctx.shadowBlur = 10; ctx.shadowColor = theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)';
+      }
 
       if (el.isGA) {
         ctx.setLineDash([5, 5]);
@@ -467,10 +606,19 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.fillStyle = el.color || (theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)');
       }
 
-      ctx.strokeStyle = isSelected ? '#FFBF00' : isHovered ? (theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)') : (theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)');
-      ctx.lineWidth = isSelected ? 3 : 1.5;
-      const sides = el.sides ?? (el.type === 'circle' ? 0 : 4), w = el.w || 100, h = el.h || 100;
-      const shapeType = el.type || 'rect';
+      if (isSelected) {
+        ctx.strokeStyle = '#FFBF00';
+        ctx.lineWidth = 3;
+      } else if (hasRowRestriction && isTable && isAllowedTable) {
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 2.5;
+      } else if (isHovered) {
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)';
+        ctx.lineWidth = 1.5;
+      } else {
+        ctx.strokeStyle = theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = 1.5;
+      }
 
       if (shapeType === 'table') {
         const tableShape = el.tableShape || el.table_shape || 'circle';
@@ -583,23 +731,29 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.closePath(); ctx.fill(); ctx.stroke();
       }
       ctx.shadowBlur = 0;
-      if (el.label) {
+      const tableLabel = el.label || el.name || (el.tableNumber ? `Mesa ${el.tableNumber}` : (isTable ? 'Mesa' : ''));
+      if (tableLabel) {
         const themeObj = typeof theme === 'object' ? (theme as any) : null;
-        const headingColor = themeObj?.headingColor || themeObj?.primaryColor || (theme === 'dark' ? '#E5A93B' : '#000');
+        const headingColor = (hasRowRestriction && isAllowedTable && isTable)
+          ? '#F59E0B'
+          : (themeObj?.headingColor || themeObj?.primaryColor || (theme === 'dark' ? '#E5A93B' : '#000'));
         const textColor = themeObj?.textColor || (theme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)');
 
-        const hasRowSubtitle = !!el.row && !el.isGA;
+        const hasRowSubtitle = (!!el.row && !el.isGA) || (hasRowRestriction && isAllowedTable && isTable);
         ctx.font = '800 12px Outfit';
         ctx.fillStyle = isSelected ? '#000' : headingColor;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(el.label.toUpperCase(), 0, (el.isGA && el.capacity) ? -8 : (hasRowSubtitle ? -7 : 0));
+        ctx.fillText(tableLabel.toUpperCase(), 0, (el.isGA && el.capacity) ? -8 : (hasRowSubtitle ? -7 : 0));
 
         if (hasRowSubtitle) {
           ctx.font = '800 8px Outfit';
           ctx.fillStyle = isSelected
             ? 'rgba(0,0,0,0.7)'
-            : (el.is_complimentary_tier ? '#F59E0B' : (theme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)'));
-          ctx.fillText(String(el.row).toUpperCase(), 0, 9);
+            : ((hasRowRestriction && isAllowedTable && isTable)
+                ? '#F59E0B'
+                : (el.is_complimentary_tier ? '#F59E0B' : (theme === 'dark' ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)')));
+          const subText = (hasRowRestriction && isAllowedTable && isTable) ? '⭐ CORTESÍA' : String(el.row || '').toUpperCase();
+          ctx.fillText(subText, 0, 9);
         }
 
         if (el.isGA && el.capacity) {
@@ -631,9 +785,8 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const isHovered = hoveredId === String(seat.id);
       const isOccupied = seat.status === 'occupied' || seat.status === 'reserved';
 
-      // Verificar si el asiento pertenece a la fila permitida por cortesía
-      const seatRowNorm = String(seat.row || '').toLowerCase().replace(/^fila\s+/i, '').trim();
-      const isAllowedByRestriction = !hasRowRestriction || normalizedRestrictedRows.has(seatRowNorm);
+      // Verificar si el asiento pertenece a la fila o mesa permitida por cortesía
+      const isAllowedByRestriction = isSeatAllowedByRestriction(seat, restrictedRows, normalizedRestrictedRows, elements);
 
       if (hasRowRestriction && !isAllowedByRestriction) {
         ctx.globalAlpha = 0.25;
@@ -867,8 +1020,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         setIsPanning(true);
       } else {
         if (hitSeat && hitSeat.status === 'available') {
-          const seatRowNorm = String(hitSeat.row || '').toLowerCase().replace(/^fila\s+/i, '').trim();
-          const isAllowed = !hasRowRestriction || normalizedRestrictedRows.has(seatRowNorm) || !!hitSeat.is_complimentary_eligible;
+          const isAllowed = isSeatAllowedByRestriction(hitSeat, restrictedRows, normalizedRestrictedRows, elements);
           if (hasRowRestriction && !isAllowed) {
             pulseEndTimeRef.current = Date.now() + 2500;
             onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);
@@ -980,8 +1132,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         setSelectionRect({ x, y, w: 0, h: 0 });
       } else {
         if (hitSeat && hitSeat.status === 'available') {
-          const seatRowNorm = String(hitSeat.row || '').toLowerCase().replace(/^fila\s+/i, '').trim();
-          const isAllowed = !hasRowRestriction || normalizedRestrictedRows.has(seatRowNorm) || !!hitSeat.is_complimentary_eligible;
+          const isAllowed = isSeatAllowedByRestriction(hitSeat, restrictedRows, normalizedRestrictedRows, elements);
           if (hasRowRestriction && !isAllowed) {
             pulseEndTimeRef.current = Date.now() + 2500;
             onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);

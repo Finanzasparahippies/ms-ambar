@@ -435,12 +435,22 @@ const TourPage = () => {
   };
 
   const handleInvalidSeatAttempt = (seat: any, allowedRows: string[]) => {
-    const rawLabel = activeRowName || (allowedRows.length > 0 ? allowedRows[0] : 'fila designada');
-    const displayLabel = rawLabel.toLowerCase().startsWith('fila') || rawLabel.toLowerCase().startsWith('mesa')
-      ? rawLabel
-      : `Fila ${rawLabel}`;
+    let displayLabel = activeRowName;
+    if (!displayLabel) {
+      const tableRows = allowedRows.filter(r => /^mesa\s+\d+/i.test(r.trim()));
+      if (tableRows.length > 1) {
+        displayLabel = `mesas habilitadas [${tableRows[0]} a ${tableRows[tableRows.length - 1]}]`;
+      } else if (allowedRows.length > 0) {
+        const raw = allowedRows[0];
+        displayLabel = raw.toLowerCase().startsWith('fila') || raw.toLowerCase().startsWith('mesa')
+          ? raw
+          : `Fila ${raw}`;
+      } else {
+        displayLabel = 'mesas o filas designadas';
+      }
+    }
     showAlert(
-      `Este cupón de cortesía es válido exclusivamente en la [${displayLabel}]. Selecciona un asiento iluminado.`,
+      `Tu cupón de cortesía aplica para las ${displayLabel}. Por favor, selecciona tu asiento en las ubicaciones habilitadas e iluminadas.`,
       'Zona Restringida por Cortesía',
       'warning'
     );
@@ -887,11 +897,22 @@ const TourPage = () => {
                                 </span>
                               </div>
                               <p className="text-xs md:text-sm font-bold text-white mt-0.5 leading-snug">
-                                Este cupón de cortesía es válido exclusivamente en la{' '}
+                                Tu cupón de cortesía aplica para las{' '}
                                 <strong className="text-amber-300 underline underline-offset-4 decoration-amber-400/60 decoration-2">
-                                  {activeRowName || (activeAllowedRows[0]?.toLowerCase().startsWith('fila') ? activeAllowedRows[0] : `Fila ${activeAllowedRows[0]}`)}
+                                  {activeRowName || (
+                                    (() => {
+                                      const tableRows = activeAllowedRows.filter(r => /^mesa\s+\d+/i.test(r.trim()));
+                                      if (tableRows.length > 1) {
+                                        return `mesas habilitadas [${tableRows[0]} a ${tableRows[tableRows.length - 1]}]`;
+                                      }
+                                      const first = activeAllowedRows[0];
+                                      return first?.toLowerCase().startsWith('fila') || first?.toLowerCase().startsWith('mesa')
+                                        ? first
+                                        : `Fila ${first || 'Designada'}`;
+                                    })()
+                                  )}
                                 </strong>
-                                . Selecciona un asiento iluminado.
+                                . Selecciona tu asiento.
                               </p>
                             </div>
                           </div>

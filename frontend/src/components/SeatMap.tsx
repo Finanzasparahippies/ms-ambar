@@ -38,12 +38,16 @@ export const SeatMap: React.FC<SeatMapProps> = ({
   const displayRowLabel = useMemo(() => {
     if (activeRowName && activeRowName.trim()) return activeRowName.trim();
     if (activeAllowedRows.length > 0) {
+      const tableRows = activeAllowedRows.filter(r => /^mesa\s+\d+/i.test(r.trim()));
+      if (tableRows.length > 1) {
+        return `mesas habilitadas [${tableRows[0]} a ${tableRows[tableRows.length - 1]}]`;
+      }
       const first = activeAllowedRows[0];
       return first.toLowerCase().startsWith('fila') || first.toLowerCase().startsWith('mesa')
         ? first
         : `Fila ${first}`;
     }
-    return 'Fila Designada';
+    return 'mesas o filas designadas';
   }, [activeRowName, activeAllowedRows]);
 
   const hasComplimentaryRestriction = isComplimentaryActive && activeAllowedRows.length > 0;
@@ -80,11 +84,11 @@ export const SeatMap: React.FC<SeatMapProps> = ({
                     </span>
                   </div>
                   <p className="text-sm font-bold text-white mt-0.5 leading-snug">
-                    Este cupón es válido exclusivamente en la{' '}
+                    Tu cupón de cortesía aplica para las{' '}
                     <strong className="text-amber-300 underline underline-offset-4 decoration-amber-400/60 decoration-2">
                       {displayRowLabel}
                     </strong>
-                    . Selecciona una butaca iluminada con el halo dorado pulsante.
+                    . Selecciona tu asiento en las ubicaciones habilitadas con halo ámbar pulsante.
                   </p>
                 </div>
               </div>
