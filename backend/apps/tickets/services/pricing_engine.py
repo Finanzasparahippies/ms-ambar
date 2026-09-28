@@ -94,7 +94,6 @@ def calculate_ticket_order_pricing(
             seat_label = f"Asiento {seat.row}{seat.number}" if seat else "Asiento Numerado"
             items.append({
                 'id': str(seat.id) if seat else f'seat_{len(items) + 1}',
-                'seat': seat,
                 'seat_id': seat.id if seat else None,
                 'type': 'seat',
                 'label': seat_label,

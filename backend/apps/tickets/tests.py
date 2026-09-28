@@ -3,7 +3,7 @@ from django.test import override_settings
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.utils import timezone
-from apps.tickets.models import Theater, Event, Seat, Ticket, GADeclaration
+from apps.tickets.models import Theater, Event, Seat, Ticket, GADeclaration, Coupon
 from unittest.mock import patch
 
 class TicketsAppTests(APITestCase):
@@ -1100,16 +1100,8 @@ class TicketsAppTests(APITestCase):
         """Valida que una cortesía con max_tickets=1 cubra exactamente 1 asiento ($0) y cobre el segundo ($500)"""
         from apps.tickets.services.pricing_engine import calculate_ticket_order_pricing
 
-        seat1 = self.event_seat
-        seat2 = Seat.objects.create(
-            theater=self.theater,
-            section="Preferente",
-            row="A",
-            number=2,
-            base_price=500,
-            x=10,
-            y=10
-        )
+        seat1 = self.seat_vip
+        seat2 = self.seat_std
         coupon = Coupon.objects.create(
             code="UNIT-VIP-TEST",
             discount_type="free_vip",
@@ -1130,25 +1122,17 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(pricing['total_seats_count'], 2)
         self.assertEqual(pricing['covered_count'], 1)
         self.assertEqual(pricing['payable_count'], 1)
-        self.assertEqual(pricing['subtotal'], 500.0)
+        self.assertEqual(pricing['subtotal'], seat2.base_price * self.event.price_multiplier)
         self.assertTrue(pricing['is_hybrid_order'])
         self.assertFalse(pricing['is_free_order'])
-        self.assertGreater(pricing['grand_total'], 500.0)  # Incluye comisión de pasarela
+        self.assertGreater(pricing['grand_total'], pricing['subtotal'])  # Incluye comisión de pasarela
 
     def test_pricing_engine_exclusivity_limit_exceeded(self):
         """Valida que si allow_mixed_checkout=False y se seleccionan más asientos que max_tickets, rechaza semánticamente"""
         from apps.tickets.services.pricing_engine import calculate_ticket_order_pricing
 
-        seat1 = self.event_seat
-        seat2 = Seat.objects.create(
-            theater=self.theater,
-            section="Preferente",
-            row="B",
-            number=2,
-            base_price=500,
-            x=15,
-            y=15
-        )
+        seat1 = self.seat_vip
+        seat2 = self.seat_std
         coupon = Coupon.objects.create(
             code="STRICT-VIP-TEST",
             discount_type="free_vip",
@@ -1184,7 +1168,7 @@ class TicketsAppTests(APITestCase):
         # Simular una orden previa con ese correo y cupón
         Ticket.objects.create(
             event=self.event,
-            seat=self.event_seat,
+            seat=self.seat_vip,
             user_email="fan@example.com",
             user_name="Fan",
             status="paid",

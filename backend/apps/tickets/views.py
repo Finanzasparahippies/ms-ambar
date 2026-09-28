@@ -623,6 +623,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                     seats = matching_seats + other_seats
 
         # --- 3. Motor de Precios Unitarios y Liquidación Híbrida ---
+        seat_map = {s.id: s for s in seats} if seats else {}
         pass_fees_to_buyer = True
         try:
             site_settings = SiteSettings.get()
@@ -855,7 +856,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                         logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: Sin asiento, Tipo: {tipo_boleto}")
                 else:
                     for item in pricing['items']:
-                        seat = item['seat']
+                        seat = seat_map.get(item['seat_id'])
                         is_comp = item['is_complimentary']
                         ticket = Ticket.objects.create(
                             event=event,
@@ -912,7 +913,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             # Pre-creación de boletos reservados para Stripe Real
             if event.event_type != 'meet_greet' and not is_seatless:
                 for item in pricing['items']:
-                    seat = item['seat']
+                    seat = seat_map.get(item['seat_id'])
                     is_comp = item['is_complimentary']
                     Ticket.objects.create(
                         event=event,
