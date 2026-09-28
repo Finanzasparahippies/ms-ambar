@@ -81,6 +81,8 @@ export default function TicketsManagementPage() {
   const [activeModalTicket, setActiveModalTicket] = useState<AdminTicket | null>(null);
   const [reassignModalTicket, setReassignModalTicket] = useState<AdminTicket | null>(null);
   const [newSeatIdInput, setNewSeatIdInput] = useState('');
+  const [resendModalTicket, setResendModalTicket] = useState<AdminTicket | null>(null);
+  const [resendEmailInput, setResendEmailInput] = useState('');
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
@@ -204,18 +206,28 @@ export default function TicketsManagementPage() {
     }
   };
 
-  // Transactional Actions: Resend Email
-  const handleResendEmail = async (ticket: AdminTicket) => {
-    const confirmed = await showConfirm(
-      `¿Reenviar el correo de confirmación oficial con pase y código QR a ${ticket.buyer_email}?`,
-      'Reenviar Correo Transaccional'
-    );
-    if (!confirmed) return;
+  // Transactional Actions: Resend Email Modal & Handler
+  const handleOpenResendModal = (ticket: AdminTicket) => {
+    setResendModalTicket(ticket);
+    setResendEmailInput(ticket.buyer_email || '');
+  };
+
+  const handleExecuteResendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendModalTicket || !resendEmailInput.trim()) return;
 
     setIsActionLoading(true);
     try {
-      const res = await api.post(`/tickets/admin/tickets/${ticket.id}/resend-email/`);
-      showAlert(res.data?.message || 'Correo reenviado correctamente.', '¡Correo Enviado!', 'success');
+      const res = await api.post(`/tickets/admin/tickets/${resendModalTicket.id}/resend-email/`, {
+        email: resendEmailInput.trim()
+      });
+      showAlert(
+        res.data?.message || `Boleto enviado con éxito a ${resendEmailInput.trim()}.`,
+        '¡Correo Transaccional Enviado!',
+        'success'
+      );
+      setResendModalTicket(null);
+      fetchTickets(true);
     } catch (err: any) {
       const msg = err.response?.data?.error || 'No fue posible reenviar el correo en este momento.';
       showAlert(msg, 'Error de Entrega', 'error');
@@ -683,7 +695,7 @@ export default function TicketsManagementPage() {
                               {/* Reenviar Correo */}
                               <button
                                 type="button"
-                                onClick={() => handleResendEmail(ticket)}
+                                onClick={() => handleOpenResendModal(ticket)}
                                 disabled={isActionLoading || isCancelled}
                                 className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-colors disabled:opacity-30"
                                 title="Reenviar Pase por Correo"
@@ -862,6 +874,97 @@ export default function TicketsManagementPage() {
                       className="px-5 py-2.5 rounded-xl bg-amber-honey hover:bg-amber-gold text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg disabled:opacity-50 transition-all"
                     >
                       {isActionLoading ? 'Reasignando...' : 'Confirmar Reasignación'}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ══════ MODAL: REENVÍO DE CORREO TRANSACCIONAL ══════ */}
+        <AnimatePresence>
+          {resendModalTicket && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+              onClick={() => setResendModalTicket(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 15 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 15 }}
+                onClick={e => e.stopPropagation()}
+                className="relative max-w-md w-full bg-[#0c0f0d] border border-amber-honey/30 rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5"
+              >
+                <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                  <div className="flex items-center gap-2 text-amber-honey font-black text-sm uppercase tracking-wider">
+                    <Mail size={16} />
+                    <span>Reenviar Boleto Oficial por Correo</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setResendModalTicket(null)}
+                    className="text-white/40 hover:text-white"
+                  >
+                    <XCircle size={18} />
+                  </button>
+                </div>
+
+                <div className="space-y-2.5 bg-white/[0.02] p-4 rounded-2xl border border-white/5 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-white/40">Boleto Folio:</span>
+                    <strong className="text-white font-mono">{resendModalTicket.folio}</strong>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/40">Evento:</span>
+                    <span className="text-white font-bold truncate max-w-[200px]">{resendModalTicket.event_title}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/40">Asistente:</span>
+                    <span className="text-white font-bold">{resendModalTicket.buyer_name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-white/40">Ubicación:</span>
+                    <span className="text-amber-honey font-bold">{resendModalTicket.desglose?.formatted || resendModalTicket.zone}</span>
+                  </div>
+                </div>
+
+                <form onSubmit={handleExecuteResendEmail} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-white/80 block">
+                      Correo Electrónico de Destino:
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={resendEmailInput}
+                      onChange={e => setResendEmailInput(e.target.value)}
+                      placeholder="ejemplo@correo.com"
+                      className="w-full px-4 py-2.5 bg-black/50 border border-white/20 focus:border-amber-honey rounded-xl text-white font-mono text-sm focus:outline-none"
+                    />
+                    <p className="text-[10px] text-white/40 leading-relaxed">
+                      El servidor despachará la plantilla HTML oficial con el código QR único e instrucciones completas de acceso al recinto.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setResendModalTicket(null)}
+                      className="px-4 py-2.5 rounded-xl border border-white/10 text-white/60 hover:text-white text-xs font-bold uppercase tracking-wider"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isActionLoading || !resendEmailInput.trim()}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs uppercase tracking-wider shadow-lg disabled:opacity-50 transition-all cursor-pointer"
+                    >
+                      <Mail size={14} />
+                      <span>{isActionLoading ? 'Despachando...' : 'Reenviar Ahora'}</span>
                     </button>
                   </div>
                 </form>

@@ -1220,14 +1220,27 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
     def resend_email(self, request, pk=None):
         """
         POST /{id}/resend-email/: Reenvía el correo transaccional con pase digital y QR.
+        Permite opcionalmente actualizar el email de destino si se provee en el body.
         """
-        ticket = self.get_object()
+        try:
+            ticket = Ticket.objects.select_related('event', 'event__theater', 'seat', 'ga_zone', 'used_coupon').get(pk=pk)
+        except Ticket.DoesNotExist:
+            return Response({'error': 'Boleto no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        target_email = request.data.get('email')
+        if target_email and str(target_email).strip():
+            clean_email = str(target_email).strip()
+            if clean_email != ticket.user_email:
+                ticket.user_email = clean_email
+                ticket.save(update_fields=['user_email'])
+
         try:
             from apps.tickets.utils import send_ticket_email
             send_ticket_email(ticket)
             return Response({
                 'status': 'success',
-                'message': f'Correo transaccional reenviado exitosamente a {ticket.user_email}.'
+                'message': f'Correo transaccional reenviado exitosamente a {ticket.user_email}.',
+                'recipient': ticket.user_email
             }, status=status.HTTP_200_OK)
         except Exception as exc:
             logger.error(f"Falla reenviando correo para Ticket #{ticket.id}: {exc}", exc_info=True)
