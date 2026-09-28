@@ -177,7 +177,8 @@ def build_spatial_virtual_rows(seats: List[Seat], tolerance_y: float = 35.0) -> 
 
         result.append({
             'letter': letter,
-            'virtual_row': f"Fila {letter}",
+            'row_letter': letter,
+            'virtual_row': letter,
             'seats': b,
             'table_rows': table_rows,
             'avg_y': avg_y
@@ -192,8 +193,13 @@ def format_table_group_label(table_rows: List[str], virtual_row: Optional[str] =
     Ej. ['Mesa 31', 'Mesa 32', 'Mesa 33', 'Mesa 34'] -> 'Mesas 31 a 34'
     Con virtual_row: 'Fila D (Mesas 31 a 34)'
     """
+    clean_vr = ""
+    if virtual_row:
+        pure_letter = re.sub(r'^fila\s*', '', str(virtual_row).strip(), flags=re.IGNORECASE)
+        clean_vr = f"Fila {pure_letter.upper()}" if pure_letter else str(virtual_row)
+
     if not table_rows:
-        return virtual_row or ''
+        return clean_vr or ''
 
     nums = []
     for t in table_rows:
@@ -218,11 +224,11 @@ def format_table_group_label(table_rows: List[str], virtual_row: Optional[str] =
         if len(table_rows) > 4:
             table_desc += "..."
 
-    if virtual_row and table_desc:
+    if clean_vr and table_desc:
         if "mesa" in table_desc.lower():
-            return f"{virtual_row} ({table_desc})"
-        return f"{virtual_row} - {table_desc}"
-    return virtual_row or table_desc
+            return f"{clean_vr} ({table_desc})"
+        return f"{clean_vr} - {table_desc}"
+    return clean_vr or table_desc
 
 
 def determine_active_complimentary_row(
@@ -303,6 +309,8 @@ def determine_active_complimentary_row(
                 if band_match:
                     allowed.add(band_match['letter'])
                     allowed.add(band_match['virtual_row'])
+                    allowed.add(band_match.get('row_letter', band_match['letter']))
+                    allowed.add(f"Fila {band_match['letter']}")
                     formatted_name = format_table_group_label(band_match['table_rows'], band_match['virtual_row'])
                 else:
                     unique_rows = list(dict.fromkeys(s.row for s in direct_row_seats if s.row))
@@ -324,7 +332,7 @@ def determine_active_complimentary_row(
         for band in spatial_bands:
             avail = [s for s in band['seats'] if s.id not in occupied_seat_ids and s.status == 'available']
             if avail:
-                allowed = set([band['letter'], band['virtual_row']])
+                allowed = set([band['letter'], band['virtual_row'], band.get('row_letter', band['letter']), f"Fila {band['letter']}"])
                 for s in band['seats']:
                     if s.row:
                         allowed.add(s.row)

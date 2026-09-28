@@ -364,8 +364,9 @@ class TicketViewSet(viewsets.ModelViewSet):
                     except (ValueError, TypeError):
                         pass
 
+                from apps.tickets.utils import format_seat_assignment
                 seat_code = f"{ticket.seat.row}{ticket.seat.number}" if ticket.seat else (ticket.ga_zone.name if ticket.ga_zone else ("Pase Meet & Greet" if ticket.event and ticket.event.event_type == 'meet_greet' else "General Sin Asiento"))
-                seat_label = f"Fila {ticket.seat.row} - #{ticket.seat.number}" if ticket.seat else seat_code
+                seat_label = format_seat_assignment(ticket.seat) if ticket.seat else seat_code
 
                 if ticket.is_scanned:
                     return Response({

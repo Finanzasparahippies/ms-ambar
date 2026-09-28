@@ -72,6 +72,7 @@ SafeImageField = HybridImageField
 
 class SeatSerializer(serializers.ModelSerializer):
     row_label = serializers.SerializerMethodField()
+    row_letter = serializers.SerializerMethodField()
     is_complimentary_eligible = serializers.SerializerMethodField()
 
     class Meta:
@@ -79,8 +80,16 @@ class SeatSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'section', 'row', 'number', 'category', 'status',
             'base_price', 'x', 'y', 'angle', 'color', 'row_label',
-            'is_complimentary_eligible'
+            'row_letter', 'is_complimentary_eligible'
         ]
+
+    def get_row_letter(self, obj):
+        import re
+        r = str(obj.row or '').strip()
+        cleaned = re.sub(r'^fila\s*', '', r, flags=re.IGNORECASE).strip()
+        if cleaned and not cleaned.lower().startswith('mesa'):
+            return cleaned.upper()
+        return ''
 
     def get_row_label(self, obj):
         r = str(obj.row or '').strip()
@@ -290,7 +299,8 @@ class TicketSerializer(serializers.ModelSerializer):
 
     def get_seat_display(self, obj):
         if obj.seat:
-            return f"{obj.seat.row}{obj.seat.number}"
+            from apps.tickets.utils import format_seat_assignment
+            return format_seat_assignment(obj.seat)
         if obj.ga_zone:
             return f"GA: {obj.ga_zone.name}"
         if obj.event and obj.event.event_type == 'meet_greet':

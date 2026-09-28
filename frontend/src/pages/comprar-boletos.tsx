@@ -21,6 +21,8 @@ import { useEventTheme } from '../context/EventThemeContext';
 import api from '../lib/api';
 import { showAlert } from '../lib/notifications';
 import { cn, getApiUrl } from '../lib/utils';
+import { SeatMapLoader, formatSeatAssignment, getSeatAssignmentParts } from '../lib/seatMapLoader';
+import TicketQRModal from '../components/TicketQRModal';
 
 const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
   ssr: false,
@@ -195,6 +197,7 @@ const TourPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = useState(false);
   const [createdTickets, setCreatedTickets] = useState<any[]>([]);
+  const [ticketPassModalData, setTicketPassModalData] = useState<{ ticket: any; seat?: any } | null>(null);
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
@@ -410,22 +413,23 @@ const TourPage = () => {
         const data = res.data;
         if (data.seats) {
           const els = data.elements || [];
+          const mappedSeats = SeatMapLoader.loadAndMapSeats(data.seats, els);
           const tables = els.filter((e: any) => e.type === 'table' || e.tableShape || String(e.label || '').trim().toLowerCase().startsWith('mesa'));
           if (tables.length > 0) {
             const tableIds = new Set(tables.map((t: any) => String(t.id)));
             // Filtrar asientos huérfanos que no pertenecen a ninguna mesa del layout activo
-            const validSeats = data.seats.filter((s: any) => {
+            const validSeats = mappedSeats.filter((s: any) => {
               const tid = s.tableId || s.table_id;
               if (tid && tableIds.has(String(tid))) return true;
-              return tables.some((t: any) => Math.hypot(t.x - s.x, t.y - s.y) <= 75);
+              return tables.some((t: any) => Math.hypot(t.x - s.x, t.y - s.y) <= 80);
             });
-            setSeats(validSeats.length > 0 ? validSeats : data.seats);
+            setSeats(validSeats.length > 0 ? validSeats : mappedSeats);
           } else {
-            setSeats(data.seats);
+            setSeats(mappedSeats);
           }
           setElements(els);
         } else {
-          setSeats(data);
+          setSeats(Array.isArray(data) ? SeatMapLoader.loadAndMapSeats(data, []) : []);
           setElements([]);
         }
       })
@@ -570,29 +574,13 @@ const TourPage = () => {
 
   const getSeatDisplayText = (seat: any) => {
     if (!seat) return '';
-    const tableId = seat.tableId || seat.table_id;
-    let tableEl: any;
-    if (tableId && Array.isArray(elements)) {
-      tableEl = elements.find((el: any) => String(el.id) === String(tableId));
-    }
-    if (!tableEl && seat.row && Array.isArray(elements)) {
-      const rowLower = String(seat.row).toLowerCase();
-      tableEl = elements.find((el: any) => el.type === 'table' && el.label && String(el.label).toLowerCase() === rowLower);
-    }
-    const rawTableName = tableEl?.label || seat.row;
-    const isTable = !!tableEl || !!tableId || String(seat.row || '').toLowerCase().includes('mesa') || String(seat.row || '').toLowerCase().includes('table');
-
-    if (isTable) {
-      const nameStr = String(rawTableName || 'Mesa').trim();
-      const formattedName = (nameStr.toLowerCase().startsWith('mesa') || nameStr.toLowerCase().startsWith('table'))
-        ? nameStr
-        : `Mesa ${nameStr}`;
-      return `${formattedName} • Asiento ${seat.number}`;
-    }
-
-    const rowStr = String(seat.row || '').trim();
-    const formattedRow = rowStr.toLowerCase().startsWith('fila') ? rowStr : `Fila ${rowStr}`;
-    return `${formattedRow} • Asiento ${seat.number}`;
+    return formatSeatAssignment({
+      row_letter: seat.row_letter,
+      table_number: seat.table_number,
+      table_label: seat.table_label,
+      number: seat.number,
+      row: seat.row
+    });
   };
 
   const getEffectiveSeatlessPrice = () => {
@@ -1212,42 +1200,59 @@ const TourPage = () => {
                     ) : (
                       <>
                         <AnimatePresence mode="popLayout">
-                          {selectedSeats.map(seat => (
-                            <motion.div
-                              key={seat.id}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 hover:border-amber-400/40 transition-all group shadow-sm"
-                            >
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/30 text-amber-600 dark:text-amber-400 flex items-center justify-center font-black font-mono text-xs shrink-0 shadow-inner">
-                                  {seat.row}{seat.number}
+                          {selectedSeats.map(seat => {
+                            const parts = getSeatAssignmentParts(seat);
+                            return (
+                              <motion.div
+                                key={seat.id}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/10 hover:border-amber-400/40 transition-all group shadow-sm"
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/30 text-amber-600 dark:text-amber-400 flex flex-col items-center justify-center font-black font-mono text-[10px] leading-tight shrink-0 shadow-inner">
+                                    <span>{parts.rowText ? parts.rowText.replace('Fila ', 'F') : 'F'}</span>
+                                    <span className="text-[9px] opacity-80">#{seat.number}</span>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="inline-block text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mb-1">
+                                      {seat.category || 'Reservado'}
+                                    </span>
+                                    {/* Chips independientes: [Fila F] [Mesa 5] [Asiento 13] */}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      {parts.rowText && (
+                                        <span className="inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-mono tracking-wider">
+                                          {parts.rowText}
+                                        </span>
+                                      )}
+                                      {parts.tableText && (
+                                        <span className="inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-mono tracking-wider">
+                                          {parts.tableText}
+                                        </span>
+                                      )}
+                                      <span className="inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-slate-200 dark:bg-white/10 border border-slate-300 dark:border-white/15 text-slate-800 dark:text-white font-mono tracking-wider">
+                                        {parts.seatText}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="min-w-0">
-                                  <span className="inline-block text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mb-0.5">
-                                    {seat.category || 'Reservado'}
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                  <span className="font-black font-mono text-xs text-slate-900 dark:text-white">
+                                    ${getSeatBasePrice(seat).toLocaleString()} <span className="text-xs text-slate-400">MXN</span>
                                   </span>
-                                  <p className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                                    {getSeatDisplayText(seat)}
-                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedSeats(selectedSeats.filter(s => String(s.id) !== String(seat.id)))}
+                                    className="w-7 h-7 rounded-xl bg-slate-200/60 dark:bg-white/10 hover:bg-rose-500/20 text-slate-500 dark:text-white/50 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-all active:scale-90"
+                                    title="Quitar asiento"
+                                  >
+                                    <X size={13} />
+                                  </button>
                                 </div>
-                              </div>
-                              <div className="flex items-center gap-2.5 shrink-0">
-                                <span className="font-black font-mono text-xs text-slate-900 dark:text-white">
-                                  ${getSeatBasePrice(seat).toLocaleString()} <span className="text-xs text-slate-400">MXN</span>
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedSeats(selectedSeats.filter(s => String(s.id) !== String(seat.id)))}
-                                  className="w-7 h-7 rounded-xl bg-slate-200/60 dark:bg-white/10 hover:bg-rose-500/20 text-slate-500 dark:text-white/50 hover:text-rose-600 dark:hover:text-rose-400 flex items-center justify-center transition-all active:scale-90"
-                                  title="Quitar asiento"
-                                >
-                                  <X size={13} />
-                                </button>
-                              </div>
-                            </motion.div>
-                          ))}
+                              </motion.div>
+                            );
+                          })}
                         </AnimatePresence>
 
                         {selectedSeats.length === 0 && (
@@ -1606,21 +1611,39 @@ const TourPage = () => {
                   <div className="bg-slate-50 dark:bg-white/[0.03] p-5 rounded-2xl border border-slate-200 dark:border-white/10 text-left space-y-3">
                     <h4 className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Tus Boletos Digitales Activados</h4>
                     <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-                      {createdTickets.map((t, idx) => (
-                        <div key={t.id} className="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10">
-                          <div>
-                            <p className="text-xs font-bold text-slate-800 dark:text-white">Boleto #{idx + 1} ({t.seat_display})</p>
-                            <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Estado: Activo • Listo para QR</span>
+                      {createdTickets.map((t, idx) => {
+                        const ticketSeatDisplay = formatSeatAssignment({
+                          row_letter: t.seat_row_letter || t.seat?.row_letter,
+                          table_number: t.table_number || t.seat?.table_number,
+                          row: t.seat_row || t.seat?.row,
+                          number: t.seat_number || t.seat?.number || (idx + 1)
+                        }) || t.seat_display;
+
+                        return (
+                          <div key={t.id} className="flex justify-between items-center bg-white dark:bg-white/5 p-3 rounded-xl border border-slate-200 dark:border-white/10">
+                            <div>
+                              <p className="text-xs font-bold text-slate-800 dark:text-white">Boleto #{idx + 1} ({ticketSeatDisplay})</p>
+                              <span className="text-xs font-extrabold uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">Estado: Activo • Listo para QR</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setTicketPassModalData({ ticket: t, seat: t.seat })}
+                                className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-slate-900 transition-colors border border-amber-400/30 px-3 py-1.5 rounded-lg bg-amber-400/10 cursor-pointer"
+                              >
+                                Ver Pase
+                              </button>
+                              <Link
+                                href={`/tickets/${t.token}`}
+                                className="text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:text-amber-500 transition-colors border border-slate-300 dark:border-white/10 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-white/5"
+                                target="_blank"
+                              >
+                                Enlace
+                              </Link>
+                            </div>
                           </div>
-                          <Link
-                            href={`/tickets/${t.token}`}
-                            className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 hover:text-slate-900 transition-colors border border-amber-400/30 px-3 py-1.5 rounded-lg bg-amber-400/10"
-                            target="_blank"
-                          >
-                            Ver Boleto
-                          </Link>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -1864,6 +1887,16 @@ const TourPage = () => {
               </div>
             </motion.div>
           </div>
+        )}
+        {/* Modal de Pase Digital (TicketQRModal) */}
+        {ticketPassModalData && currentEvent && (
+          <TicketQRModal
+            isOpen={Boolean(ticketPassModalData)}
+            onClose={() => setTicketPassModalData(null)}
+            ticket={ticketPassModalData.ticket}
+            event={currentEvent}
+            seat={ticketPassModalData.seat}
+          />
         )}
       </AnimatePresence>
     </div>

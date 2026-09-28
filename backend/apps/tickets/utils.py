@@ -1,6 +1,8 @@
 import qrcode
 import io
 import logging
+import re
+import math
 from django.utils.timezone import localtime
 from email.mime.image import MIMEImage
 from django.conf import settings
@@ -10,6 +12,51 @@ from config.email_waterfall import dispatch_email_async
 
 
 logger = logging.getLogger(__name__)
+
+
+def format_seat_assignment(seat):
+    """
+    Formato canónico de asignación de asiento sin duplicaciones ('Fila F · Mesa 5 · Asiento 13').
+    """
+    if not seat:
+        return ""
+    row_raw = str(getattr(seat, 'row', '') or '').strip()
+    row_clean = re.sub(r'^fila\s*', '', row_raw, flags=re.IGNORECASE).strip()
+
+    table_label = None
+    theater = getattr(seat, 'theater', None)
+    if theater and isinstance(theater.layout, dict):
+        layout_seats = theater.layout.get('seats', [])
+        layout_elements = theater.layout.get('map_elements', [])
+        table_id = None
+        for ls in layout_seats:
+            if ls.get('id') == seat.id or (ls.get('number') == seat.number and (ls.get('row') == seat.row or ls.get('row') == row_clean)):
+                table_id = ls.get('tableId') or ls.get('table_id')
+                break
+        for el in layout_elements:
+            if table_id and str(el.get('id')) == str(table_id):
+                table_label = el.get('label')
+                break
+            if not table_id and (el.get('type') == 'table' or el.get('tableShape')):
+                if math.hypot(el.get('x', 0) - getattr(seat, 'x', 0), el.get('y', 0) - getattr(seat, 'y', 0)) <= 80:
+                    table_label = el.get('label')
+                    break
+
+    parts = []
+    if row_clean and not row_clean.lower().startswith('mesa'):
+        parts.append(f"Fila {row_clean.upper()}")
+
+    if table_label:
+        pure_tbl = re.sub(r'^mesa\s*', '', str(table_label), flags=re.IGNORECASE).strip()
+        if pure_tbl:
+            parts.append(f"Mesa {pure_tbl}")
+    elif row_raw.lower().startswith('mesa'):
+        pure_tbl = re.sub(r'^mesa\s*', '', row_raw, flags=re.IGNORECASE).strip()
+        if pure_tbl:
+            parts.append(f"Mesa {pure_tbl}")
+
+    parts.append(f"Asiento {seat.number}")
+    return " · ".join(parts)
 
 def generate_ticket_qr(ticket):
     """
@@ -42,7 +89,7 @@ def send_ticket_email(ticket):
 
     # 1. Resolver desglose dinámico de la ubicación
     if ticket.seat:
-        seat_str = f"Fila {ticket.seat.row} · Asiento {ticket.seat.number}"
+        seat_str = format_seat_assignment(ticket.seat)
         section_str = ticket.seat.section or "General"
     elif ticket.ga_zone:
         seat_str = "Zona General Admission"

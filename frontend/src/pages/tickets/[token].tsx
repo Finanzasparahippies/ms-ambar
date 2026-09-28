@@ -8,6 +8,7 @@ import { Calendar, MapPin, Armchair, Mail, ChevronLeft, ShieldCheck, AlertCircle
 import api from '../../lib/api';
 import { getApiUrl } from '../../lib/utils';
 import ThemedSection from '../../components/ThemedSection';
+import { formatSeatAssignment } from '../../lib/seatMapLoader';
 
 const formatoHoraOficial = (fechaString: string) => {
   if (!fechaString) return "--:--";
@@ -299,9 +300,18 @@ export default function TicketPage() {
                     <div className="flex items-start gap-2.5">
                       <Armchair className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
                       <div>
-                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Ubicación</span>
+                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Ubicación / Asignación</span>
                         <span className="text-xs text-neutral-200 font-medium block">
-                          {ticket.seat_display || (ticket.seat ? `Fila ${ticket.seat_row} • Asiento ${ticket.seat_number}` : 'Pase General')}
+                          {ticket.seat || ticket.seat_row ? (
+                            formatSeatAssignment({
+                              row_letter: ticket.seat?.row_letter || ticket.seat_row_letter,
+                              table_number: ticket.seat?.table_number || ticket.table_number,
+                              row: ticket.seat?.row || ticket.seat_row,
+                              number: ticket.seat?.number || ticket.seat_number || '—'
+                            })
+                          ) : (
+                            ticket.seat_display || 'Pase General'
+                          )}
                         </span>
                       </div>
                     </div>

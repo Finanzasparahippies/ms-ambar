@@ -144,6 +144,18 @@ export const isSeatAllowedByRestriction = (
   if (!allowedRows || allowedRows.length === 0) return true;
   if (seat.is_complimentary_eligible) return true;
 
+  // Validación directa sobre seat.row_letter limpia (ej. 'F')
+  const cleanRowLetter = String((seat as any).row_letter || '').replace(/^fila\s*/i, '').trim().toLowerCase();
+  if (cleanRowLetter) {
+    if (normalizedAllowedSet.has(cleanRowLetter) || normalizedAllowedSet.has(`fila ${cleanRowLetter}`)) {
+      return true;
+    }
+    for (const raw of allowedRows) {
+      const rawClean = raw.trim().toLowerCase().replace(/^fila\s*/i, '').trim();
+      if (cleanRowLetter === rawClean) return true;
+    }
+  }
+
   const candidateTexts = [seat.row, seat.section].filter(Boolean) as string[];
   for (const text of candidateTexts) {
     const clean = String(text).trim().toLowerCase();
@@ -395,32 +407,70 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     return seats.find(s => String(s.id) === hoveredId) || null;
   }, [seats, hoveredId]);
 
-  const getSeatTooltipLabel = useCallback((seat: Seat) => {
+  const getSeatTooltipDetails = useCallback((seat: Seat) => {
     const tableId = (seat as any).tableId || (seat as any).table_id;
     let tableEl: MapElement | undefined;
     if (tableId) {
       tableEl = elements.find(el => String(el.id) === String(tableId));
+    }
+    if (!tableEl && seat.x !== undefined && seat.y !== undefined) {
+      tableEl = elements.find(el => (el.type === 'table' || el.tableShape) && Math.hypot(el.x - seat.x, el.y - seat.y) <= 80);
     }
     if (!tableEl && seat.row) {
       const rowLower = String(seat.row).toLowerCase();
       tableEl = elements.find(el => el.type === 'table' && el.label && String(el.label).toLowerCase() === rowLower);
     }
 
-    const rawTableName = tableEl?.label || seat.row;
-    const isTable = !!tableEl || !!tableId || String(seat.row || '').toLowerCase().includes('mesa') || String(seat.row || '').toLowerCase().includes('table');
-
-    if (isTable) {
-      const nameStr = String(rawTableName || 'Mesa').trim();
-      const formattedName = (nameStr.toLowerCase().startsWith('mesa') || nameStr.toLowerCase().startsWith('table'))
-        ? nameStr
-        : `Mesa ${nameStr}`;
-      return `${formattedName} • Asiento ${seat.number}`;
+    // Fila limpia (row_letter)
+    let rowLetter = (seat as any).row_letter;
+    if (!rowLetter) {
+      const cand = (tableEl && (tableEl.row || tableEl.row_label)) || seat.row || '';
+      const cleanCand = String(cand).replace(/^fila\s*/i, '').trim();
+      if (cleanCand && !cleanCand.toLowerCase().startsWith('mesa')) {
+        rowLetter = cleanCand.toUpperCase();
+      }
+    } else {
+      rowLetter = String(rowLetter).replace(/^fila\s*/i, '').trim().toUpperCase();
     }
 
-    const rowStr = String(seat.row || '').trim();
-    const formattedRow = rowStr.toLowerCase().startsWith('fila') ? rowStr : `Fila ${rowStr}`;
-    return `${formattedRow} • Asiento ${seat.number}`;
+    // Mesa limpia (table_number)
+    let tableNum = (seat as any).table_number;
+    if (tableNum === undefined && tableEl?.label) {
+      const match = String(tableEl.label).match(/\d+/);
+      if (match) tableNum = match[0];
+    }
+    if (tableNum === undefined && seat.row && String(seat.row).toLowerCase().includes('mesa')) {
+      const match = String(seat.row).match(/\d+/);
+      if (match) tableNum = match[0];
+    }
+
+    // Título estructurado: Fila F · Mesa 5 (o Fila F o Mesa 5)
+    const titleParts: string[] = [];
+    if (rowLetter) titleParts.push(`Fila ${rowLetter}`);
+    if (tableNum !== undefined && String(tableNum).trim() !== '') titleParts.push(`Mesa ${tableNum}`);
+    const title = titleParts.length > 0 ? titleParts.join(' · ') : (seat.section || 'General');
+
+    // Subtítulo estructurado: Asiento #13
+    const subtitle = `Asiento #${seat.number}`;
+
+    // Estado / Precio: $500.00 MXN o estado ocupado
+    const isOccupied = seat.status === 'occupied' || seat.status === 'reserved';
+    const priceText = isOccupied
+      ? 'OCUPADO'
+      : (seat.base_price ? `$${Number(seat.base_price).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN` : '$500.00 MXN');
+
+    return {
+      title,
+      subtitle,
+      priceText,
+      isOccupied
+    };
   }, [elements]);
+
+  const getSeatTooltipLabel = useCallback((seat: Seat) => {
+    const details = getSeatTooltipDetails(seat);
+    return `${details.title} • ${details.subtitle}`;
+  }, [getSeatTooltipDetails]);
 
   // --- Premium Rendering Engine ---
   const draw = useCallback(() => {
@@ -1269,25 +1319,36 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         style={{ touchAction: 'none' }}
         tabIndex={0}
       />
-      {hoveredSeat && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-black/85 backdrop-blur-xl border border-white/20 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-3 text-white text-[11px] font-black uppercase tracking-wider z-20 pointer-events-none transition-all duration-200">
-          <span className={cn(
-            "w-2.5 h-2.5 rounded-full shrink-0 animate-pulse",
-            hoveredSeat.status === 'occupied' || hoveredSeat.status === 'reserved'
-              ? "bg-red-500 shadow-[0_0_8px_#ef4444]"
-              : String(hoveredSeat.category).toLowerCase() === 'vip'
-                ? "bg-amber-400 shadow-[0_0_8px_#f59e0b]"
-                : "bg-[#22a6b3] shadow-[0_0_8px_#22a6b3]"
-          )} />
-          <span>{getSeatTooltipLabel(hoveredSeat)}</span>
-          <span className="text-white/30">|</span>
-          <span className="text-amber-400 font-extrabold">
-            {hoveredSeat.status === 'occupied' || hoveredSeat.status === 'reserved'
-              ? 'OCUPADO / RESERVADO'
-              : (hoveredSeat.base_price ? `$${Math.round(Number(hoveredSeat.base_price)).toLocaleString('es-MX')} MXN` : 'DISPONIBLE')}
-          </span>
-        </div>
-      )}
+      {hoveredSeat && (() => {
+        const details = getSeatTooltipDetails(hoveredSeat);
+        return (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 px-5 py-2.5 bg-[#0d1017]/90 backdrop-blur-2xl border border-amber-500/30 rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex items-center gap-3.5 text-white z-20 pointer-events-none transition-all duration-200">
+            <span className={cn(
+              "w-2.5 h-2.5 rounded-full shrink-0 animate-pulse",
+              details.isOccupied
+                ? "bg-red-500 shadow-[0_0_8px_#ef4444]"
+                : String(hoveredSeat.category).toLowerCase() === 'vip'
+                  ? "bg-amber-400 shadow-[0_0_8px_#f59e0b]"
+                  : "bg-[#22a6b3] shadow-[0_0_8px_#22a6b3]"
+            )} />
+            <div className="flex flex-col text-left">
+              <span className="text-xs font-black uppercase tracking-wider text-amber-400">
+                {details.title}
+              </span>
+              <span className="text-[11px] font-bold text-white/90">
+                {details.subtitle}
+              </span>
+            </div>
+            <div className="h-6 w-[1px] bg-white/15" />
+            <span className={cn(
+              "text-xs font-black font-mono tracking-tight",
+              details.isOccupied ? "text-red-400" : "text-amber-400"
+            )}>
+              {details.priceText}
+            </span>
+          </div>
+        );
+      })()}
       <div className="absolute bottom-6 left-6 flex gap-2 z-10 pointer-events-none">
         <div className="px-4 py-2 bg-black/60 backdrop-blur-xl border border-white/10 rounded-full text-[9px] font-black opacity-60 uppercase tracking-widest text-white/50 hidden sm:block">
           Del: Borrar | Shift+Drag: Multi | {effectiveAllowZoom ? 'Scroll: Zoom | ' : ''}Arrastrar: Paneo

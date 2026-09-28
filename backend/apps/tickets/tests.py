@@ -1011,4 +1011,36 @@ class TicketsAppTests(APITestCase):
         self.assertIsNotNone(active_row)
         self.assertIn("Mesa 10", allowed_rows)
 
+    def test_format_seat_assignment_hierarchy_and_no_duplication(self):
+        """Valida que la asignación no duplique 'Fila' y restituya la jerarquía completa: Fila F · Mesa 5 · Asiento 13"""
+        from apps.tickets.utils import format_seat_assignment
+        from apps.tickets.models import Theater, Seat
+
+        theater = Theater.objects.create(
+            name="London Pub Cabaret",
+            layout={
+                "map_elements": [
+                    {"id": "table-5", "type": "table", "label": "Mesa 5", "x": 200, "y": 300}
+                ],
+                "seats": [
+                    {"id": 9999, "row": "Fila F", "number": 13, "tableId": "table-5", "x": 210, "y": 305}
+                ]
+            }
+        )
+        seat = Seat.objects.create(
+            id=9999,
+            theater=theater,
+            section="General",
+            row="Fila F",
+            number=13,
+            base_price=500,
+            x=210,
+            y=305
+        )
+
+        formatted = format_seat_assignment(seat)
+        self.assertEqual(formatted, "Fila F · Mesa 5 · Asiento 13")
+        self.assertNotIn("Fila Fila", formatted)
+
+
 
