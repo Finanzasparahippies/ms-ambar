@@ -501,11 +501,12 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   };
 
   const handleSelectAllAllowedRecipients = () => {
-    if (!selectedCouponForEmail?.allowed_emails || selectedCouponForEmail.allowed_emails.length === 0) return;
+    const allowed = selectedCouponForEmail?.allowed_emails;
+    if (!allowed || allowed.length === 0) return;
     setEmailRecipients(prev => {
       const set = new Set(prev.map(e => e.toLowerCase()));
       const next = [...prev];
-      for (const em of selectedCouponForEmail.allowed_emails) {
+      for (const em of allowed) {
         const clean = (em || '').trim();
         if (clean && clean.includes('@') && !set.has(clean.toLowerCase())) {
           set.add(clean.toLowerCase());
@@ -1530,7 +1531,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                       <div className="space-y-1.5 pt-1">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-zinc-400 font-semibold">
-                            Invitados autorizados en el cupón ({selectedCouponForEmail.allowed_emails.length}):
+                            Invitados autorizados en el cupón ({(selectedCouponForEmail.allowed_emails || []).length}):
                           </span>
                           <button
                             type="button"
@@ -1541,7 +1542,7 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                           </button>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
-                          {selectedCouponForEmail.allowed_emails.map((em: string) => {
+                          {(selectedCouponForEmail.allowed_emails || []).map((em: string) => {
                             const isSelected = emailRecipients.some(
                               r => r.toLowerCase() === (em || '').trim().toLowerCase()
                             );
