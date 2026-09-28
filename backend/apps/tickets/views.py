@@ -47,12 +47,13 @@ class CouponViewSet(viewsets.ModelViewSet):
         coupon = self.get_object()
         recipient_email = request.data.get('email', '').strip()
         custom_note = request.data.get('note', '').strip()
+        image_url = request.data.get('image_url', '').strip() or None
 
         if not recipient_email:
             return Response({'error': 'Debes ingresar una dirección de correo de destino.'}, status=status.HTTP_400_BAD_REQUEST)
 
         from apps.tickets.utils import send_coupon_email
-        success, msg = send_coupon_email(coupon, recipient_email, custom_note, async_send=True)
+        success, msg = send_coupon_email(coupon, recipient_email, custom_note, image_url=image_url, async_send=True)
         if success:
             return Response({'message': f'Cupón enviado exitosamente a {recipient_email}.'})
         return Response({'error': f'Error al enviar el correo: {msg}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

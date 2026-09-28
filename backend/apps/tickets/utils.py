@@ -179,9 +179,9 @@ def send_ticket_telegram(ticket):
     logger.info(f"[Ticket] Telegram delivery stub: {ticket.token}")
 
 
-def send_coupon_email(coupon, recipient_email, custom_note='', async_send=False):
+def send_coupon_email(coupon, recipient_email, custom_note='', image_url=None, async_send=False):
     """
-    Despacha un correo electrónico elegante con la información del cupón y link de auto-aplicación.
+    Despacha un correo electrónico elegante con la información del cupón, imagen opcional (Cloudinary/Flyer) y link de auto-aplicación.
     Si el cupón no tenía correo asignado, lo asigna automáticamente al correo del destinatario para blindar el beneficio.
     """
     logger.info(f"[DELIVERY/SMTP] [Email: {recipient_email.strip()} | EventID: {coupon.event.id if coupon.event else '-'} | TicketUUID: - | StripeID: -] Iniciando pipeline de correo de cupón {coupon.code} para destinatario: {recipient_email.strip()}")
@@ -189,6 +189,16 @@ def send_coupon_email(coupon, recipient_email, custom_note='', async_send=False)
     if not coupon.assigned_email:
         coupon.assigned_email = recipient_email
         coupon.save(update_fields=['assigned_email'])
+
+    # Determinar URL de imagen segura (Cloudinary o Flyer de Evento)
+    selected_image = None
+    if image_url and isinstance(image_url, str) and (image_url.startswith('https://') or image_url.startswith('http://')):
+        selected_image = image_url.strip()
+    elif not image_url and coupon.event:
+        if coupon.event.flyer and hasattr(coupon.event.flyer, 'url'):
+            selected_image = coupon.event.flyer.url
+        elif coupon.event.image and hasattr(coupon.event.image, 'url'):
+            selected_image = coupon.event.image.url
 
     discount_desc = "100% de descuento (Entrada VIP Gratuita)" if coupon.discount_type == 'free_vip' else (
         f"{coupon.discount_value}% de descuento" if coupon.discount_type == 'percentage' else f"${coupon.discount_value} MXN de descuento"
@@ -214,10 +224,17 @@ def send_coupon_email(coupon, recipient_email, custom_note='', async_send=False)
         f"Con cariño, Ms Ambar"
     )
 
+    image_html = f"""
+      <div style="text-align: center; margin-bottom: 24px;">
+        <img src="{selected_image}" alt="Ms Ambar Evento" style="max-width: 100%; width: 100%; max-height: 380px; object-fit: cover; border-radius: 12px; border: 1px solid rgba(217, 119, 6, 0.4); display: block; margin: 0 auto; box-shadow: 0 8px 24px rgba(0,0,0,0.6);" />
+      </div>
+    """ if selected_image else ""
+
     html_content = f"""
     <div style="font-family: 'Playfair Display', Georgia, serif; max-width: 600px; margin: 0 auto; background: #0d0d0d; color: #f3f4f6; border: 1px solid #d97706; border-radius: 16px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
       <h2 style="color: #f59e0b; text-align: center; margin-top: 0; font-size: 26px; letter-spacing: 3px;">MS AMBAR</h2>
       <hr style="border: 0; border-top: 1px solid rgba(217, 119, 6, 0.4); margin: 20px 0;" />
+      {image_html}
       <h3 style="color: #ffffff; text-align: center; font-size: 20px;">¡Tienes una Invitación Exclusiva!</h3>
       <p style="font-size: 15px; line-height: 1.7; color: #d1d5db; text-align: center;">
         Se ha emitido un cupón exclusivo asignado especialmente a tu correo (<strong>{recipient_email}</strong>) para disfrutar de los eventos de <strong>Ms Ambar</strong>.

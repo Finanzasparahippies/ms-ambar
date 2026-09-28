@@ -23,8 +23,10 @@ import {
   ChevronUp,
   ChevronDown,
   ShieldCheck,
+  ImageIcon,
 } from 'lucide-react';
 import { showAlert, showConfirm, showToast } from '../lib/notifications';
+import { CloudinaryMediaPicker } from './ui/CloudinaryMediaPicker';
 
 // ─── Interfaces de Tipado Estricto para el Modelo Coupon ───
 export interface Coupon {
@@ -54,6 +56,8 @@ export interface EventOption {
   date?: string;
   theater?: number | any;
   theater_name?: string;
+  flyer?: string;
+  image?: string;
   complimentary_rows_priority?: string[];
 }
 
@@ -121,6 +125,9 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
   const [selectedCouponForEmail, setSelectedCouponForEmail] = useState<Coupon | null>(null);
   const [emailRecipient, setEmailRecipient] = useState('');
   const [emailNote, setEmailNote] = useState('');
+  const [emailImageUrl, setEmailImageUrl] = useState<string | null>(null);
+  const [emailImageFile, setEmailImageFile] = useState<File | null>(null);
+  const [emailImagePreview, setEmailImagePreview] = useState<string | null>(null);
   const [emailSending, setEmailSending] = useState(false);
 
   // ── Feedback al copiar enlace ──
@@ -457,6 +464,14 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
     setSelectedCouponForEmail(coupon);
     setEmailRecipient(coupon.assigned_email || '');
     setEmailNote('');
+
+    // Pre-cargar flyer del evento si existe
+    const associatedEvent = events.find(ev => ev.id === coupon.event);
+    const defaultImage = associatedEvent?.flyer || associatedEvent?.image || null;
+    setEmailImageUrl(defaultImage);
+    setEmailImageFile(null);
+    setEmailImagePreview(defaultImage);
+
     setIsEmailModalOpen(true);
   };
 
@@ -477,7 +492,8 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
         `${apiUrl}/tickets/coupons/${selectedCouponForEmail.id}/send_email/`,
         {
           email: emailRecipient.trim(),
-          note: emailNote.trim()
+          note: emailNote.trim(),
+          image_url: emailImageUrl || null
         },
         { headers }
       );
@@ -1379,6 +1395,54 @@ export const CouponManager: React.FC<CouponManagerProps> = ({
                     onChange={e => setEmailNote(e.target.value)}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-xs text-zinc-200 focus:outline-none focus:border-purple-500"
                   />
+                </div>
+
+                {/* Imagen del Correo (Cloudinary / Flyer) */}
+                <div className="pt-2 border-t border-zinc-800/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-purple-400" />
+                      Imagen / Banner del Correo
+                    </label>
+                    {selectedCouponForEmail.event && (() => {
+                      const associatedEv = events.find(ev => ev.id === selectedCouponForEmail.event);
+                      const flyerUrl = associatedEv?.flyer || associatedEv?.image;
+                      if (!flyerUrl) return null;
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmailImageUrl(flyerUrl);
+                            setEmailImageFile(null);
+                            setEmailImagePreview(flyerUrl);
+                          }}
+                          className="text-[10px] text-purple-400 hover:text-purple-300 font-medium underline cursor-pointer"
+                        >
+                          Usar Flyer Oficial
+                        </button>
+                      );
+                    })()}
+                  </div>
+
+                  <CloudinaryMediaPicker
+                    category="Cupones"
+                    subfolder="coupon_invites"
+                    aspectRatio="video"
+                    file={emailImageFile}
+                    preview={emailImagePreview}
+                    valueUrl={emailImageUrl}
+                    onFileChange={(f, p) => {
+                      setEmailImageFile(f);
+                      setEmailImagePreview(p);
+                    }}
+                    onUrlChange={(url) => {
+                      setEmailImageUrl(url);
+                      setEmailImagePreview(url);
+                    }}
+                  />
+                  <p className="text-[10px] text-zinc-500">
+                    Opcional: Si no seleccionas una imagen, se enviará el correo con el diseño minimalista de Ms Ambar.
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
