@@ -24,12 +24,13 @@ export interface FormattedSeatParts {
   rowText?: string;
   tableText?: string;
   seatText: string;
+  formattedText?: string;
 }
 
 /**
  * Helper canónico de formateo de asignación de asiento.
- * Elimina prefijos redundantes ("Fila Fila F" -> "Fila F", "Mesa Mesa 5" -> "Mesa 5")
- * y retorna la jerarquía completa: "Fila F · Mesa 5 · Asiento 13"
+ * Elimina prefijos redundantes ("Fila Fila F" -> "Fila: F", "Mesa Mesa 5" -> "Mesa: 5")
+ * y retorna la jerarquía canónica: "Fila: F · Mesa: 4 · Asiento: 13"
  */
 export function formatSeatAssignment(seat: {
   row_letter?: string;
@@ -43,16 +44,16 @@ export function formatSeatAssignment(seat: {
   // Extraer y limpiar letra de fila
   let cleanRowLetter = seat.row_letter;
   if (!cleanRowLetter && seat.row) {
-    const rawClean = String(seat.row).replace(/^fila\s*/i, '').trim();
+    const rawClean = String(seat.row).replace(/^fila\s*:?\s*/i, '').trim();
     if (!rawClean.toLowerCase().startsWith('mesa')) {
       cleanRowLetter = rawClean;
     }
   }
 
   if (cleanRowLetter) {
-    const pureLetter = cleanRowLetter.replace(/^fila\s*/i, '').trim();
+    const pureLetter = String(cleanRowLetter).replace(/^fila\s*:?\s*/i, '').trim();
     if (pureLetter) {
-      parts.push(`Fila ${pureLetter}`);
+      parts.push(`Fila: ${pureLetter.toUpperCase()}`);
     }
   }
 
@@ -68,14 +69,15 @@ export function formatSeatAssignment(seat: {
   }
 
   if (cleanTableNum !== undefined && cleanTableNum !== null && String(cleanTableNum).trim() !== '') {
-    const pureTable = String(cleanTableNum).replace(/^mesa\s*/i, '').trim();
+    const pureTable = String(cleanTableNum).replace(/^mesa\s*:?\s*/i, '').trim();
     if (pureTable) {
-      parts.push(`Mesa ${pureTable}`);
+      parts.push(`Mesa: ${pureTable}`);
     }
   }
 
-  parts.push(`Asiento ${seat.number}`);
-  return parts.join(' · '); // Resultado: "Fila F · Mesa 5 · Asiento 13"
+  const pureSeat = String(seat.number).replace(/^asiento\s*:?\s*/i, '').trim();
+  parts.push(`Asiento: ${pureSeat}`);
+  return parts.join(' · '); // Resultado canónico: "Fila: F · Mesa: 4 · Asiento: 13"
 }
 
 /**
@@ -90,7 +92,7 @@ export function getSeatAssignmentParts(seat: {
 }): FormattedSeatParts {
   let cleanRowLetter = seat.row_letter;
   if (!cleanRowLetter && seat.row) {
-    const rawClean = String(seat.row).replace(/^fila\s*/i, '').trim();
+    const rawClean = String(seat.row).replace(/^fila\s*:?\s*/i, '').trim();
     if (!rawClean.toLowerCase().startsWith('mesa')) {
       cleanRowLetter = rawClean;
     }
@@ -98,8 +100,8 @@ export function getSeatAssignmentParts(seat: {
 
   let rowText: string | undefined = undefined;
   if (cleanRowLetter) {
-    const pureLetter = cleanRowLetter.replace(/^fila\s*/i, '').trim();
-    if (pureLetter) rowText = `Fila ${pureLetter}`;
+    const pureLetter = String(cleanRowLetter).replace(/^fila\s*:?\s*/i, '').trim();
+    if (pureLetter) rowText = `Fila: ${pureLetter.toUpperCase()}`;
   }
 
   let cleanTableNum = seat.table_number;
@@ -114,14 +116,18 @@ export function getSeatAssignmentParts(seat: {
 
   let tableText: string | undefined = undefined;
   if (cleanTableNum !== undefined && cleanTableNum !== null && String(cleanTableNum).trim() !== '') {
-    const pureTable = String(cleanTableNum).replace(/^mesa\s*/i, '').trim();
-    if (pureTable) tableText = `Mesa ${pureTable}`;
+    const pureTable = String(cleanTableNum).replace(/^mesa\s*:?\s*/i, '').trim();
+    if (pureTable) tableText = `Mesa: ${pureTable}`;
   }
+
+  const pureSeat = String(seat.number).replace(/^asiento\s*:?\s*/i, '').trim();
+  const seatText = `Asiento: ${pureSeat}`;
 
   return {
     rowText,
     tableText,
-    seatText: `Asiento ${seat.number}`
+    seatText,
+    formattedText: formatSeatAssignment(seat)
   };
 }
 

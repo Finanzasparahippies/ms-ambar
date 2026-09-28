@@ -3304,6 +3304,12 @@ export default function AdminDashboard() {
                 Salir
               </button>
               <Link
+                href="/dashboard/tickets"
+                className="flex items-center gap-2 bg-white/5 hover:bg-amber-honey/20 border border-white/10 hover:border-amber-honey/40 px-5 py-3 rounded-xl shadow-lg transition-all text-xs font-bold uppercase tracking-widest text-[#F4F6F0] hover:text-amber-honey cursor-pointer"
+              >
+                <Ticket size={14} className="text-amber-honey" /> Boletos
+              </Link>
+              <Link
                 href="/dashboard/scan-tickets"
                 className="flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-[#1E2B22] font-black uppercase tracking-widest text-xs px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(229,169,59,0.15)]"
               >

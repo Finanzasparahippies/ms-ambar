@@ -1202,6 +1202,7 @@ const TourPage = () => {
                         <AnimatePresence mode="popLayout">
                           {selectedSeats.map(seat => {
                             const parts = getSeatAssignmentParts(seat);
+                            const canonicalSeatDisplay = formatSeatAssignment(seat);
                             return (
                               <motion.div
                                 key={seat.id}
@@ -1212,14 +1213,19 @@ const TourPage = () => {
                               >
                                 <div className="flex items-center gap-3 min-w-0">
                                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400/20 to-amber-600/10 border border-amber-400/30 text-amber-600 dark:text-amber-400 flex flex-col items-center justify-center font-black font-mono text-[10px] leading-tight shrink-0 shadow-inner">
-                                    <span>{parts.rowText ? parts.rowText.replace('Fila ', 'F') : 'F'}</span>
+                                    <span>{parts.rowText ? parts.rowText.replace(/^fila\s*:?\s*/i, '').trim().toUpperCase() : 'F'}</span>
                                     <span className="text-[9px] opacity-80">#{seat.number}</span>
                                   </div>
                                   <div className="min-w-0">
-                                    <span className="inline-block text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20 mb-1">
-                                      {seat.category || 'Reservado'}
-                                    </span>
-                                    {/* Chips independientes: [Fila F] [Mesa 5] [Asiento 13] */}
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                      <span className="inline-block text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest bg-amber-400/10 px-2 py-0.5 rounded-md border border-amber-400/20">
+                                        {seat.category || 'Reservado'}
+                                      </span>
+                                      <span className="text-[11px] font-black text-slate-800 dark:text-white font-mono tracking-tight">
+                                        {canonicalSeatDisplay}
+                                      </span>
+                                    </div>
+                                    {/* Chips independientes: [Fila: F] [Mesa: 4] [Asiento: 13] */}
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                       {parts.rowText && (
                                         <span className="inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-mono tracking-wider">

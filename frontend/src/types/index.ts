@@ -49,6 +49,17 @@ export interface Event {
   complimentary_rows_priority?: string[];
 }
 
+export interface TicketSeatAssignment {
+  id?: string;
+  row?: string;
+  row_letter?: string;
+  table_number?: string | number;
+  table_label?: string;
+  number?: string | number;
+  section?: string;
+  [key: string]: any;
+}
+
 export interface Ticket {
   id: number;
   event: Event;

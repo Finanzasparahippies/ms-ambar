@@ -2,22 +2,29 @@ import React from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { getSeatAssignmentParts, formatSeatAssignment } from '../lib/seatMapLoader';
 
+export interface TicketSeatAssignment {
+  id?: string;
+  row?: string;
+  row_letter?: string;
+  table_number?: string | number;
+  table_label?: string;
+  number?: string | number;
+  section?: string;
+  [key: string]: any;
+}
+
 export interface TicketPassProps {
   ticket: {
     token: string;
     seat_row?: string;
     seat_number?: number | string;
+    seat_row_letter?: string;
+    table_number?: string | number;
+    table_label?: string;
+    section?: string;
     seat_display?: string;
     user_email?: string;
-    seat?: {
-      row?: string;
-      number: number | string;
-      row_letter?: string;
-      table_number?: string | number;
-      table_label?: string;
-      section?: string;
-      [key: string]: any;
-    };
+    seat?: TicketSeatAssignment;
     ga_zone?: {
       name?: string;
     };
@@ -32,15 +39,7 @@ export interface TicketPassProps {
     section?: string;
     [key: string]: any;
   };
-  seat?: {
-    row?: string;
-    number?: number | string;
-    row_letter?: string;
-    table_number?: string | number;
-    table_label?: string;
-    section?: string;
-    [key: string]: any;
-  };
+  seat?: TicketSeatAssignment;
   className?: string;
 }
 
@@ -51,12 +50,16 @@ export const TicketPass: React.FC<TicketPassProps> = ({
   className = ''
 }) => {
   // 1. Resolver información de asiento de manera unificada y normalizada
-  const rawSeat = seatProp || ticket?.seat || {
+  const fallbackSeat: TicketSeatAssignment = {
     row: ticket?.seat_row,
     number: ticket?.seat_number,
     row_letter: ticket?.seat_row_letter,
-    table_number: ticket?.table_number
+    table_number: ticket?.table_number,
+    table_label: (ticket as any)?.table_label,
+    section: (ticket as any)?.section,
   };
+
+  const rawSeat: TicketSeatAssignment = seatProp || ticket?.seat || fallbackSeat;
 
   const hasSeat = Boolean(rawSeat?.number || rawSeat?.row || rawSeat?.row_letter);
 
@@ -65,12 +68,12 @@ export const TicketPass: React.FC<TicketPassProps> = ({
         row: rawSeat?.row,
         row_letter: rawSeat?.row_letter,
         table_number: rawSeat?.table_number,
-        table_label: rawSeat?.table_label,
+        table_label: (rawSeat as any)?.table_label ?? (rawSeat as any)?.table_number,
         number: rawSeat?.number ?? '—'
       })
     : null;
 
-  const sectionName = rawSeat?.section || event?.section || ticket?.ga_zone?.name || 'GENERAL';
+  const sectionName = (rawSeat as any)?.section || event?.section || ticket?.ga_zone?.name || 'GENERAL';
 
   // Formato de fecha oficial
   const formatEventDate = (dateStr: string) => {

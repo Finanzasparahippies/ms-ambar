@@ -361,3 +361,206 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
     def get_fee_config(self, obj):
         return get_fee_config()
 
+
+class AdminTicketSerializer(serializers.ModelSerializer):
+    folio = serializers.SerializerMethodField()
+    token = serializers.UUIDField(read_only=True)
+    buyer = serializers.SerializerMethodField()
+    buyer_name = serializers.SerializerMethodField()
+    buyer_email = serializers.CharField(source='user_email', read_only=True)
+    buyer_phone = serializers.CharField(source='user_phone', read_only=True)
+    event = serializers.SerializerMethodField()
+    event_id = serializers.IntegerField(source='event.id', read_only=True)
+    event_title = serializers.CharField(source='event.title', read_only=True)
+    zone = serializers.SerializerMethodField()
+    desglose = serializers.SerializerMethodField()
+    row_letter = serializers.SerializerMethodField()
+    table_number = serializers.SerializerMethodField()
+    seat_number = serializers.SerializerMethodField()
+    status = serializers.SerializerMethodField()
+    raw_status = serializers.CharField(source='status', read_only=True)
+    payment_reference = serializers.SerializerMethodField()
+    coupon = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Ticket
+        fields = [
+            'id',
+            'folio',
+            'token',
+            'buyer',
+            'buyer_name',
+            'buyer_email',
+            'buyer_phone',
+            'event',
+            'event_id',
+            'event_title',
+            'zone',
+            'desglose',
+            'row_letter',
+            'table_number',
+            'seat_number',
+            'status',
+            'raw_status',
+            'is_scanned',
+            'scanned_at',
+            'amount_paid',
+            'has_mg',
+            'payment_reference',
+            'coupon',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_folio(self, obj):
+        return f"TKT-{obj.id:06d}"
+
+    def get_buyer_name(self, obj):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.filter(email__iexact=obj.user_email).first()
+        if user:
+            full = f"{user.first_name} {user.last_name}".strip()
+            if full:
+                return full
+            if user.username:
+                return user.username
+        email_prefix = (obj.user_email or '').split('@')[0]
+        return email_prefix.replace('.', ' ').replace('_', ' ').replace('-', ' ').title() or 'Asistente'
+
+    def get_buyer(self, obj):
+        return {
+            'name': self.get_buyer_name(obj),
+            'email': obj.user_email,
+            'phone': obj.user_phone or ''
+        }
+
+    def get_event(self, obj):
+        ev = obj.event
+        if not ev:
+            return None
+        return {
+            'id': ev.id,
+            'title': ev.title,
+            'artist': ev.artist,
+            'date': ev.date.isoformat() if ev.date else None,
+            'venue_name': ev.venue_name or (ev.theater.name if ev.theater else 'London Pub'),
+            'venue_address': ev.venue_address or (ev.theater.location if ev.theater else '')
+        }
+
+    def get_zone(self, obj):
+        if obj.seat:
+            return obj.seat.section or "Zona General"
+        if obj.ga_zone:
+            return obj.ga_zone.name
+        if obj.has_mg or (obj.event and obj.event.event_type == 'meet_greet'):
+            return "Meet & Greet"
+        return "General (Sin Asiento)"
+
+    def _extract_seat_info(self, obj):
+        import re
+        import math
+        if not obj.seat:
+            return {'row_letter': None, 'table_number': None, 'seat_number': None, 'table_label': None}
+
+        seat = obj.seat
+        row_raw = str(getattr(seat, 'row', '') or '').strip()
+        row_clean = re.sub(r'^fila\s*:?\s*', '', row_raw, flags=re.IGNORECASE).strip()
+        row_letter = row_clean.upper() if row_clean and not row_clean.lower().startswith('mesa') else ''
+
+        table_number = None
+        table_label = None
+
+        theater = getattr(seat, 'theater', None)
+        if theater and isinstance(theater.layout, dict):
+            layout_seats = theater.layout.get('seats', [])
+            layout_elements = theater.layout.get('map_elements', [])
+            table_id = None
+            for ls in layout_seats:
+                if ls.get('id') == seat.id or (ls.get('number') == seat.number and (ls.get('row') == seat.row or ls.get('row') == row_clean)):
+                    table_id = ls.get('tableId') or ls.get('table_id')
+                    break
+            for el in layout_elements:
+                if table_id and str(el.get('id')) == str(table_id):
+                    table_label = el.get('label')
+                    break
+                if not table_id and (el.get('type') == 'table' or el.get('tableShape')):
+                    if math.hypot(el.get('x', 0) - getattr(seat, 'x', 0), el.get('y', 0) - getattr(seat, 'y', 0)) <= 80:
+                        table_label = el.get('label')
+                        break
+
+        if table_label:
+            num_match = re.search(r'\d+', str(table_label))
+            if num_match:
+                table_number = int(num_match.group(0))
+        elif row_raw.lower().startswith('mesa'):
+            num_match = re.search(r'\d+', row_raw)
+            if num_match:
+                table_number = int(num_match.group(0))
+                table_label = f"Mesa {table_number}"
+
+        return {
+            'row_letter': row_letter or None,
+            'table_number': table_number,
+            'seat_number': seat.number,
+            'table_label': table_label
+        }
+
+    def get_row_letter(self, obj):
+        info = self._extract_seat_info(obj)
+        return info['row_letter']
+
+    def get_table_number(self, obj):
+        info = self._extract_seat_info(obj)
+        return info['table_number']
+
+    def get_seat_number(self, obj):
+        return obj.seat.number if obj.seat else None
+
+    def get_desglose(self, obj):
+        from apps.tickets.utils import format_seat_assignment
+        info = self._extract_seat_info(obj)
+        formatted = format_seat_assignment(obj.seat) if obj.seat else self.get_zone(obj)
+        return {
+            'row_letter': info['row_letter'],
+            'table_number': info['table_number'],
+            'seat_number': info['seat_number'],
+            'formatted': formatted,
+            'chips': {
+                'row': f"Fila: {info['row_letter']}" if info['row_letter'] else None,
+                'table': f"Mesa: {info['table_number']}" if info['table_number'] else None,
+                'seat': f"Asiento: {info['seat_number']}" if info['seat_number'] else None,
+            }
+        }
+
+    def get_status(self, obj):
+        if obj.status == 'cancelled':
+            return 'CANCELLED'
+        if obj.is_scanned or obj.status == 'used':
+            return 'CHECKED_IN'
+        if obj.used_coupon and (obj.used_coupon.is_complimentary or obj.used_coupon.discount_type == 'free_vip'):
+            return 'COMPLIMENTARY'
+        return 'ACTIVE'
+
+    def get_payment_reference(self, obj):
+        if obj.used_coupon and (obj.used_coupon.is_complimentary or obj.used_coupon.discount_type == 'free_vip'):
+            return f"CORTESIA:{obj.used_coupon.code}"
+        if obj.stripe_session_id:
+            return obj.stripe_session_id
+        if obj.used_coupon:
+            return f"CUPON:{obj.used_coupon.code}"
+        return "PAGO-DIRECTO"
+
+    def get_coupon(self, obj):
+        if not obj.used_coupon:
+            return None
+        c = obj.used_coupon
+        return {
+            'id': c.id,
+            'code': c.code,
+            'discount_type': c.discount_type,
+            'discount_value': float(c.discount_value),
+            'is_complimentary': c.is_complimentary
+        }
+
+

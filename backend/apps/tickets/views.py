@@ -6,7 +6,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import Event, Theater, Ticket, Seat, SiteSettings, Coupon
-from .serializers import EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer, SiteSettingsSerializer, CouponSerializer
+from .serializers import (
+    EventSerializer, TheaterSerializer, TicketSerializer, SeatSerializer,
+    SiteSettingsSerializer, CouponSerializer, AdminTicketSerializer
+)
 import logging
 
 # Instanciación estándar del logger utilizando el nombre del módulo actual.
@@ -1002,5 +1005,235 @@ class ActiveThemeView(APIView):
                 logger.error(f"Error al guardar caché 'ms_ambar_active_theme_global': {exc}", exc_info=True)
 
         return Response(theme_data)
+
+
+class TicketManagementViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet Administrativo (/api/tickets/admin/tickets/):
+    Gestión, auditoría y control transaccional de tickets para Staff y Administradores.
+    """
+    permission_classes = [permissions.IsAdminUser]
+    serializer_class = AdminTicketSerializer
+    queryset = Ticket.objects.all().select_related('event', 'seat', 'ga_zone', 'used_coupon')
+
+    def get_queryset(self):
+        from django.db import models
+        import re
+        import uuid
+
+        qs = Ticket.objects.all().select_related('event', 'seat', 'ga_zone', 'used_coupon')
+
+        # 1. Filtro por Evento
+        event_id = self.request.query_params.get('event_id')
+        if event_id and str(event_id).isdigit():
+            qs = qs.filter(event_id=int(event_id))
+
+        # 2. Filtro por Estatus Canónico
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            status_upper = status_param.strip().upper()
+            if status_upper == 'ACTIVE':
+                qs = qs.filter(status='paid', is_scanned=False).exclude(used_coupon__is_complimentary=True).exclude(used_coupon__discount_type='free_vip')
+            elif status_upper == 'CHECKED_IN':
+                qs = qs.filter(models.Q(is_scanned=True) | models.Q(status='used'))
+            elif status_upper == 'CANCELLED':
+                qs = qs.filter(status='cancelled')
+            elif status_upper == 'COMPLIMENTARY':
+                qs = qs.filter(models.Q(used_coupon__is_complimentary=True) | models.Q(used_coupon__discount_type='free_vip'))
+
+        # 3. Filtro por Tipo de Entrada
+        ticket_type = self.request.query_params.get('type')
+        if ticket_type:
+            t_upper = ticket_type.strip().upper()
+            if t_upper == 'NUMBERED':
+                qs = qs.filter(seat__isnull=False)
+            elif t_upper == 'GENERAL':
+                qs = qs.filter(seat__isnull=True, has_mg=False)
+            elif t_upper == 'MG':
+                qs = qs.filter(has_mg=True)
+            elif t_upper == 'COMPLIMENTARY':
+                qs = qs.filter(models.Q(used_coupon__is_complimentary=True) | models.Q(used_coupon__discount_type='free_vip'))
+
+        # 4. Buscador en tiempo real (por nombre, correo, folio, teléfono o token QR)
+        search = self.request.query_params.get('search') or self.request.query_params.get('q')
+        if search:
+            search_clean = search.strip()
+            folio_match = re.search(r'TKT-0*(\d+)', search_clean, re.IGNORECASE)
+            id_filter = int(folio_match.group(1)) if folio_match else (int(search_clean) if search_clean.isdigit() else None)
+
+            query = (
+                models.Q(user_email__icontains=search_clean) |
+                models.Q(user_phone__icontains=search_clean) |
+                models.Q(event__title__icontains=search_clean) |
+                models.Q(used_coupon__code__icontains=search_clean)
+            )
+
+            try:
+                uuid_val = uuid.UUID(search_clean)
+                query |= models.Q(token=uuid_val)
+            except (ValueError, TypeError):
+                pass
+
+            if id_filter:
+                query |= models.Q(id=id_filter)
+
+            qs = qs.filter(query)
+
+        return qs.order_by('-id')
+
+    @action(detail=True, methods=['post'], url_path='check-in')
+    def check_in(self, request, pk=None):
+        """
+        POST /{id}/check-in/: Valida y marca boleto usado con timestamp geolocalizado.
+        """
+        lat = request.data.get('latitude')
+        lng = request.data.get('longitude')
+        loc_label = request.data.get('location_label', '')
+
+        with transaction.atomic():
+            ticket = Ticket.objects.select_for_update().select_related('event', 'seat', 'ga_zone', 'used_coupon').get(pk=pk)
+
+            if ticket.status == 'cancelled':
+                return Response({
+                    'error': 'No es posible hacer check-in de un boleto cancelado.',
+                    'ticket_id': ticket.id,
+                    'status': 'CANCELLED'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            now = timezone.now()
+            already_scanned = bool(ticket.is_scanned or ticket.status == 'used')
+
+            ticket.is_scanned = True
+            ticket.scanned_at = now
+            ticket.status = 'used'
+            ticket.save(update_fields=['is_scanned', 'scanned_at', 'status'])
+
+            logger.info(
+                f"[ADMIN/CHECK-IN] Ticket #{ticket.id} ({ticket.user_email}) marcado como CHECKED_IN por admin {request.user.username}. "
+                f"Geo: {lat}, {lng} ({loc_label}) - Previo: {already_scanned}"
+            )
+
+        serializer = self.get_serializer(ticket)
+        return Response({
+            'status': 'success',
+            'message': 'Ingreso validado exitosamente' if not already_scanned else 'Check-in actualizado exitosamente',
+            'already_scanned': already_scanned,
+            'geolocation': {
+                'latitude': lat,
+                'longitude': lng,
+                'label': loc_label,
+                'timestamp': now.isoformat()
+            },
+            'ticket': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='reassign')
+    def reassign(self, request, pk=None):
+        """
+        POST /{id}/reassign/: Reasigna butaca de forma atómica (select_for_update()).
+        """
+        from apps.tickets.utils import format_seat_assignment
+
+        new_seat_id = request.data.get('new_seat_id') or request.data.get('seat_id')
+        if not new_seat_id:
+            return Response({'error': 'El parámetro new_seat_id es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        with transaction.atomic():
+            ticket = Ticket.objects.select_for_update().select_related('event', 'seat').get(pk=pk)
+
+            if ticket.status == 'cancelled':
+                return Response({'error': 'No se puede reasignar un boleto cancelado.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                new_seat = Seat.objects.select_for_update().get(pk=new_seat_id)
+            except Seat.DoesNotExist:
+                return Response({'error': f'El asiento con ID {new_seat_id} no existe.'}, status=status.HTTP_404_NOT_FOUND)
+
+            # Validar recinto si aplica
+            if ticket.event.theater_id and new_seat.theater_id != ticket.event.theater_id:
+                return Response({'error': 'El nuevo asiento no pertenece al recinto de este evento.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Validar colisión de asiento con otro boleto activo
+            conflict = Ticket.objects.select_for_update().filter(
+                event=ticket.event,
+                seat=new_seat,
+                status__in=['paid', 'reserved', 'used']
+            ).exclude(pk=ticket.pk).first()
+
+            if conflict:
+                return Response({
+                    'error': f'El asiento seleccionado ya está asignado al boleto #{conflict.id} ({conflict.user_email}).'
+                }, status=status.HTTP_409_CONFLICT)
+
+            old_seat = ticket.seat
+            old_display = format_seat_assignment(old_seat) if old_seat else 'Sin Asiento'
+
+            ticket.seat = new_seat
+            ticket.save(update_fields=['seat'])
+
+            new_display = format_seat_assignment(new_seat)
+            logger.info(
+                f"[ADMIN/REASSIGN] Ticket #{ticket.id} ({ticket.user_email}) reasignado: '{old_display}' → '{new_display}' por {request.user.username}."
+            )
+
+        serializer = self.get_serializer(ticket)
+        return Response({
+            'status': 'success',
+            'message': f'Butaca reasignada con éxito de {old_display} a {new_display}.',
+            'old_seat': old_display,
+            'new_seat': new_display,
+            'ticket': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='cancel')
+    def cancel(self, request, pk=None):
+        """
+        POST /{id}/cancel/: Cancela y libera la butaca en la matriz del recinto.
+        """
+        reason = request.data.get('reason', 'Cancelación administrativa')
+
+        with transaction.atomic():
+            ticket = Ticket.objects.select_for_update().select_related('event', 'seat').get(pk=pk)
+
+            if ticket.status == 'cancelled':
+                return Response({
+                    'status': 'already_cancelled',
+                    'message': 'Este boleto ya se encontraba cancelado previamente.'
+                }, status=status.HTTP_200_OK)
+
+            old_seat = ticket.seat
+            ticket.status = 'cancelled'
+            ticket.save(update_fields=['status'])
+
+            logger.info(
+                f"[ADMIN/CANCEL] Ticket #{ticket.id} ({ticket.user_email}) cancelado por admin {request.user.username}. Motivo: {reason}."
+            )
+
+        serializer = self.get_serializer(ticket)
+        return Response({
+            'status': 'success',
+            'message': f'Boleto #{ticket.id} cancelado y butaca liberada exitosamente.',
+            'ticket': serializer.data
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='resend-email')
+    def resend_email(self, request, pk=None):
+        """
+        POST /{id}/resend-email/: Reenvía el correo transaccional con pase digital y QR.
+        """
+        ticket = self.get_object()
+        try:
+            from apps.tickets.utils import send_ticket_email
+            send_ticket_email(ticket)
+            return Response({
+                'status': 'success',
+                'message': f'Correo transaccional reenviado exitosamente a {ticket.user_email}.'
+            }, status=status.HTTP_200_OK)
+        except Exception as exc:
+            logger.error(f"Falla reenviando correo para Ticket #{ticket.id}: {exc}", exc_info=True)
+            return Response({
+                'error': f'Error al despachar el correo: {str(exc)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
