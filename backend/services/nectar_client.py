@@ -424,3 +424,124 @@ class NectarGatewayClient:
             timeout=TIMEOUT_MUTATION_SECONDS,
             idempotency_key=key
         )
+
+    def get_addons_catalog(self) -> NectarResponse:
+        """Obtiene el catálogo de addons, estados de aprovisionamiento y SLA 48h."""
+        return self._execute_request(
+            method="GET",
+            path="/v1/tenants/addons/",
+            timeout=TIMEOUT_QUERY_SECONDS
+        )
+
+    def toggle_addon(self, addon_type: str) -> NectarResponse:
+        """Activa o solicita aprovisionamiento de un addon específico."""
+        payload = {"addon_type": addon_type}
+        return self._execute_request(
+            method="POST",
+            path="/v1/tenants/addons/toggle/",
+            data=payload,
+            timeout=TIMEOUT_MUTATION_SECONDS
+        )
+
+    def get_subwallet_breakdown(self) -> NectarResponse:
+        """Consulta el desglose de sub-bolsas y saldo libre desde Néctar Labs."""
+        return self._execute_request(
+            method="GET",
+            path="/v1/wallet/breakdown/",
+            timeout=TIMEOUT_QUERY_SECONDS
+        )
+
+    def reallocate_subwallet(
+        self,
+        addon_type: str,
+        amount: Decimal,
+        direction: str = "INJECT"
+    ) -> NectarResponse:
+        """Reasigna saldo entre el balance libre y una sub-bolsa de addon."""
+        payload = {
+            "addon_type": str(addon_type),
+            "amount": str(amount),
+            "direction": direction.upper()
+        }
+        return self._execute_request(
+            method="POST",
+            path="/v1/wallet/reallocate-subwallet/",
+            data=payload,
+            timeout=TIMEOUT_MUTATION_SECONDS
+        )
+
+    def reserve_2pc(
+        self,
+        service_type: str,
+        amount: Decimal,
+        external_reference: str,
+        idempotency_key: Optional[str] = None,
+        ttl_seconds: int = 120,
+        description: str = "",
+        metadata: Optional[dict] = None
+    ) -> NectarResponse:
+        """Fase 1 (2PC): Reserva atómica en bolsa de servicio."""
+        key = idempotency_key or str(uuid.uuid4())
+        payload = {
+            "service_type": service_type,
+            "amount": str(amount),
+            "external_reference": external_reference,
+            "ttl_seconds": ttl_seconds,
+            "description": description or f"Reserva 2PC para {external_reference}",
+            "metadata": metadata or {}
+        }
+        return self._execute_request(
+            method="POST",
+            path="/v1/wallet/reserve-2pc/",
+            data=payload,
+            timeout=TIMEOUT_MUTATION_SECONDS,
+            idempotency_key=key
+        )
+
+    def capture_2pc(
+        self,
+        reservation_id: Optional[str] = None,
+        external_reference: Optional[str] = None,
+        actual_amount: Optional[Decimal] = None,
+        description: str = ""
+    ) -> NectarResponse:
+        """Fase 2 (2PC): Captura definitiva de reserva previa."""
+        payload = {}
+        if reservation_id:
+            payload["reservation_id"] = str(reservation_id)
+        if external_reference:
+            payload["external_reference"] = str(external_reference)
+        if actual_amount is not None:
+            payload["actual_amount"] = str(actual_amount)
+        if description:
+            payload["description"] = description
+
+        return self._execute_request(
+            method="POST",
+            path="/v1/wallet/capture-2pc/",
+            data=payload,
+            timeout=TIMEOUT_MUTATION_SECONDS
+        )
+
+    def release_2pc(
+        self,
+        reservation_id: Optional[str] = None,
+        external_reference: Optional[str] = None,
+        reason: str = ""
+    ) -> NectarResponse:
+        """Fase 2 (2PC Reversal): Liberación y desbloqueo de fondos retenidos."""
+        payload = {}
+        if reservation_id:
+            payload["reservation_id"] = str(reservation_id)
+        if external_reference:
+            payload["external_reference"] = str(external_reference)
+        if reason:
+            payload["reason"] = reason
+
+        return self._execute_request(
+            method="POST",
+            path="/v1/wallet/release-2pc/",
+            data=payload,
+            timeout=TIMEOUT_MUTATION_SECONDS
+        )
+

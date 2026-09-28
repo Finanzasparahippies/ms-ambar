@@ -1,5 +1,16 @@
 from django.urls import path
-from .views import AnalyticsOverview, AnalyticsUnitDataView, AnalyticsExportCSVView, SystemMetricsView, DashboardOrdersView, DashboardExpensesView, AdsPerformanceView
+from .views import (
+    AnalyticsOverview,
+    AnalyticsUnitDataView,
+    AnalyticsExportCSVView,
+    SystemMetricsView,
+    DashboardOrdersView,
+    DashboardExpensesView,
+    AdsPerformanceView,
+    DashboardAddonsView,
+    DashboardAddonToggleView,
+    DashboardAddonReallocateView
+)
 
 urlpatterns = [
     path('analytics/', AnalyticsOverview.as_view(), name='analytics_overview'),
@@ -10,4 +21,8 @@ urlpatterns = [
     path('orders/', DashboardOrdersView.as_view(), name='dashboard_orders'),
     path('orders/<int:pk>/', DashboardOrdersView.as_view(), name='dashboard_order_detail'),
     path('expenses/', DashboardExpensesView.as_view(), name='dashboard_expenses'),
+    path('addons/', DashboardAddonsView.as_view(), name='dashboard_addons'),
+    path('addons/<str:addon_type>/toggle/', DashboardAddonToggleView.as_view(), name='dashboard_addon_toggle'),
+    path('addons/reallocate/', DashboardAddonReallocateView.as_view(), name='dashboard_addon_reallocate'),
 ]
+

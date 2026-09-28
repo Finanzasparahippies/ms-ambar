@@ -1294,3 +1294,162 @@ class AdsPerformanceView(APIView):
         except Exception as e:
             logger.error(f"[AdsPerformanceView] Error al consultar métricas de anuncios: {e}", exc_info=True)
             return Response({'error': str(e)}, status=500)
+
+
+class DashboardAddonsView(APIView):
+    """
+    GET /api/dashboard/addons/
+    Entrega el catálogo de addons con estado de suscripción (SLA 48h)
+    y saldos de sub-billeteras directamente desde Néctar Labs via Zero-Trust RPC.
+    """
+    permission_classes = [IsAdminUser]
+
+    METADATA_CATALOG = {
+        'FACTURAPI_CFDI': {
+            'name': 'Facturación CFDI 4.0 SAT',
+            'description': 'Timbrado fiscal automático de boletos y pedidos de mercancía ante el SAT con portal de autofacturación.',
+            'icon_path': 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+            'budget_key': 'FACTURAPI'
+        },
+        'LOGISTICS_NATIONAL': {
+            'name': 'Logística Nacional (Envia / Skydropx)',
+            'description': 'Cotización multicarrier automatizada, generación de guías prepagadas y rastreo en tiempo real.',
+            'icon_path': 'M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2m-4-1v8m0 0l3-3m-3 3L9 8m-5 5h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 00.707.293h3.172a1 1 0 00.707-.293l2.414-2.414a1 1 0 01.707-.293H20',
+            'budget_key': 'ENVIA'
+        },
+        'NECTAR_DRIVER': {
+            'name': 'Néctar Driver Local',
+            'description': 'Despacho y cobro contra entrega (Pay-on-Pickup) para entregas directas con repartidores propios.',
+            'icon_path': 'M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h2m-8 0a2 2 0 100 4 2 2 0 000-4zm10 0a2 2 0 100 4 2 2 0 000-4z',
+            'budget_key': 'NECTAR_DRIVER'
+        },
+        'AWS_SES_CAMPAIGNS': {
+            'name': 'Amazon SES Email Waterfall',
+            'description': 'Cascada de correos transaccionales y campañas masivas de newsletter sin límite de sandbox.',
+            'icon_path': 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+            'budget_key': 'AWS_SES'
+        },
+        'STRIPE_CONNECT_PAYOUTS': {
+            'name': 'Stripe Connect Custom Payouts',
+            'description': 'Dispersión automatizada de comisiones y pagos a cuentas bancarias interbancarias CLABE.',
+            'icon_path': 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z',
+            'budget_key': 'STRIPE_PAYOUTS'
+        }
+    }
+
+    def get(self, request):
+        from services.nectar_client import NectarGatewayClient
+        client = NectarGatewayClient()
+
+        # Consulta catálogo y billeteras
+        cat_resp = client.get_addons_catalog()
+        breakdown_resp = client.get_subwallet_breakdown()
+
+        wallet_overview = {
+            'unallocated_balance': '0.00',
+            'total_allocated': '0.00',
+            'total_balance': '0.00'
+        }
+
+        budgets_by_service = {}
+        if breakdown_resp.success and isinstance(breakdown_resp.data, dict):
+            wallet_overview['unallocated_balance'] = str(breakdown_resp.data.get('unallocated_balance', '0.00'))
+            wallet_overview['total_allocated'] = str(breakdown_resp.data.get('total_allocated_balance', '0.00'))
+            wallet_overview['total_balance'] = str(breakdown_resp.data.get('total_balance', '0.00'))
+
+            raw_budgets = breakdown_resp.data.get('budgets', [])
+            for b in raw_budgets:
+                st = b.get('service_type')
+                if st:
+                    budgets_by_service[st] = {
+                        'allocated_balance': str(b.get('allocated_balance', '0.00')),
+                        'used_balance': str(b.get('used_balance', '0.00'))
+                    }
+
+        addons_detail = {}
+        if cat_resp.success and isinstance(cat_resp.data, dict):
+            addons_detail = cat_resp.data.get('addons_detail', {})
+
+        result_addons = []
+        for addon_key, meta in self.METADATA_CATALOG.items():
+            # Mapear clave al identifier del backend Hub
+            ident_candidates = [addon_key.lower()]
+            if addon_key == 'FACTURAPI_CFDI':
+                ident_candidates = ['facturapi_cfdi', 'facturapi']
+            elif addon_key == 'LOGISTICS_NATIONAL':
+                ident_candidates = ['delivery_engine', 'envia', 'skydropx']
+            elif addon_key == 'AWS_SES_CAMPAIGNS':
+                ident_candidates = ['aws_ses']
+            elif addon_key == 'STRIPE_CONNECT_PAYOUTS':
+                ident_candidates = ['stripe']
+
+            status = 'INACTIVE'
+            badge_label = 'Inactivo'
+            for c in ident_candidates:
+                sub_info = addons_detail.get(c)
+                if sub_info:
+                    status = sub_info.get('status', 'INACTIVE')
+                    badge_label = sub_info.get('status_display', 'Inactivo')
+                    break
+
+            budget_data = budgets_by_service.get(meta['budget_key'], {
+                'allocated_balance': '0.00',
+                'used_balance': '0.00'
+            })
+
+            result_addons.append({
+                'id': addon_key,
+                'name': meta['name'],
+                'addon_type': addon_key,
+                'description': meta['description'],
+                'status': status,
+                'badge_label': badge_label,
+                'icon_path': meta['icon_path'],
+                'budget': budget_data
+            })
+
+        return Response({
+            'addons': result_addons,
+            'wallet': wallet_overview,
+            'hub_connected': cat_resp.success
+        })
+
+
+class DashboardAddonToggleView(APIView):
+    """
+    POST /api/dashboard/addons/<str:addon_type>/toggle/
+    Activa o desactiva el addon mediante RPC firmado hacia el Hub Central.
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, addon_type):
+        from services.nectar_client import NectarGatewayClient
+        client = NectarGatewayClient()
+        resp = client.toggle_addon(addon_type)
+        if resp.success:
+            return Response(resp.data, status=200)
+        return Response(resp.error, status=resp.status_code if resp.status_code != 0 else 502)
+
+
+class DashboardAddonReallocateView(APIView):
+    """
+    POST /api/dashboard/addons/reallocate/
+    Reasigna fondos entre el balance libre y una sub-bolsa.
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        from services.nectar_client import NectarGatewayClient
+        addon_type = request.data.get('addon_type')
+        amount = request.data.get('amount')
+        direction = request.data.get('direction', 'INJECT')
+
+        if not addon_type or not amount:
+            return Response({'error': 'Parámetros addon_type y amount son requeridos.'}, status=400)
+
+        client = NectarGatewayClient()
+        resp = client.reallocate_subwallet(addon_type=addon_type, amount=amount, direction=direction)
+        if resp.success:
+            return Response(resp.data, status=200)
+        return Response(resp.error, status=resp.status_code if resp.status_code != 0 else 502)
+
