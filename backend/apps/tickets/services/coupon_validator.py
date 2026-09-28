@@ -357,11 +357,14 @@ def determine_active_complimentary_row(
 def check_orphan_seats(
     event: Event,
     candidate_seat_ids: List[int],
-    return_details: bool = False
+    return_details: bool = False,
+    coupon: Optional[Coupon] = None
 ) -> Union[Tuple[bool, Optional[str]], Tuple[bool, Optional[str], List[int]]]:
     """
     Regla Anti-Asiento Huérfano (Orphan Seat Prevention) en mesas compartidas o filas contiguas:
     Verifica que la selección no deje exactamente 1 asiento libre aislado en una mesa compartida.
+    Permite a los usuarios con cupón de cortesía seleccionar un boleto aislado en su fila/mesa designada
+    o seleccionar una mesa vacía sin restricciones bloqueantes.
     Si return_details=True, retorna (is_valid, error_msg, orphan_seat_ids).
     Si return_details=False, retorna (is_valid, error_msg) para compatibilidad con código existente.
     """
@@ -392,6 +395,13 @@ def check_orphan_seats(
     for s in table_seats:
         seats_by_row.setdefault(s.row, []).append(s)
 
+    # Detectar si la compra se realiza con un cupón de cortesía activo
+    is_complimentary_flow = False
+    allowed_complimentary_rows: List[str] = []
+    if coupon and (coupon.is_complimentary or coupon.discount_type == 'free_vip' or float(coupon.discount_value or 0) >= 100):
+        is_complimentary_flow = True
+        _, allowed_complimentary_rows = determine_active_complimentary_row(event, coupon)
+
     all_orphan_ids: List[int] = []
 
     for row_name, row_seats_list in seats_by_row.items():
@@ -400,11 +410,38 @@ def check_orphan_seats(
         if total_seats_in_table < 2:
             continue
 
+        # Asientos ocupados antes de esta selección (para detectar mesa vacía)
+        initially_occupied = [
+            s for s in row_seats_list
+            if s.id in occupied_in_event or s.status != 'available'
+        ]
+        is_empty_table = (len(initially_occupied) == 0)
+
+        # Asientos candidatos seleccionados en esta mesa
+        candidates_in_table = [s for s in row_seats_list if s.id in candidate_set]
+
+        # Si es flujo de cortesía y los asientos están en la fila/mesa asignada, permitir boleto aislado
+        if is_complimentary_flow:
+            if not allowed_complimentary_rows:
+                continue
+            norm_allowed = set(normalize_row_name(r) for r in allowed_complimentary_rows)
+            seat_in_allowed = all(
+                normalize_row_name(s.row) in norm_allowed
+                or any(is_seat_in_priority(s.row, r) for r in allowed_complimentary_rows)
+                for s in candidates_in_table
+            )
+            if seat_in_allowed:
+                continue
+
         # Asientos que quedarían libres si se efectúa esta compra
         free_seats_in_table = [
             s for s in row_seats_list
             if s.id not in occupied_in_event and s.id not in candidate_set and s.status == 'available'
         ]
+
+        # Si la mesa estaba completamente vacía y un usuario selecciona 1 boleto individual, no restringir
+        if is_empty_table and len(candidates_in_table) == 1:
+            continue
 
         # Si queda exactamente 1 asiento libre aislado en la mesa
         if len(free_seats_in_table) == 1:
@@ -483,7 +520,7 @@ def lock_and_validate_seats_atomic(
                         }
 
         # Validar regla Anti-Asiento Huérfano
-        no_orphans, orphan_err = check_orphan_seats(event, seat_ids)
+        no_orphans, orphan_err = check_orphan_seats(event, seat_ids, coupon=coupon_locked)
         if not no_orphans:
             return {'valid': False, 'error': orphan_err}
 

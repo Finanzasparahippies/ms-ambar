@@ -23,6 +23,7 @@ import { showAlert } from '../lib/notifications';
 import { cn, getApiUrl } from '../lib/utils';
 import { SeatMapLoader, formatSeatAssignment, getSeatAssignmentParts } from '../lib/seatMapLoader';
 import TicketQRModal from '../components/TicketQRModal';
+import { isSeatAllowedByRestriction } from '../components/SeatingChart';
 
 const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
   ssr: false,
@@ -477,6 +478,34 @@ const TourPage = () => {
   const orphanSeatIds = useMemo(() => {
     if (!selectedSeats || selectedSeats.length === 0 || !seats || seats.length === 0) return [];
 
+    const isComplimentary = Boolean(
+      appliedCoupon && (
+        appliedCoupon.is_complimentary ||
+        appliedCoupon.discount_type === 'free_vip' ||
+        appliedCoupon.allowed_mode === 'DESIGNATED_ROW' ||
+        Number(appliedCoupon.discount_value || 0) >= 100
+      )
+    );
+
+    // Si el usuario tiene cupón de cortesía y los asientos seleccionados están en la fila permitida,
+    // se permite seleccionar un boleto aislado sin restricción de asiento huérfano.
+    if (isComplimentary) {
+      if (activeAllowedRows && activeAllowedRows.length > 0) {
+        const normAllowed = new Set(
+          activeAllowedRows.map(r => String(r || '').toLowerCase().replace(/^fila\s+/i, '').trim())
+        );
+        const allInDesignated = selectedSeats.every(s =>
+          isSeatAllowedByRestriction(s, activeAllowedRows, normAllowed, elements)
+        );
+        if (allInDesignated) {
+          return [];
+        }
+      } else {
+        // Cortesía general sin restricción de fila
+        return [];
+      }
+    }
+
     const selectedSet = new Set(selectedSeats.map(s => String(s.id)));
     const orphans: string[] = [];
 
@@ -486,12 +515,18 @@ const TourPage = () => {
 
     seats.forEach(s => {
       const tid = s.tableId || s.table_id || s.element_id;
+      const isTableSeat = Boolean(tid || String(s.row || '').toLowerCase().startsWith('mesa'));
       if (tid) {
         const key = String(tid);
         if (!tableSeatsMap[key]) tableSeatsMap[key] = [];
         tableSeatsMap[key].push(s);
+      } else if (String(s.row || '').toLowerCase().startsWith('mesa')) {
+        const key = String(s.row).trim().toUpperCase();
+        if (!tableSeatsMap[key]) tableSeatsMap[key] = [];
+        tableSeatsMap[key].push(s);
       }
-      if (s.row) {
+      // Solo evaluar en filas contiguas (butacas lineales de teatro) si NO es parte de una mesa
+      if (s.row && !isTableSeat) {
         const rKey = String(s.row).trim().toUpperCase();
         if (!rowSeatsMap[rKey]) rowSeatsMap[rKey] = [];
         rowSeatsMap[rKey].push(s);
@@ -505,6 +540,15 @@ const TourPage = () => {
         return !isOccupied && !selectedSet.has(String(s.id));
       });
       const selectedInTable = tableSeats.filter(s => selectedSet.has(String(s.id)));
+      const isTableInitiallyEmpty = tableSeats.every(
+        s => s.status !== 'occupied' && s.status !== 'reserved'
+      );
+
+      // Si la mesa estaba completamente vacía y el usuario selecciona 1 boleto individual, no restringir
+      if (isTableInitiallyEmpty && selectedInTable.length === 1) {
+        return;
+      }
+
       if (selectedInTable.length > 0 && availableUnselected.length === 1) {
         orphans.push(String(availableUnselected[0].id));
       }
@@ -535,7 +579,7 @@ const TourPage = () => {
     });
 
     return Array.from(new Set(orphans));
-  }, [seats, selectedSeats]);
+  }, [seats, selectedSeats, appliedCoupon, activeAllowedRows, elements]);
 
   const handleProceedToCheckout = () => {
     if (isCurrentEventPast) return;

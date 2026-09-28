@@ -832,6 +832,60 @@ class TicketsAppTests(APITestCase):
         is_valid_2, _ = check_orphan_seats(self.event, valid_candidates)
         self.assertTrue(is_valid_2)
 
+    def test_check_orphan_seats_allows_complimentary_single_ticket_in_designated_row(self):
+        """Verify complimentary coupon allows selecting 1 isolated ticket in designated row without orphan blocker."""
+        from apps.tickets.services.coupon_validator import check_orphan_seats
+        from apps.tickets.models import Coupon
+
+        # Create a table in designated complimentary row "Fila G"
+        table_g_seats = []
+        for i in range(1, 5):
+            s = Seat.objects.create(
+                theater=self.theater,
+                section="Zona Mesas",
+                row="Fila G",
+                number=i,
+                base_price=500,
+                status="available"
+            )
+            table_g_seats.append(s)
+
+        coupon = Coupon.objects.create(
+            code="COMP-SOLO-VIP",
+            discount_type="free_vip",
+            is_complimentary=True,
+            complimentary_allocation_mode="DESIGNATED_ROW",
+            complimentary_rows_priority=["Fila G"],
+            event=self.event
+        )
+
+        # Selecting only 1 single seat in that table
+        single_candidate = [table_g_seats[0].id]
+        is_valid, err_msg = check_orphan_seats(self.event, single_candidate, coupon=coupon)
+        self.assertTrue(is_valid)
+        self.assertIsNone(err_msg)
+
+    def test_check_orphan_seats_allows_selecting_empty_table_of_two(self):
+        """Verify selecting 1 seat in an empty 2-seat table is allowed without error."""
+        from apps.tickets.services.coupon_validator import check_orphan_seats
+
+        t2_seats = []
+        for i in range(1, 3):
+            s = Seat.objects.create(
+                theater=self.theater,
+                section="Terraza",
+                row="Mesa 50",
+                number=i,
+                base_price=500,
+                status="available"
+            )
+            t2_seats.append(s)
+
+        # Select 1 seat at empty 2-seat table
+        is_valid, err_msg = check_orphan_seats(self.event, [t2_seats[0].id])
+        self.assertTrue(is_valid)
+        self.assertIsNone(err_msg)
+
     def test_event_seats_endpoint_serializes_row_label_and_complimentary_flag(self):
         """Verify /api/tickets/events/{id}/seats/?coupon=CODE returns row_label and is_complimentary_eligible."""
         from apps.tickets.models import Coupon

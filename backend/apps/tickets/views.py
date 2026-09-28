@@ -637,7 +637,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
             # Prevención de Asiento Huérfano (Orphan Seat Prevention)
             from apps.tickets.services.coupon_validator import check_orphan_seats
-            no_orphans, orphan_err = check_orphan_seats(event, [int(s) for s in seat_ids if str(s).isdigit()])
+            no_orphans, orphan_err = check_orphan_seats(event, [int(s) for s in seat_ids if str(s).isdigit()], coupon=coupon_obj)
             if not no_orphans:
                 return Response({'error': orphan_err}, status=status.HTTP_400_BAD_REQUEST)
 
