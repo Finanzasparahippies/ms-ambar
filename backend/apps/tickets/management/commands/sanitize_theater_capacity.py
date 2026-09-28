@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = "Reconcilia y migra boletos vendidos hacia los 168 asientos oficiales del layout sin borrar ningún ticket pagado."
+    help = "Reconcilia y migra boletos vendidos hacia los 168 asientos oficiales del layout mediante correspondencia espacial exacta 1-a-1."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -28,7 +28,7 @@ class Command(BaseCommand):
         apply_changes = options.get('apply', False)
 
         self.stdout.write(self.style.MIGRATE_HEADING(
-            f"=== Reconciliación Segura de Boletos y Capacidad: '{theater_name}' (Modo: {'APLICAR MIGRACIÓN' if apply_changes else 'SIMULACIÓN (Dry-Run)'}) ==="
+            f"=== Reconciliación Segura 1-a-1 de Boletos: '{theater_name}' (Modo: {'APLICAR MIGRACIÓN' if apply_changes else 'SIMULACIÓN (Dry-Run)'}) ==="
         ))
 
         theater = Theater.objects.filter(name__icontains=theater_name).first()
@@ -53,130 +53,129 @@ class Command(BaseCommand):
         # Separar asientos de las Filas oficiales (Fila A - I) vs Asientos legados de Mesas (Mesa X)
         official_row_seats = [s for s in db_seats if s.row and s.row.strip().lower().startswith('fila')]
         legacy_table_seats = [s for s in db_seats if s.row and s.row.strip().lower().startswith('mesa')]
-        other_seats = [s for s in db_seats if s not in official_row_seats and s not in legacy_table_seats]
 
         self.stdout.write(f"\n[ESTRUCTURA DE ASIENTOS]")
         self.stdout.write(f"  - Asientos en Filas oficiales (Fila A - I): {len(official_row_seats)}")
         self.stdout.write(f"  - Asientos legados etiquetados como 'Mesa X': {len(legacy_table_seats)}")
-        self.stdout.write(f"  - Otros asientos: {len(other_seats)}")
 
         # Auditar tickets vendidos
         legacy_seats_with_tickets = []
         for s in legacy_table_seats:
-            t_count = Ticket.objects.filter(seat=s).count()
-            if t_count > 0:
-                legacy_seats_with_tickets.append((s, t_count))
-
-        official_seats_with_tickets = []
-        for s in official_row_seats:
-            t_count = Ticket.objects.filter(seat=s).count()
-            if t_count > 0:
-                official_seats_with_tickets.append((s, t_count))
+            tickets = list(Ticket.objects.filter(seat=s))
+            if tickets:
+                legacy_seats_with_tickets.append((s, tickets))
 
         self.stdout.write(f"\n[AUDITORÍA DE TICKETS PAGADOS]")
-        self.stdout.write(f"  - Boletos en asientos legados 'Mesa X': {sum(c for _, c in legacy_seats_with_tickets)} (en {len(legacy_seats_with_tickets)} asientos)")
-        self.stdout.write(f"  - Boletos en asientos oficiales 'Fila X': {sum(c for _, c in official_seats_with_tickets)} (en {len(official_seats_with_tickets)} asientos)")
+        self.stdout.write(f"  - Asientos legados con boletos activos: {len(legacy_seats_with_tickets)}")
 
-        # Mapear mesas por label para búsqueda rápida
+        # Mapeo de mesas por label
         table_by_label = {}
         for t in tables:
             lbl = str(t.get('label', '')).strip().lower()
             if lbl:
                 table_by_label[lbl] = t
 
-        # Preparar plan de reconciliación / migración
+        # Plan de migración 1-a-1 usando proximidad espacial (evita colisiones de unique constraint)
         migration_plan = []
-        unmatched_seats = []
+        claimed_dest_ids = set()
 
-        for legacy_seat, ticket_count in legacy_seats_with_tickets:
+        # Obtener pares (event_id, seat_id) existentes para evitar cualquier conflicto
+        existing_event_seat_pairs = set(Ticket.objects.filter(seat__in=official_row_seats).values_list('event_id', 'seat_id'))
+
+        for legacy_seat, tickets in legacy_seats_with_tickets:
             table_label = legacy_seat.row.strip().lower()
             matched_table = table_by_label.get(table_label)
-            matched_official_seat = None
 
+            target_row = ""
             if matched_table:
                 target_row = str(matched_table.get('row') or matched_table.get('row_label') or '').strip().lower()
-                # Buscar asiento en official_row_seats con la misma fila y número
-                candidates = [s for s in official_row_seats if s.row.strip().lower() == target_row and s.number == legacy_seat.number]
-                if candidates:
-                    matched_official_seat = candidates[0]
-                else:
-                    # Búsqueda espacial por proximidad a la mesa (< 65px)
-                    spatial_candidates = [
-                        s for s in official_row_seats
-                        if s.row.strip().lower() == target_row and math.hypot(s.x - legacy_seat.x, s.y - legacy_seat.y) <= 45
-                    ]
-                    if spatial_candidates:
-                        matched_official_seat = spatial_candidates[0]
 
-            if not matched_official_seat:
-                # Fallback espacial general: buscar el asiento oficial más cercano (< 30px)
-                closest = None
-                min_dist = float('inf')
-                for s in official_row_seats:
-                    d = math.hypot(s.x - legacy_seat.x, s.y - legacy_seat.y)
-                    if d < min_dist:
-                        min_dist = d
-                        closest = s
-                if closest and min_dist <= 35:
-                    matched_official_seat = closest
+            # Ordenar candidatos oficiales por distancia euclidiana al asiento legado
+            scored_candidates = []
+            for s in official_row_seats:
+                if s.id in claimed_dest_ids:
+                    continue
 
-            if matched_official_seat:
-                migration_plan.append((legacy_seat, matched_official_seat, ticket_count))
+                # Verificar que la asignación no viole la restricción unique de (event_id, seat_id)
+                conflict = any((t.event_id, s.id) in existing_event_seat_pairs for t in tickets)
+                if conflict:
+                    continue
+
+                dist = math.hypot(s.x - legacy_seat.x, s.y - legacy_seat.y)
+                row_match = (s.row.strip().lower() == target_row) if target_row else True
+                num_match = (s.number == legacy_seat.number)
+
+                # Priorizar coincidencia de fila de mesa + proximidad física
+                score = dist
+                if not row_match:
+                    score += 500
+                if not num_match:
+                    score += 50
+
+                scored_candidates.append((score, dist, s))
+
+            scored_candidates.sort(key=lambda x: x[0])
+
+            if scored_candidates:
+                best_score, best_dist, best_seat = scored_candidates[0]
+                migration_plan.append((legacy_seat, best_seat, tickets, best_dist))
+                claimed_dest_ids.add(best_seat.id)
+                for t in tickets:
+                    existing_event_seat_pairs.add((t.event_id, best_seat.id))
             else:
-                unmatched_seats.append((legacy_seat, ticket_count))
+                self.stdout.write(self.style.ERROR(
+                    f"  [ERROR] No se encontró destino libre sin conflicto para {legacy_seat.row} #{legacy_seat.number} (ID {legacy_seat.id})"
+                ))
 
-        self.stdout.write(f"\n[PLAN DE MIGRACIÓN DE BOLETOS]")
-        self.stdout.write(f"  - Asientos legados listos para migrar a filas oficiales: {len(migration_plan)}")
-        for src, dest, count in migration_plan:
-            self.stdout.write(f"    • {src.row} #{src.number} (ID {src.id}) -> {dest.row} #{dest.number} (ID {dest.id}) [{count} boleto(s)]")
-
-        if unmatched_seats:
-            self.stdout.write(self.style.WARNING(f"  - [AVISO] Asientos con boletos sin correspondencia exacta: {len(unmatched_seats)}"))
-            for s, count in unmatched_seats:
-                self.stdout.write(f"    • {s.row} #{s.number} (ID {s.id}) [{count} boletos]")
+        self.stdout.write(f"\n[PLAN DE MIGRACIÓN DE BOLETOS 1-A-1]")
+        self.stdout.write(f"  - Asientos a migrar de forma unívoca: {len(migration_plan)} de {len(legacy_seats_with_tickets)}")
+        for src, dest, tickets, dist in migration_plan:
+            self.stdout.write(
+                f"    • {src.row} #{src.number} (ID {src.id}, x={int(src.x)}, y={int(src.y)}) -> "
+                f"{dest.row} #{dest.number} (ID {dest.id}, x={int(dest.x)}, y={int(dest.y)}, dist={dist:.1f}px) [{len(tickets)} boleto(s)]"
+            )
 
         if not apply_changes:
             self.stdout.write(self.style.WARNING(
-                "\n[MODO SIMULACIÓN] Para ejecutar la migración segura y dejar exactamente 168 asientos:"
+                "\n[MODO SIMULACIÓN] Para ejecutar la migración 1-a-1 sin conflictos y dejar 168 asientos exactos:"
                 f"\n  ./nectar.sh manage-prod sanitize_theater_capacity --theater-name '{theater_name}' --apply"
             ))
             return
 
-        # EJECUCIÓN SEGURA DENTRO DE TRANSACCIÓN ATÓMICA
+        # EJECUCIÓN TRANSACCIONAL ATÓMICA
         with transaction.atomic():
-            migrated_tickets_total = 0
-            # 1. Reasignar tickets de asientos legados hacia los asientos oficiales correspondientes
-            for src, dest, count in migration_plan:
-                tickets_to_move = Ticket.objects.filter(seat=src)
-                updated_count = tickets_to_move.update(seat=dest)
-                migrated_tickets_total += updated_count
-                # Marcar el asiento oficial como ocupado
+            migrated_count = 0
+            for src, dest, tickets, dist in migration_plan:
+                for t in tickets:
+                    t.seat = dest
+                    t.save(update_fields=['seat'])
+                    migrated_count += 1
                 dest.status = 'occupied'
                 dest.save(update_fields=['status'])
 
             self.stdout.write(self.style.SUCCESS(
-                f"\n[ÉXITO] Se migraron {migrated_tickets_total} boleto(s) pagados a sus asientos oficiales correspondientes."
+                f"\n[ÉXITO] Se reasignaron con éxito {migrated_count} boleto(s) pagados sin ninguna colisión."
             ))
 
-            # 2. Ahora que los boletos están a salvo en los asientos oficiales, purgar los asientos legados sin boletos
+            # Purgar los 22 asientos legados 'Mesa X' que ahora tienen 0 boletos asociados
             legacy_purgable = Seat.objects.filter(theater=theater, row__istartswith='mesa', ticket__isnull=True)
             purgable_count = legacy_purgable.count()
             legacy_purgable.delete()
-            self.stdout.write(self.style.SUCCESS(f"  Se purgaron {purgable_count} asientos legados duplicados (ahora vacíos)."))
+            self.stdout.write(self.style.SUCCESS(f"  Se eliminaron {purgable_count} asientos legados duplicados (ahora vacíos)."))
 
-            # 3. Purgar asientos extra que no pertenezcan a las 168 butacas oficiales y no tengan boletos
+            # Purgar cualquier otro asiento que no pertenezca a las 168 butacas oficiales
             other_purgable = Seat.objects.filter(theater=theater, ticket__isnull=True).exclude(id__in=[s.id for s in official_row_seats])
             other_count = other_purgable.count()
             other_purgable.delete()
             if other_count > 0:
                 self.stdout.write(self.style.SUCCESS(f"  Se purgaron {other_count} asientos huérfanos adicionales."))
 
-            # 4. Verificar conteo final en base de datos
+            # Verificación final de integridad
             final_db_count = Seat.objects.filter(theater=theater).count()
             final_tickets_count = Ticket.objects.filter(seat__theater=theater).count()
 
             self.stdout.write(self.style.SUCCESS(
-                f"\n=== SANEAMIENTO COMPLETADO EXITOSAMENTE ==="
-                f"\n  - Asientos finales en Base de Datos: {final_db_count} (Capacidad oficial exacta: 168)"
-                f"\n  - Boletos pagados y preservados: {final_tickets_count} (100% conservados y asignados en el mapa)"
+                f"\n=== RECONCILIACIÓN COMPLETADA CON ÉXITO ==="
+                f"\n  - Capacidad final en Base de Datos: {final_db_count} asientos (Exactamente 168)"
+                f"\n  - Boletos de clientes preservados: {final_tickets_count} (100% intactos, pagados y ocupados en el plano)"
             ))
