@@ -125,6 +125,7 @@ class ShopAppTests(APITestCase):
             'state': 'Jalisco',
             'postal_code': '44100',
             'country': 'México',
+            'shipping_rate_id': 'rate_std_fallback',
             'shipping_amount': 150.00,
             'items': [
                 {'product_id': self.product_active.id, 'quantity': 2}
@@ -1258,6 +1259,7 @@ class ShopAppTests(APITestCase):
             'city': 'Hermosillo',
             'state': 'Sonora',
             'country': 'México',
+            'shipping_rate_id': 'rate_std_fallback',
             'shipping_amount': 150.00,
             'items': [{'product_id': self.product_active.id, 'quantity': 1}]
         }
