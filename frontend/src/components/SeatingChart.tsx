@@ -270,6 +270,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const lastTouchDistRef = useRef<number | null>(null);
   const touchStartRef = useRef<{ clientX: number; clientY: number; time: number; hitSeat: Seat | null } | null>(null);
   const touchMovedRef = useRef<boolean>(false);
+  const lastTouchTimeRef = useRef<number>(0);
   const pulseEndTimeRef = useRef<number>(0);
 
   useEffect(() => {
@@ -1052,23 +1053,40 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     };
   };
 
-  const getHitSeat = useCallback((x: number, y: number) => {
-    const maxRadius = Math.max(12, Math.min(24, 18 / transform.scale));
+  const getHitSeat = useCallback((x: number, y: number, isTouch = false) => {
+    // En pantallas táctiles, expandir el radio de tolerancia (slop) para adaptarse al tamaño de la yema del dedo (WCAG 44px+)
+    const touchRadius = Math.max(16, 26 / transform.scale);
+    const mouseRadius = Math.max(12, Math.min(24, 18 / transform.scale));
+    const maxRadius = isTouch ? touchRadius : mouseRadius;
     let closestSeat: Seat | null = null;
     let minDist = Infinity;
+    const candidates: { seat: Seat; dist: number }[] = [];
 
     for (let i = seats.length - 1; i >= 0; i--) {
       const s = seats[i];
       const dx = s.x - x;
       const dy = s.y - y;
       const dist = Math.hypot(dx, dy);
-      if (dist <= maxRadius && dist < minDist) {
-        minDist = dist;
-        closestSeat = s;
+      if (dist <= maxRadius) {
+        candidates.push({ seat: s, dist });
+        if (dist < minDist) {
+          minDist = dist;
+          closestSeat = s;
+        }
       }
     }
+
+    // Prioridad de deselección táctil: si un asiento dentro del radio ya está seleccionado,
+    // priorizarlo para permitir deseleccionarlo sin requerir precisión microscópica.
+    if (isTouch && candidates.length > 0) {
+      const selectedCandidate = candidates.find(c => selectedIds.includes(String(c.seat.id)));
+      if (selectedCandidate) {
+        return selectedCandidate.seat;
+      }
+    }
+
     return closestSeat;
-  }, [seats, transform.scale]);
+  }, [seats, transform.scale, selectedIds]);
 
   const getHitElement = useCallback((x: number, y: number) => {
     const slop = Math.max(5, 12 / transform.scale);
@@ -1098,7 +1116,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       const { x, y } = getTouchCoords(e);
       setLastMousePos({ x: touch.clientX, y: touch.clientY });
 
-      const hitSeat = getHitSeat(x, y);
+      const hitSeat = getHitSeat(x, y, true);
       const hitEl = getHitElement(x, y);
 
       if (isDesignMode) {
@@ -1118,7 +1136,9 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         }
         setIsPanning(true);
       } else {
-        // En modo reserva de cliente, guardamos el toque inicial para diferenciar PAN de TAP
+        // En modo cliente: guardamos el toque inicial.
+        // Si el usuario tocó directamente sobre un asiento, no iniciamos paneo de inmediato
+        // para evitar que el mapa se mueva involuntariamente bajo el dedo durante el tap.
         touchStartRef.current = {
           clientX: touch.clientX,
           clientY: touch.clientY,
@@ -1126,7 +1146,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
           hitSeat: hitSeat || null
         };
         touchMovedRef.current = false;
-        setIsPanning(true);
+        setIsPanning(!hitSeat);
       }
     } else if (e.touches.length === 2) {
       const t1 = e.touches[0];
@@ -1154,8 +1174,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
           touch.clientX - touchStartRef.current.clientX,
           touch.clientY - touchStartRef.current.clientY
         );
-        if (delta > 8) {
+        // Umbral adaptativo de 14px para absorber microtemblores y aplastamiento de la yema
+        if (delta > 14) {
           touchMovedRef.current = true;
+          setIsPanning(true);
         }
       }
 
@@ -1207,21 +1229,41 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   };
 
   const handleTouchEnd = () => {
+    const now = Date.now();
+    lastTouchTimeRef.current = now;
     setIsPanning(false);
 
-    // Solo si el usuario NO arrastró la pantalla (desplazamiento < 8px) procesamos el TAP en el asiento
+    // Solo si el usuario NO arrastró la pantalla procesamos el TAP en el asiento
     if (!isDesignMode && touchStartRef.current && !touchMovedRef.current) {
-      const hitSeat = touchStartRef.current.hitSeat;
-      if (hitSeat && hitSeat.status === 'available') {
-        const isAllowed = isSeatAllowedByRestriction(hitSeat, restrictedRows, normalizedRestrictedRows, elements);
-        if (hasRowRestriction && !isAllowed) {
-          pulseEndTimeRef.current = Date.now() + 2500;
-          onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);
-        } else {
-          const id = String(hitSeat.id);
-          const newSelection = selectedIds.includes(id) ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
-          setSelectedIds(newSelection);
-          onSelect?.(newSelection);
+      const touchDuration = now - touchStartRef.current.time;
+      // Validar que sea un tap rápido (< 500ms)
+      if (touchDuration < 500) {
+        let hitSeat = touchStartRef.current.hitSeat;
+        // Fallback: si no enganchó en touchStart, re-evaluar con las coordenadas actuales
+        if (!hitSeat) {
+          hitSeat = getHitSeat(mousePos.x, mousePos.y, true);
+        }
+
+        if (hitSeat && hitSeat.status === 'available') {
+          const isAllowed = isSeatAllowedByRestriction(hitSeat, restrictedRows, normalizedRestrictedRows, elements);
+          if (hasRowRestriction && !isAllowed) {
+            pulseEndTimeRef.current = Date.now() + 2500;
+            onInvalidSelectionAttempt?.(hitSeat, restrictedRows || []);
+          } else {
+            const id = String(hitSeat.id);
+            const isAlreadySelected = selectedIds.includes(id);
+            const newSelection = isAlreadySelected ? selectedIds.filter(i => i !== id) : [...selectedIds, id];
+
+            // Feedback háptico en dispositivos táctiles compatibles
+            if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+              try {
+                navigator.vibrate(isAlreadySelected ? [10, 30, 10] : 14);
+              } catch (_) {}
+            }
+
+            setSelectedIds(newSelection);
+            onSelect?.(newSelection);
+          }
         }
       }
     }
@@ -1234,6 +1276,11 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Prevenir doble toggle por clics sintéticos emulados por el navegador tras eventos táctiles
+    if (Date.now() - lastTouchTimeRef.current < 650) {
+      return;
+    }
+
     const { x, y } = getMouseCoords(e);
     if (e.button === 1 || e.button === 2) { setIsPanning(true); setLastMousePos({ x: e.clientX, y: e.clientY }); return; }
 

@@ -1097,6 +1097,46 @@ const TourPage = () => {
                                 orphanSeatIds={orphanSeatIds}
                                 onInvalidSelectionAttempt={handleInvalidSeatAttempt}
                               />
+
+                              {/* Barra flotante de selección rápida para pantallas táctiles/móviles */}
+                              {selectedSeats.length > 0 && (
+                                <div className="absolute top-3 left-3 right-3 z-20 pointer-events-auto flex flex-col gap-1.5 md:hidden">
+                                  <div className="bg-nature-night/95 dark:bg-[#0b0d17]/95 backdrop-blur-xl border border-amber-honey/40 rounded-2xl p-2 shadow-2xl flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-none max-w-[calc(100%-75px)]">
+                                      {selectedSeats.map((seat: any) => {
+                                        const seatLabel = getSeatDisplayText(seat) || `Asiento ${seat.row}${seat.number}`;
+                                        return (
+                                          <div
+                                            key={String(seat.id)}
+                                            className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-honey/20 border border-amber-honey/40 text-amber-honey rounded-xl text-[11px] font-black shrink-0 animate-fadeIn"
+                                          >
+                                            <span className="truncate max-w-[120px]">{seatLabel}</span>
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedSeats(prev => prev.filter(s => String(s.id) !== String(seat.id)));
+                                              }}
+                                              className="w-6 h-6 rounded-full bg-amber-honey/30 active:bg-red-500 active:text-white flex items-center justify-center text-xs font-bold transition-colors"
+                                              title="Quitar asiento"
+                                              aria-label={`Quitar ${seatLabel}`}
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedSeats([])}
+                                      className="px-2.5 py-1.5 bg-red-500/20 active:bg-red-500/30 border border-red-500/30 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors"
+                                    >
+                                      Quitar
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
