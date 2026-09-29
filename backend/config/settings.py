@@ -119,6 +119,9 @@ if 'test' in sys.argv:
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
             "NAME": BASE_DIR / "db.sqlite3",
+            "OPTIONS": {
+                "timeout": 30,
+            },
         }
     }
     # Override storage during tests to avoid Cloudinary HTTP requests
@@ -531,3 +534,22 @@ NECTAR_TENANT_ID = env("NECTAR_TENANT_ID", default="")
 NECTAR_TENANT_SUBDOMAIN = env("NECTAR_TENANT_SUBDOMAIN", default="msambar")
 NECTAR_SECRET_KEY = env("NECTAR_SECRET_KEY", default=env("NECTAR_API_KEY", default=""))
 NECTAR_API_KEY = env("NECTAR_API_KEY", default=NECTAR_SECRET_KEY)
+
+# ------------------------------------------------------------------------------
+# 8. CONTROL DE ACCESOS CRIPTOGRÁFICO Y BILLETERAS MÓVILES (APPLE & GOOGLE)
+# ------------------------------------------------------------------------------
+QR_HMAC_SECRET_KEY = env("QR_HMAC_SECRET_KEY", default=SECRET_KEY)
+
+# Apple Wallet (PassKit PKCS#7)
+APPLE_PASS_TYPE_ID = env("APPLE_PASS_TYPE_ID", default="pass.com.msambar.tickets")
+APPLE_TEAM_ID = env("APPLE_TEAM_ID", default="NECTARLABS1")
+APPLE_CERT_PATH = env("APPLE_CERT_PATH", default="")
+APPLE_CERT_PASSWORD = env("APPLE_CERT_PASSWORD", default="")
+APPLE_WWDR_CERT_PATH = env("APPLE_WWDR_CERT_PATH", default="")
+
+# Google Wallet (Google Pay Passes API)
+GOOGLE_WALLET_ISSUER_ID = env("GOOGLE_WALLET_ISSUER_ID", default="3388000000022114400")
+GOOGLE_WALLET_SERVICE_ACCOUNT_KEY_FILE = env("GOOGLE_WALLET_SERVICE_ACCOUNT_KEY_FILE", default="")
+GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL = env("GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL", default="")
+GOOGLE_WALLET_PRIVATE_KEY = env("GOOGLE_WALLET_PRIVATE_KEY", default="")
+

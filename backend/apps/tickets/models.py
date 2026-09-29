@@ -1,4 +1,6 @@
 from django.db import models
+from django.conf import settings
+from django.utils import timezone
 from datetime import timedelta
 import uuid
 
@@ -1000,6 +1002,53 @@ class Ticket(models.Model):
             seat_info = "Pase Meet & Greet"
             
         return f"Ticket #{self.id} | {self.event.title} - {seat_info} ({self.user_email})"
+
+    def get_qr_payload(self, format_type: str = 'compact') -> str:
+        """
+        Retorna el payload criptográficamente firmado (HMAC / JWT) para el código QR de acceso.
+        """
+        from apps.tickets.access.qr_crypto import generate_qr_payload
+        return generate_qr_payload(self, format_type=format_type)
+
+
+class TicketCheckInAudit(models.Model):
+    """
+    Registro inmutable de auditoría para cada intento o canje de boletos en torniquetes y puertas.
+    Garantiza trazabilidad forense, previene fraudes y documenta el dispositivo, ubicación y operador.
+    """
+    STATUS_SUCCESS = 'SUCCESS'
+    STATUS_ALREADY_USED = 'ALREADY_USED'
+    STATUS_INVALID = 'INVALID'
+    STATUS_ERROR = 'ERROR'
+
+    STATUS_CHOICES = [
+        (STATUS_SUCCESS, 'Acceso Exitoso'),
+        (STATUS_ALREADY_USED, 'Ya Utilizado (Rechazado)'),
+        (STATUS_INVALID, 'QR Inválido o Falsificado'),
+        (STATUS_ERROR, 'Error de Procesamiento'),
+    ]
+
+    ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE, related_name='checkin_audits', null=True, blank=True)
+    scanned_at = models.DateTimeField(default=timezone.now, db_index=True)
+    scanner_device_id = models.CharField(max_length=100, default='door-1', help_text="Identificador único del dispositivo escáner o torniquete")
+    location = models.CharField(max_length=150, default='Acceso Principal', help_text="Punto de acceso físico (ej. Puerta Norte, VIP, Acceso Principal)")
+    operator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='operator_checkins')
+    operator_name = models.CharField(max_length=150, blank=True, default='')
+    idempotency_key = models.CharField(max_length=120, null=True, blank=True, db_index=True, help_text="Llave de idempotencia del escáner para evitar doble check-in ante reintentos de red")
+    status_result = models.CharField(max_length=30, choices=STATUS_CHOICES, default=STATUS_SUCCESS)
+    response_payload = models.JSONField(default=dict, blank=True, help_text="Copia de la respuesta JSON entregada al escáner")
+    notes = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Auditoría de Check-In"
+        verbose_name_plural = "Auditorías de Check-In"
+        ordering = ['-scanned_at']
+
+    def __str__(self):
+        ticket_ref = f"Ticket #{self.ticket_id}" if self.ticket_id else "Sin Ticket"
+        return f"CheckInAudit [{self.status_result}] {ticket_ref} @ {self.location} ({self.scanner_device_id})"
+
 
 class SiteSettings(models.Model):
     """

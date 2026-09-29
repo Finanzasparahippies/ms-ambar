@@ -364,7 +364,7 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
 
     def get_permissions(self):
-        if self.action in ['checkout', 'by_session', 'retrieve']:
+        if self.action in ['checkout', 'by_session', 'retrieve', 'apple_pass', 'google_wallet_link']:
             return [permissions.AllowAny()]
         elif self.action in ['validate', 'toggle_checkin']:
             return [permissions.IsAdminUser()]
@@ -372,7 +372,7 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if self.action in ['retrieve', 'by_session']:
+        if self.action in ['retrieve', 'by_session', 'apple_pass', 'google_wallet_link']:
             return Ticket.objects.all()
         if not user or user.is_anonymous:
             return Ticket.objects.none()
@@ -510,6 +510,42 @@ class TicketViewSet(viewsets.ModelViewSet):
             'scanned_at': ticket.scanned_at.isoformat() if ticket.scanned_at else None,
             'message': f"Boleto #{ticket.id} ({ticket.user_email}) marcado como {'INGRESADO' if ticket.is_scanned else 'PENDIENTE'}."
         })
+
+    @action(detail=True, methods=['get'], url_path='apple-pass', permission_classes=[permissions.AllowAny])
+    def apple_pass(self, request, pk=None):
+        """
+        Descarga del paquete nativo Apple Wallet (.pkpass) firmado criptográficamente.
+        GET /api/tickets/{token}/apple-pass/
+        """
+        from django.http import HttpResponse
+        from apps.tickets.services.apple_wallet import AppleWalletPassGenerator
+
+        ticket = self.get_object()
+        generator = AppleWalletPassGenerator()
+        pkpass_bytes = generator.generate_pass(ticket)
+
+        filename = f"ticket-{ticket.id}.pkpass"
+        response = HttpResponse(pkpass_bytes, content_type='application/vnd.apple.pkpass')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return response
+
+    @action(detail=True, methods=['get'], url_path='google-wallet-link', permission_classes=[permissions.AllowAny])
+    def google_wallet_link(self, request, pk=None):
+        """
+        Emisión del enlace firmado (Save to Google Wallet) con JWT RS256.
+        GET /api/tickets/{token}/google-wallet-link/
+        """
+        from django.shortcuts import redirect
+        from apps.tickets.services.google_wallet import GoogleWalletService
+
+        ticket = self.get_object()
+        service = GoogleWalletService()
+        result = service.generate_save_url(ticket)
+
+        if request.query_params.get('redirect') == 'true':
+            return redirect(result['save_url'])
+
+        return Response(result)
 
     @action(detail=False, methods=['post'], url_path='checkout')
     def checkout(self, request):
@@ -1335,6 +1371,50 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': f'Error al despachar el correo: {str(exc)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class TicketCheckInView(APIView):
+    """
+    Endpoint transaccional de escaneo y check-in atómico en puerta para torniquetes y dispositivos móviles del staff.
+    POST /api/tickets/scanner/check-in/
+    
+    Payload recibido:
+    {
+        "qr_payload": "3157397a-...:1774843200:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "scanner_device_id": "door-1",
+        "location": "Acceso Principal",
+        "idempotency_key": "scanner-uuid-123"
+    }
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        qr_payload = request.data.get('qr_payload') or request.data.get('token')
+        if not qr_payload:
+            return Response({
+                "status": "BAD_REQUEST",
+                "message": "qr_payload es requerido para procesar el check-in."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        scanner_device_id = str(request.data.get('scanner_device_id', 'door-1')).strip() or 'door-1'
+        location = str(request.data.get('location', 'Acceso Principal')).strip() or 'Acceso Principal'
+        idempotency_key = (
+            request.data.get('idempotency_key') or
+            request.headers.get('X-Idempotency-Key')
+        )
+
+        from apps.tickets.access.checkin_engine import process_ticket_checkin
+
+        result = process_ticket_checkin(
+            qr_payload=qr_payload,
+            scanner_device_id=scanner_device_id,
+            location=location,
+            operator=request.user if request.user.is_authenticated else None,
+            idempotency_key=idempotency_key
+        )
+
+        return Response(result["data"], status=result["status_code"])
+
 
 
 

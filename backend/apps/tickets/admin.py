@@ -108,3 +108,14 @@ class SiteSettingsAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
     def has_delete_permission(self, request, obj=None):
         return False
 
+
+from .models import TicketCheckInAudit
+
+@admin.register(TicketCheckInAudit)
+class TicketCheckInAuditAdmin(admin.ModelAdmin):
+    list_display = ('ticket', 'status_result', 'scanner_device_id', 'location', 'operator_name', 'scanned_at', 'idempotency_key')
+    list_filter = ('status_result', 'location', 'scanner_device_id', 'scanned_at')
+    search_fields = ('ticket__token', 'ticket__user_email', 'scanner_device_id', 'idempotency_key', 'operator_name')
+    readonly_fields = ('ticket', 'scanned_at', 'scanner_device_id', 'location', 'operator', 'operator_name', 'idempotency_key', 'status_result', 'response_payload', 'created_at')
+
+

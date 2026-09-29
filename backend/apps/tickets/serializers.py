@@ -286,10 +286,23 @@ class TicketSerializer(serializers.ModelSerializer):
     theater_name = serializers.SerializerMethodField()
     theater_location = serializers.SerializerMethodField()
     seat_display = serializers.SerializerMethodField()
+    qr_payload = serializers.SerializerMethodField()
+    apple_pass_url = serializers.SerializerMethodField()
+    google_wallet_link_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
         fields = '__all__'
+
+    def get_qr_payload(self, obj):
+        from apps.tickets.access.qr_crypto import generate_qr_payload
+        return generate_qr_payload(obj, format_type='compact')
+
+    def get_apple_pass_url(self, obj):
+        return f"/api/tickets/{obj.token}/apple-pass/"
+
+    def get_google_wallet_link_url(self, obj):
+        return f"/api/tickets/{obj.token}/google-wallet-link/"
 
     def get_theater_name(self, obj):
         return obj.event.theater.name if obj.event and obj.event.theater else "Convivencia"
