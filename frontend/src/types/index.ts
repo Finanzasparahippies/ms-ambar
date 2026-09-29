@@ -333,6 +333,17 @@ export interface Product {
   image?: string;
   images?: (string | ProductImage)[];
   gallery?: string[];
+  requires_shipping?: boolean;
+  is_digital?: boolean;
+}
+
+export interface CartFinancials {
+  subtotal: number;
+  discount_amount: number;
+  shipping_cost: number | null; // null si no se ha cotizado/seleccionado
+  service_fee: number;
+  total: number; // subtotal - discount + (shipping_cost ?? 0) + service_fee
+  requires_shipping: boolean; // true si hay al menos un producto físico
 }
 
 export interface Category {

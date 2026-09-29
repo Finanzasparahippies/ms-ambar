@@ -1,6 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product } from '../types';
+import { Product, CartFinancials } from '../types';
+
+export { type CartFinancials };
+
+export interface ShippingRate {
+  id: string;
+  provider: string;
+  service_level_name: string;
+  total_price: number;
+  cost?: number;
+  currency: string;
+  days: string;
+  is_fallback?: boolean;
+  is_fallback_rate?: boolean;
+}
 
 export interface CartItem {
   product: Product;
@@ -25,6 +39,10 @@ interface CartContextType {
   setCheckoutStep: (step: 'cart' | 'shipping' | 'success') => void;
   cartItemsCount: number;
   cartSubtotal: number;
+  shippingRate: ShippingRate | null;
+  setShippingRate: (rate: ShippingRate | null) => void;
+  requiresShipping: boolean;
+  financials: CartFinancials;
   addToCart: (product: Product, quantity?: number, sourceImageElement?: HTMLElement | null) => void;
   updateQuantity: (productId: number, delta: number) => void;
   removeFromCart: (productId: number) => void;
@@ -44,6 +62,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [checkoutStep, setCheckoutStep] = useState<'cart' | 'shipping' | 'success'>('cart');
+  const [shippingRate, setShippingRate] = useState<ShippingRate | null>(null);
   const [flyingItems, setFlyingItems] = useState<FlyingItem[]>([]);
   const [isCartBouncing, setIsCartBouncing] = useState<boolean>(false);
   const [isHydrated, setIsHydrated] = useState<boolean>(false);
@@ -176,6 +195,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = useCallback(() => {
     setCart([]);
+    setShippingRate(null);
     try {
       if (typeof window !== 'undefined') {
         localStorage.removeItem(CART_STORAGE_KEY);
@@ -193,13 +213,36 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [triggerCartBounce]
   );
 
-  const cartItemsCount = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const cartItemsCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart]);
 
-  const cartSubtotal = cart.reduce((acc, item) => {
-    const rawPrice = item.product.price;
-    const numPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice as string) || 0;
-    return acc + numPrice * item.quantity;
-  }, 0);
+  const cartSubtotal = useMemo(() => {
+    return cart.reduce((acc, item) => {
+      const rawPrice = item.product.price;
+      const numPrice = typeof rawPrice === 'number' ? rawPrice : parseFloat(rawPrice as string) || 0;
+      return acc + numPrice * item.quantity;
+    }, 0);
+  }, [cart]);
+
+  const requiresShipping = useMemo(() => {
+    return cart.length > 0 && cart.some(
+      (item) => item.product?.is_digital !== true && (item.product as any)?.requires_shipping !== false
+    );
+  }, [cart]);
+
+  const financials: CartFinancials = useMemo(() => {
+    const shipping_cost = requiresShipping ? (shippingRate ? shippingRate.total_price : null) : 0;
+    const discount_amount = 0;
+    const service_fee = 0;
+    const total = cartSubtotal - discount_amount + (shipping_cost ?? 0) + service_fee;
+    return {
+      subtotal: cartSubtotal,
+      discount_amount,
+      shipping_cost,
+      service_fee,
+      total,
+      requires_shipping: requiresShipping,
+    };
+  }, [cartSubtotal, requiresShipping, shippingRate]);
 
   return (
     <CartContext.Provider
@@ -210,6 +253,10 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCheckoutStep,
         cartItemsCount,
         cartSubtotal,
+        shippingRate,
+        setShippingRate,
+        requiresShipping,
+        financials,
         addToCart,
         updateQuantity,
         removeFromCart,

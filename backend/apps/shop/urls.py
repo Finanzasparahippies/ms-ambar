@@ -31,6 +31,7 @@ urlpatterns = [
     path('webhook/skydropx/', skydropx_webhook, name='skydropx-webhook'),
     path('webhook/nectar/', NectarWebhookReceiverView.as_view(), name='nectar-webhook'),
     path('checkout/', ShopCheckoutView.as_view(), name='shop-checkout'),
+    path('checkout/create-payment-intent/', ShopCheckoutView.as_view(), name='shop-checkout-create-payment-intent'),
     path('orders/', DashboardOrdersView.as_view(), name='shop-orders-list'),
     path('orders/by_session/', OrderBySessionView.as_view(), name='order-by-session'),
     path('orders/<int:pk>/label/', OrderDownloadLabelView.as_view(), name='order-download-label'),

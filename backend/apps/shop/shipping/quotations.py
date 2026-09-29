@@ -16,18 +16,22 @@ def get_fallback_rates() -> List[Dict[str, Any]]:
             "provider": "Estándar Nacional (FedEx / Estafeta)",
             "service_level_name": "Terrestre Estándar",
             "total_price": 150.00,
+            "cost": 150.00,
             "currency": "MXN",
             "days": "3 a 5 días hábiles",
-            "is_fallback": True
+            "is_fallback": True,
+            "is_fallback_rate": True
         },
         {
             "id": "rate_exp_fallback",
             "provider": "Express Nacional (DHL / FedEx Express)",
             "service_level_name": "Express Prioritario",
             "total_price": 220.00,
+            "cost": 220.00,
             "currency": "MXN",
             "days": "1 a 2 días hábiles",
-            "is_fallback": True
+            "is_fallback": True,
+            "is_fallback_rate": True
         }
     ]
 
@@ -101,7 +105,7 @@ def quote_shipping_rates(
     """
     if not validate_postal_code(origin_zip) or not validate_postal_code(dest_zip):
         logger.warning(f"[Quotations] Códigos postales inválidos: origen={origin_zip}, destino={dest_zip}")
-        return get_fallback_rates()
+        return []
 
     cfg = None
     try:

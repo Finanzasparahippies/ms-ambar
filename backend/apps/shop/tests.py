@@ -308,6 +308,28 @@ class ShopAppTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('Stock insuficiente', response.data['error'])
 
+    @override_settings(TESTING=False)
+    def test_checkout_requires_shipping_validation(self):
+        """Verify checkout rejects orders without selected shipping rate or accepted fallback."""
+        url = reverse('shop-checkout')
+        data = {
+            'email': 'buyer@example.com',
+            'full_name': 'Carlos Santana',
+            'phone': '3331234567',
+            'street_and_number': 'Av. Juárez 123',
+            'suburb': 'Centro',
+            'city': 'Guadalajara',
+            'state': 'Jalisco',
+            'postal_code': '44100',
+            'country': 'México',
+            'items': [
+                {'product_id': self.product_active.id, 'quantity': 1}
+            ]
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data.get('error_code'), 'SHIPPING_NOT_SELECTED')
+
     @patch('apps.shop.views.send_ticket_email')
     @patch('stripe.Webhook.construct_event')
     def test_stripe_webhook_ticket_fulfillment(self, mock_construct, mock_send_ticket):

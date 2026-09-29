@@ -16,7 +16,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import api from '../lib/api';
-import { useCart } from '../context/CartContext';
+import { useCart, ShippingRate } from '../context/CartContext';
 
 const MEXICAN_STATES = [
   "Aguascalientes", "Baja California", "Baja California Sur", "Campeche", "Chiapas",
@@ -25,16 +25,6 @@ const MEXICAN_STATES = [
   "Nuevo León", "Oaxaca", "Puebla", "Querétaro", "Quintana Roo", "San Luis Potosí",
   "Sinaloa", "Sonora", "Tabasco", "Tamaulipas", "Tlaxcala", "Veracruz", "Yucatán", "Zacatecas"
 ];
-
-interface ShippingRate {
-  id: string;
-  provider: string;
-  service_level_name: string;
-  total_price: number;
-  currency: string;
-  days: string;
-  is_fallback?: boolean;
-}
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -49,6 +39,10 @@ export const CartDrawer: React.FC = () => {
     clearCart,
     cartSubtotal,
     cartItemsCount,
+    shippingRate: selectedRate,
+    setShippingRate: setSelectedRate,
+    requiresShipping,
+    financials,
   } = useCart();
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -67,7 +61,6 @@ export const CartDrawer: React.FC = () => {
 
   // Cotizador de Envíos
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>([]);
-  const [selectedRate, setSelectedRate] = useState<ShippingRate | null>(null);
   const [quotingShipping, setQuotingShipping] = useState<boolean>(false);
   const [orderResult, setOrderResult] = useState<any>(null);
   const [packagingType, setPackagingType] = useState<'bag' | 'box'>('bag');
@@ -133,28 +126,30 @@ export const CartDrawer: React.FC = () => {
 
       if (quoteRes.data?.rates && quoteRes.data.rates.length > 0) {
         setShippingRates(quoteRes.data.rates);
-        setSelectedRate(quoteRes.data.rates[0]);
+        setSelectedRate(null);
+      } else {
+        setShippingRates([]);
+        setSelectedRate(null);
       }
     } catch (err: any) {
-      console.warn('Fallo al cotizar paquetería, usando tarifa estándar de respaldo:', err);
+      console.warn('Fallo al cotizar paquetería, ofreciendo tarifa estándar de respaldo:', err);
       const fallbackRate: ShippingRate = {
         id: 'rate_std_fallback',
         provider: 'Estándar Nacional (FedEx / Estafeta)',
         service_level_name: 'Terrestre Estándar',
         total_price: 150.0,
+        cost: 150.0,
         currency: 'MXN',
         days: '3 a 5 días hábiles',
         is_fallback: true,
+        is_fallback_rate: true,
       };
       setShippingRates([fallbackRate]);
-      setSelectedRate(fallbackRate);
+      setSelectedRate(null);
     } finally {
       setQuotingShipping(false);
     }
   };
-
-  const shippingCost = selectedRate ? selectedRate.total_price : 150;
-  const orderTotal = cartSubtotal + (cart.length > 0 ? shippingCost : 0);
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,8 +157,14 @@ export const CartDrawer: React.FC = () => {
     setError(null);
 
     const cleanCp = postalCode.replace(/\D/g, '');
-    if (cleanCp.length !== 5) {
+    if (requiresShipping && cleanCp.length !== 5) {
       setError('Por favor ingresa un Código Postal válido de 5 dígitos.');
+      setLoading(false);
+      return;
+    }
+
+    if (requiresShipping && !selectedRate) {
+      setError('Debes cotizar y seleccionar un método de envío antes de proceder al pago.');
       setLoading(false);
       return;
     }
@@ -172,6 +173,8 @@ export const CartDrawer: React.FC = () => {
       product_id: item.product.id,
       quantity: item.quantity,
     }));
+
+    const isFallback = Boolean(selectedRate?.is_fallback || selectedRate?.is_fallback_rate);
 
     try {
       const res = await api.post('/shop/checkout/', {
@@ -185,9 +188,10 @@ export const CartDrawer: React.FC = () => {
         street_and_number: streetAndNumber,
         country,
         packaging_type: packagingType,
-        shipping_rate_id: selectedRate?.id || 'rate_std_fallback',
-        shipping_amount: selectedRate?.total_price || 150.0,
-        shipping_provider: selectedRate?.provider || 'Estándar Nacional',
+        shipping_rate_id: selectedRate?.id || '',
+        accept_fallback_shipping: isFallback,
+        shipping_amount: selectedRate ? selectedRate.total_price : 0,
+        shipping_provider: selectedRate?.provider || (requiresShipping ? 'Estándar Nacional' : 'Digital'),
         items: itemsPayload,
       });
 
@@ -198,18 +202,19 @@ export const CartDrawer: React.FC = () => {
         } else {
           setOrderResult({
             order_id: res.data.order_id,
-            total_amount: orderTotal,
+            total_amount: financials.total,
             status: 'Confirmado',
           });
           clearCart();
           setCheckoutStep('success');
         }
       }
-
     } catch (err: any) {
       console.error('Checkout failed', err);
       if (err.response?.data?.error) {
         setError(err.response.data.error);
+      } else if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
       } else {
         setError('Error de comunicación con la pasarela. Intenta de nuevo.');
       }
@@ -486,32 +491,86 @@ export const CartDrawer: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Selector de Tarifas de Envío */}
+                      {/* Selector de Tarifas de Envío con Dark Glass UI */}
                       {shippingRates.length > 0 && (
-                        <div className="space-y-2 pt-2">
-                          <label className="text-xs text-neutral-300 uppercase tracking-widest font-bold block pl-1 flex items-center gap-1.5">
-                            <Truck size={12} className="text-purple-400" /> Paquetería y Método de Envío
-                          </label>
-                          <div className="space-y-2">
-                            {shippingRates.map((rate) => (
-                              <div
-                                key={rate.id}
-                                onClick={() => setSelectedRate(rate)}
-                                className={`p-3.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between ${
-                                  selectedRate?.id === rate.id
-                                    ? 'border-purple-500 bg-purple-950/40 text-white shadow-lg shadow-purple-900/30 ring-1 ring-purple-500/50'
-                                    : 'border-white/10 bg-white/[0.03] text-neutral-300 hover:border-purple-500/30 hover:bg-purple-950/20'
-                                }`}
-                              >
-                                <div>
-                                  <p className="font-extrabold uppercase text-xs text-white">{rate.provider}</p>
-                                  <p className="text-xs text-neutral-400">
-                                    {rate.service_level_name} • {rate.days}
-                                  </p>
-                                </div>
-                                <span className="font-black text-amber-300">${rate.total_price} MXN</span>
+                        <div className="space-y-3 pt-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs text-purple-300 uppercase tracking-widest font-bold flex items-center gap-1.5 pl-1">
+                              <Truck size={13} className="text-purple-400" /> Opciones de Envío Disponibles
+                            </label>
+                            <span className="text-[10px] text-neutral-400 font-medium">
+                              {selectedRate ? '1 seleccionada' : 'Selecciona una opción'}
+                            </span>
+                          </div>
+
+                          {/* Fallback warning if rates are fallback */}
+                          {shippingRates.some((r) => r.is_fallback || r.is_fallback_rate) && (
+                            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-2 shadow-sm">
+                              <Sparkles size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-bold text-[11px] uppercase tracking-wider text-amber-300">Tarifa Plana de Contingencia</p>
+                                <p className="text-[10px] text-amber-200/85 leading-normal mt-0.5">
+                                  Las paqueterías en tiempo real no reportan cobertura directa para este C.P. Confirma voluntariamente la tarifa estándar de respaldo ($150.00 MXN) para continuar.
+                                </p>
                               </div>
-                            ))}
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            {shippingRates.map((rate) => {
+                              const isSelected = selectedRate?.id === rate.id;
+                              const isFallback = Boolean(rate.is_fallback || rate.is_fallback_rate);
+
+                              return (
+                                <motion.div
+                                  key={rate.id}
+                                  whileHover={{ scale: 1.01 }}
+                                  whileTap={{ scale: 0.99 }}
+                                  onClick={() => setSelectedRate(rate)}
+                                  className={`p-3.5 rounded-xl border text-xs cursor-pointer transition-all duration-200 flex items-center justify-between gap-3 relative overflow-hidden ${
+                                    isSelected
+                                      ? 'border-purple-500 bg-purple-950/40 text-white shadow-[0_0_20px_rgba(168,85,247,0.2)] ring-1 ring-purple-500/50'
+                                      : 'border-white/10 bg-white/[0.03] text-neutral-300 hover:border-purple-500/40 hover:bg-purple-950/20'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    {/* Custom Radio Button */}
+                                    <div
+                                      className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
+                                        isSelected
+                                          ? 'border-purple-400 bg-purple-500'
+                                          : 'border-white/30 bg-black/40'
+                                      }`}
+                                    >
+                                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                    </div>
+
+                                    <div>
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-extrabold uppercase text-xs text-white tracking-wide">
+                                          {rate.provider}
+                                        </p>
+                                        {isFallback && (
+                                          <span className="px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-[9px] font-bold text-amber-300 uppercase">
+                                            Respaldo
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-[11px] text-neutral-400 mt-0.5">
+                                        {rate.service_level_name} • {rate.days}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="text-right shrink-0">
+                                    <span className="font-black text-amber-300 font-mono text-sm block">
+                                      ${rate.total_price.toFixed(2)}
+                                    </span>
+                                    <span className="text-[10px] text-neutral-400 font-bold uppercase">MXN</span>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -579,23 +638,110 @@ export const CartDrawer: React.FC = () => {
                         />
                       </div>
 
-                      {/* Botón de Pago */}
-                      <div className="pt-4 space-y-3">
-                        <motion.button
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
-                          type="submit"
-                          disabled={loading}
-                          className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 disabled:opacity-50 transition-all"
-                        >
-                          {loading ? (
-                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          ) : (
-                            <>
-                              Proceder al Pago Seguro (${orderTotal} MXN) <ArrowRight size={15} />
-                            </>
-                          )}
-                        </motion.button>
+                      {/* Desglose Financiero Dinámico en Paso Envío */}
+                      <div className="p-4 bg-[#0E1310] border border-white/10 rounded-2xl space-y-2 mt-4 shadow-inner">
+                        <div className="flex justify-between items-center text-xs text-neutral-400">
+                          <span>Subtotal de productos:</span>
+                          <span className="font-mono text-white font-bold">${financials.subtotal.toFixed(2)} MXN</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-neutral-400">
+                          <span>Envío {selectedRate ? `(${selectedRate.provider})` : ''}:</span>
+                          <span className="font-mono font-bold transition-all duration-300">
+                            {financials.shipping_cost !== null ? (
+                              <span className="text-amber-300">${financials.shipping_cost.toFixed(2)} MXN</span>
+                            ) : postalCode.replace(/\D/g, '').length === 5 ? (
+                              <span className="text-purple-400">
+                                {quotingShipping ? 'Cotizando paqueterías...' : 'Selecciona una opción'}
+                              </span>
+                            ) : (
+                              <span className="text-neutral-500">Ingresa tu C.P.</span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs font-black uppercase tracking-wider pt-2 border-t border-white/10 text-white">
+                          <span>Total a Pagar:</span>
+                          <motion.span
+                            key={financials.total}
+                            initial={{ scale: 0.95, opacity: 0.8 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="text-amber-300 font-mono font-black text-base drop-shadow-sm"
+                          >
+                            ${financials.total.toFixed(2)} MXN
+                          </motion.span>
+                        </div>
+                      </div>
+
+                      {/* Botón de Pago con Estados Reactivos A, B, C, D */}
+                      <div className="pt-2 space-y-3">
+                        {(() => {
+                          const cleanCp = postalCode.replace(/\D/g, '');
+
+                          if (loading) {
+                            return (
+                              <button
+                                type="button"
+                                disabled
+                                className="w-full bg-purple-900/40 text-purple-200/70 font-black uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 border border-purple-500/20 cursor-not-allowed"
+                              >
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <span>Procesando pago seguro...</span>
+                              </button>
+                            );
+                          }
+
+                          // Estado B: Dirección lista, cotizando paqueterías
+                          if (quotingShipping) {
+                            return (
+                              <button
+                                type="button"
+                                disabled
+                                className="w-full bg-purple-950/60 text-purple-300 font-bold uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 border border-purple-500/30 cursor-not-allowed shadow-inner"
+                              >
+                                <div className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full animate-spin" />
+                                <span>Cotizando paqueterías...</span>
+                              </button>
+                            );
+                          }
+
+                          // Estado A: Falta dirección o C.P. incompleto
+                          if (requiresShipping && cleanCp.length < 5) {
+                            return (
+                              <button
+                                type="button"
+                                disabled
+                                className="w-full bg-white/[0.04] text-neutral-400 font-bold uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 border border-white/10 cursor-not-allowed"
+                              >
+                                <span>Ingresa tu Código Postal para cotizar</span>
+                              </button>
+                            );
+                          }
+
+                          // Estado C: Tarifas listas, falta elegir paquetería
+                          if (requiresShipping && !selectedRate) {
+                            return (
+                              <button
+                                type="button"
+                                disabled
+                                className="w-full bg-purple-950/30 text-purple-300/80 font-bold uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 border border-purple-500/20 cursor-not-allowed"
+                              >
+                                <span>Selecciona una opción de envío</span>
+                              </button>
+                            );
+                          }
+
+                          // Estado D: Tarifa confirmada (o no requiere envío)
+                          return (
+                            <motion.button
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                              type="submit"
+                              className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 transition-all cursor-pointer"
+                            >
+                              <span>Proceder al pago seguro · Total: ${financials.total.toFixed(2)} MXN</span>
+                              <ArrowRight size={15} />
+                            </motion.button>
+                          );
+                        })()}
 
                         <button
                           type="button"
@@ -653,21 +799,40 @@ export const CartDrawer: React.FC = () => {
                   )}
                 </div>
 
-                {/* Cart Footer */}
+                {/* Cart Footer en Paso Carrito */}
                 {checkoutStep === 'cart' && cart.length > 0 && (
                   <div className="border-t border-white/10 pt-4 mt-4 space-y-3">
-                    <div className="flex justify-between items-center text-sm font-black uppercase tracking-wider pl-1">
-                      <span className="text-neutral-300">Subtotal:</span>
-                      <span className="text-amber-300 font-mono font-black text-base drop-shadow-sm">${cartSubtotal} MXN</span>
+                    <div className="space-y-1.5 text-xs font-semibold pl-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-neutral-400">Subtotal:</span>
+                        <span className="text-white font-mono font-bold">${financials.subtotal.toFixed(2)} MXN</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-neutral-400">Envío:</span>
+                        <span className="font-mono text-purple-300 font-bold">
+                          {requiresShipping
+                            ? selectedRate
+                              ? `$${selectedRate.total_price.toFixed(2)} MXN`
+                              : 'Por calcular'
+                            : 'Gratis / No requerido'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm font-black uppercase tracking-wider pt-1 border-t border-white/5">
+                        <span className="text-neutral-200">Total estimado:</span>
+                        <span className="text-amber-300 font-mono font-black text-base drop-shadow-sm">
+                          ${financials.total.toFixed(2)} MXN
+                        </span>
+                      </div>
                     </div>
 
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => setCheckoutStep('shipping')}
-                      className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 transition-all"
+                      className="w-full bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 hover:brightness-110 active:scale-95 text-white font-black uppercase tracking-widest text-xs py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl shadow-purple-600/35 border border-purple-400/40 transition-all cursor-pointer"
                     >
-                      Proceder al Envío <ArrowRight size={15} />
+                      {requiresShipping ? 'Ingresar dirección de envío' : 'Proceder al Pago Seguro'}{' '}
+                      <ArrowRight size={15} />
                     </motion.button>
                   </div>
                 )}

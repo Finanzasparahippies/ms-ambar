@@ -116,6 +116,15 @@ class Product(models.Model):
         if updated:
             super().save(update_fields=['stripe_product_id', 'stripe_price_id'])
 
+    @property
+    def requires_shipping(self) -> bool:
+        if self.specifications and isinstance(self.specifications, dict):
+            if self.specifications.get('is_digital') is True or self.specifications.get('requires_shipping') is False:
+                return False
+        if self.category and ('digital' in self.category.name.lower() or 'digital' in self.category.slug.lower()):
+            return False
+        return True
+
     def __str__(self):
         return self.name
 
@@ -242,6 +251,13 @@ class Order(models.Model):
     def address(self):
         parts = [self.street_and_number, self.suburb, self.city, self.state, self.postal_code, self.country]
         return ", ".join([p for p in parts if p])
+
+    @property
+    def requires_shipping(self) -> bool:
+        items = self.items.all()
+        if not items.exists():
+            return True
+        return any(getattr(item.product, 'requires_shipping', True) for item in items if item.product)
 
     def __str__(self):
         return f"Order {self.id} - {self.user_email}"
