@@ -16,15 +16,15 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
+import { isSeatAllowedByRestriction } from '../components/SeatingChart';
 import ThemedSection from '../components/ThemedSection';
+import TicketQRModal from '../components/TicketQRModal';
 import TourTimeline from '../components/TourTimeline';
 import { useEventTheme } from '../context/EventThemeContext';
 import api from '../lib/api';
 import { showAlert } from '../lib/notifications';
-import { cn, getApiUrl } from '../lib/utils';
 import { SeatMapLoader, formatSeatAssignment, getSeatAssignmentParts } from '../lib/seatMapLoader';
-import TicketQRModal from '../components/TicketQRModal';
-import { isSeatAllowedByRestriction } from '../components/SeatingChart';
+import { cn, getApiUrl } from '../lib/utils';
 
 const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
   ssr: false,
@@ -1219,7 +1219,7 @@ const TourPage = () => {
                   <span className="text-xs font-black uppercase tracking-[0.25em]">Néctar Gateway</span>
                 </div>
                 <h3 className="text-xl md:text-2xl font-black uppercase tracking-wider text-slate-900 dark:text-white">Reserva Digital</h3>
-                <p className="text-xs uppercase tracking-[0.3em] text-slate-400 dark:text-slate-400 font-bold mt-0.5">Transacción Encriptada 256-bit</p>
+                <p className="text-xs uppercase tracking-[0.3em] text-slate-400 dark:text-slate-400 font-bold mt-0.5">Transacción Encriptada Segura</p>
               </div>
 
               {isCurrentEventPast ? (
@@ -1354,28 +1354,25 @@ const TourPage = () => {
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                className={`flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border transition-all group shadow-sm ${
-                                  isComplimentary
+                                className={`flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border transition-all group shadow-sm ${isComplimentary
                                     ? 'border-emerald-500/40 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05]'
                                     : 'border-slate-200/80 dark:border-white/10 hover:border-amber-400/40'
-                                }`}
+                                  }`}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
-                                  <div className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center font-black font-mono text-[10px] leading-tight shrink-0 shadow-inner ${
-                                    isComplimentary
+                                  <div className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center font-black font-mono text-[10px] leading-tight shrink-0 shadow-inner ${isComplimentary
                                       ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                                       : 'bg-gradient-to-br from-amber-400/20 to-amber-600/10 border-amber-400/30 text-amber-600 dark:text-amber-400'
-                                  }`}>
+                                    }`}>
                                     <span>{parts.rowText ? parts.rowText.replace(/^fila\s*:?\s*/i, '').trim().toUpperCase() : 'F'}</span>
                                     <span className="text-[9px] opacity-80">#{seat.number}</span>
                                   </div>
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                      <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${
-                                        isComplimentary
+                                      <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${isComplimentary
                                           ? 'bg-emerald-400/15 text-emerald-700 dark:text-emerald-400 border-emerald-400/30'
                                           : 'bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-400/20'
-                                      }`}>
+                                        }`}>
                                         {isComplimentary ? 'Cortesía VIP' : (seat.category || 'Reservado')}
                                       </span>
                                       <span className="text-[11px] font-black text-slate-800 dark:text-white font-mono tracking-tight">
@@ -2043,7 +2040,7 @@ const TourPage = () => {
                     disabled={isSubmitting || checkoutSuccess}
                     className="w-full py-4.5 rounded-2xl text-xs font-black uppercase tracking-[0.25em] bg-gradient-to-r from-amber-400 via-amber-300 to-amber-500 text-slate-950 shadow-xl shadow-amber-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2.5 hover:scale-[1.01] active:scale-95"
                   >
-                    <ShieldCheck size={18} className="shrink-0" />
+                    <ShieldCheck size={18} className="text-sm md:text-base font-black uppercase tracking-[0.2em] block" />
                     {isSubmitting
                       ? 'Procesando...'
                       : (baseTotal === 0 && appliedCoupon
