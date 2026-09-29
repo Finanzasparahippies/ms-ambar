@@ -1100,6 +1100,9 @@ class TicketsAppTests(APITestCase):
         """Valida que una cortesía con max_tickets=1 cubra exactamente 1 asiento ($0) y cobre el segundo ($500)"""
         from apps.tickets.services.pricing_engine import calculate_ticket_order_pricing
 
+        self.event.enable_dynamic_pricing = False
+        self.event.save()
+
         seat1 = self.seat_vip
         seat2 = self.seat_std
         coupon = Coupon.objects.create(
@@ -1164,7 +1167,8 @@ class TicketsAppTests(APITestCase):
         )
 
         # Primer uso: Válido
-        self.assertTrue(coupon.is_valid_for_event(self.event, user_email="fan@example.com"))
+        is_valid, reason = coupon.is_valid_for_event(self.event, user_email="fan@example.com")
+        self.assertTrue(is_valid)
 
         # Simular una orden previa con ese correo y cupón
         Ticket.objects.create(
@@ -1177,10 +1181,13 @@ class TicketsAppTests(APITestCase):
         )
 
         # Segundo uso con el mismo correo: Inválido por límite por correo
-        self.assertFalse(coupon.is_valid_for_event(self.event, user_email="fan@example.com"))
+        is_valid, reason = coupon.is_valid_for_event(self.event, user_email="fan@example.com")
+        self.assertFalse(is_valid)
+        self.assertIn("límite máximo", reason)
 
         # Uso con otro correo: Válido
-        self.assertTrue(coupon.is_valid_for_event(self.event, user_email="otro@example.com"))
+        is_valid, _ = coupon.is_valid_for_event(self.event, user_email="otro@example.com")
+        self.assertTrue(is_valid)
 
 
 

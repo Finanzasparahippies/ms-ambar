@@ -132,6 +132,9 @@ def calculate_ticket_order_pricing(
                     'max_tickets': max_tickets
                 }
 
+            # Regla Canónica de Bonificación: Priorizar y bonificar el asiento de mayor valor a favor del usuario
+            items.sort(key=lambda item: item['base_price'], reverse=True)
+
             # Aplicar 100% de descuento a las primeras `max_tickets` butacas
             for idx, item in enumerate(items):
                 if idx < max_tickets:

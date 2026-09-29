@@ -952,6 +952,11 @@ class Coupon(models.Model):
 
         return True, "Cupón válido."
 
+    def check_validity(self, event, user_email=None) -> bool:
+        """Helper para contextos que requieren un booleano estricto de validez."""
+        is_valid, _ = self.is_valid_for_event(event, user_email=user_email)
+        return is_valid
+
     def __str__(self):
         return f"{self.code} ({self.get_discount_type_display()}) - {self.times_used}/{self.max_uses} usos"
 
