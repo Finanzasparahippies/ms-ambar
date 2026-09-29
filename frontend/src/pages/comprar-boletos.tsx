@@ -1355,14 +1355,14 @@ const TourPage = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 className={`flex justify-between items-center bg-slate-50 dark:bg-white/[0.03] p-3.5 rounded-2xl border transition-all group shadow-sm ${isComplimentary
-                                    ? 'border-emerald-500/40 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05]'
-                                    : 'border-slate-200/80 dark:border-white/10 hover:border-amber-400/40'
+                                  ? 'border-emerald-500/40 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.05]'
+                                  : 'border-slate-200/80 dark:border-white/10 hover:border-amber-400/40'
                                   }`}
                               >
                                 <div className="flex items-center gap-3 min-w-0">
                                   <div className={`w-10 h-10 rounded-xl border flex flex-col items-center justify-center font-black font-mono text-[10px] leading-tight shrink-0 shadow-inner ${isComplimentary
-                                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                                      : 'bg-gradient-to-br from-amber-400/20 to-amber-600/10 border-amber-400/30 text-amber-600 dark:text-amber-400'
+                                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-gradient-to-br from-amber-400/20 to-amber-600/10 border-amber-400/30 text-amber-600 dark:text-amber-400'
                                     }`}>
                                     <span>{parts.rowText ? parts.rowText.replace(/^fila\s*:?\s*/i, '').trim().toUpperCase() : 'F'}</span>
                                     <span className="text-[9px] opacity-80">#{seat.number}</span>
@@ -1370,8 +1370,8 @@ const TourPage = () => {
                                   <div className="min-w-0">
                                     <div className="flex items-center gap-1.5 flex-wrap mb-1">
                                       <span className={`inline-block text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border ${isComplimentary
-                                          ? 'bg-emerald-400/15 text-emerald-700 dark:text-emerald-400 border-emerald-400/30'
-                                          : 'bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-400/20'
+                                        ? 'bg-emerald-400/15 text-emerald-700 dark:text-emerald-400 border-emerald-400/30'
+                                        : 'bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-400/20'
                                         }`}>
                                         {isComplimentary ? 'Cortesía VIP' : (seat.category || 'Reservado')}
                                       </span>

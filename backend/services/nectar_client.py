@@ -14,6 +14,7 @@ import logging
 from decimal import Decimal
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
+from urllib.parse import quote, urlparse, parse_qsl
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -84,6 +85,9 @@ class NectarGatewayClient:
             getattr(settings, "NECTAR_API_KEY", None) or
             os.getenv("NECTAR_SECRET_KEY", os.getenv("NECTAR_API_KEY", ""))
         ).strip()
+
+        # Delta de deriva horaria NTP calculado pasivamente contra el Hub
+        self.time_offset = 0.0
 
         # Inicialización del Pool de Conexiones persistentes
         self.session = requests.Session()
@@ -165,13 +169,39 @@ class NectarGatewayClient:
         return True
 
     # --------------------------------------------------------------------------
-    # Generador Criptográfico HMAC-SHA256
+    # Generador Criptográfico Canónico RFC 3986 (HMAC-SHA256)
     # --------------------------------------------------------------------------
-    def _generate_hmac_headers(self, raw_body_bytes: bytes, idempotency_key: Optional[str] = None) -> Dict[str, str]:
-        timestamp = str(int(time.time()))
-        payload = raw_body_bytes or b""
-        message = payload + timestamp.encode('utf-8')
-        signature = hmac.new(self.secret_key.encode('utf-8'), message, hashlib.sha256).hexdigest()
+    def _build_canonical_query(self, query_string: str) -> str:
+        if not query_string:
+            return ""
+        pairs = parse_qsl(query_string, keep_blank_values=True)
+        sorted_pairs = sorted(pairs, key=lambda item: (str(item[0]), str(item[1])))
+        return "&".join(f"{quote(str(k), safe='') }={quote(str(v), safe='')}" for k, v in sorted_pairs)
+
+    def _generate_hmac_headers(
+        self,
+        method: str,
+        path: str,
+        raw_body_bytes: bytes,
+        idempotency_key: Optional[str] = None
+    ) -> Dict[str, str]:
+        # Timestamp sincronizado contra el Hub
+        synced_epoch = int(time.time() + self.time_offset)
+        timestamp = str(synced_epoch)
+
+        # Normalización canónica RFC 3986
+        parsed = urlparse(path)
+        clean_path = parsed.path or "/"
+        canonical_query = self._build_canonical_query(parsed.query)
+        canonical_uri = f"{clean_path}?{canonical_query}" if canonical_query else clean_path
+        body_sha256 = hashlib.sha256(raw_body_bytes or b"").hexdigest()
+
+        canonical_string = f"{method.upper()}|{canonical_uri}|{timestamp}|{body_sha256}"
+        signature = hmac.new(
+            self.secret_key.encode('utf-8'),
+            canonical_string.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
 
         headers = {
             "Content-Type": "application/json",
@@ -185,7 +215,7 @@ class NectarGatewayClient:
         return headers
 
     # --------------------------------------------------------------------------
-    # Ejecutor HTTP Resiliente
+    # Ejecutor HTTP Resiliente con Auto-Sync NTP
     # --------------------------------------------------------------------------
     def _execute_request(
         self,
@@ -193,26 +223,59 @@ class NectarGatewayClient:
         path: str,
         data: Optional[Dict] = None,
         timeout: float = TIMEOUT_MUTATION_SECONDS,
-        idempotency_key: Optional[str] = None
+        idempotency_key: Optional[str] = None,
+        _is_retry: bool = False
     ) -> NectarResponse:
         url = f"{self.base_url}{path}"
-        serialized_body = json.dumps(data).encode('utf-8') if data else b""
+        serialized_body = json.dumps(data, separators=(',', ':')).encode('utf-8') if data else b""
 
         # Validación de Circuit Breaker
         if not self._can_execute():
             logger.warning(f"[NectarGatewayClient] Llamada a {path} bloqueada: Circuit Breaker está OPEN.")
             return self._trigger_graceful_fallback(path, data, idempotency_key, "CIRCUIT_BREAKER_OPEN")
 
-        headers = self._generate_hmac_headers(serialized_body, idempotency_key=idempotency_key)
+        headers = self._generate_hmac_headers(
+            method=method,
+            path=path,
+            raw_body_bytes=serialized_body,
+            idempotency_key=idempotency_key
+        )
 
         try:
             response = self.session.request(
                 method=method,
                 url=url,
-                data=serialized_body,
+                data=serialized_body if serialized_body else None,
                 headers=headers,
                 timeout=timeout
             )
+
+            # Sincronización pasiva de deriva horaria NTP con el Hub
+            server_time_str = response.headers.get("X-Nectar-Server-Time")
+            if server_time_str and server_time_str.isdigit():
+                server_epoch = float(server_time_str)
+                calculated_offset = server_epoch - time.time()
+                # Sanity clamping: máximo 24 horas de desfase
+                if abs(calculated_offset) <= 86400:
+                    self.time_offset = calculated_offset
+
+            # Reintento automático único si hubo 401 por deriva horaria
+            if response.status_code == 401 and not _is_retry:
+                err_detail = ""
+                try:
+                    err_detail = response.json().get("detail", "")
+                except Exception:
+                    pass
+                if "desfase" in err_detail.lower() or "timestamp" in err_detail.lower():
+                    logger.warning(f"[NTPAutoSync] Desfase detectado llamando a {path}. Reajustando delta_t a {self.time_offset:.2f}s y reintentando...")
+                    return self._execute_request(
+                        method=method,
+                        path=path,
+                        data=data,
+                        timeout=timeout,
+                        idempotency_key=idempotency_key,
+                        _is_retry=True
+                    )
 
             # Éxito 2xx
             if 200 <= response.status_code < 300:
