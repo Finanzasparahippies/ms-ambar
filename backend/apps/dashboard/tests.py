@@ -411,7 +411,12 @@ class DashboardAppTests(APITestCase):
         self.assertEqual(response['Content-Type'], 'text/csv; charset=utf-8-sig')
         self.assertIn('attachment;', response['Content-Disposition'])
 
-        content = response.content.decode('utf-8-sig')
+        if hasattr(response, 'streaming_content'):
+            chunks = list(response.streaming_content)
+            raw = b"".join(c.encode('utf-8') if isinstance(c, str) else c for c in chunks)
+            content = raw.decode('utf-8-sig')
+        else:
+            content = response.content.decode('utf-8-sig')
         # Check header
         self.assertIn('ID Boleto', content)
         self.assertIn('UUID / Token', content)
