@@ -13,7 +13,7 @@ import hashlib
 import logging
 from decimal import Decimal
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from urllib.parse import quote, urlparse, parse_qsl
 
 import requests
@@ -180,11 +180,25 @@ class NectarGatewayClient:
 
     def _generate_hmac_headers(
         self,
-        method: str,
-        path: str,
-        raw_body_bytes: bytes,
-        idempotency_key: Optional[str] = None
+        method: Optional[Union[str, bytes]] = None,
+        path: Optional[str] = None,
+        raw_body_bytes: Optional[bytes] = None,
+        idempotency_key: Optional[str] = None,
+        **kwargs
     ) -> Dict[str, str]:
+        # Compatibilidad retroactiva si el primer argumento posicional es raw bytes (legacy signature)
+        if isinstance(method, (bytes, bytearray)):
+            raw_body_bytes = bytes(method)
+            method = "POST"
+            path = "/"
+        elif method is None:
+            method = "POST"
+            path = path or "/"
+            raw_body_bytes = raw_body_bytes or b""
+        else:
+            path = path or "/"
+            raw_body_bytes = raw_body_bytes or b""
+
         # Timestamp sincronizado contra el Hub
         synced_epoch = int(time.time() + self.time_offset)
         timestamp = str(synced_epoch)
@@ -196,7 +210,7 @@ class NectarGatewayClient:
         canonical_uri = f"{clean_path}?{canonical_query}" if canonical_query else clean_path
         body_sha256 = hashlib.sha256(raw_body_bytes or b"").hexdigest()
 
-        canonical_string = f"{method.upper()}|{canonical_uri}|{timestamp}|{body_sha256}"
+        canonical_string = f"{str(method).upper()}|{canonical_uri}|{timestamp}|{body_sha256}"
         signature = hmac.new(
             self.secret_key.encode('utf-8'),
             canonical_string.encode('utf-8'),

@@ -50,21 +50,35 @@ class NectarGatewayClientTestCase(APITestCase):
         """Verifica que las cabeceras HMAC generadas por el cliente sean criptográficamente válidas."""
         body = json.dumps({"amount": "500.00", "reference_id": "ord_101"}).encode('utf-8')
         idemp = str(uuid.uuid4())
-        headers = self.client_sdk._generate_hmac_headers(body, idempotency_key=idemp)
+        method = "POST"
+        path = "/api/v1/wallets/ledger"
+        headers = self.client_sdk._generate_hmac_headers(
+            method=method,
+            path=path,
+            raw_body_bytes=body,
+            idempotency_key=idemp
+        )
 
         self.assertEqual(headers["X-Nectar-Tenant-ID"], "tenant-ambar-uuid-12345")
         self.assertIn("X-Nectar-Timestamp", headers)
         self.assertIn("X-Nectar-Signature", headers)
         self.assertEqual(headers["Idempotency-Key"], idemp)
 
-        # Verificar matemáticamente la firma
+        # Verificar matemáticamente la firma canónica (METHOD|PATH|TIMESTAMP|SHA256(BODY))
         ts = headers["X-Nectar-Timestamp"]
+        body_sha256 = hashlib.sha256(body).hexdigest()
+        canonical_string = f"{method}|{path}|{ts}|{body_sha256}"
         expected_sig = hmac.new(
             b"test_super_secret_hmac_key_9988",
-            body + ts.encode('utf-8'),
+            canonical_string.encode('utf-8'),
             hashlib.sha256
         ).hexdigest()
         self.assertEqual(headers["X-Nectar-Signature"], expected_sig)
+
+        # Validar compatibilidad con invocación legacy posicional
+        legacy_headers = self.client_sdk._generate_hmac_headers(body, idempotency_key=idemp)
+        self.assertIn("X-Nectar-Signature", legacy_headers)
+        self.assertEqual(legacy_headers["Idempotency-Key"], idemp)
 
     @patch("services.nectar_client.requests.Session.request")
     def test_successful_balance_query(self, mock_request):
