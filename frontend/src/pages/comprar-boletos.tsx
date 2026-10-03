@@ -203,6 +203,24 @@ const TourPage = () => {
   const [ticketPassModalData, setTicketPassModalData] = useState<{ ticket: any; seat?: any } | null>(null);
   const [limitExceededModalData, setLimitExceededModalData] = useState<{ maxTickets: number; detail: string } | null>(null);
 
+  const isMeetGreet = currentEvent?.event_type === 'meet_greet';
+  const isCurrentEventPast = useMemo(() => {
+    if (!currentEvent?.date) return false;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return new Date(currentEvent.date) < startOfToday;
+  }, [currentEvent]);
+
+  const isOnlineSalesClosed = useMemo(() => {
+    if (!currentEvent) return false;
+    if (currentEvent.is_online_sales_active === false) return true;
+    if (currentEvent.is_cutoff_reached === true) return true;
+    if (currentEvent.cutoff_datetime) {
+      return new Date() >= new Date(currentEvent.cutoff_datetime);
+    }
+    return false;
+  }, [currentEvent]);
+
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
@@ -703,24 +721,6 @@ const TourPage = () => {
     console.log(`[TicketPricing Debug] getEffectiveSeatlessPrice resolved: $${resolvedPrice} MXN | Source: ${source}`);
     return resolvedPrice;
   };
-
-  const isMeetGreet = currentEvent?.event_type === 'meet_greet';
-  const isCurrentEventPast = useMemo(() => {
-    if (!currentEvent?.date) return false;
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return new Date(currentEvent.date) < startOfToday;
-  }, [currentEvent]);
-
-  const isOnlineSalesClosed = useMemo(() => {
-    if (!currentEvent) return false;
-    if (currentEvent.is_online_sales_active === false) return true;
-    if (currentEvent.is_cutoff_reached === true) return true;
-    if (currentEvent.cutoff_datetime) {
-      return new Date() >= new Date(currentEvent.cutoff_datetime);
-    }
-    return false;
-  }, [currentEvent]);
 
   // ── Cálculo de Disponibilidad de Butacas (Badge Header) ──────────────────
   const { totalSeatsCount, availableSeatsCount, occupancyPercentage } = useMemo(() => {
