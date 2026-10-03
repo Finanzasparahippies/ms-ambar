@@ -610,19 +610,34 @@ class TicketViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='apple-pass', permission_classes=[permissions.AllowAny])
     def apple_pass(self, request, pk=None):
         """
-        Descarga del paquete nativo Apple Wallet (.pkpass) firmado criptográficamente.
+        Descarga del paquete binario nativo Apple Wallet (.pkpass) firmado con PKCS#7.
         GET /api/tickets/{token}/apple-pass/
         """
         from django.http import HttpResponse
-        from apps.tickets.services.apple_wallet import AppleWalletPassGenerator
+        from apps.tickets.services.apple_wallet import AppleWalletService
 
         ticket = self.get_object()
-        generator = AppleWalletPassGenerator()
-        pkpass_bytes = generator.generate_pass(ticket)
 
-        filename = f"ticket-{ticket.id}.pkpass"
+        if ticket.status == 'cancelled':
+            return Response(
+                {'error': 'Este boleto ha sido cancelado y no puede ser emitido para Apple Wallet.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        service = AppleWalletService()
+        try:
+            pkpass_bytes = service.generate_pass(ticket)
+        except Exception as e:
+            logger.error(f"[APPLE WALLET] Error generando pase para ticket #{ticket.id} ({ticket.token}): {e}", exc_info=True)
+            return Response(
+                {'error': 'No fue posible generar el pase de Apple Wallet en este momento. Intente más tarde.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        filename = f"ms-ambar-ticket-{ticket.id}.pkpass"
         response = HttpResponse(pkpass_bytes, content_type='application/vnd.apple.pkpass')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return response
 
     @action(detail=True, methods=['get'], url_path='google-wallet-link', permission_classes=[permissions.AllowAny])
