@@ -229,6 +229,30 @@ def handle_successful_payment(session):
         event = Event.objects.get(id=event_id)
         seat_ids = [s for s in seat_ids_raw.split(',') if s.strip()] if seat_ids_raw else []
 
+        # Control de Corte en Webhook: Evitar confirmación de pagos completados posterior al corte
+        from django.utils import timezone
+        now = timezone.now()
+        if not getattr(event, 'is_online_sales_active', True) or (getattr(event, 'cutoff_datetime', None) and now >= event.cutoff_datetime):
+            logger.error(
+                f"[CHECKOUT/POST_CUTOFF_REFUND] Pago completado posterior al corte para evento #{event_id} "
+                f"por {user_email}. Disparando reembolso automático en Stripe..."
+            )
+            payment_intent = session.get('payment_intent')
+            if payment_intent:
+                try:
+                    stripe.Refund.create(
+                        payment_intent=payment_intent,
+                        reason='requested_by_customer',
+                        metadata={'reason': 'REJECTED_POST_CUTOFF', 'event_id': str(event.id)}
+                    )
+                    logger.info(f"[CHECKOUT/REFUND_SUCCESS] Reembolso emitido para PI: {payment_intent}")
+                except Exception as refund_err:
+                    logger.critical(f"[CHECKOUT/REFUND_FAILED] Falló reembolso de Stripe para PI {payment_intent}: {refund_err}")
+
+            if session_id:
+                Ticket.objects.filter(stripe_session_id=session_id).update(status='cancelled')
+            return
+
         logger.info(f"[CHECKOUT/STRIPE_WEBHOOK] [Email: {user_email} | EventID: {event_id} | TicketUUID: - | StripeID: {session_id}] Pago exitoso procesado. Payment Intent: {session.get('payment_intent')}, Estado: paid")
 
         if seat_ids:

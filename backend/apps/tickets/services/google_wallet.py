@@ -220,3 +220,74 @@ class GoogleWalletService:
             "class_id": event_class["id"],
             "object_id": event_object["id"]
         }
+
+    def _get_oauth2_access_token(self) -> Optional[str]:
+        """
+        Obtiene token Bearer OAuth2 mediante intercambio de aserción JWT firmada con RS256.
+        """
+        import requests
+        email, private_key = self._load_credentials()
+        if not email or not private_key:
+            return None
+
+        now = int(time.time())
+        claims = {
+            "iss": email,
+            "scope": "https://www.googleapis.com/auth/wallet_object.issuer",
+            "aud": "https://oauth2.googleapis.com/token",
+            "exp": now + 3600,
+            "iat": now
+        }
+
+        try:
+            assertion = jwt.encode(claims, private_key, algorithm="RS256")
+            res = requests.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                    "assertion": assertion
+                },
+                timeout=5.0
+            )
+            if res.status_code == 200:
+                return res.json().get("access_token")
+            logger.error(f"[GOOGLE WALLET] Error token OAuth2 ({res.status_code}): {res.text}")
+            return None
+        except Exception as e:
+            logger.error(f"[GOOGLE WALLET] Excepción obteniendo token OAuth2: {e}")
+            return None
+
+    def update_ticket_state(self, ticket: Any, new_state: str = "COMPLETED") -> bool:
+        """
+        Ejecuta PATCH https://walletobjects.googleapis.com/walletobjects/v1/eventTicketObject/{id}
+        para actualizar el estado del pase tras la redención física en el acceso.
+        """
+        import requests
+        object_id = f"{self.issuer_id}.ticket_{ticket.token}"
+        token = self._get_oauth2_access_token()
+        if not token:
+            logger.info(f"[GOOGLE WALLET] Omitiendo PATCH remoto para {object_id} (Modo Local/Dev).")
+            return False
+
+        url = f"https://walletobjects.googleapis.com/walletobjects/v1/eventTicketObject/{object_id}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+        body = {"state": new_state}
+
+        for attempt in range(3):
+            try:
+                res = requests.patch(url, headers=headers, json=body, timeout=4.0)
+                if res.status_code in [200, 204]:
+                    logger.info(f"[GOOGLE WALLET] Estado de boleto {object_id} actualizado a '{new_state}'.")
+                    return True
+                if res.status_code == 404:
+                    logger.warning(f"[GOOGLE WALLET] Objeto {object_id} no existe en servidor de Google.")
+                    return False
+                time.sleep(0.2 * (2 ** attempt))
+            except Exception as patch_err:
+                logger.warning(f"[GOOGLE WALLET] Intento {attempt + 1} fallido actualizando estado: {patch_err}")
+                time.sleep(0.2 * (2 ** attempt))
+
+        return False

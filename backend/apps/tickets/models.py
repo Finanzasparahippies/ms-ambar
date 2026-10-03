@@ -427,6 +427,8 @@ class Event(models.Model):
         help_text="Imagen del flyer oficial del evento. Se muestra en la landing page y en la página de compra de boletos."
     )
     is_active = models.BooleanField(default=True)
+    is_online_sales_active = models.BooleanField(default=True, help_text="Bandera global de corte para ventas en línea en día de evento.")
+    cutoff_datetime = models.DateTimeField(null=True, blank=True, help_text="Fecha y hora exacta del corte de venta web previo a taquilla física.")
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default='concert')
     #discount code to validate purchase
     discount_code = models.CharField(max_length=255, blank=True, null=True)
@@ -555,6 +557,16 @@ class Event(models.Model):
             if not self.venue_address:
                 self.venue_address = self.theater.location
         super().save(*args, **kwargs)
+
+        try:
+            from django.core.cache import cache
+            cache.delete('active_events')
+            cache.delete('ms_ambar_active_events_public')
+            cache.delete('ms_ambar_active_theme_global')
+            if self.id:
+                cache.delete(f'event_{self.id}')
+        except Exception:
+            pass
 
         from django.conf import settings
         from django.utils.text import slugify

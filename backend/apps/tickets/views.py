@@ -573,6 +573,23 @@ class TicketViewSet(viewsets.ModelViewSet):
             logger.warning(f"[CHECKOUT/REJECTED] Intento de compra en evento finalizado #{event_id} por {email}")
             return Response({'error': 'Este evento ya ha finalizado. La venta de boletos se encuentra cerrada.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Validación estricta de corte de venta para taquilla física
+        now = timezone.now()
+        if not getattr(event, 'is_online_sales_active', True) or (getattr(event, 'cutoff_datetime', None) and now >= event.cutoff_datetime):
+            logger.warning(f"[CHECKOUT/REJECTED] Venta web cerrada por corte de evento #{event_id} (Online Active: {getattr(event, 'is_online_sales_active', True)}, Cutoff: {getattr(event, 'cutoff_datetime', None)})")
+            try:
+                from django.core.cache import cache
+                cache.delete('active_events')
+                cache.delete('ms_ambar_active_events_public')
+                cache.delete(f'event_{event.id}')
+            except Exception:
+                pass
+            return Response({
+                'error': 'Venta en línea finalizada por inicio del evento. Adquiere tus boletos directamente en la taquilla del recinto.',
+                'code': 'ONLINE_SALES_CLOSED',
+                'cutoff': True
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         # --- 1. Validar Cupón si se proporcionó ---
         coupon_obj = None
         if coupon_code:
