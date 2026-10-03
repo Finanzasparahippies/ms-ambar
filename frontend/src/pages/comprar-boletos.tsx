@@ -485,7 +485,7 @@ const TourPage = () => {
               if (currentEvent?.id) {
                 const refreshed = eventsData.find((e: any) => e.id === currentEvent.id);
                 if (refreshed) {
-                  setCurrentEvent(prev => {
+                  setCurrentEvent((prev: any) => {
                     if (!prev) return refreshed;
                     if (
                       prev.is_online_sales_active !== refreshed.is_online_sales_active ||
