@@ -161,6 +161,8 @@ class EventViewSet(viewsets.ModelViewSet):
         cache.delete('ms_ambar_active_theme_global')
         if event_id:
             cache.delete(f'event_{event_id}')
+            cache.delete(f'event_seats_{event_id}')
+            cache.delete(f'seats_event_{event_id}')
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -168,6 +170,9 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = serializer.save()
+        if instance.is_online_sales_active and instance.cutoff_datetime and instance.is_cutoff_reached():
+            instance.cutoff_datetime = None
+            instance.save(update_fields=['cutoff_datetime'])
         self._invalidate_event_caches(instance.id)
 
     def perform_destroy(self, instance):
@@ -185,6 +190,15 @@ class EventViewSet(viewsets.ModelViewSet):
         from django.utils.dateparse import parse_datetime
         import zoneinfo
 
+        def parse_bool(val):
+            if isinstance(val, bool):
+                return val
+            if isinstance(val, str):
+                return val.strip().lower() in ('true', '1', 't', 'yes', 'y')
+            if isinstance(val, (int, float)):
+                return bool(val)
+            return bool(val)
+
         event = self.get_object()
         is_active_input = request.data.get('is_online_sales_active')
         cutoff_dt_input = request.data.get('cutoff_datetime')
@@ -192,12 +206,21 @@ class EventViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             update_fields = []
             if is_active_input is not None:
-                event.is_online_sales_active = bool(is_active_input)
+                is_active = parse_bool(is_active_input)
+                event.is_online_sales_active = is_active
                 update_fields.append('is_online_sales_active')
-                if event.is_online_sales_active and 'cutoff_datetime' not in request.data:
-                    if event.cutoff_datetime and event.is_cutoff_reached():
+                if is_active:
+                    # Si se reactivan ventas explícitamente y no se pasa un corte futuro,
+                    # limpiar corte previo para evitar bloqueo residual inmediato
+                    if 'cutoff_datetime' not in request.data:
+                        if event.cutoff_datetime:
+                            event.cutoff_datetime = None
+                            if 'cutoff_datetime' not in update_fields:
+                                update_fields.append('cutoff_datetime')
+                    elif not cutoff_dt_input:
                         event.cutoff_datetime = None
-                        update_fields.append('cutoff_datetime')
+                        if 'cutoff_datetime' not in update_fields:
+                            update_fields.append('cutoff_datetime')
 
             if 'cutoff_datetime' in request.data:
                 if cutoff_dt_input:
@@ -216,7 +239,8 @@ class EventViewSet(viewsets.ModelViewSet):
                     event.cutoff_datetime = parsed_dt
                 else:
                     event.cutoff_datetime = None
-                update_fields.append('cutoff_datetime')
+                if 'cutoff_datetime' not in update_fields:
+                    update_fields.append('cutoff_datetime')
 
             if update_fields:
                 event.save(update_fields=update_fields)

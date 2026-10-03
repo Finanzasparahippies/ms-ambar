@@ -145,13 +145,14 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
         cutoff_datetime: nextCutoffDatetime
       };
 
-      const res = await api.post(`/tickets/events/${event.id}/toggle-online-sales/`, payload)
-        .catch(() => api.post(`/tickets/events/${event.id}/configure-cutoff/`, payload));
+      const res = await api.post(`/events/${event.id}/toggle-online-sales/`, payload)
+        .catch(() => api.post(`/tickets/events/${event.id}/toggle-online-sales/`, payload))
+        .catch(() => api.patch(`/tickets/events/${event.id}/`, payload));
 
       const serverUpdated: EventCutoffData = {
         ...event,
-        is_online_sales_active: res.data.is_online_sales_active,
-        cutoff_datetime: res.data.cutoff_datetime,
+        is_online_sales_active: typeof res.data.is_online_sales_active === 'boolean' ? res.data.is_online_sales_active : willOpen,
+        cutoff_datetime: res.data.cutoff_datetime ?? null,
         is_cutoff_reached: typeof res.data.is_cutoff_reached === 'boolean' ? res.data.is_cutoff_reached : !willOpen,
         timezone: res.data.timezone || venueTimezone
       };

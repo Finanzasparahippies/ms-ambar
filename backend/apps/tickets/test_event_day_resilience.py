@@ -181,6 +181,18 @@ class EventDayResilienceTests(APITestCase):
         self.assertTrue(res_reopen.data.get('is_online_sales_active'))
         self.assertFalse(res_reopen.data.get('is_cutoff_reached'))
 
+        # 3. Validar coerción de string "false" y "true"
+        res_str_close = self.client.post(url, {'is_online_sales_active': 'false'}, format='json')
+        self.assertEqual(res_str_close.status_code, status.HTTP_200_OK)
+        self.assertFalse(res_str_close.data.get('is_online_sales_active'))
+
+        # 4. Validar reapertura vía ruta directa /api/events/<id>/toggle-online-sales/
+        direct_url = f'/api/events/{self.event.id}/toggle-online-sales/'
+        res_direct = self.client.post(direct_url, {'is_online_sales_active': 'true'}, format='json')
+        self.assertEqual(res_direct.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_direct.data.get('is_online_sales_active'))
+        self.assertFalse(res_direct.data.get('is_cutoff_reached'))
+
     def test_07_venue_specific_timezone_cutoff_logic(self):
         """Valida que is_cutoff_reached compare respecto a la zona horaria del venue (America/Hermosillo)."""
         import zoneinfo

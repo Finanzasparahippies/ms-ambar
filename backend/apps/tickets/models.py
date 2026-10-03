@@ -607,6 +607,8 @@ class Event(models.Model):
             cache.delete('ms_ambar_active_theme_global')
             if self.id:
                 cache.delete(f'event_{self.id}')
+                cache.delete(f'event_seats_{self.id}')
+                cache.delete(f'seats_event_{self.id}')
         except Exception as cache_err:
             import logging
             logging.getLogger('apps.tickets').warning(f"[CACHE] Error al invalidar caché en Event.save: {cache_err}")

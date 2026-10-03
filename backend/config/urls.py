@@ -11,6 +11,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/webhooks/brevo', BrevoWebhookView.as_view(), name='brevo-webhook-root'),
     path('api/events/<int:pk>/toggle-online-sales/', EventViewSet.as_view({'post': 'toggle_online_sales'}), name='event-toggle-online-sales-direct'),
+    path('api/events/<int:pk>/', EventViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='event-detail-direct'),
+    path('api/events/', EventViewSet.as_view({'get': 'list', 'post': 'create'}), name='event-list-direct'),
     path('api/tickets/', include('apps.tickets.urls')),
     path('api/shop/', include('apps.shop.urls')),
     path('api/users/', include('apps.users.urls')),

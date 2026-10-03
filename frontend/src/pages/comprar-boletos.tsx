@@ -446,6 +446,54 @@ const TourPage = () => {
     fetchSeats();
   }, [currentEvent]);
 
+  // Dynamic re-sync when sales status flips from closed to active: flush seats & refresh layout
+  const prevSalesClosedRef = React.useRef(isOnlineSalesClosed);
+  useEffect(() => {
+    if (prevSalesClosedRef.current === true && !isOnlineSalesClosed) {
+      fetchSeats();
+    }
+    prevSalesClosedRef.current = isOnlineSalesClosed;
+  }, [isOnlineSalesClosed]);
+
+  // Real-time Event Sync: Auto-refresh event state on window focus or periodic ticker
+  useEffect(() => {
+    const refreshEventState = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        api.get('/tickets/events/')
+          .then(res => {
+            const eventsData = res.data;
+            if (Array.isArray(eventsData) && eventsData.length > 0) {
+              setEvents(eventsData.filter((e: any) => e.is_active !== false));
+              if (currentEvent?.id) {
+                const refreshed = eventsData.find((e: any) => e.id === currentEvent.id);
+                if (refreshed) {
+                  setCurrentEvent(prev => {
+                    if (!prev) return refreshed;
+                    if (
+                      prev.is_online_sales_active !== refreshed.is_online_sales_active ||
+                      prev.cutoff_datetime !== refreshed.cutoff_datetime ||
+                      prev.is_cutoff_reached !== refreshed.is_cutoff_reached
+                    ) {
+                      return { ...prev, ...refreshed };
+                    }
+                    return prev;
+                  });
+                }
+              }
+            }
+          })
+          .catch(() => {});
+      }
+    };
+
+    const interval = setInterval(refreshEventState, 15000);
+    window.addEventListener('focus', refreshEventState);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refreshEventState);
+    };
+  }, [currentEvent?.id]);
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
@@ -1019,6 +1067,7 @@ const TourPage = () => {
                         ) : (
                           <div className="relative w-full">
                             <SeatMap
+                              key={`seatmap-${currentEvent?.id}-${isOnlineSalesClosed ? 'closed' : 'active'}`}
                               seats={seats}
                               elements={elements}
                               selectedIds={selectedSeats.map(s => String(s.id))}

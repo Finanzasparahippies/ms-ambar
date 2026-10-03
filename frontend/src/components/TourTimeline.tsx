@@ -20,6 +20,9 @@ export interface Event {
   image?: string;
   is_active?: boolean;
   timezone?: string;
+  is_online_sales_active?: boolean;
+  cutoff_datetime?: string | null;
+  is_cutoff_reached?: boolean;
 }
 
 interface TourTimelineProps {
@@ -32,6 +35,7 @@ interface VenueMapTooltipProps {
   displayName: string;
   displayLocation: string;
   isPast: boolean;
+  isClosed?: boolean;
   isActive: boolean;
   selectedYear: number;
   secTheme: any;
@@ -43,6 +47,7 @@ const VenueMapTooltip: React.FC<VenueMapTooltipProps> = ({
   displayName,
   displayLocation,
   isPast,
+  isClosed = false,
   isActive,
   selectedYear,
   secTheme,
@@ -137,7 +142,7 @@ const VenueMapTooltip: React.FC<VenueMapTooltipProps> = ({
 
         {/* Status Badge */}
         <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-500/40 text-[9px] font-black uppercase tracking-wider text-amber-300 shadow-lg pointer-events-none z-20">
-          {isPast ? 'Concluido' : (isActive ? 'Seleccionado' : 'En Venta')}
+          {isPast ? 'Concluido' : (isClosed ? 'Taquilla Física' : (isActive ? 'Seleccionado' : 'En Venta'))}
         </div>
 
         {/* Center Venue Location Marker Accent */}
@@ -275,6 +280,11 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                   const now = new Date();
                   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                   const isPast = date < startOfToday;
+                  const isClosed = !isPast && (
+                    event.is_online_sales_active === false ||
+                    event.is_cutoff_reached === true ||
+                    (Boolean(event.cutoff_datetime) && now >= new Date(event.cutoff_datetime!))
+                  );
                   const isHovered = hoveredEventId === event.id;
                   const coverImg = getEventImage(event);
 
@@ -301,6 +311,7 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                             displayName={displayName}
                             displayLocation={displayLocation}
                             isPast={isPast}
+                            isClosed={isClosed}
                             isActive={isActive}
                             selectedYear={selectedYear}
                             secTheme={secTheme}
@@ -388,6 +399,10 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                               {isPast ? (
                                 <span className="px-2.5 py-1 rounded-full text-[8.5px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20">
                                   Concluido
+                                </span>
+                              ) : isClosed ? (
+                                <span className="px-2.5 py-1 rounded-full text-[8.5px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                  Taquilla Física
                                 </span>
                               ) : (
                                 <span className="px-2.5 py-1 rounded-full text-[8.5px] font-black uppercase tracking-widest bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
