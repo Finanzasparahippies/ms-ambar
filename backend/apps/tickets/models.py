@@ -598,21 +598,6 @@ class Event(models.Model):
             if not self.timezone and getattr(self.theater, 'timezone', None):
                 self.timezone = self.theater.timezone
 
-        # Auto-limpiar corte de horario si las ventas se activan explícitamente y el corte ya expiró
-        if self.is_online_sales_active and self.cutoff_datetime:
-            try:
-                if self.is_cutoff_reached():
-                    logger.info(
-                        f"[EVENT CUTOFF RESET] Corte expirado ({self.cutoff_datetime}) limpiado automáticamente "
-                        f"para Evento #{self.id or 'nuevo'} ('{self.title}') al activarse ventas en línea."
-                    )
-                    self.cutoff_datetime = None
-            except Exception as exc:
-                logger.error(
-                    f"[EVENT CUTOFF RESET] Error al evaluar is_cutoff_reached en Event.save (#{self.id or 'nuevo'}): {exc}",
-                    exc_info=True
-                )
-
         super().save(*args, **kwargs)
 
         try:
