@@ -161,6 +161,24 @@ const TourPage = () => {
   const router = useRouter();
   const [events, setEvents] = useState<any[]>([]);
   const [currentEvent, setCurrentEvent] = useState<any>(null);
+
+  const isMeetGreet = currentEvent?.event_type === 'meet_greet';
+  const isCurrentEventPast = useMemo(() => {
+    if (!currentEvent?.date) return false;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return new Date(currentEvent.date) < startOfToday;
+  }, [currentEvent]);
+
+  const isOnlineSalesClosed = useMemo(() => {
+    if (!currentEvent) return false;
+    if (currentEvent.is_online_sales_active === false) return true;
+    if (currentEvent.is_cutoff_reached === true) return true;
+    if (currentEvent.cutoff_datetime) {
+      return new Date() >= new Date(currentEvent.cutoff_datetime);
+    }
+    return false;
+  }, [currentEvent]);
   const [seats, setSeats] = useState<any[]>([]);
   const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
@@ -202,24 +220,6 @@ const TourPage = () => {
   const [createdTickets, setCreatedTickets] = useState<any[]>([]);
   const [ticketPassModalData, setTicketPassModalData] = useState<{ ticket: any; seat?: any } | null>(null);
   const [limitExceededModalData, setLimitExceededModalData] = useState<{ maxTickets: number; detail: string } | null>(null);
-
-  const isMeetGreet = currentEvent?.event_type === 'meet_greet';
-  const isCurrentEventPast = useMemo(() => {
-    if (!currentEvent?.date) return false;
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return new Date(currentEvent.date) < startOfToday;
-  }, [currentEvent]);
-
-  const isOnlineSalesClosed = useMemo(() => {
-    if (!currentEvent) return false;
-    if (currentEvent.is_online_sales_active === false) return true;
-    if (currentEvent.is_cutoff_reached === true) return true;
-    if (currentEvent.cutoff_datetime) {
-      return new Date() >= new Date(currentEvent.cutoff_datetime);
-    }
-    return false;
-  }, [currentEvent]);
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
@@ -465,12 +465,12 @@ const TourPage = () => {
   }, [currentEvent]);
 
   // Dynamic re-sync when sales status flips from closed to active: flush seats & refresh layout
-  const prevSalesClosedRef = React.useRef(isOnlineSalesClosed);
+  const prevSalesClosedRef = React.useRef<boolean>(false);
   useEffect(() => {
     if (prevSalesClosedRef.current === true && !isOnlineSalesClosed) {
       fetchSeats();
     }
-    prevSalesClosedRef.current = isOnlineSalesClosed;
+    prevSalesClosedRef.current = Boolean(isOnlineSalesClosed);
   }, [isOnlineSalesClosed]);
 
   // Real-time Event Sync: Auto-refresh event state on window focus or periodic ticker
