@@ -273,7 +273,11 @@ class EventSerializer(serializers.ModelSerializer):
     def get_is_cutoff_reached(self, obj):
         try:
             return bool(obj.is_cutoff_reached())
-        except Exception:
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').warning(
+                f"[SERIALIZER] Fallo evaluando is_cutoff_reached para Event #{getattr(obj, 'id', 'N/A')}: {exc}"
+            )
             return not getattr(obj, 'is_online_sales_active', True)
 
     def get_base_price(self, obj):
@@ -285,6 +289,20 @@ class EventSerializer(serializers.ModelSerializer):
     def get_price_with_fee(self, obj):
         """Returns fee breakdown for the lowest-priced ticket in this event."""
         return calculate_total_with_fee(obj.base_price)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        try:
+            cutoff_reached = bool(instance.is_cutoff_reached())
+            data['is_cutoff_reached'] = cutoff_reached
+            if cutoff_reached:
+                data['is_online_sales_active'] = False
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').warning(
+                f"[SERIALIZER] Error evaluando is_cutoff_reached en to_representation para Event #{getattr(instance, 'id', 'N/A')}: {exc}"
+            )
+        return data
 
 
 class TicketSerializer(serializers.ModelSerializer):

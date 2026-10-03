@@ -1,8 +1,11 @@
+import logging
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 import uuid
+
+logger = logging.getLogger('apps.tickets')
 
 class Theater(models.Model):
     name = models.CharField(max_length=255)
@@ -570,7 +573,11 @@ class Event(models.Model):
         tz_name = self.timezone or (self.theater.timezone if self.theater else None) or 'America/Hermosillo'
         try:
             venue_tz = zoneinfo.ZoneInfo(tz_name)
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                f"[ZONEINFO] Error cargando zona horaria '{tz_name}' para Event #{self.id or 'nuevo'}: {exc}. "
+                f"Aplicando fallback a 'America/Hermosillo'."
+            )
             venue_tz = zoneinfo.ZoneInfo('America/Hermosillo')
 
         now_venue = timezone.now().astimezone(venue_tz)
@@ -590,6 +597,22 @@ class Event(models.Model):
                 self.venue_address = self.theater.location
             if not self.timezone and getattr(self.theater, 'timezone', None):
                 self.timezone = self.theater.timezone
+
+        # Auto-limpiar corte de horario si las ventas se activan explícitamente y el corte ya expiró
+        if self.is_online_sales_active and self.cutoff_datetime:
+            try:
+                if self.is_cutoff_reached():
+                    logger.info(
+                        f"[EVENT CUTOFF RESET] Corte expirado ({self.cutoff_datetime}) limpiado automáticamente "
+                        f"para Evento #{self.id or 'nuevo'} ('{self.title}') al activarse ventas en línea."
+                    )
+                    self.cutoff_datetime = None
+            except Exception as exc:
+                logger.error(
+                    f"[EVENT CUTOFF RESET] Error al evaluar is_cutoff_reached en Event.save (#{self.id or 'nuevo'}): {exc}",
+                    exc_info=True
+                )
+
         super().save(*args, **kwargs)
 
         try:

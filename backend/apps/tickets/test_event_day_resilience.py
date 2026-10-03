@@ -200,3 +200,21 @@ class EventDayResilienceTests(APITestCase):
         self.event.save()
         self.assertTrue(self.event.is_cutoff_reached())
 
+    def test_08_serializer_dynamic_cutoff_state(self):
+        """Valida que EventSerializer serialice is_online_sales_active=False y is_cutoff_reached=True si el corte pasó."""
+        from apps.tickets.serializers import EventSerializer
+        import zoneinfo
+
+        hermosillo_tz = zoneinfo.ZoneInfo('America/Hermosillo')
+        now_hermosillo = timezone.now().astimezone(hermosillo_tz)
+
+        # Evento con corte en el pasado
+        self.event.is_online_sales_active = True
+        self.event.cutoff_datetime = now_hermosillo - timezone.timedelta(minutes=5)
+        self.event.save()
+
+        serializer = EventSerializer(self.event)
+        data = serializer.data
+        self.assertTrue(data.get('is_cutoff_reached'))
+        self.assertFalse(data.get('is_online_sales_active'))
+

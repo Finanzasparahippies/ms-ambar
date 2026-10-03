@@ -667,11 +667,12 @@ const TourPage = () => {
   const isOnlineSalesClosed = useMemo(() => {
     if (!currentEvent) return false;
     if (currentEvent.is_online_sales_active === false) return true;
+    if (currentEvent.is_cutoff_reached === true) return true;
     if (currentEvent.cutoff_datetime) {
       return new Date() >= new Date(currentEvent.cutoff_datetime);
     }
-    return isCurrentEventPast;
-  }, [currentEvent, isCurrentEventPast]);
+    return false;
+  }, [currentEvent]);
 
   // ── Cálculo de Disponibilidad de Butacas (Badge Header) ──────────────────
   const { totalSeatsCount, availableSeatsCount, occupancyPercentage } = useMemo(() => {

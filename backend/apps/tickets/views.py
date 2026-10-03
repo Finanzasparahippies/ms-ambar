@@ -228,13 +228,14 @@ class EventViewSet(viewsets.ModelViewSet):
                 f"is_cutoff_reached={event.is_cutoff_reached()}"
             )
 
+        cutoff_reached = event.is_cutoff_reached()
         return Response({
             'status': 'success',
             'message': 'Estado de taquilla digital actualizado exitosamente.',
             'event_id': event.id,
-            'is_online_sales_active': event.is_online_sales_active,
+            'is_online_sales_active': False if cutoff_reached else event.is_online_sales_active,
             'cutoff_datetime': event.cutoff_datetime.isoformat() if event.cutoff_datetime else None,
-            'is_cutoff_reached': event.is_cutoff_reached(),
+            'is_cutoff_reached': cutoff_reached,
             'timezone': event.timezone
         }, status=status.HTTP_200_OK)
 

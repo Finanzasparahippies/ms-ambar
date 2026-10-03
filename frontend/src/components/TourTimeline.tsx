@@ -28,6 +28,162 @@ interface TourTimelineProps {
   onEventSelect: (event: Event) => void;
 }
 
+interface VenueMapTooltipProps {
+  displayName: string;
+  displayLocation: string;
+  isPast: boolean;
+  isActive: boolean;
+  selectedYear: number;
+  secTheme: any;
+  theme: any;
+  alignOffset: 'left' | 'center' | 'right';
+}
+
+const VenueMapTooltip: React.FC<VenueMapTooltipProps> = ({
+  displayName,
+  displayLocation,
+  isPast,
+  isActive,
+  selectedYear,
+  secTheme,
+  theme,
+  alignOffset
+}) => {
+  const [shouldLoadIframe, setShouldLoadIframe] = useState(false);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+
+  // 150ms debounce before mounting Google Maps iframe to protect scroll performance
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setShouldLoadIframe(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const query = encodeURIComponent(`${displayName}, ${displayLocation}`);
+  const mapEmbedUrl = `https://maps.google.com/maps?q=${query}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+  const externalMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+
+  const alignmentClass =
+    alignOffset === 'left'
+      ? 'left-0'
+      : alignOffset === 'right'
+      ? 'right-0'
+      : 'left-1/2 -translate-x-1/2';
+
+  const tailClass =
+    alignOffset === 'left'
+      ? 'left-8'
+      : alignOffset === 'right'
+      ? 'right-8'
+      : 'left-1/2 -translate-x-1/2';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8, scale: 0.94 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -6, scale: 0.94 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      className={cn(
+        "absolute top-[5.2rem] z-[100] w-80 p-3.5 bg-slate-950/95 backdrop-blur-2xl border border-amber-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.9),0_0_30px_rgba(245,158,11,0.22)] flex flex-col gap-2.5 text-left",
+        alignmentClass
+      )}
+      style={{
+        backgroundColor: secTheme.card_bg ? `${secTheme.card_bg}f5` : undefined,
+        borderColor: secTheme.border_color || undefined
+      }}
+    >
+      {/* Balloon Tail Arrow Pointing UP to Date Bubble */}
+      <div 
+        className={cn(
+          "w-3.5 h-3.5 bg-slate-950 border-t border-l border-amber-500/40 rotate-45 absolute -top-1.5 z-10",
+          tailClass
+        )} 
+        style={{ 
+          backgroundColor: secTheme.card_bg || undefined, 
+          borderColor: secTheme.border_color || undefined 
+        }} 
+      />
+
+      {/* Map Container */}
+      <div className="relative h-36 w-full rounded-xl overflow-hidden bg-[#0a0d14] border border-amber-500/30 shadow-inner group/map z-20">
+        {shouldLoadIframe ? (
+          <>
+            {!iframeLoaded && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-slate-950 z-10 text-amber-400">
+                <MapPin className="animate-bounce text-amber-400" size={24} />
+                <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400">Localizando Recinto...</span>
+              </div>
+            )}
+            <iframe
+              src={mapEmbedUrl}
+              title={`Mapa de ${displayName}`}
+              onLoad={() => setIframeLoaded(true)}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="w-full h-full border-0 pointer-events-none transition-opacity duration-300"
+              style={{
+                filter: 'invert(90%) hue-rotate(180deg) contrast(1.15) brightness(0.85)',
+                opacity: iframeLoaded ? 1 : 0
+              }}
+            />
+          </>
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-950 text-amber-400/60">
+            <MapPin size={22} className="animate-pulse" />
+            <span className="text-[10px] uppercase font-bold tracking-widest text-slate-500">Cargando mapa...</span>
+          </div>
+        )}
+
+        {/* Status Badge */}
+        <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-amber-500/40 text-[9px] font-black uppercase tracking-wider text-amber-300 shadow-lg pointer-events-none z-20">
+          {isPast ? 'Concluido' : (isActive ? 'Seleccionado' : 'En Venta')}
+        </div>
+
+        {/* Center Venue Location Marker Accent */}
+        <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+          <div className="relative flex items-center justify-center">
+            <span className="animate-ping absolute inline-flex h-8 w-8 rounded-full bg-amber-400/30" />
+            <div className="w-4 h-4 rounded-full bg-amber-400 border-2 border-slate-950 shadow-[0_0_12px_#F59E0B]" />
+          </div>
+        </div>
+      </div>
+
+      {/* Info & External Link Header */}
+      <div className="px-1 space-y-1.5 z-20">
+        <div className="flex items-center justify-between gap-2">
+          <h5 className="text-xs font-black text-white line-clamp-1 uppercase tracking-tight" style={{ color: secTheme.heading_color || undefined }}>
+            {displayName}
+          </h5>
+          <span className="text-[9px] font-mono text-amber-400/80 uppercase shrink-0">Hermosillo</span>
+        </div>
+        <p className="text-[10.5px] text-slate-300 font-medium flex items-center gap-1.5 line-clamp-2 leading-tight" style={{ color: secTheme.subtitle_color || undefined }}>
+          <MapPin size={12} className="text-amber-400 shrink-0" style={{ color: secTheme.accent_color || undefined }} />
+          <span>{displayLocation}</span>
+        </p>
+
+        {/* Navigation Action Row */}
+        <div className="pt-2 flex items-center justify-between text-[10px] border-t border-white/10 mt-1.5 pointer-events-auto">
+          <span className="text-amber-400/90 font-bold uppercase tracking-wider" style={{ color: secTheme.accent_color || undefined }}>
+            Ms Ambar Tour {selectedYear}
+          </span>
+          <a
+            href={externalMapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-[9.5px] font-black uppercase tracking-wider transition-all shadow-sm active:scale-95"
+            title="Abrir ubicación en Google Maps"
+          >
+            <span>Ver en Maps</span>
+            <ArrowRight size={10} />
+          </a>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps) => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [hoveredEventId, setHoveredEventId] = useState<number | null>(null);
@@ -138,64 +294,19 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                       onMouseEnter={() => setHoveredEventId(event.id)}
                       onMouseLeave={() => setHoveredEventId(null)}
                     >
-                      {/* Floating Cover Image Balloon Tooltip (Downward Pop) */}
+                      {/* Floating Venue Geographic Map Balloon Tooltip (Downward Pop, Lazy-Loaded) */}
                       <AnimatePresence>
                         {isHovered && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -8, scale: 0.94 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -6, scale: 0.94 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
-                            className="absolute top-[5.2rem] left-1/2 -translate-x-1/2 z-[100] pointer-events-none w-72 p-3 bg-slate-950/95 dark:bg-slate-950/95 backdrop-blur-2xl border border-amber-500/40 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_25px_rgba(245,158,11,0.25)] flex flex-col gap-2.5 text-left"
-                            style={{
-                              backgroundColor: secTheme.card_bg ? `${secTheme.card_bg}f2` : undefined,
-                              borderColor: secTheme.border_color || undefined
-                            }}
-                          >
-                            {/* Balloon Tail Arrow Pointing UP to Date Bubble */}
-                            <div 
-                              className="w-3.5 h-3.5 bg-slate-950 border-t border-l border-amber-500/40 rotate-45 absolute -top-1.5 left-1/2 -translate-x-1/2 z-10" 
-                              style={{ 
-                                backgroundColor: secTheme.card_bg || undefined, 
-                                borderColor: secTheme.border_color || undefined 
-                              }} 
-                            />
-
-                            <div className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-900 border border-amber-500/20 shadow-inner group/img z-20">
-                              {coverImg ? (
-                                <img
-                                  src={coverImg}
-                                  alt={displayName}
-                                  loading="lazy"
-                                  decoding="async"
-                                  className="w-full h-full object-cover object-center transition-transform duration-500 group-hover/img:scale-105"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gradient-to-br from-amber-950/80 via-slate-900 to-black flex items-center justify-center p-4 text-center relative overflow-hidden">
-                                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.15),transparent_70%)]" />
-                                  <Ticket className="text-amber-400/40 mb-1" size={32} />
-                                </div>
-                              )}
-
-                              <div className="absolute top-2 right-2 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-amber-500/30 text-[9px] font-black uppercase tracking-wider text-amber-400 shadow-md">
-                                {isPast ? 'Concluido' : (isActive ? 'Seleccionado' : 'Disponible')}
-                              </div>
-                            </div>
-
-                            <div className="px-1 space-y-1 z-20">
-                              <h5 className="text-xs font-black text-white line-clamp-1 uppercase tracking-tight" style={{ color: secTheme.heading_color || undefined }}>
-                                {displayName}
-                              </h5>
-                              <p className="text-[10px] text-amber-200/80 font-medium flex items-center gap-1 line-clamp-1" style={{ color: secTheme.subtitle_color || undefined }}>
-                                <MapPin size={11} className="text-amber-400 shrink-0" style={{ color: secTheme.accent_color || undefined }} />
-                                {displayLocation}
-                              </p>
-                              <div className="pt-1 flex items-center justify-between text-[9px] text-slate-400 font-bold uppercase tracking-wider border-t border-white/5 mt-1">
-                                <span className="text-amber-400" style={{ color: secTheme.accent_color || undefined }}>Ms Ambar Tour {selectedYear}</span>
-                                <span className="text-white/60">Clic para reservar</span>
-                              </div>
-                            </div>
-                          </motion.div>
+                          <VenueMapTooltip
+                            displayName={displayName}
+                            displayLocation={displayLocation}
+                            isPast={isPast}
+                            isActive={isActive}
+                            selectedYear={selectedYear}
+                            secTheme={secTheme}
+                            theme={theme}
+                            alignOffset={index === 0 ? 'left' : (index === filteredEvents.length - 1 ? 'right' : 'center')}
+                          />
                         )}
                       </AnimatePresence>
 
@@ -241,6 +352,22 @@ const TourTimeline = ({ events, currentEvent, onEventSelect }: TourTimelineProps
                             : "bg-slate-900/60 dark:bg-slate-950/60 border-slate-800 dark:border-white/10 hover:border-amber-500/40 hover:bg-slate-900/80"
                         )}
                       >
+                        {/* 1. Fondo de la tarjeta con imagen del evento y protección de contraste al 80% */}
+                        <div className="absolute inset-0 overflow-hidden rounded-[2rem] pointer-events-none z-0">
+                          {coverImg ? (
+                            <img
+                              src={coverImg}
+                              alt={displayName}
+                              loading="lazy"
+                              decoding="async"
+                              className="w-full h-full object-cover object-center opacity-30 group-hover/card:opacity-45 scale-105 group-hover/card:scale-110 transition-all duration-700 ease-out"
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/15 via-slate-900/60 to-black/80" />
+                          )}
+                          {/* Capa de degradado con 80-85% de opacidad para garantizar legibilidad WCAG AAA */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#080c0a] via-[#080c0a]/85 to-[#080c0a]/75 backdrop-blur-[1px]" />
+                        </div>
                         <div className="relative z-10 space-y-3.5">
                           <div className="flex justify-between items-center gap-2">
                             <div className="flex items-center gap-2">

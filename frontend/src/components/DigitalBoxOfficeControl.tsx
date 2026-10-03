@@ -42,30 +42,71 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
   const [isOpen, setIsOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [cutoffInput, setCutoffInput] = useState('');
+  const [now, setNow] = useState<Date>(() => new Date());
 
   // Resolved venue timezone (default to America/Hermosillo)
   const venueTimezone = event?.timezone || 'America/Hermosillo';
 
+  // Live countdown / clock ticker to auto-refresh cutoff state as time passes
+  useEffect(() => {
+    if (!event?.cutoff_datetime) return;
+
+    // Ticker every 5 seconds to ensure instantaneous transition when cutoff passes
+    const interval = setInterval(() => {
+      setNow(new Date());
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [event?.cutoff_datetime]);
+
   const isOnlineActive = event?.is_online_sales_active !== false;
   const cutoffDate = event?.cutoff_datetime ? new Date(event.cutoff_datetime) : null;
-  const isPastCutoff = cutoffDate ? new Date() >= cutoffDate : false;
+  const isPastCutoff = cutoffDate ? now >= cutoffDate : false;
 
-  // Single source of truth for effective closed state
-  const isEffectivelyClosed = typeof event?.is_cutoff_reached === 'boolean'
-    ? event.is_cutoff_reached
-    : (!isOnlineActive || isPastCutoff);
+  // Single source of truth for effective closed state:
+  // Closed if explicitly marked inactive, or if backend reports cutoff reached,
+  // or if local clock reached/passed cutoff_datetime
+  const isEffectivelyClosed = !isOnlineActive || (event?.is_cutoff_reached === true) || isPastCutoff;
 
-  // Initialize input when modal opens or event changes
+  // Auto-notify parent dashboard state if client time reaches cutoff in real-time
+  useEffect(() => {
+    if (isPastCutoff && event?.is_online_sales_active && onEventUpdated) {
+      onEventUpdated({
+        ...event,
+        is_online_sales_active: false,
+        is_cutoff_reached: true
+      });
+    }
+  }, [isPastCutoff, event?.is_online_sales_active, onEventUpdated]);
+
+  // Initialize input when modal opens or event changes using venue timezone
   useEffect(() => {
     if (event?.cutoff_datetime) {
-      const d = new Date(event.cutoff_datetime);
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const localStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      setCutoffInput(localStr);
+      try {
+        const d = new Date(event.cutoff_datetime);
+        const formatter = new Intl.DateTimeFormat('en-CA', {
+          timeZone: venueTimezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        });
+        const parts = formatter.formatToParts(d);
+        const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+        const localStr = `${getPart('year')}-${getPart('month')}-${getPart('day')}T${getPart('hour')}:${getPart('minute')}`;
+        setCutoffInput(localStr);
+      } catch {
+        const d = new Date(event.cutoff_datetime);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const localStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        setCutoffInput(localStr);
+      }
     } else {
       setCutoffInput('');
     }
-  }, [event?.cutoff_datetime, isOpen]);
+  }, [event?.cutoff_datetime, venueTimezone, isOpen]);
 
   if (!event) return null;
 
@@ -172,13 +213,28 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
     }
   };
 
-  // Quick Preset Helper
+  // Quick Preset Helper using venue timezone
   const applyPreset = (minutesBeforeEvent: number) => {
     if (!event.date) return;
     const eventTime = new Date(event.date);
     const target = new Date(eventTime.getTime() - minutesBeforeEvent * 60000);
-    const pad = (n: number) => String(n).padStart(2, '0');
-    setCutoffInput(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`);
+    try {
+      const formatter = new Intl.DateTimeFormat('en-CA', {
+        timeZone: venueTimezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+      const parts = formatter.formatToParts(target);
+      const getPart = (type: string) => parts.find(p => p.type === type)?.value || '';
+      setCutoffInput(`${getPart('year')}-${getPart('month')}-${getPart('day')}T${getPart('hour')}:${getPart('minute')}`);
+    } catch {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setCutoffInput(`${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`);
+    }
   };
 
   return (
@@ -400,7 +456,9 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
                         showAlert('Por favor selecciona una fecha y hora o usa "Quitar Programación".', 'Atención', 'warning');
                         return;
                       }
-                      handleSaveCutoffDatetime(new Date(cutoffInput).toISOString());
+                      // Send the datetime string without client browser timezone skew so the backend attaches venue timezone
+                      const normalizedInput = cutoffInput.length === 16 ? `${cutoffInput}:00` : cutoffInput;
+                      handleSaveCutoffDatetime(normalizedInput);
                     }}
                     disabled={isUpdating || !cutoffInput}
                     className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"

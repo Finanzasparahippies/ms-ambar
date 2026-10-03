@@ -157,9 +157,15 @@ export default function TicketsManagementPage() {
         params.append('search', debouncedSearch);
       }
 
-      const res = await api.get(`/tickets/admin/tickets/?${params.toString()}`);
-      const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      const [ticketsRes, eventsRes] = await Promise.all([
+        api.get(`/tickets/admin/tickets/?${params.toString()}`),
+        api.get('/tickets/events/').catch(() => null)
+      ]);
+      const data = Array.isArray(ticketsRes.data) ? ticketsRes.data : (ticketsRes.data?.results || []);
       setTickets(data);
+      if (eventsRes?.data && Array.isArray(eventsRes.data)) {
+        setEvents(eventsRes.data);
+      }
     } catch (err: any) {
       console.error('Error fetching admin tickets:', err);
       showToast('Error al actualizar la lista de boletos.', 'error');
