@@ -740,12 +740,26 @@ class TicketViewSet(viewsets.ModelViewSet):
                 logger.warning(f"[CHECKOUT/REJECTED] Asientos ocupados {list(occupied_seat_ids)} intentados por {email}")
                 return Response({'error': 'Uno o más asientos ya están reservados o pagados.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Prevención de Asiento Huérfano (Orphan Seat Prevention)
+            # Prevención de Asiento Huérfano (Orphan Seat Prevention / Soft Warning)
+            allow_orphan_seat = bool(request.data.get('allow_orphan_seat', False))
             from apps.tickets.services.coupon_validator import check_orphan_seats
-            no_orphans, orphan_err = check_orphan_seats(event, [int(s) for s in seat_ids if str(s).isdigit()], coupon=coupon_obj)
+            no_orphans, orphan_err, orphan_seat_ids = check_orphan_seats(
+                event,
+                [int(s) for s in seat_ids if str(s).isdigit()],
+                coupon=coupon_obj,
+                return_details=True
+            )
             if not no_orphans:
-                logger.warning(f"[CHECKOUT/REJECTED] Regla de asiento huérfano bloqueó compra: {orphan_err}")
-                return Response({'error': orphan_err}, status=status.HTTP_400_BAD_REQUEST)
+                if not allow_orphan_seat:
+                    logger.warning(f"[CHECKOUT/ORPHAN_WARNING] Selección deja asiento huérfano (asientos: {orphan_seat_ids}): {orphan_err}")
+                    return Response({
+                        'code': 'ORPHAN_SEAT_WARNING',
+                        'error': orphan_err,
+                        'message': orphan_err,
+                        'orphan_seat_ids': orphan_seat_ids
+                    }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                else:
+                    logger.info(f"[CHECKOUT/ORPHAN_OVERRIDDEN] Asiento huérfano confirmado por comprador ({email}): {orphan_seat_ids}")
 
             for s_id in seat_ids:
                 try:

@@ -113,9 +113,9 @@ export const SeatMap: React.FC<SeatMapProps> = ({
               <AlertTriangle size={18} className="text-amber-400 shrink-0 mt-0.5 animate-bounce" />
               <div className="text-xs leading-relaxed">
                 <span className="font-black uppercase tracking-wider text-amber-300 block mb-0.5">
-                  Regla de Adyacencia: Asiento Aislado Detectado
+                  Aviso Preventivo: Asiento Individual en Mesa
                 </span>
-                Tu selección actual dejaría 1 butaca solitaria. Te recomendamos elegir asientos contiguos para completar tu reserva sin restricciones.
+                Tu selección deja 1 asiento disponible en la mesa. Puedes continuar con tu compra o añadir el asiento restante para disfrutar de la mesa completa.
               </div>
             </motion.div>
           )}

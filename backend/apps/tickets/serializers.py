@@ -603,3 +603,23 @@ class AdminTicketSerializer(serializers.ModelSerializer):
         }
 
 
+class CheckoutRequestSerializer(serializers.Serializer):
+    """
+    Especificación de contrato estricto para iniciación de compras / reservas.
+    Soporta el flag `allow_orphan_seat` para transformar el bloqueo en aviso permisivo.
+    """
+    email = serializers.EmailField(required=True)
+    event_id = serializers.IntegerField(required=True)
+    seat_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list
+    )
+    quantity = serializers.IntegerField(default=1, min_value=1)
+    phone = serializers.CharField(required=False, allow_blank=True, default='')
+    has_mg = serializers.BooleanField(default=False)
+    coupon_code = serializers.CharField(required=False, allow_blank=True, default='')
+    is_seatless = serializers.BooleanField(default=False)
+    allow_orphan_seat = serializers.BooleanField(default=False, required=False)
+
+

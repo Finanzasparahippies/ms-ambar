@@ -952,14 +952,15 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.restore();
       }
 
-      // Regla Anti-Asiento Huérfano: Resaltar en ámbar preventivo si este asiento quedaría aislado
+      // Regla Anti-Asiento Huérfano: Resaltar con pulso ámbar preventivo si este asiento quedaría aislado
       const isOrphanSeat = orphanSeatSet.has(String(seat.id));
       if (isOrphanSeat && !isSelected) {
         ctx.save();
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = '#D97706';
-        ctx.strokeStyle = '#D97706';
-        ctx.lineWidth = 2.5;
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 250);
+        ctx.shadowBlur = 10 + 6 * pulse;
+        ctx.shadowColor = '#F59E0B';
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 2.2 + 0.8 * pulse;
         ctx.setLineDash([4, 3]);
         ctx.beginPath();
         ctx.roundRect(-14, -14, 28, 28, 8);
@@ -968,10 +969,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       }
 
       if (isSelected) {
-        fillColor = '#2563EB';
+        fillColor = '#10B981';
         strokeColor = '#ffffff';
         ctx.shadowBlur = 14;
-        ctx.shadowColor = '#2563EB';
+        ctx.shadowColor = '#10B981';
       } else if (isHovered && !isOccupied && isAllowedByRestriction) {
         fillColor = '#38bdf8';
         strokeColor = '#ffffff';

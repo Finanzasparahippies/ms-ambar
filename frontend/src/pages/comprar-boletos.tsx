@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
+  AlertTriangle,
   Calendar, CalendarX,
   Check, CheckCircle, Info,
   Mail, MapPin, Maximize2,
@@ -220,6 +221,8 @@ const TourPage = () => {
   const [createdTickets, setCreatedTickets] = useState<any[]>([]);
   const [ticketPassModalData, setTicketPassModalData] = useState<{ ticket: any; seat?: any } | null>(null);
   const [limitExceededModalData, setLimitExceededModalData] = useState<{ maxTickets: number; detail: string } | null>(null);
+  const [isOrphanModalOpen, setIsOrphanModalOpen] = useState(false);
+  const [allowOrphanSeat, setAllowOrphanSeat] = useState(false);
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
@@ -652,6 +655,51 @@ const TourPage = () => {
     return Array.from(new Set(orphans));
   }, [seats, selectedSeats, appliedCoupon, activeAllowedRows, elements]);
 
+  // Si el usuario cambia su selección y ya no hay asientos huérfanos, resetear permiso
+  useEffect(() => {
+    if (orphanSeatIds.length === 0) {
+      setAllowOrphanSeat(false);
+    }
+  }, [orphanSeatIds.length]);
+
+  // Desglose descriptivo de la mesa y asientos huérfanos para el modal
+  const orphanSeatDetails = useMemo(() => {
+    if (!orphanSeatIds.length || !seats.length) return null;
+    const matched = seats.filter(s => orphanSeatIds.includes(String(s.id)));
+    if (!matched.length) return null;
+    const tables = Array.from(new Set(matched.map(s => {
+      const rowStr = String(s.row || '').trim();
+      return rowStr.toLowerCase().startsWith('mesa') ? rowStr : `Fila ${s.row}`;
+    })));
+    return {
+      orphanSeats: matched,
+      tableLabel: tables.join(', ') || 'la Mesa',
+      count: matched.length,
+      seatNumbers: matched.map(s => `#${s.number}`).join(', ')
+    };
+  }, [orphanSeatIds, seats]);
+
+  const handleConfirmOrphanOverride = () => {
+    setAllowOrphanSeat(true);
+    setIsOrphanModalOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleAddRemainingOrphanSeats = () => {
+    const remaining = seats.filter(s => orphanSeatIds.includes(String(s.id)));
+    setSelectedSeats(prev => {
+      const existingIds = new Set(prev.map(s => String(s.id)));
+      const toAdd = remaining.filter(s => !existingIds.has(String(s.id)));
+      return [...prev, ...toAdd];
+    });
+    setAllowOrphanSeat(false);
+    setIsOrphanModalOpen(false);
+  };
+
+  const handleDismissOrphanModal = () => {
+    setIsOrphanModalOpen(false);
+  };
+
   const handleProceedToCheckout = () => {
     if (isOnlineSalesClosed || isCurrentEventPast) {
       showAlert(
@@ -661,12 +709,10 @@ const TourPage = () => {
       );
       return;
     }
-    if (orphanSeatIds.length > 0) {
-      showAlert(
-        'Tu selección actual deja 1 asiento libre aislado en el recinto. Por favor selecciona asientos contiguos antes de proceder al pago.',
-        'Restricción de Asiento Huérfano',
-        'warning'
-      );
+    // Si la selección deja un asiento huérfano y el usuario no lo ha confirmado previamente,
+    // se presenta el modal de confirmación no bloqueante
+    if (orphanSeatIds.length > 0 && !allowOrphanSeat) {
+      setIsOrphanModalOpen(true);
       return;
     }
     setIsCheckoutOpen(true);
@@ -839,6 +885,7 @@ const TourPage = () => {
         phone,
         has_mg: isMeetGreet ? true : wantsMG,
         coupon_code: appliedCoupon ? appliedCoupon.code : (couponCode.trim() || undefined),
+        allow_orphan_seat: Boolean(allowOrphanSeat),
       };
 
       if (isMeetGreet) {
@@ -870,6 +917,11 @@ const TourPage = () => {
     } catch (err: any) {
       console.error("Error during checkout:", err);
       const data = err.response?.data;
+      if (data?.code === 'ORPHAN_SEAT_WARNING' || data?.error_code === 'ORPHAN_SEAT_WARNING') {
+        setIsCheckoutOpen(false);
+        setIsOrphanModalOpen(true);
+        return;
+      }
       if (data?.error_code === 'COMPLIMENTARY_ORDER_LIMIT_EXCEEDED' || data?.code === 'COMPLIMENTARY_ORDER_LIMIT_EXCEEDED') {
         setLimitExceededModalData({
           maxTickets: Number(data.max_tickets || appliedCoupon?.max_tickets || 1),
@@ -2146,6 +2198,76 @@ const TourPage = () => {
                 >
                   <X size={16} />
                   <span>Retirar cupón (mantener boletos a tarifa regular)</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── MODAL DE CONFIRMACIÓN: AVISO DE ASIENTO INDIVIDUAL EN MESA ─── */}
+      <AnimatePresence>
+        {isOrphanModalOpen && (
+          <div className="fixed inset-0 z-[120] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md rounded-[2.5rem] bg-gradient-to-b from-[#181a24] to-[#0e101a] border border-amber-500/30 p-6 md:p-8 shadow-2xl text-white backdrop-blur-2xl space-y-6 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-lg shadow-amber-500/10">
+                  <AlertTriangle size={24} className="animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-400 block mb-1">
+                    Aviso de Asignación
+                  </span>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">
+                    Aviso de Asiento Individual en Mesa
+                  </h3>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs leading-relaxed text-slate-300 space-y-2">
+                <p>
+                  Tu selección deja <strong className="text-amber-300 font-bold">1 asiento disponible</strong> en {orphanSeatDetails?.tableLabel || 'la mesa'} {orphanSeatDetails?.seatNumbers ? `(${orphanSeatDetails.seatNumbers})` : ''}.
+                </p>
+                <p className="text-slate-400">
+                  ¿Deseas continuar con tu compra o prefieres seleccionar la mesa completa para disfrutar el espacio exclusivo?
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                {orphanSeatDetails?.orphanSeats && orphanSeatDetails.orphanSeats.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAddRemainingOrphanSeats}
+                    className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-400 via-amber-honey to-amber-500 text-slate-950 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Añadir asiento restante a mi orden
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleConfirmOrphanOverride}
+                  className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Check size={16} />
+                  Continuar de todos modos
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDismissOrphanModal}
+                  className="w-full py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors text-center"
+                >
+                  Modificar selección en el mapa
                 </button>
               </div>
             </motion.div>
