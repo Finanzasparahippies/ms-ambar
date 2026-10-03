@@ -6,7 +6,7 @@ from django.utils import timezone
 from django.core.cache import cache
 import stripe
 
-from apps.tickets.models import Ticket, Event
+from apps.tickets.models import Ticket, Event, Seat
 from apps.tickets.utils import format_seat_assignment
 
 logger = logging.getLogger('apps.tickets')
@@ -112,7 +112,8 @@ def release_reservations(
                 'released_tickets': []
             }
 
-        tickets_list = list(qs.select_related('event', 'seat'))
+        # Evitar select_related en ForeignKey nullable ('seat') durante select_for_update() en PostgreSQL
+        tickets_list = list(qs)
         if not tickets_list:
             return {
                 'status': 'success',
@@ -121,6 +122,9 @@ def release_reservations(
                 'affected_events': [],
                 'message': 'No se encontraron reservaciones pendientes que coincidan con los criterios.'
             }
+
+        seat_ids = [t.seat_id for t in tickets_list if t.seat_id]
+        seats_map = {s.id: s for s in Seat.objects.filter(id__in=seat_ids)} if seat_ids else {}
 
         released_info = []
         affected_event_ids = set()
@@ -160,7 +164,8 @@ def release_reservations(
             if ticket.status == 'paid':
                 continue
 
-            seat_display = format_seat_assignment(ticket.seat) if ticket.seat else "Sin asiento"
+            seat_obj = seats_map.get(ticket.seat_id)
+            seat_display = format_seat_assignment(seat_obj) if seat_obj else "Sin asiento"
             event_id = ticket.event_id
             affected_event_ids.add(event_id)
 
