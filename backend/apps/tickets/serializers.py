@@ -156,6 +156,7 @@ class EventSerializer(serializers.ModelSerializer):
     numbered_seat_base_price = serializers.SerializerMethodField()
     price_with_fee = serializers.SerializerMethodField()
     theme_config = serializers.ReadOnlyField(source='get_theme_config')
+    is_cutoff_reached = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -165,7 +166,7 @@ class EventSerializer(serializers.ModelSerializer):
             'venue_name', 'venue_address', 'duration_minutes',
             'theater', 'theater_name', 'theater_location',
             'image', 'image_url', 'flyer', 'flyer_url',
-            'is_active', 'is_online_sales_active', 'cutoff_datetime',
+            'is_active', 'is_online_sales_active', 'cutoff_datetime', 'is_cutoff_reached',
             'mg_price', 'mg_limit', 'mg_available',
             'allow_seatless_tickets', 'allow_numbered_tickets', 'seatless_ticket_price', 'numbered_ticket_price',
             'enable_dynamic_pricing', 'monthly_price_increment', 'effective_seatless_ticket_price',
@@ -268,6 +269,12 @@ class EventSerializer(serializers.ModelSerializer):
             import logging
             logging.getLogger('apps.tickets').warning(f"Error al serializar local_doors_open para Event #{obj.id}: {exc}")
             return obj.doors_open.isoformat() if obj.doors_open else None
+
+    def get_is_cutoff_reached(self, obj):
+        try:
+            return bool(obj.is_cutoff_reached())
+        except Exception:
+            return not getattr(obj, 'is_online_sales_active', True)
 
     def get_base_price(self, obj):
         return obj.base_price

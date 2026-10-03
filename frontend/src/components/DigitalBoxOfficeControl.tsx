@@ -14,7 +14,7 @@ import {
   Check
 } from 'lucide-react';
 import api from '../lib/api';
-import { showAlert, showConfirm, showToast } from '../lib/notifications';
+import { showAlert, showToast } from '../lib/notifications';
 
 export interface EventCutoffData {
   id: number;
@@ -23,6 +23,7 @@ export interface EventCutoffData {
   doors_open?: string;
   is_online_sales_active?: boolean;
   cutoff_datetime?: string | null;
+  is_cutoff_reached?: boolean;
   venue_name?: string;
   timezone?: string;
 }
@@ -48,7 +49,11 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
   const isOnlineActive = event?.is_online_sales_active !== false;
   const cutoffDate = event?.cutoff_datetime ? new Date(event.cutoff_datetime) : null;
   const isPastCutoff = cutoffDate ? new Date() >= cutoffDate : false;
-  const isEffectivelyClosed = !isOnlineActive || isPastCutoff;
+
+  // Single source of truth for effective closed state
+  const isEffectivelyClosed = typeof event?.is_cutoff_reached === 'boolean'
+    ? event.is_cutoff_reached
+    : (!isOnlineActive || isPastCutoff);
 
   // Initialize input when modal opens or event changes
   useEffect(() => {
@@ -66,40 +71,47 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
 
   // 1. Bidirectional Instant 1-Click Toggle with Optimistic UI & Rollback
   const handleToggleSalesActive = async (targetState?: boolean) => {
-    const nextState = typeof targetState === 'boolean' ? targetState : !isOnlineActive;
-    if (nextState === isOnlineActive) return;
+    // If targetState is provided: true means OPEN, false means CLOSE
+    // If no argument provided: toggle the current effective state: closed -> open; open -> close
+    const willOpen = typeof targetState === 'boolean' ? targetState : isEffectivelyClosed;
+
+    // When reopening sales (willOpen === true):
+    // Clear any past/expired cutoff datetime so the event doesn't immediately re-lock itself!
+    const nextCutoffDatetime = willOpen ? null : (event.cutoff_datetime || null);
 
     const previousEventState = { ...event };
 
     // Optimistic UI update
-    const optimisticEvent = {
+    const optimisticEvent: EventCutoffData = {
       ...event,
-      is_online_sales_active: nextState
+      is_online_sales_active: willOpen,
+      cutoff_datetime: nextCutoffDatetime,
+      is_cutoff_reached: !willOpen
     };
     if (onEventUpdated) onEventUpdated(optimisticEvent);
 
     showToast(
-      nextState
+      willOpen
         ? 'Taquilla digital abierta: ventas web habilitadas.'
         : 'Taquilla digital cerrada: banner de taquilla física activado.',
-      nextState ? 'success' : 'info'
+      willOpen ? 'success' : 'info'
     );
 
     setIsUpdating(true);
     try {
-      // POST to atomic toggle endpoint with fallback
       const payload = {
-        is_online_sales_active: nextState,
-        cutoff_datetime: event.cutoff_datetime || null
+        is_online_sales_active: willOpen,
+        cutoff_datetime: nextCutoffDatetime
       };
 
       const res = await api.post(`/tickets/events/${event.id}/toggle-online-sales/`, payload)
         .catch(() => api.post(`/tickets/events/${event.id}/configure-cutoff/`, payload));
 
-      const serverUpdated = {
+      const serverUpdated: EventCutoffData = {
         ...event,
         is_online_sales_active: res.data.is_online_sales_active,
         cutoff_datetime: res.data.cutoff_datetime,
+        is_cutoff_reached: typeof res.data.is_cutoff_reached === 'boolean' ? res.data.is_cutoff_reached : !willOpen,
         timezone: res.data.timezone || venueTimezone
       };
       if (onEventUpdated) onEventUpdated(serverUpdated);
@@ -124,17 +136,18 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
 
     try {
       const payload = {
-        is_online_sales_active: event.is_online_sales_active !== false,
+        is_online_sales_active: true,
         cutoff_datetime: targetDatetimeIso
       };
 
       const res = await api.post(`/tickets/events/${event.id}/toggle-online-sales/`, payload)
         .catch(() => api.post(`/tickets/events/${event.id}/configure-cutoff/`, payload));
 
-      const updated = {
+      const updated: EventCutoffData = {
         ...event,
         is_online_sales_active: res.data.is_online_sales_active,
         cutoff_datetime: res.data.cutoff_datetime,
+        is_cutoff_reached: res.data.is_cutoff_reached,
         timezone: res.data.timezone || venueTimezone
       };
       if (onEventUpdated) onEventUpdated(updated);
@@ -201,18 +214,18 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
           onClick={() => handleToggleSalesActive()}
           disabled={isUpdating}
           className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
-            isOnlineActive
-              ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 hover:border-amber-400'
-              : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400'
+            isEffectivelyClosed
+              ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400'
+              : 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 hover:border-amber-400'
           } ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}
-          title={isOnlineActive ? 'Cerrar venta web y pasar a taquilla física' : 'Reabrir venta web'}
+          title={isEffectivelyClosed ? 'Reabrir venta web' : 'Cerrar venta web y pasar a taquilla física'}
         >
           {isUpdating ? (
             <RefreshCw size={12} className="animate-spin" />
           ) : (
             <Power size={12} />
           )}
-          <span>{isOnlineActive ? 'Cerrar Web' : 'Reabrir Web'}</span>
+          <span>{isEffectivelyClosed ? 'Reabrir Web' : 'Cerrar Web'}</span>
         </button>
 
         {/* Modal Trigger */}
@@ -224,7 +237,7 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
         >
           <Clock size={12} className="text-amber-400" />
           <span>
-            {cutoffDate ? cutoffDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'Horario'}
+            {cutoffDate && !isEffectivelyClosed ? cutoffDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'Horario'}
           </span>
         </button>
       </div>
@@ -275,24 +288,24 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
                       type="button"
                       onClick={() => handleToggleSalesActive(true)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                        isOnlineActive
+                        !isEffectivelyClosed
                           ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      {isOnlineActive && <Check size={12} />}
+                      {!isEffectivelyClosed && <Check size={12} />}
                       <span>ABIERTA</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleToggleSalesActive(false)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                        !isOnlineActive
+                        isEffectivelyClosed
                           ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25'
                           : 'text-slate-400 hover:text-white'
                       }`}
                     >
-                      {!isOnlineActive && <Check size={12} />}
+                      {isEffectivelyClosed && <Check size={12} />}
                       <span>CERRADA</span>
                     </button>
                   </div>
@@ -313,7 +326,7 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-400">Corte Programado:</span>
                   <span className="font-mono font-bold text-slate-200">
-                    {cutoffDate ? cutoffDate.toLocaleString('es-MX', { timeZone: venueTimezone }) : 'Modo Manual (Sin Corte)'}
+                    {cutoffDate && !isPastCutoff ? cutoffDate.toLocaleString('es-MX', { timeZone: venueTimezone }) : 'Modo Manual (Sin Corte)'}
                   </span>
                 </div>
               </div>

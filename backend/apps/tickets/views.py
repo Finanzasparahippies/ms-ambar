@@ -194,6 +194,10 @@ class EventViewSet(viewsets.ModelViewSet):
             if is_active_input is not None:
                 event.is_online_sales_active = bool(is_active_input)
                 update_fields.append('is_online_sales_active')
+                if event.is_online_sales_active and 'cutoff_datetime' not in request.data:
+                    if event.cutoff_datetime and event.is_cutoff_reached():
+                        event.cutoff_datetime = None
+                        update_fields.append('cutoff_datetime')
 
             if 'cutoff_datetime' in request.data:
                 if cutoff_dt_input:
