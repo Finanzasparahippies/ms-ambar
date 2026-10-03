@@ -250,38 +250,65 @@ export default function ScanTicketsPage() {
     setIsValidating(true);
     stopScanner(); // Pause camera reader during api validation
 
+    const idempotencyKey = `scan-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
     try {
-      const payload: { token: string; event_id?: string } = { token };
+      const payload: Record<string, any> = {
+        qr_payload: token,
+        token: token,
+        scanner_device_id: 'dashboard-scanner-01',
+        location: 'Acceso Taquilla Principal',
+        idempotency_key: idempotencyKey
+      };
       if (selectedEventId) payload.event_id = selectedEventId;
 
-      const res = await api.post('/tickets/tickets/validate/', payload).catch(err => err.response);
+      const res = await api.post('/tickets/scanner/check-in/', payload, {
+        headers: { 'X-Idempotency-Key': idempotencyKey }
+      }).catch(async (err) => {
+        // Fallback defensivo a validate si scanner/check-in no está disponible
+        if (err.response?.status === 404) {
+          return api.post('/tickets/tickets/validate/', { token, event_id: selectedEventId }).catch(e => e.response);
+        }
+        return err.response;
+      });
+
       const data = res?.data || {};
 
       if (res && res.status === 200) {
-        if (data.status === 'success') {
+        if (data.status === 'SUCCESS' || data.status === 'success') {
           playSound('success');
-          setScanResult(data);
+          if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([80]);
+          setScanResult({
+            event: data.event?.title || data.event || 'Evento',
+            seat: data.physical_location || data.seat_label || data.seat || 'General',
+            buyer: data.attendee?.email || data.buyer || '',
+            has_mg: data.has_mg,
+            scanned_at: data.checked_in_at || new Date().toISOString()
+          });
           setScanStatusType('success');
           if (selectedEventId) fetchAttendance(selectedEventId);
         } else {
           playSound('error');
+          if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([400]);
           setScanError(data.message || 'Error de validación');
           setScanStatusType('error');
         }
       } else {
-        if (data.status === 'already_used') {
+        if (res?.status === 409 || data.status === 'ALREADY_USED' || data.status === 'already_used') {
           playSound('warning');
+          if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([200, 100, 200]);
           setScanResult({
-            event: data.event || 'Evento',
-            seat: data.seat || 'Asiento',
-            buyer: data.buyer || '',
+            event: data.event?.title || data.event || 'Evento',
+            seat: data.physical_location || data.seat || 'Asiento',
+            buyer: data.attendee?.email || data.buyer || '',
             has_mg: data.has_mg,
-            scanned_at: data.scanned_at
+            scanned_at: data.checked_in_at || data.scanned_at
           });
           setScanError(data.message || 'Boleto ya utilizado anteriormente.');
           setScanStatusType('already_used');
-        } else if (data.status === 'wrong_event') {
+        } else if (data.status === 'WRONG_EVENT' || data.status === 'wrong_event') {
           playSound('warning');
+          if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([200, 100, 200]);
           setScanResult({
             event: data.ticket_event || 'Otro Evento',
             seat: 'No aplicable hoy'
@@ -290,14 +317,16 @@ export default function ScanTicketsPage() {
           setScanStatusType('error');
         } else {
           playSound('error');
+          if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([400]);
           setScanError(data.error || data.message || 'Boleto inválido, falsificado o cancelado.');
           setScanStatusType('error');
         }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('[Scanner UI Error]', err);
       playSound('error');
-      setScanError('Error de red al conectar con el servidor.');
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.([400]);
+      setScanError(err?.message || 'Error de red al conectar con el servidor.');
       setScanStatusType('error');
     } finally {
       setIsValidating(false);

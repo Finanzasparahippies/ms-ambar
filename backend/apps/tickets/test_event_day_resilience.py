@@ -61,7 +61,7 @@ class EventDayResilienceTests(APITestCase):
         self.assertEqual(response.data.get('code'), 'ONLINE_SALES_CLOSED')
         self.assertTrue(response.data.get('cutoff'))
 
-    @patch('stripe.Refund.create')
+    @patch('apps.shop.views.stripe.Refund.create')
     def test_02_webhook_refunds_and_cancels_post_cutoff_session(self, mock_refund):
         """Valida que una sesión de Stripe completada tras el corte dispare reembolso y no emita boleto."""
         from apps.shop.views import handle_successful_payment

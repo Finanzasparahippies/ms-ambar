@@ -2,7 +2,8 @@ import os
 import json
 import time
 import logging
-from typing import Dict, Any, Tuple
+import requests
+from typing import Dict, Any, Tuple, Optional
 from django.conf import settings
 from apps.tickets.utils import format_seat_assignment
 from apps.tickets.access.qr_crypto import generate_qr_payload

@@ -20,6 +20,7 @@ import { isSeatAllowedByRestriction } from '../components/SeatingChart';
 import ThemedSection from '../components/ThemedSection';
 import TicketQRModal from '../components/TicketQRModal';
 import TourTimeline from '../components/TourTimeline';
+import BoxOfficeCutoffBanner from '../components/BoxOfficeCutoffBanner';
 import { useEventTheme } from '../context/EventThemeContext';
 import api from '../lib/api';
 import { showAlert } from '../lib/notifications';
@@ -584,7 +585,14 @@ const TourPage = () => {
   }, [seats, selectedSeats, appliedCoupon, activeAllowedRows, elements]);
 
   const handleProceedToCheckout = () => {
-    if (isCurrentEventPast) return;
+    if (isOnlineSalesClosed || isCurrentEventPast) {
+      showAlert(
+        'Venta en línea finalizada por inicio del evento. Adquiere tus boletos directamente en la taquilla del recinto.',
+        'Venta en Línea Cerrada',
+        'warning'
+      );
+      return;
+    }
     if (orphanSeatIds.length > 0) {
       showAlert(
         'Tu selección actual deja 1 asiento libre aislado en el recinto. Por favor selecciona asientos contiguos antes de proceder al pago.',
@@ -653,6 +661,15 @@ const TourPage = () => {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     return new Date(currentEvent.date) < startOfToday;
   }, [currentEvent]);
+
+  const isOnlineSalesClosed = useMemo(() => {
+    if (!currentEvent) return false;
+    if (currentEvent.is_online_sales_active === false) return true;
+    if (currentEvent.cutoff_datetime) {
+      return new Date() >= new Date(currentEvent.cutoff_datetime);
+    }
+    return isCurrentEventPast;
+  }, [currentEvent, isCurrentEventPast]);
 
   // ── Cálculo de Disponibilidad de Butacas (Badge Header) ──────────────────
   const { totalSeatsCount, availableSeatsCount, occupancyPercentage } = useMemo(() => {
@@ -1603,23 +1620,30 @@ const TourPage = () => {
               )}
 
               <div className="mt-6 w-full">
-                <PremiumCTAButton
-                  disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
-                  onClick={handleProceedToCheckout}
-                >
-                  <span className="text-sm md:text-base font-black uppercase tracking-[0.2em] block">
-                    {isCurrentEventPast
-                      ? 'Venta Finalizada'
-                      : (baseTotal === 0 && appliedCoupon
-                        ? 'Reclamar Entrada VIP'
-                        : (checkoutTotal > 0
-                          ? `Pagar $${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`
-                          : 'Proceder al Pago'
+                {isOnlineSalesClosed ? (
+                  <BoxOfficeCutoffBanner
+                    venueName={currentEvent?.venue_name || 'London Pub'}
+                    doorsOpenTime={currentEvent?.local_doors_open ? new Date(currentEvent.local_doors_open).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '19:00 hrs'}
+                  />
+                ) : (
+                  <PremiumCTAButton
+                    disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
+                    onClick={handleProceedToCheckout}
+                  >
+                    <span className="text-sm md:text-base font-black uppercase tracking-[0.2em] block">
+                      {isCurrentEventPast
+                        ? 'Venta Finalizada'
+                        : (baseTotal === 0 && appliedCoupon
+                          ? 'Reclamar Entrada VIP'
+                          : (checkoutTotal > 0
+                            ? `Pagar $${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`
+                            : 'Proceder al Pago'
+                          )
                         )
-                      )
-                    }
-                  </span>
-                </PremiumCTAButton>
+                      }
+                    </span>
+                  </PremiumCTAButton>
+                )}
               </div>
             </motion.div>
           </div>
