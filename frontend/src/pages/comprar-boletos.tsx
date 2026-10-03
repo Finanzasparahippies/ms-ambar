@@ -27,13 +27,13 @@ import { showAlert } from '../lib/notifications';
 import { SeatMapLoader, formatSeatAssignment, getSeatAssignmentParts } from '../lib/seatMapLoader';
 import { cn, getApiUrl } from '../lib/utils';
 
-const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
+const SeatMap = dynamic(() => import('../components/SeatMap'), {
   ssr: false,
   loading: () => (
-    <div className="h-[30rem] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10">
-      <div className="w-8 h-8 rounded-full border-2 border-t-amber-honey border-amber-honey/20 animate-spin" />
-      <span className="text-xs uppercase font-bold tracking-widest text-amber-honey">
-        Cargando Mapa de Asientos...
+    <div className="h-[30rem] lg:h-[36.5rem] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10">
+      <div className="w-10 h-10 rounded-full border-4 border-t-amber-honey border-amber-honey/20 animate-spin" />
+      <span className="text-xs uppercase font-extrabold tracking-widest text-amber-honey animate-pulse">
+        Cargando Mapa de Asientos del Recinto...
       </span>
     </div>
   ),
@@ -421,9 +421,11 @@ const TourPage = () => {
           const tables = els.filter((e: any) => e.type === 'table' || e.tableShape || String(e.label || '').trim().toLowerCase().startsWith('mesa'));
           if (tables.length > 0) {
             const tableIds = new Set(tables.map((t: any) => String(t.id)));
-            // Filtrar asientos huérfanos que no pertenecen a ninguna mesa del layout activo
+            // Mantener butacas independientes, zonas GA y asientos válidos asociados a mesas
             const validSeats = mappedSeats.filter((s: any) => {
               const tid = s.tableId || s.table_id;
+              const isTableSeat = Boolean(tid || String(s.row || '').toLowerCase().startsWith('mesa'));
+              if (!isTableSeat) return true; // Butacas de fila o GA regular
               if (tid && tableIds.has(String(tid))) return true;
               return tables.some((t: any) => Math.hypot(t.x - s.x, t.y - s.y) <= 80);
             });
@@ -999,164 +1001,79 @@ const TourPage = () => {
 
                     {ticketMode === 'seat' ? (
                       <div className="space-y-3">
-                        {/* ── Banner de Guía para Cupón de Cortesía Activo ── */}
-                        {appliedCoupon?.allowed_mode === 'DESIGNATED_ROW' && activeAllowedRows.length > 0 && (
-                          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 border-2 border-amber-400/60 shadow-[0_0_25px_rgba(245,158,11,0.25)] flex items-center gap-3.5 backdrop-blur-md animate-fade-in">
-                            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/25 border border-amber-400/50 text-amber-400 shrink-0">
-                              <Sparkles size={20} className="animate-spin-slow" />
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">
-                                  Cortesía VIP Activa
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/30 text-amber-200 border border-amber-400/40">
-                                  Asignación Automática
-                                </span>
-                              </div>
-                              <p className="text-xs md:text-sm font-bold text-white mt-0.5 leading-snug">
-                                Tu cupón de cortesía aplica para las{' '}
-                                <strong className="text-amber-300 underline underline-offset-4 decoration-amber-400/60 decoration-2">
-                                  {activeRowName || (
-                                    (() => {
-                                      const tableRows = activeAllowedRows.filter(r => /^mesa\s+\d+/i.test(r.trim()));
-                                      if (tableRows.length > 1) {
-                                        return `mesas habilitadas [${tableRows[0]} a ${tableRows[tableRows.length - 1]}]`;
-                                      }
-                                      const first = activeAllowedRows[0];
-                                      return first?.toLowerCase().startsWith('fila') || first?.toLowerCase().startsWith('mesa')
-                                        ? first
-                                        : `Fila ${first || 'Designada'}`;
-                                    })()
-                                  )}
-                                </strong>
-                                . Selecciona tu asiento.
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* ── Banner de Prevención de Asiento Huérfano (Anti-Orphan Alert) ── */}
-                        {orphanSeatIds.length > 0 && (
-                          <div className="p-3.5 rounded-2xl bg-amber-950/70 border border-amber-500/50 text-amber-200 shadow-xl backdrop-blur-md flex items-start gap-3 animate-fade-in">
-                            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 text-sm font-bold mt-0.5">
-                              ⚠️
-                            </div>
-                            <div className="text-xs leading-relaxed flex-1">
-                              <span className="font-black uppercase tracking-wider text-amber-300 block mb-0.5">
-                                Regla de Adyacencia: Asiento Aislado Detectado
-                              </span>
-                              Tu selección actual deja un asiento libre aislado en el recinto. Te sugerimos seleccionar asientos contiguos para evitar restricciones antes del checkout.
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                          <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-xs font-black uppercase tracking-wider text-white/70">
-                            <div className="flex flex-wrap items-center gap-4">
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
-                              </span>
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
-                              </span>
-                              {appliedCoupon?.allowed_mode === 'DESIGNATED_ROW' && activeAllowedRows.length > 0 && (
-                                <span className="flex items-center gap-1.5 text-amber-300 font-black">
-                                  <span className="relative flex h-3 w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400" />
-                                  </span>
-                                  Fila VIP Permitida
-                                </span>
-                              )}
-                              {orphanSeatIds.length > 0 && (
-                                <span className="flex items-center gap-1.5 text-amber-400 font-black">
-                                  <span className="w-3 h-3 rounded-full border-2 border-dashed border-amber-500 bg-amber-500/20" />
-                                  Asiento Aislado
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-xs tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
-                              Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
-                            </span>
-                          </div>
-
-                          {isLoading ? (
-                            <div className="h-[30rem] lg:h-[36.25rem] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
-                              <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-                              <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
-                            </div>
-                          ) : (
-                            <div className={cn(
-                              "h-[25rem] xs:h-[30rem] lg:h-[36.25rem] relative w-full overflow-hidden",
-                              isCurrentEventPast && "pointer-events-none opacity-85"
-                            )}>
-                              {isCurrentEventPast && (
-                                <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
-                                  <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
-                                    <p className="text-xs font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
-                                    <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
-                                  </div>
-                                </div>
-                              )}
-                              <SeatingChart
-                                seats={seats}
-                                onSelect={handleSelectionChange}
-                                selectedIds={selectedSeats.map(s => String(s.id))}
-                                theme={theme}
-                                elements={elements}
-                                allowZoom={allowCanvasZoom}
-                                restrictedRows={activeAllowedRows}
-                                orphanSeatIds={orphanSeatIds}
-                                onInvalidSelectionAttempt={handleInvalidSeatAttempt}
-                              />
-
-                              {/* Barra flotante de selección rápida para pantallas táctiles/móviles */}
-                              {selectedSeats.length > 0 && (
-                                <div className="absolute top-3 left-3 right-3 z-20 pointer-events-auto flex flex-col gap-1.5 md:hidden">
-                                  <div className="bg-nature-night/95 dark:bg-[#0b0d17]/95 backdrop-blur-xl border border-amber-honey/40 rounded-2xl p-2 shadow-2xl flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-none max-w-[calc(100%-75px)]">
-                                      {selectedSeats.map((seat: any) => {
-                                        const seatLabel = getSeatDisplayText(seat) || `Asiento ${seat.row}${seat.number}`;
-                                        return (
-                                          <div
-                                            key={String(seat.id)}
-                                            className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-honey/20 border border-amber-honey/40 text-amber-honey rounded-xl text-[11px] font-black shrink-0 animate-fadeIn"
-                                          >
-                                            <span className="truncate max-w-[120px]">{seatLabel}</span>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedSeats(prev => prev.filter(s => String(s.id) !== String(seat.id)));
-                                              }}
-                                              className="w-6 h-6 rounded-full bg-amber-honey/30 active:bg-red-500 active:text-white flex items-center justify-center text-xs font-bold transition-colors"
-                                              title="Quitar asiento"
-                                              aria-label={`Quitar ${seatLabel}`}
-                                            >
-                                              ✕
-                                            </button>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedSeats([])}
-                                      className="px-2.5 py-1.5 bg-red-500/20 active:bg-red-500/30 border border-red-500/30 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors"
-                                    >
-                                      Quitar
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-xs uppercase font-extrabold tracking-widest text-slate-400">
+                            Mapa de Asientos Interactivo
+                          </span>
+                          <span className="text-xs tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
+                            Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
+                          </span>
                         </div>
+
+                        {isLoading ? (
+                          <div className="h-[30rem] lg:h-[36.5rem] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10 shadow-xl">
+                            <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+                            <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
+                          </div>
+                        ) : (
+                          <div className="relative w-full">
+                            <SeatMap
+                              seats={seats}
+                              elements={elements}
+                              selectedIds={selectedSeats.map(s => String(s.id))}
+                              onSelect={handleSelectionChange}
+                              theme={theme}
+                              allowZoom={allowCanvasZoom}
+                              activeAllowedRows={activeAllowedRows}
+                              activeRowName={activeRowName}
+                              isComplimentaryActive={appliedCoupon?.allowed_mode === 'DESIGNATED_ROW'}
+                              orphanSeatIds={orphanSeatIds}
+                              onInvalidSelectionAttempt={handleInvalidSeatAttempt}
+                              isReadOnly={isOnlineSalesClosed || isCurrentEventPast}
+                              readOnlyMessage={isOnlineSalesClosed ? "Venta en línea concluida · Consulta ubicaciones para taquilla física" : "Venta concluida para este recinto"}
+                            />
+
+                            {/* Barra flotante de selección rápida para pantallas táctiles/móviles */}
+                            {selectedSeats.length > 0 && !isOnlineSalesClosed && !isCurrentEventPast && (
+                              <div className="absolute top-14 left-3 right-3 z-30 pointer-events-auto flex flex-col gap-1.5 md:hidden">
+                                <div className="bg-nature-night/95 dark:bg-[#0b0d17]/95 backdrop-blur-xl border border-amber-honey/40 rounded-2xl p-2 shadow-2xl flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-none max-w-[calc(100%-75px)]">
+                                    {selectedSeats.map((seat: any) => {
+                                      const seatLabel = getSeatDisplayText(seat) || `Asiento ${seat.row}${seat.number}`;
+                                      return (
+                                        <div
+                                          key={String(seat.id)}
+                                          className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-honey/20 border border-amber-honey/40 text-amber-honey rounded-xl text-[11px] font-black shrink-0 animate-fadeIn"
+                                        >
+                                          <span className="truncate max-w-[120px]">{seatLabel}</span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedSeats(prev => prev.filter(s => String(s.id) !== String(seat.id)));
+                                            }}
+                                            className="w-6 h-6 rounded-full bg-amber-honey/30 active:bg-red-500 active:text-white flex items-center justify-center text-xs font-bold transition-colors"
+                                            title="Quitar asiento"
+                                            aria-label={`Quitar ${seatLabel}`}
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedSeats([])}
+                                    className="px-2.5 py-1.5 bg-red-500/20 active:bg-red-500/30 border border-red-500/30 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors"
+                                  >
+                                    Vaciar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">

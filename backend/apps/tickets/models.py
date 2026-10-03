@@ -7,6 +7,11 @@ import uuid
 class Theater(models.Model):
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255, blank=True, default='')
+    timezone = models.CharField(
+        max_length=50,
+        default='America/Hermosillo',
+        help_text="Zona horaria IANA del teatro/venue (ej. America/Hermosillo)."
+    )
     layout = models.JSONField(help_text="JSON representation of sections and rows", null=True, blank=True, default=dict)
     complimentary_rows_priority = models.JSONField(default=list, blank=True, help_text="Lista priorizada de filas designadas para cortesía (ej. ['Fila G', 'Fila H'])")
 
@@ -550,12 +555,41 @@ class Event(models.Model):
             logging.getLogger('apps.tickets').debug(f"Error accediendo a self.image.url: {exc}")
             return None
 
+    def is_cutoff_reached(self) -> bool:
+        """
+        Determina si las ventas web han alcanzado el corte programado o manual.
+        Convierte timezone.now() a la zona horaria física del venue (ZoneInfo)
+        antes de comparar contra cutoff_datetime.
+        """
+        if not self.is_online_sales_active:
+            return True
+        if not self.cutoff_datetime:
+            return False
+
+        import zoneinfo
+        tz_name = self.timezone or (self.theater.timezone if self.theater else None) or 'America/Hermosillo'
+        try:
+            venue_tz = zoneinfo.ZoneInfo(tz_name)
+        except Exception:
+            venue_tz = zoneinfo.ZoneInfo('America/Hermosillo')
+
+        now_venue = timezone.now().astimezone(venue_tz)
+        cutoff_venue = self.cutoff_datetime
+        if timezone.is_naive(cutoff_venue):
+            cutoff_venue = cutoff_venue.replace(tzinfo=venue_tz)
+        else:
+            cutoff_venue = cutoff_venue.astimezone(venue_tz)
+
+        return now_venue >= cutoff_venue
+
     def save(self, *args, **kwargs):
         if self.theater:
             if not self.venue_name:
                 self.venue_name = self.theater.name
             if not self.venue_address:
                 self.venue_address = self.theater.location
+            if not self.timezone and getattr(self.theater, 'timezone', None):
+                self.timezone = self.theater.timezone
         super().save(*args, **kwargs)
 
         try:

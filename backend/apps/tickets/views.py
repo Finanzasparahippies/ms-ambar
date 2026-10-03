@@ -175,62 +175,72 @@ class EventViewSet(viewsets.ModelViewSet):
         super().perform_destroy(instance)
         self._invalidate_event_caches(event_id)
 
-    @action(detail=True, methods=['post', 'patch'], url_path='configure-cutoff', permission_classes=[permissions.IsAdminUser])
-    def configure_cutoff(self, request, pk=None):
+    @action(detail=True, methods=['post'], url_path='toggle-online-sales', permission_classes=[permissions.IsAdminUser])
+    def toggle_online_sales(self, request, pk=None):
         """
-        Control administrativo en tiempo real para taquilla digital:
-        - Activa o desactiva ventas en línea inmediatamente (`is_online_sales_active`).
-        - Configura o borra la fecha/hora programada de cierre (`cutoff_datetime`).
-        - Invalida cachés de Redis de inmediato.
+        Endpoint atómico para alternar bidireccionalmente ventas web y/o programar hora de corte.
+        Invalida de forma transaccional los cachés públicos de Redis tras el commit.
         """
-        event = self.get_object()
+        from django.db import transaction
+        from django.utils.dateparse import parse_datetime
+        import zoneinfo
 
+        event = self.get_object()
         is_active_input = request.data.get('is_online_sales_active')
         cutoff_dt_input = request.data.get('cutoff_datetime')
 
-        update_fields = []
-        if is_active_input is not None:
-            event.is_online_sales_active = bool(is_active_input)
-            update_fields.append('is_online_sales_active')
+        with transaction.atomic():
+            update_fields = []
+            if is_active_input is not None:
+                event.is_online_sales_active = bool(is_active_input)
+                update_fields.append('is_online_sales_active')
 
-        if 'cutoff_datetime' in request.data:
-            if cutoff_dt_input:
-                from django.utils.dateparse import parse_datetime
-                from django.utils import timezone
-                parsed_dt = parse_datetime(str(cutoff_dt_input).strip())
-                if not parsed_dt:
-                    return Response({
-                        'error': 'Formato de fecha/hora inválido. Usa formato ISO (ej. 2026-10-03T19:00:00).'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                if timezone.is_naive(parsed_dt):
-                    import zoneinfo
-                    tz_name = getattr(event, 'timezone', None) or 'America/Hermosillo'
-                    try:
-                        tz = zoneinfo.ZoneInfo(tz_name)
-                    except Exception as tz_err:
-                        logger.warning(f"Error cargando timezone {tz_name}: {tz_err}")
-                        tz = zoneinfo.ZoneInfo('America/Hermosillo')
-                    parsed_dt = parsed_dt.replace(tzinfo=tz)
-                event.cutoff_datetime = parsed_dt
-            else:
-                event.cutoff_datetime = None
-            update_fields.append('cutoff_datetime')
+            if 'cutoff_datetime' in request.data:
+                if cutoff_dt_input:
+                    parsed_dt = parse_datetime(str(cutoff_dt_input).strip())
+                    if not parsed_dt:
+                        return Response({
+                            'error': 'Formato de fecha/hora inválido. Usa formato ISO (ej. 2026-10-03T19:00:00).'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    if timezone.is_naive(parsed_dt):
+                        tz_name = getattr(event, 'timezone', None) or 'America/Hermosillo'
+                        try:
+                            tz = zoneinfo.ZoneInfo(tz_name)
+                        except Exception:
+                            tz = zoneinfo.ZoneInfo('America/Hermosillo')
+                        parsed_dt = parsed_dt.replace(tzinfo=tz)
+                    event.cutoff_datetime = parsed_dt
+                else:
+                    event.cutoff_datetime = None
+                update_fields.append('cutoff_datetime')
 
-        if update_fields:
-            event.save(update_fields=update_fields)
-            self._invalidate_event_caches(event.id)
+            if update_fields:
+                event.save(update_fields=update_fields)
+
+            transaction.on_commit(lambda: self._invalidate_event_caches(event.id))
             logger.info(
-                f"[EVENT CUTOFF UPDATE] Evento #{event.id} ({event.title}) actualizado por {request.user}. "
-                f"is_online_sales_active={event.is_online_sales_active}, cutoff_datetime={event.cutoff_datetime}"
+                f"[EVENT TOGGLE SALES] Evento #{event.id} ({event.title}) actualizado por {request.user}. "
+                f"is_online_sales_active={event.is_online_sales_active}, cutoff_datetime={event.cutoff_datetime}, "
+                f"is_cutoff_reached={event.is_cutoff_reached()}"
             )
 
         return Response({
             'status': 'success',
-            'message': 'Configuración de corte de taquilla digital actualizada exitosamente.',
+            'message': 'Estado de taquilla digital actualizado exitosamente.',
             'event_id': event.id,
             'is_online_sales_active': event.is_online_sales_active,
-            'cutoff_datetime': event.cutoff_datetime.isoformat() if event.cutoff_datetime else None
+            'cutoff_datetime': event.cutoff_datetime.isoformat() if event.cutoff_datetime else None,
+            'is_cutoff_reached': event.is_cutoff_reached(),
+            'timezone': event.timezone
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'], url_path='configure-cutoff', permission_classes=[permissions.IsAdminUser])
+    def configure_cutoff(self, request, pk=None):
+        """
+        Alias retrocompatible de control administrativo para taquilla digital.
+        Delega a la lógica atómica de toggle_online_sales.
+        """
+        return self.toggle_online_sales(request, pk=pk)
 
     @action(detail=False, methods=['get', 'post'], url_path='cloudinary-signature', permission_classes=[permissions.IsAdminUser])
     def cloudinary_signature(self, request):
@@ -631,9 +641,11 @@ class TicketViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Este evento ya ha finalizado. La venta de boletos se encuentra cerrada.'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Validación estricta de corte de venta para taquilla física
-        now = timezone.now()
-        if not getattr(event, 'is_online_sales_active', True) or (getattr(event, 'cutoff_datetime', None) and now >= event.cutoff_datetime):
-            logger.warning(f"[CHECKOUT/REJECTED] Venta web cerrada por corte de evento #{event_id} (Online Active: {getattr(event, 'is_online_sales_active', True)}, Cutoff: {getattr(event, 'cutoff_datetime', None)})")
+        if event.is_cutoff_reached():
+            logger.warning(
+                f"[CHECKOUT/REJECTED] Venta web cerrada por corte de evento #{event_id} "
+                f"(Online Active: {event.is_online_sales_active}, Cutoff: {event.cutoff_datetime}, TZ: {getattr(event, 'timezone', 'N/A')})"
+            )
             try:
                 from django.core.cache import cache
                 cache.delete('active_events')

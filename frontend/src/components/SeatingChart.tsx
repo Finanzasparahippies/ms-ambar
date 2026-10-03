@@ -340,11 +340,15 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Re-fit when initial seats/elements load or if zoom is disabled
+  // Re-fit when initial seats/elements load from async API
+  const prevItemCountRef = useRef<number>(0);
   useEffect(() => {
-    if ((seats.length > 0 || elements.length > 0) && (!hasAutoFittedRef.current || !allowZoom)) {
+    const currentCount = seats.length + elements.length;
+    if (currentCount > 0 && (prevItemCountRef.current === 0 || !hasAutoFittedRef.current || !allowZoom)) {
       handleFitToView();
+      hasAutoFittedRef.current = true;
     }
+    prevItemCountRef.current = currentCount;
   }, [seats.length, elements.length, allowZoom, handleFitToView]);
 
   // Non-passive native wheel listener with constrained zoom/pan bounds
@@ -1384,7 +1388,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const cursorClass = isPanning ? 'cursor-grabbing' : (activeTool !== 'select' || hoveredId) ? 'cursor-pointer' : 'cursor-default';
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full relative overflow-hidden transition-colors duration-500", theme === 'dark' ? "bg-[#0b0d17]" : "bg-white", cursorClass)} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={containerRef} className={cn("w-full h-full min-h-[350px] relative overflow-hidden transition-colors duration-500", theme === 'dark' ? "bg-[#0b0d17]" : "bg-white", cursorClass)} onContextMenu={(e) => e.preventDefault()}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}

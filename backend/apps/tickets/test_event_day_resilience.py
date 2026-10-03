@@ -156,3 +156,47 @@ class EventDayResilienceTests(APITestCase):
         self.assertFalse(self.event.is_online_sales_active)
         self.assertIsNotNone(self.event.cutoff_datetime)
 
+    def test_06_toggle_online_sales_endpoint(self):
+        """Valida que toggle-online-sales soporte alternar bidireccionalmente ventas web con invalidación atómica."""
+        url = reverse('event-detail', kwargs={'pk': self.event.id}) + 'toggle-online-sales/'
+
+        self.staff_user.is_staff = True
+        self.staff_user.save()
+        self.client.force_authenticate(user=self.staff_user)
+
+        # 1. Cerrar ventas en línea
+        res_close = self.client.post(url, {
+            'is_online_sales_active': False
+        }, format='json')
+        self.assertEqual(res_close.status_code, status.HTTP_200_OK)
+        self.assertFalse(res_close.data.get('is_online_sales_active'))
+        self.assertTrue(res_close.data.get('is_cutoff_reached'))
+
+        # 2. Reabrir ventas en línea
+        res_reopen = self.client.post(url, {
+            'is_online_sales_active': True,
+            'cutoff_datetime': None
+        }, format='json')
+        self.assertEqual(res_reopen.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_reopen.data.get('is_online_sales_active'))
+        self.assertFalse(res_reopen.data.get('is_cutoff_reached'))
+
+    def test_07_venue_specific_timezone_cutoff_logic(self):
+        """Valida que is_cutoff_reached compare respecto a la zona horaria del venue (America/Hermosillo)."""
+        import zoneinfo
+
+        hermosillo_tz = zoneinfo.ZoneInfo('America/Hermosillo')
+        now_hermosillo = timezone.now().astimezone(hermosillo_tz)
+
+        # Caso 1: Cutoff 30 minutos en el futuro en Hermosillo -> False
+        self.event.is_online_sales_active = True
+        self.event.timezone = 'America/Hermosillo'
+        self.event.cutoff_datetime = now_hermosillo + timezone.timedelta(minutes=30)
+        self.event.save()
+        self.assertFalse(self.event.is_cutoff_reached())
+
+        # Caso 2: Cutoff 10 minutos en el pasado en Hermosillo -> True
+        self.event.cutoff_datetime = now_hermosillo - timezone.timedelta(minutes=10)
+        self.event.save()
+        self.assertTrue(self.event.is_cutoff_reached())
+

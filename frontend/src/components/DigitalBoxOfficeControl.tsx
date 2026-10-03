@@ -8,15 +8,15 @@ import {
   CheckCircle2,
   X,
   Sparkles,
-  Ticket,
-  ChevronDown,
   RefreshCw,
-  Sliders
+  Globe,
+  Sliders,
+  Check
 } from 'lucide-react';
 import api from '../lib/api';
 import { showAlert, showConfirm, showToast } from '../lib/notifications';
 
-interface EventCutoffData {
+export interface EventCutoffData {
   id: number;
   title: string;
   date?: string;
@@ -24,6 +24,7 @@ interface EventCutoffData {
   is_online_sales_active?: boolean;
   cutoff_datetime?: string | null;
   venue_name?: string;
+  timezone?: string;
 }
 
 interface DigitalBoxOfficeControlProps {
@@ -41,6 +42,9 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
   const [isUpdating, setIsUpdating] = useState(false);
   const [cutoffInput, setCutoffInput] = useState('');
 
+  // Resolved venue timezone (default to America/Hermosillo)
+  const venueTimezone = event?.timezone || 'America/Hermosillo';
+
   const isOnlineActive = event?.is_online_sales_active !== false;
   const cutoffDate = event?.cutoff_datetime ? new Date(event.cutoff_datetime) : null;
   const isPastCutoff = cutoffDate ? new Date() >= cutoffDate : false;
@@ -49,7 +53,6 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
   // Initialize input when modal opens or event changes
   useEffect(() => {
     if (event?.cutoff_datetime) {
-      // Convert to local YYYY-MM-DDTHH:mm format for datetime-local input
       const d = new Date(event.cutoff_datetime);
       const pad = (n: number) => String(n).padStart(2, '0');
       const localStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -57,47 +60,56 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
     } else {
       setCutoffInput('');
     }
-  }, [event?.cutoff_datetime]);
+  }, [event?.cutoff_datetime, isOpen]);
 
   if (!event) return null;
 
-  // 1. Instant 1-Click Toggle for Online Sales
-  const handleToggleSalesActive = async () => {
-    const nextState = !isOnlineActive;
-    const confirmMessage = nextState
-      ? `¿Deseas REACTIVAR la venta en línea para "${event.title}"? Los compradores podrán volver a pagar con tarjeta y Stripe inmediatamente.`
-      : `¿Deseas CERRAR la venta en línea para "${event.title}" ahora mismo? La página web mostrará el banner de venta exclusiva en taquilla física.`;
+  // 1. Bidirectional Instant 1-Click Toggle with Optimistic UI & Rollback
+  const handleToggleSalesActive = async (targetState?: boolean) => {
+    const nextState = typeof targetState === 'boolean' ? targetState : !isOnlineActive;
+    if (nextState === isOnlineActive) return;
 
-    const confirmed = await showConfirm(
-      confirmMessage,
-      nextState ? 'Reactivar Taquilla Digital' : 'Cerrar Taquilla Digital'
+    const previousEventState = { ...event };
+
+    // Optimistic UI update
+    const optimisticEvent = {
+      ...event,
+      is_online_sales_active: nextState
+    };
+    if (onEventUpdated) onEventUpdated(optimisticEvent);
+
+    showToast(
+      nextState
+        ? 'Taquilla digital abierta: ventas web habilitadas.'
+        : 'Taquilla digital cerrada: banner de taquilla física activado.',
+      nextState ? 'success' : 'info'
     );
-    if (!confirmed) return;
 
     setIsUpdating(true);
     try {
-      const res = await api.post(`/tickets/events/${event.id}/configure-cutoff/`, {
-        is_online_sales_active: nextState
-      });
+      // POST to atomic toggle endpoint with fallback
+      const payload = {
+        is_online_sales_active: nextState,
+        cutoff_datetime: event.cutoff_datetime || null
+      };
 
-      const updated = {
+      const res = await api.post(`/tickets/events/${event.id}/toggle-online-sales/`, payload)
+        .catch(() => api.post(`/tickets/events/${event.id}/configure-cutoff/`, payload));
+
+      const serverUpdated = {
         ...event,
         is_online_sales_active: res.data.is_online_sales_active,
-        cutoff_datetime: res.data.cutoff_datetime
+        cutoff_datetime: res.data.cutoff_datetime,
+        timezone: res.data.timezone || venueTimezone
       };
-      if (onEventUpdated) onEventUpdated(updated);
-
-      showToast(
-        nextState
-          ? 'Taquilla digital reactivada. Ventas online habilitadas.'
-          : 'Taquilla digital cerrada. Banner de taquilla física activo.',
-        nextState ? 'success' : 'info'
-      );
+      if (onEventUpdated) onEventUpdated(serverUpdated);
     } catch (err: any) {
-      console.error('[Cutoff Error]', err);
+      console.error('[Cutoff Toggle Error]', err);
+      // Rollback on failure
+      if (onEventUpdated) onEventUpdated(previousEventState);
       showAlert(
-        err.response?.data?.error || 'No fue posible actualizar el estado de la taquilla digital.',
-        'Error de Configuración',
+        err.response?.data?.error || 'No fue posible sincronizar el cambio de taquilla con el servidor. Se ha revertido el estado.',
+        'Error de Red',
         'error'
       );
     } finally {
@@ -105,30 +117,38 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
     }
   };
 
-  // 2. Save Cutoff Datetime
+  // 2. Save Cutoff Datetime with Atomic Commit
   const handleSaveCutoffDatetime = async (targetDatetimeIso: string | null) => {
     setIsUpdating(true);
+    const previousEventState = { ...event };
+
     try {
-      const res = await api.post(`/tickets/events/${event.id}/configure-cutoff/`, {
+      const payload = {
+        is_online_sales_active: event.is_online_sales_active !== false,
         cutoff_datetime: targetDatetimeIso
-      });
+      };
+
+      const res = await api.post(`/tickets/events/${event.id}/toggle-online-sales/`, payload)
+        .catch(() => api.post(`/tickets/events/${event.id}/configure-cutoff/`, payload));
 
       const updated = {
         ...event,
         is_online_sales_active: res.data.is_online_sales_active,
-        cutoff_datetime: res.data.cutoff_datetime
+        cutoff_datetime: res.data.cutoff_datetime,
+        timezone: res.data.timezone || venueTimezone
       };
       if (onEventUpdated) onEventUpdated(updated);
 
       showToast(
         targetDatetimeIso
-          ? 'Hora de corte programada guardada exitosamente.'
-          : 'Fecha de corte programada eliminada (Modo Manual activo).',
+          ? `Corte programado guardado (${venueTimezone}).`
+          : 'Corte programado cancelado. Venta web en modo manual.',
         'success'
       );
       setIsOpen(false);
     } catch (err: any) {
-      console.error('[Cutoff Error]', err);
+      console.error('[Cutoff Datetime Error]', err);
+      if (onEventUpdated) onEventUpdated(previousEventState);
       showAlert(
         err.response?.data?.error || 'Formato de fecha inválido o error en el servidor.',
         'Error',
@@ -139,7 +159,7 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
     }
   };
 
-  // Preset Buttons Helper
+  // Quick Preset Helper
   const applyPreset = (minutesBeforeEvent: number) => {
     if (!event.date) return;
     const eventTime = new Date(event.date);
@@ -151,61 +171,65 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
   return (
     <>
       {/* Control Pill Trigger Button */}
-      <div className={`inline-flex items-center gap-2 p-1.5 rounded-2xl bg-[#080a0f] border border-white/10 backdrop-blur-xl shadow-lg ${className}`}>
-        {/* Live Status Indicator */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5">
+      <div className={`inline-flex items-center gap-2 p-1.5 rounded-2xl bg-[#080a0f] border border-white/10 backdrop-blur-xl shadow-xl ${className}`}>
+        {/* State Pill Indicator */}
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-colors ${
+          isEffectivelyClosed
+            ? 'bg-amber-500/10 border-amber-500/30 text-amber-400'
+            : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+        }`}>
           <span className="relative flex h-2.5 w-2.5">
             <span
               className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                isEffectivelyClosed ? 'bg-rose-500' : 'bg-emerald-400'
+                isEffectivelyClosed ? 'bg-amber-400' : 'bg-emerald-400'
               }`}
             />
             <span
               className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
-                isEffectivelyClosed ? 'bg-rose-500' : 'bg-emerald-500'
+                isEffectivelyClosed ? 'bg-amber-500' : 'bg-emerald-500'
               }`}
             />
           </span>
-          <span className="text-[11px] font-black uppercase tracking-wider text-slate-200">
-            {isEffectivelyClosed ? 'Taquilla Digital Cerrada' : 'Taquilla Digital Abierta'}
+          <span className="text-[11px] font-black uppercase tracking-wider">
+            {isEffectivelyClosed ? 'CERRADA' : 'ABIERTA'}
           </span>
         </div>
 
-        {/* Instant 1-Click Toggle Button */}
+        {/* Bidirectional Fast Toggle Switch */}
         <button
           type="button"
-          onClick={handleToggleSalesActive}
+          onClick={() => handleToggleSalesActive()}
           disabled={isUpdating}
           className={`px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
             isOnlineActive
-              ? 'bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 hover:border-rose-500'
-              : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:border-emerald-500'
+              ? 'bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 hover:border-amber-400'
+              : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400'
           } ${isUpdating ? 'opacity-50 pointer-events-none' : ''}`}
-          title={isOnlineActive ? 'Cerrar ventas web inmediatamente' : 'Reactivar ventas web'}
+          title={isOnlineActive ? 'Cerrar venta web y pasar a taquilla física' : 'Reabrir venta web'}
         >
           {isUpdating ? (
             <RefreshCw size={12} className="animate-spin" />
           ) : (
             <Power size={12} />
           )}
-          <span>{isOnlineActive ? 'Cerrar Web Ahora' : 'Reactivar Web'}</span>
+          <span>{isOnlineActive ? 'Cerrar Web' : 'Reabrir Web'}</span>
         </button>
 
-        {/* Modal Trigger for Scheduled Time */}
+        {/* Modal Trigger */}
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-honey border border-amber-500/30 text-[11px] font-black uppercase tracking-wider flex items-center gap-1 transition-all cursor-pointer"
-          title="Configurar hora de corte programada"
+          className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+          title="Configurar horario de corte y zona horaria"
         >
-          <Clock size={12} />
+          <Clock size={12} className="text-amber-400" />
           <span>
-            {cutoffDate ? cutoffDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'Programar'}
+            {cutoffDate ? cutoffDate.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : 'Horario'}
           </span>
         </button>
       </div>
 
-      {/* Glassmorphic Modal for Cutoff Configuration */}
+      {/* Glassmorphic Modal for Box Office Cutoff Control */}
       <AnimatePresence>
         {isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -221,11 +245,11 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
               <div className="flex items-center justify-between pb-4 border-b border-white/10">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-                    <Clock size={18} />
+                    <Sliders size={18} />
                   </div>
                   <div>
                     <h3 className="text-base font-black uppercase tracking-wider text-white">
-                      Corte de Taquilla Digital
+                      Control de Taquilla Digital
                     </h3>
                     <p className="text-xs text-white/50">{event.title}</p>
                   </div>
@@ -239,38 +263,71 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
                 </button>
               </div>
 
-              {/* Status Summary */}
-              <div className="my-5 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/60">Venta en Línea Inmediata:</span>
-                  <span className={`font-black ${isOnlineActive ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {isOnlineActive ? 'HABILITADA' : 'DESACTIVADA'}
+              {/* Bidirectional Switch Card */}
+              <div className="my-5 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-300">
+                    Estado de Venta Web:
                   </span>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-white/60">Cierre Programado:</span>
-                  <span className="font-mono font-bold text-amber-300">
-                    {cutoffDate ? cutoffDate.toLocaleString('es-MX') : 'Sin fecha límite automática'}
-                  </span>
-                </div>
-                {isEffectivelyClosed && (
-                  <div className="pt-2 border-t border-white/10 flex items-center gap-2 text-rose-400 text-xs font-bold">
-                    <AlertTriangle size={14} className="shrink-0" />
-                    <span>Banner de Taquilla Física activo en /comprar-boletos</span>
+                  {/* Visual Toggle Pill */}
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-black/50 border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSalesActive(true)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                        isOnlineActive
+                          ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/25'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {isOnlineActive && <Check size={12} />}
+                      <span>ABIERTA</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleSalesActive(false)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                        !isOnlineActive
+                          ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/25'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {!isOnlineActive && <Check size={12} />}
+                      <span>CERRADA</span>
+                    </button>
                   </div>
-                )}
+                </div>
+
+                {/* Venue Timezone Badge */}
+                <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5 text-slate-400">
+                    <Globe size={13} className="text-amber-400" />
+                    Zona Horaria del Venue:
+                  </span>
+                  <span className="font-mono font-bold text-amber-300">
+                    {venueTimezone}
+                  </span>
+                </div>
+
+                {/* Programmed Cutoff Status */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-400">Corte Programado:</span>
+                  <span className="font-mono font-bold text-slate-200">
+                    {cutoffDate ? cutoffDate.toLocaleString('es-MX', { timeZone: venueTimezone }) : 'Modo Manual (Sin Corte)'}
+                  </span>
+                </div>
               </div>
 
-              {/* Input for Exact Datetime */}
+              {/* Datetime Input with Presets */}
               <div className="space-y-3">
-                <label className="text-xs font-black uppercase tracking-wider text-white/70 block">
-                  Hora de Cierre Automático:
+                <label className="text-xs font-black uppercase tracking-wider text-slate-300 block">
+                  Fecha y Hora de Cierre Automático ({venueTimezone}):
                 </label>
                 <input
                   type="datetime-local"
                   value={cutoffInput}
                   onChange={e => setCutoffInput(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/20 focus:border-amber-honey text-sm text-white font-mono focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 rounded-xl bg-black/50 border border-white/20 focus:border-amber-400 text-sm text-white font-mono focus:outline-none transition-colors"
                 />
 
                 {/* Quick Presets */}
@@ -309,9 +366,9 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
                     type="button"
                     onClick={() => handleSaveCutoffDatetime(null)}
                     disabled={isUpdating}
-                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-bold transition-colors cursor-pointer"
+                    className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-colors cursor-pointer"
                   >
-                    Eliminar Programación
+                    Quitar Programación
                   </button>
                 ) : <div />}
 
@@ -321,21 +378,21 @@ export const DigitalBoxOfficeControl: React.FC<DigitalBoxOfficeControlProps> = (
                     onClick={() => setIsOpen(false)}
                     className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-colors cursor-pointer"
                   >
-                    Cancelar
+                    Cerrar
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       if (!cutoffInput) {
-                        showAlert('Por favor selecciona una fecha y hora o elimina la programación.', 'Atención', 'warning');
+                        showAlert('Por favor selecciona una fecha y hora o usa "Quitar Programación".', 'Atención', 'warning');
                         return;
                       }
                       handleSaveCutoffDatetime(new Date(cutoffInput).toISOString());
                     }}
                     disabled={isUpdating || !cutoffInput}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black uppercase tracking-wider transition-all shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
                   >
-                    {isUpdating ? 'Guardando...' : 'Guardar Hora'}
+                    {isUpdating ? 'Guardando...' : 'Guardar Horario'}
                   </button>
                 </div>
               </div>

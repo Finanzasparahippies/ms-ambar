@@ -230,9 +230,10 @@ def handle_successful_payment(session):
         seat_ids = [s for s in seat_ids_raw.split(',') if s.strip()] if seat_ids_raw else []
 
         # Control de Corte en Webhook: Evitar confirmación de pagos completados posterior al corte
-        from django.utils import timezone
-        now = timezone.now()
-        if not getattr(event, 'is_online_sales_active', True) or (getattr(event, 'cutoff_datetime', None) and now >= event.cutoff_datetime):
+        is_cutoff = event.is_cutoff_reached() if hasattr(event, 'is_cutoff_reached') else (
+            not getattr(event, 'is_online_sales_active', True) or (getattr(event, 'cutoff_datetime', None) and timezone.now() >= event.cutoff_datetime)
+        )
+        if is_cutoff:
             logger.error(
                 f"[CHECKOUT/POST_CUTOFF_REFUND] Pago completado posterior al corte para evento #{event_id} "
                 f"por {user_email}. Disparando reembolso automático en Stripe..."
