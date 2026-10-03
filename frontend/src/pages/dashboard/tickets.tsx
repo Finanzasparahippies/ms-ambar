@@ -13,6 +13,7 @@ import api from '../../lib/api';
 import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import TicketPass from '../../components/TicketPass';
 import DigitalBoxOfficeControl from '../../components/DigitalBoxOfficeControl';
+import ReservedSeatsManager from '../../components/dashboard/ReservedSeatsManager';
 
 interface AdminTicket {
   id: number;
@@ -77,6 +78,7 @@ export default function TicketsManagementPage() {
   const [selectedEventId, setSelectedEventId] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'issued' | 'reserved'>('issued');
 
   // Modal states
   const [activeModalTicket, setActiveModalTicket] = useState<AdminTicket | null>(null);
@@ -445,8 +447,44 @@ export default function TicketsManagementPage() {
             </div>
           </div>
 
-          {/* Interactive Filters Bar (Dark Glass) */}
-          <div className="bg-[#0c0f0d]/90 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl space-y-4">
+          {/* View Mode Tabs: Boletos Emitidos vs. Butacas Reservadas */}
+          <div className="flex items-center gap-2 mb-6 p-1.5 bg-black/40 border border-white/10 rounded-2xl w-fit">
+            <button
+              type="button"
+              onClick={() => setActiveTab('issued')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === 'issued'
+                  ? 'bg-amber-honey text-slate-950 shadow-md shadow-amber-honey/20'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Ticket size={14} />
+              <span>Boletos Emitidos ({stats.total})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('reserved')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === 'reserved'
+                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <ShieldCheck size={14} />
+              <span>Butacas Reservadas / En Proceso</span>
+            </button>
+          </div>
+
+          {activeTab === 'reserved' ? (
+            <ReservedSeatsManager
+              selectedEventId={selectedEventId}
+              onSeatsReleased={() => fetchTickets()}
+            />
+          ) : (
+            <>
+              {/* Interactive Filters Bar (Dark Glass) */}
+              <div className="bg-[#0c0f0d]/90 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4">
               {/* Buscador en tiempo real con debounce 300ms */}
               <div className="md:col-span-5 relative">
@@ -763,6 +801,8 @@ export default function TicketsManagementPage() {
               </table>
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* ══════ MODAL: PASE DIGITAL INTERACTIVO CON QR FUNCIONAL ══════ */}

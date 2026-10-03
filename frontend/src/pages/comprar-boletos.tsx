@@ -16,11 +16,11 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
+import BoxOfficeCutoffBanner from '../components/BoxOfficeCutoffBanner';
 import { isSeatAllowedByRestriction } from '../components/SeatingChart';
 import ThemedSection from '../components/ThemedSection';
 import TicketQRModal from '../components/TicketQRModal';
 import TourTimeline from '../components/TourTimeline';
-import BoxOfficeCutoffBanner from '../components/BoxOfficeCutoffBanner';
 import { useEventTheme } from '../context/EventThemeContext';
 import api from '../lib/api';
 import { showAlert } from '../lib/notifications';
@@ -500,7 +500,7 @@ const TourPage = () => {
               }
             }
           })
-          .catch(() => {});
+          .catch(() => { });
       }
     };
 

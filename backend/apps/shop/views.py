@@ -161,7 +161,7 @@ def stripe_webhook(request):
         if event['type'] in ['checkout.session.completed', 'payment_intent.succeeded']:
             session = event['data']['object']
             handle_successful_payment(session)
-        elif event['type'] in ['payment_intent.payment_failed', 'checkout.session.expired']:
+        elif event['type'] in ['payment_intent.payment_failed', 'checkout.session.expired', 'charge.failed']:
             session = event['data']['object']
             handle_failed_payment(session)
     except Exception as e:
@@ -176,14 +176,14 @@ def handle_failed_payment(session):
     payment_intent_id = session.get('payment_intent')
     logger.info(f"[CHECKOUT/STRIPE_WEBHOOK] [Email: - | EventID: - | TicketUUID: - | StripeID: {session_id}] Pago fallido/expirado/cancelado. Payment Intent: {payment_intent_id}, Estado: failed")
 
-    from apps.tickets.models import Ticket
+    from apps.tickets.services.reservation_engine import release_reservations
     from apps.shop.models import Order
 
     if session_id:
-        Ticket.objects.filter(stripe_session_id=session_id, status='reserved').update(status='cancelled')
+        release_reservations(stripe_session_id=session_id)
         Order.objects.filter(stripe_session_id=session_id, status='pending').update(status='cancelled')
     if payment_intent_id:
-        Ticket.objects.filter(stripe_session_id=payment_intent_id, status='reserved').update(status='cancelled')
+        release_reservations(stripe_session_id=payment_intent_id)
         Order.objects.filter(stripe_session_id=payment_intent_id, status='pending').update(status='cancelled')
 
 from apps.tickets.utils import send_ticket_email, send_ticket_whatsapp, send_ticket_telegram
@@ -264,7 +264,21 @@ def handle_successful_payment(session):
                 if session_id:
                     ticket = Ticket.objects.filter(stripe_session_id=session_id, seat=seat).first()
                 if not ticket:
-                    ticket = Ticket.objects.filter(event=event, seat=seat).first()
+                    # Protección Anti-Race: si el asiento fue liberado y comprado por otro usuario, emitir reembolso
+                    conflicting_paid = Ticket.objects.filter(event=event, seat=seat, status='paid').exclude(stripe_session_id=session_id).first()
+                    if conflicting_paid:
+                        logger.critical(
+                            f"[CHECKOUT/OVERLAP_REFUND] Asiento #{seat_id} ({seat.row}{seat.number}) ya fue comprado por "
+                            f"{conflicting_paid.user_email}. Emitiendo reembolso inmediato a {user_email}..."
+                        )
+                        pi = session.get('payment_intent')
+                        if pi:
+                            try:
+                                stripe.Refund.create(payment_intent=pi, reason='duplicate', metadata={'reason': 'SEAT_ALREADY_TAKEN_BY_CONCURRENT_BUYER'})
+                            except Exception as re_err:
+                                logger.error(f"Error procesando reembolso automático de conflicto: {re_err}")
+                        continue
+                    ticket = Ticket.objects.filter(event=event, seat=seat, status='reserved').first()
                 
                 ticket_already_paid = False
                 if ticket:

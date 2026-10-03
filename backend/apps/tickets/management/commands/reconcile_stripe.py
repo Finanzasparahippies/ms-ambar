@@ -25,12 +25,11 @@ class Command(BaseCommand):
             stripe_available = False
             self.stdout.write(self.style.WARNING("Modo offline/mock: Stripe API key no configurada."))
 
-        # 1. Limpieza de boletos reservados abandonados o vencidos (> 30 min)
-        expiration_cutoff = timezone.now() - timedelta(minutes=30)
-        stale_tickets = Ticket.objects.filter(status='reserved', created_at__lt=expiration_cutoff)
-        stale_count = stale_tickets.count()
-        stale_tickets.update(status='cancelled')
-        self.stdout.write(self.style.SUCCESS(f"✅ Se cancelaron {stale_count} boletos reservados abandonados/vencidos."))
+        # 1. Limpieza de boletos reservados abandonados o vencidos (> 15 min)
+        from apps.tickets.services.reservation_engine import release_reservations
+        release_res = release_reservations(release_all_expired=True, timeout_minutes=15)
+        stale_count = release_res.get('released_count', 0)
+        self.stdout.write(self.style.SUCCESS(f"✅ Se cancelaron y liberaron {stale_count} boletos reservados abandonados/vencidos. Caché Redis purgada."))
 
         # 2. Reconciliación de boletos 'paid' sin amount_paid
         paid_tickets_without_amount = Ticket.objects.filter(status='paid', amount_paid__isnull=True)

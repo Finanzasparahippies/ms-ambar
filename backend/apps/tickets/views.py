@@ -1487,6 +1487,47 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
                 'error': f'Error al despachar el correo: {str(exc)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=['get'], url_path='reserved-sessions')
+    def reserved_sessions(self, request):
+        """
+        GET /api/tickets/admin/tickets/reserved-sessions/
+        Lista todas las reservaciones en estado 'reserved' para auditoría y control de butacas atascadas.
+        """
+        from apps.tickets.services.reservation_engine import get_reserved_sessions
+        event_id = request.query_params.get('event_id')
+        sessions = get_reserved_sessions(event_id=event_id)
+        return Response({
+            'status': 'success',
+            'count': len(sessions),
+            'sessions': sessions
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='release-seats')
+    def release_seats(self, request):
+        """
+        POST /api/tickets/admin/tickets/release-seats/
+        Liberación atómica de butacas en estado 'reserved':
+        Acepta ticket_ids, stripe_session_id o release_all_expired=True.
+        """
+        from apps.tickets.services.reservation_engine import release_reservations
+        ticket_ids = request.data.get('ticket_ids')
+        stripe_session_id = request.data.get('stripe_session_id')
+        release_all_expired = request.data.get('release_all_expired', False)
+        timeout_minutes = int(request.data.get('timeout_minutes', 15))
+
+        result = release_reservations(
+            ticket_ids=ticket_ids,
+            stripe_session_id=stripe_session_id,
+            release_all_expired=release_all_expired,
+            timeout_minutes=timeout_minutes,
+            admin_user=request.user if request.user.is_authenticated else None
+        )
+
+        if result.get('status') == 'error':
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(result, status=status.HTTP_200_OK)
+
 
 class TicketCheckInView(APIView):
     """
