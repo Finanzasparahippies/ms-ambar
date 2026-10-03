@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
 import { getApiUrl } from '../../lib/utils';
+import DigitalBoxOfficeControl from '../../components/DigitalBoxOfficeControl';
 
 export default function ScanTicketsPage() {
   const router = useRouter();
@@ -78,6 +79,18 @@ export default function ScanTicketsPage() {
       })
       .catch(err => console.error("Error loading events for scanner:", err));
   }, []);
+
+  const currentEvent = React.useMemo(() => {
+    if (!events || events.length === 0) return null;
+    if (selectedEventId) {
+      return events.find((e: any) => String(e.id) === String(selectedEventId)) || events[0];
+    }
+    return events[0] || null;
+  }, [events, selectedEventId]);
+
+  const handleEventUpdated = (updatedEvent: any) => {
+    setEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, ...updatedEvent } : e));
+  };
 
   const fetchAttendance = async (eventId: string) => {
     if (!eventId) {
@@ -396,6 +409,13 @@ export default function ScanTicketsPage() {
         </Link>
 
         <div className="flex flex-wrap items-center justify-end gap-3 w-full sm:w-auto">
+          {currentEvent && (
+            <DigitalBoxOfficeControl
+              event={currentEvent}
+              onEventUpdated={handleEventUpdated}
+            />
+          )}
+
           {/* Active Event Selector */}
           <div className="flex items-center gap-2 bg-black/50 border border-white/10 rounded-xl px-3 py-1.5">
             <Ticket size={12} className="text-amber-honey shrink-0" />

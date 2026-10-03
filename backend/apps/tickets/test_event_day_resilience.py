@@ -127,3 +127,32 @@ class EventDayResilienceTests(APITestCase):
         self.assertIn(f"ticket_{self.ticket.token}", args[0])
         self.assertEqual(kwargs['json'], {'state': 'COMPLETED'})
         self.assertEqual(kwargs['headers']['Authorization'], 'Bearer fake_test_token')
+
+    def test_05_configure_cutoff_endpoint_admin(self):
+        """Valida que el endpoint administrativo configure-cutoff actualice is_online_sales_active y cutoff_datetime."""
+        url = reverse('event-detail', kwargs={'pk': self.event.id}) + 'configure-cutoff/'
+
+        # 1. Sin autenticación staff debe ser denegado 401/403
+        anon_res = self.client.post(url, {'is_online_sales_active': False}, format='json')
+        self.assertIn(anon_res.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+        # 2. Con autenticación staff
+        self.staff_user.is_staff = True
+        self.staff_user.save()
+        self.client.force_authenticate(user=self.staff_user)
+
+        target_cutoff = "2026-10-03T19:30:00"
+        auth_res = self.client.post(url, {
+            'is_online_sales_active': False,
+            'cutoff_datetime': target_cutoff
+        }, format='json')
+
+        self.assertEqual(auth_res.status_code, status.HTTP_200_OK)
+        self.assertEqual(auth_res.data.get('status'), 'success')
+        self.assertFalse(auth_res.data.get('is_online_sales_active'))
+        self.assertIsNotNone(auth_res.data.get('cutoff_datetime'))
+
+        self.event.refresh_from_db()
+        self.assertFalse(self.event.is_online_sales_active)
+        self.assertIsNotNone(self.event.cutoff_datetime)
+

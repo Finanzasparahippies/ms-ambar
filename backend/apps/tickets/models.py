@@ -565,8 +565,9 @@ class Event(models.Model):
             cache.delete('ms_ambar_active_theme_global')
             if self.id:
                 cache.delete(f'event_{self.id}')
-        except Exception:
-            pass
+        except Exception as cache_err:
+            import logging
+            logging.getLogger('apps.tickets').warning(f"[CACHE] Error al invalidar caché en Event.save: {cache_err}")
 
         from django.conf import settings
         from django.utils.text import slugify
