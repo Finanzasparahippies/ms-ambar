@@ -227,7 +227,9 @@ show_help() {
     echo ""
     echo "=== UTILITIES ==="
     echo "  ticket-audit <token_or_id> - Diagnostic audit for ticket token/ID against Stripe in prod (--fix supported)"
+    echo "  ticket-debug <token_or_id> - Comprehensive diagnostic for a ticket (DB, Stripe, Wallets, QR) in prod"
     echo "  ticket-cancel <id>         - Force ticket cancellation and seat release in prod"
+    echo "  clean-cancelled-seats      - Unlink seats (seat=None) on all cancelled tickets to prevent collisions"
     echo "  reconcile-stripe-prod      - Reconcile unconfirmed/stuck reservations against Stripe API"
     echo "  clear-locks-prod <event_id>- Flush Redis reservation locks and stale holds for an event"
     echo "  purge-bots              - Purge bot/spam subscribers in dev backend (supports --dry-run)"
@@ -238,6 +240,24 @@ show_help() {
 }
 
 case $COMMAND in
+    ticket-debug|ticket-debug-prod)
+        run_django_cmd_prod debug_ticket "$@"
+        ;;
+    ticket-debug-staging)
+        run_django_cmd_staging debug_ticket "$@"
+        ;;
+    ticket-debug-dev)
+        run_django_cmd_dev debug_ticket "$@"
+        ;;
+    clean-cancelled-seats|clean-cancelled-seats-prod)
+        run_django_cmd_prod clean_cancelled_seats "$@"
+        ;;
+    clean-cancelled-seats-staging)
+        run_django_cmd_staging clean_cancelled_seats "$@"
+        ;;
+    clean-cancelled-seats-dev)
+        run_django_cmd_dev clean_cancelled_seats "$@"
+        ;;
     ticket-audit|ticket-audit-prod)
         run_django_cmd_prod audit_ticket_token "$@"
         ;;

@@ -5,7 +5,7 @@ import zipfile
 import hashlib
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime, timezone as dt_timezone
+from datetime import datetime, timedelta, timezone as dt_timezone
 from django.conf import settings
 from django.utils.timezone import localtime
 from PIL import Image, ImageDraw, ImageFont
@@ -465,7 +465,7 @@ class AppleWalletService:
                 .public_key(key.public_key())
                 .serial_number(x509.random_serial_number())
                 .not_valid_before(datetime.now(dt_timezone.utc))
-                .not_valid_after(datetime.now(dt_timezone.utc) + datetime.timedelta(days=365))
+                .not_valid_after(datetime.now(dt_timezone.utc) + timedelta(days=365))
                 .sign(key, hashes.SHA256())
             )
 

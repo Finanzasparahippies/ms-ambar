@@ -45,6 +45,7 @@ export const AppleWalletButton: React.FC<{
   isPriority?: boolean;
   className?: string;
 }> = ({ ticketToken, ticketId, customUrl, isPriority = false, className = '' }) => {
+  const { isApple } = useWalletPlatform();
   const downloadUrl = customUrl
     ? getApiUrl(customUrl)
     : getApiUrl(`/tickets/${ticketToken}/apple-pass/`);
@@ -54,7 +55,7 @@ export const AppleWalletButton: React.FC<{
   const handleAppleDownload = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // En Safari iOS/macOS, la navegación directa permite al sistema interceptar el MIME type .pkpass
     if (typeof window !== 'undefined' && /iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent)) {
-      // Permitir la acción estándar de descarga/apertura nativa
+      // Permitir la acción estándar de apertura nativa
       return;
     }
   };
@@ -68,7 +69,8 @@ export const AppleWalletButton: React.FC<{
       )}
       <a
         href={downloadUrl}
-        download={filename}
+        download={isApple ? undefined : filename}
+        target={isApple ? '_self' : undefined}
         onClick={handleAppleDownload}
         className={`w-full flex items-center justify-center gap-3 bg-black hover:bg-zinc-900 active:scale-[0.98] transition-all duration-200 py-3.5 px-5 rounded-2xl border ${
           isPriority
