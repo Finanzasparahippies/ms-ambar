@@ -7,9 +7,9 @@ from django.utils import timezone
 import stripe
 
 from apps.tickets.models import Ticket
-from apps.tickets.utils import send_ticket_email
 from apps.shop.models import Order
 from apps.dashboard.views import get_ticket_actual_price
+from apps.tickets.services.reservation_engine import release_reservations
 
 logger = logging.getLogger('apps.tickets')
 
@@ -40,63 +40,18 @@ class Command(BaseCommand):
             stripe_available = False
             self.stdout.write(self.style.WARNING("⚠️ Modo offline/mock: Stripe API key no configurada."))
 
-        # 1. Reconciliación de boletos 'reserved' varados o abandonados (> 15 min)
-        expiration_cutoff = timezone.now() - timedelta(minutes=15)
-        stale_tickets = Ticket.objects.filter(status='reserved', created_at__lt=expiration_cutoff)
-        stale_count = stale_tickets.count()
-        self.stdout.write(f"\n1. Inspeccionando {stale_count} boletos en estado 'reserved' (> 15 min)...")
-
-        recovered_paid = 0
-        cancelled_stale = 0
-
-        for t in stale_tickets:
-            if t.stripe_session_id and stripe_available:
-                try:
-                    sid = t.stripe_session_id.strip()
-                    is_paid = False
-                    amount_total = None
-
-                    if sid.startswith('cs_'):
-                        session = stripe.checkout.Session.retrieve(sid)
-                        if session.payment_status == 'paid' or session.status == 'complete':
-                            is_paid = True
-                            if session.amount_total is not None:
-                                amount_total = Decimal(session.amount_total) / Decimal(100)
-                    elif sid.startswith('pi_'):
-                        pi = stripe.PaymentIntent.retrieve(sid)
-                        if pi.status == 'succeeded':
-                            is_paid = True
-                            if pi.amount is not None:
-                                amount_total = Decimal(pi.amount) / Decimal(100)
-
-                    if is_paid:
-                        if not dry_run:
-                            t.status = 'paid'
-                            t.amount_paid = amount_total or get_ticket_actual_price(t)
-                            t.save(update_fields=['status', 'amount_paid'])
-                            try:
-                                send_ticket_email(t)
-                            except Exception as email_err:
-                                logger.warning(f"Error enviando correo de boleto recuperado #{t.id}: {email_err}")
-                        recovered_paid += 1
-                        self.stdout.write(self.style.SUCCESS(
-                            f"   ✅ [RECUPERADO] Ticket #{t.id} ({t.user_email}) pagado en Stripe ({sid}). Transicionado a PAID."
-                        ))
-                        continue
-                except Exception as exc:
-                    logger.warning(f"Error verificando Stripe Session {t.stripe_session_id} para ticket #{t.id}: {exc}")
-
-            # Si no fue pagado en Stripe o no tiene sesión, cancelar y liberar asiento
-            if not dry_run:
-                old_seat = t.seat
-                t.status = 'cancelled'
-                t.seat = None
-                t.save(update_fields=['status', 'seat'])
-            cancelled_stale += 1
-
-        self.stdout.write(self.style.SUCCESS(
-            f"   ✓ Proceso completado: {recovered_paid} recuperados a PAID, {cancelled_stale} cancelados y asientos liberados."
-        ))
+        # 1. Limpieza y reconciliación de boletos reservados abandonados o vencidos (> 15 min)
+        self.stdout.write("\n1. Procesando reservas abandonadas o vencidas (> 15 min)...")
+        if dry_run:
+            cutoff = timezone.now() - timedelta(minutes=15)
+            stale_count = Ticket.objects.filter(status='reserved', created_at__lt=cutoff).count()
+            self.stdout.write(self.style.NOTICE(f"   [DRY-RUN] Se detectaron {stale_count} boletos reservados que serían evaluados/liberados."))
+        else:
+            release_res = release_reservations(release_all_expired=True, timeout_minutes=15)
+            stale_count = release_res.get('released_count', 0)
+            self.stdout.write(self.style.SUCCESS(
+                f"   ✅ Se cancelaron y liberaron {stale_count} boletos reservados abandonados/vencidos. Caché Redis purgada."
+            ))
 
         # 2. Reconciliación de boletos 'paid' sin amount_paid
         self.stdout.write("\n2. Verificando montos en boletos pagados...")

@@ -1189,6 +1189,55 @@ class TicketsAppTests(APITestCase):
         is_valid, _ = coupon.is_valid_for_event(self.event, user_email="otro@example.com")
         self.assertTrue(is_valid)
 
+    @patch('stripe.checkout.Session.create')
+    def test_checkout_orphan_seat_warning_and_override(self, mock_stripe):
+        """
+        Valida que dejar un asiento huérfano devuelva HTTP 422 con código ORPHAN_SEAT_WARNING
+        cuando allow_orphan_seat=False, y proceda a Stripe cuando allow_orphan_seat=True.
+        """
+        mock_stripe.return_value = type('MockSession', (), {'url': 'https://checkout.stripe.com/test_orphan', 'id': 'cs_test_orphan'})()
+
+        # Crear una mesa de 4 asientos
+        table_seats = []
+        for i in range(1, 5):
+            s = Seat.objects.create(
+                theater=self.theater,
+                section="Zona Mesas",
+                row="Mesa 55",
+                number=i,
+                base_price=600,
+                status="available"
+            )
+            table_seats.append(s)
+
+        # Seleccionar 3 de los 4 asientos deja 1 huérfano
+        candidate_ids = [table_seats[0].id, table_seats[1].id, table_seats[2].id]
+
+        # 1. Sin confirmación explícita (allow_orphan_seat=False)
+        res_warning = self.client.post('/api/tickets/tickets/checkout/', {
+            'email': 'comprador@nectarlabs.test',
+            'event_id': self.event.id,
+            'seat_ids': candidate_ids,
+            'quantity': 1,
+            'allow_orphan_seat': False
+        }, format='json')
+
+        self.assertEqual(res_warning.status_code, status.HTTP_422_UNPROCESSABLE_ENTITY)
+        self.assertEqual(res_warning.data.get('code'), 'ORPHAN_SEAT_WARNING')
+        self.assertIn(table_seats[3].id, res_warning.data.get('orphan_seat_ids', []))
+
+        # 2. Con confirmación explícita (allow_orphan_seat=True)
+        res_ok = self.client.post('/api/tickets/tickets/checkout/', {
+            'email': 'comprador@nectarlabs.test',
+            'event_id': self.event.id,
+            'seat_ids': candidate_ids,
+            'quantity': 1,
+            'allow_orphan_seat': True
+        }, format='json')
+
+        self.assertEqual(res_ok.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_ok.data.get('session_url'), 'https://checkout.stripe.com/test_orphan')
+
 
 
 

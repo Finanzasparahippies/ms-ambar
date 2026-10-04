@@ -56,23 +56,29 @@ export function calculateLayoutBounds(
 
   // Evaluate seats
   seats.forEach(s => {
-    if (typeof s.x === 'number' && !isNaN(s.x) && typeof s.y === 'number' && !isNaN(s.y)) {
-      minX = Math.min(minX, s.x - seatPadding);
-      maxX = Math.max(maxX, s.x + seatPadding);
-      minY = Math.min(minY, s.y - seatPadding);
-      maxY = Math.max(maxY, s.y + seatPadding);
+    const nx = typeof s.x === 'number' ? s.x : parseFloat(String(s.x));
+    const ny = typeof s.y === 'number' ? s.y : parseFloat(String(s.y));
+    if (!isNaN(nx) && !isNaN(ny)) {
+      minX = Math.min(minX, nx - seatPadding);
+      maxX = Math.max(maxX, nx + seatPadding);
+      minY = Math.min(minY, ny - seatPadding);
+      maxY = Math.max(maxY, ny + seatPadding);
     }
   });
 
   // Evaluate map elements
   elements.forEach(el => {
-    if (typeof el.x === 'number' && !isNaN(el.x) && typeof el.y === 'number' && !isNaN(el.y)) {
-      const halfW = (el.w || 100) / 2 + seatPadding;
-      const halfH = (el.h || 100) / 2 + seatPadding;
-      minX = Math.min(minX, el.x - halfW);
-      maxX = Math.max(maxX, el.x + halfW);
-      minY = Math.min(minY, el.y - halfH);
-      maxY = Math.max(maxY, el.y + halfH);
+    const nx = typeof el.x === 'number' ? el.x : parseFloat(String(el.x));
+    const ny = typeof el.y === 'number' ? el.y : parseFloat(String(el.y));
+    const nw = typeof el.w === 'number' ? el.w : (parseFloat(String(el.w)) || 100);
+    const nh = typeof el.h === 'number' ? el.h : (parseFloat(String(el.h)) || 100);
+    if (!isNaN(nx) && !isNaN(ny)) {
+      const halfW = nw / 2 + seatPadding;
+      const halfH = nh / 2 + seatPadding;
+      minX = Math.min(minX, nx - halfW);
+      maxX = Math.max(maxX, nx + halfW);
+      minY = Math.min(minY, ny - halfH);
+      maxY = Math.max(maxY, ny + halfH);
     }
   });
 

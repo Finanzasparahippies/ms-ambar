@@ -1,12 +1,20 @@
+import logging
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 import uuid
 
+logger = logging.getLogger('apps.tickets')
+
 class Theater(models.Model):
     name = models.CharField(max_length=255)
     location = models.CharField(max_length=255, blank=True, default='')
+    timezone = models.CharField(
+        max_length=50,
+        default='America/Hermosillo',
+        help_text="Zona horaria IANA del teatro/venue (ej. America/Hermosillo)."
+    )
     layout = models.JSONField(help_text="JSON representation of sections and rows", null=True, blank=True, default=dict)
     complimentary_rows_priority = models.JSONField(default=list, blank=True, help_text="Lista priorizada de filas designadas para cortesía (ej. ['Fila G', 'Fila H'])")
 
@@ -427,6 +435,8 @@ class Event(models.Model):
         help_text="Imagen del flyer oficial del evento. Se muestra en la landing page y en la página de compra de boletos."
     )
     is_active = models.BooleanField(default=True)
+    is_online_sales_active = models.BooleanField(default=True, help_text="Bandera global de corte para ventas en línea en día de evento.")
+    cutoff_datetime = models.DateTimeField(null=True, blank=True, help_text="Fecha y hora exacta del corte de venta web previo a taquilla física.")
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default='concert')
     #discount code to validate purchase
     discount_code = models.CharField(max_length=255, blank=True, null=True)
@@ -548,13 +558,60 @@ class Event(models.Model):
             logging.getLogger('apps.tickets').debug(f"Error accediendo a self.image.url: {exc}")
             return None
 
+    def is_cutoff_reached(self) -> bool:
+        """
+        Determina si las ventas web han alcanzado el corte programado o manual.
+        Convierte timezone.now() a la zona horaria física del venue (ZoneInfo)
+        antes de comparar contra cutoff_datetime.
+        """
+        if not self.is_online_sales_active:
+            return True
+        if not self.cutoff_datetime:
+            return False
+
+        import zoneinfo
+        tz_name = self.timezone or (self.theater.timezone if self.theater else None) or 'America/Hermosillo'
+        try:
+            venue_tz = zoneinfo.ZoneInfo(tz_name)
+        except Exception as exc:
+            logger.warning(
+                f"[ZONEINFO] Error cargando zona horaria '{tz_name}' para Event #{self.id or 'nuevo'}: {exc}. "
+                f"Aplicando fallback a 'America/Hermosillo'."
+            )
+            venue_tz = zoneinfo.ZoneInfo('America/Hermosillo')
+
+        now_venue = timezone.now().astimezone(venue_tz)
+        cutoff_venue = self.cutoff_datetime
+        if timezone.is_naive(cutoff_venue):
+            cutoff_venue = cutoff_venue.replace(tzinfo=venue_tz)
+        else:
+            cutoff_venue = cutoff_venue.astimezone(venue_tz)
+
+        return now_venue >= cutoff_venue
+
     def save(self, *args, **kwargs):
         if self.theater:
             if not self.venue_name:
                 self.venue_name = self.theater.name
             if not self.venue_address:
                 self.venue_address = self.theater.location
+            if not self.timezone and getattr(self.theater, 'timezone', None):
+                self.timezone = self.theater.timezone
+
         super().save(*args, **kwargs)
+
+        try:
+            from django.core.cache import cache
+            cache.delete('active_events')
+            cache.delete('ms_ambar_active_events_public')
+            cache.delete('ms_ambar_active_theme_global')
+            if self.id:
+                cache.delete(f'event_{self.id}')
+                cache.delete(f'event_seats_{self.id}')
+                cache.delete(f'seats_event_{self.id}')
+        except Exception as cache_err:
+            import logging
+            logging.getLogger('apps.tickets').warning(f"[CACHE] Error al invalidar caché en Event.save: {cache_err}")
 
         from django.conf import settings
         from django.utils.text import slugify

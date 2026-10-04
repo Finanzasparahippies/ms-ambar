@@ -17,11 +17,16 @@ class TheaterAdmin(admin.ModelAdmin):
 
 @admin.register(Event)
 class EventAdmin(CloudinaryMediaAdminMixin, admin.ModelAdmin):
-    list_display = ('title', 'artist', 'date', 'event_type', 'allow_seatless_tickets', 'allow_numbered_tickets', 'is_active')
-    list_filter = ('is_active', 'event_type', 'date', 'allow_seatless_tickets', 'allow_numbered_tickets')
+    list_display = ('title', 'artist', 'date', 'event_type', 'is_online_sales_active', 'cutoff_datetime', 'is_active')
+    list_editable = ('is_online_sales_active',)
+    list_filter = ('is_online_sales_active', 'is_active', 'event_type', 'date', 'allow_seatless_tickets', 'allow_numbered_tickets')
     fieldsets = (
         ('Información del Evento', {
             'fields': ('title', 'artist', 'date', 'doors_open', 'duration_minutes', 'venue_name', 'venue_address', 'theater', 'is_active', 'event_type', 'price_multiplier')
+        }),
+        ('Control de Corte Día de Evento (Taquilla Física)', {
+            'fields': ('is_online_sales_active', 'cutoff_datetime'),
+            'description': 'Control en tiempo real: Desactiva ventas web inmediatamente para habilitar el banner de taquilla física en el recinto.',
         }),
         ('Personalización Visual del Tema (Frontend)', {
             'fields': (

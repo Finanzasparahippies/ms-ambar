@@ -186,6 +186,24 @@ def process_ticket_checkin(
                 ticket.status = 'used'
                 ticket.save(update_fields=['is_scanned', 'scanned_at', 'status'])
 
+                # Desacoplamiento asíncrono con Google Wallet REST API (<80ms turnstile latency)
+                import threading
+
+                def _async_wallet_sync(ticket_id_val: int):
+                    def _worker():
+                        try:
+                            from apps.tickets.models import Ticket
+                            from apps.tickets.services.google_wallet import GoogleWalletService
+                            t = Ticket.objects.filter(id=ticket_id_val).first()
+                            if t:
+                                GoogleWalletService().update_ticket_state(t, new_state="COMPLETED")
+                        except Exception as exc:
+                            logger.error(f"[GOOGLE WALLET SYNC] Background error para Ticket #{ticket_id_val}: {exc}")
+
+                    threading.Thread(target=_worker, daemon=True).start()
+
+                transaction.on_commit(lambda tid=ticket.id: _async_wallet_sync(tid))
+
                 # Ubicación física compuesta ('Fila: F · Mesa: 4 · Asiento: 13')
                 if ticket.seat:
                     physical_location = format_seat_assignment(ticket.seat)

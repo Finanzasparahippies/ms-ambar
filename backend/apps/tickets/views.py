@@ -161,6 +161,8 @@ class EventViewSet(viewsets.ModelViewSet):
         cache.delete('ms_ambar_active_theme_global')
         if event_id:
             cache.delete(f'event_{event_id}')
+            cache.delete(f'event_seats_{event_id}')
+            cache.delete(f'seats_event_{event_id}')
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -168,12 +170,106 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = serializer.save()
+        if instance.is_online_sales_active and instance.cutoff_datetime and instance.is_cutoff_reached():
+            instance.cutoff_datetime = None
+            instance.save(update_fields=['cutoff_datetime'])
         self._invalidate_event_caches(instance.id)
 
     def perform_destroy(self, instance):
         event_id = instance.id
         super().perform_destroy(instance)
         self._invalidate_event_caches(event_id)
+
+    @action(detail=True, methods=['post'], url_path='toggle-online-sales', permission_classes=[permissions.IsAdminUser])
+    def toggle_online_sales(self, request, pk=None):
+        """
+        Endpoint atómico para alternar bidireccionalmente ventas web y/o programar hora de corte.
+        Invalida de forma transaccional los cachés públicos de Redis tras el commit.
+        """
+        from django.db import transaction
+        from django.utils.dateparse import parse_datetime
+        import zoneinfo
+
+        def parse_bool(val):
+            if isinstance(val, bool):
+                return val
+            if isinstance(val, str):
+                return val.strip().lower() in ('true', '1', 't', 'yes', 'y')
+            if isinstance(val, (int, float)):
+                return bool(val)
+            return bool(val)
+
+        event = self.get_object()
+        is_active_input = request.data.get('is_online_sales_active')
+        cutoff_dt_input = request.data.get('cutoff_datetime')
+
+        with transaction.atomic():
+            update_fields = []
+            if is_active_input is not None:
+                is_active = parse_bool(is_active_input)
+                event.is_online_sales_active = is_active
+                update_fields.append('is_online_sales_active')
+                if is_active:
+                    # Si se reactivan ventas explícitamente y no se pasa un corte futuro,
+                    # limpiar corte previo para evitar bloqueo residual inmediato
+                    if 'cutoff_datetime' not in request.data:
+                        if event.cutoff_datetime:
+                            event.cutoff_datetime = None
+                            if 'cutoff_datetime' not in update_fields:
+                                update_fields.append('cutoff_datetime')
+                    elif not cutoff_dt_input:
+                        event.cutoff_datetime = None
+                        if 'cutoff_datetime' not in update_fields:
+                            update_fields.append('cutoff_datetime')
+
+            if 'cutoff_datetime' in request.data:
+                if cutoff_dt_input:
+                    parsed_dt = parse_datetime(str(cutoff_dt_input).strip())
+                    if not parsed_dt:
+                        return Response({
+                            'error': 'Formato de fecha/hora inválido. Usa formato ISO (ej. 2026-10-03T19:00:00).'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    if timezone.is_naive(parsed_dt):
+                        tz_name = getattr(event, 'timezone', None) or 'America/Hermosillo'
+                        try:
+                            tz = zoneinfo.ZoneInfo(tz_name)
+                        except Exception:
+                            tz = zoneinfo.ZoneInfo('America/Hermosillo')
+                        parsed_dt = parsed_dt.replace(tzinfo=tz)
+                    event.cutoff_datetime = parsed_dt
+                else:
+                    event.cutoff_datetime = None
+                if 'cutoff_datetime' not in update_fields:
+                    update_fields.append('cutoff_datetime')
+
+            if update_fields:
+                event.save(update_fields=update_fields)
+
+            transaction.on_commit(lambda: self._invalidate_event_caches(event.id))
+            logger.info(
+                f"[EVENT TOGGLE SALES] Evento #{event.id} ({event.title}) actualizado por {request.user}. "
+                f"is_online_sales_active={event.is_online_sales_active}, cutoff_datetime={event.cutoff_datetime}, "
+                f"is_cutoff_reached={event.is_cutoff_reached()}"
+            )
+
+        cutoff_reached = event.is_cutoff_reached()
+        return Response({
+            'status': 'success',
+            'message': 'Estado de taquilla digital actualizado exitosamente.',
+            'event_id': event.id,
+            'is_online_sales_active': False if cutoff_reached else event.is_online_sales_active,
+            'cutoff_datetime': event.cutoff_datetime.isoformat() if event.cutoff_datetime else None,
+            'is_cutoff_reached': cutoff_reached,
+            'timezone': event.timezone
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post', 'patch'], url_path='configure-cutoff', permission_classes=[permissions.IsAdminUser])
+    def configure_cutoff(self, request, pk=None):
+        """
+        Alias retrocompatible de control administrativo para taquilla digital.
+        Delega a la lógica atómica de toggle_online_sales.
+        """
+        return self.toggle_online_sales(request, pk=pk)
 
     @action(detail=False, methods=['get', 'post'], url_path='cloudinary-signature', permission_classes=[permissions.IsAdminUser])
     def cloudinary_signature(self, request):
@@ -514,19 +610,34 @@ class TicketViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='apple-pass', permission_classes=[permissions.AllowAny])
     def apple_pass(self, request, pk=None):
         """
-        Descarga del paquete nativo Apple Wallet (.pkpass) firmado criptográficamente.
+        Descarga del paquete binario nativo Apple Wallet (.pkpass) firmado con PKCS#7.
         GET /api/tickets/{token}/apple-pass/
         """
         from django.http import HttpResponse
-        from apps.tickets.services.apple_wallet import AppleWalletPassGenerator
+        from apps.tickets.services.apple_wallet import AppleWalletService
 
         ticket = self.get_object()
-        generator = AppleWalletPassGenerator()
-        pkpass_bytes = generator.generate_pass(ticket)
 
-        filename = f"ticket-{ticket.id}.pkpass"
+        if ticket.status == 'cancelled':
+            return Response(
+                {'error': 'Este boleto ha sido cancelado y no puede ser emitido para Apple Wallet.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        service = AppleWalletService()
+        try:
+            pkpass_bytes = service.generate_pass(ticket)
+        except Exception as e:
+            logger.error(f"[APPLE WALLET] Error generando pase para ticket #{ticket.id} ({ticket.token}): {e}", exc_info=True)
+            return Response(
+                {'error': 'No fue posible generar el pase de Apple Wallet en este momento. Intente más tarde.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        filename = f"ms-ambar-ticket-{ticket.id}.pkpass"
         response = HttpResponse(pkpass_bytes, content_type='application/vnd.apple.pkpass')
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
         return response
 
     @action(detail=True, methods=['get'], url_path='google-wallet-link', permission_classes=[permissions.AllowAny])
@@ -573,6 +684,25 @@ class TicketViewSet(viewsets.ModelViewSet):
             logger.warning(f"[CHECKOUT/REJECTED] Intento de compra en evento finalizado #{event_id} por {email}")
             return Response({'error': 'Este evento ya ha finalizado. La venta de boletos se encuentra cerrada.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Validación estricta de corte de venta para taquilla física
+        if event.is_cutoff_reached():
+            logger.warning(
+                f"[CHECKOUT/REJECTED] Venta web cerrada por corte de evento #{event_id} "
+                f"(Online Active: {event.is_online_sales_active}, Cutoff: {event.cutoff_datetime}, TZ: {getattr(event, 'timezone', 'N/A')})"
+            )
+            try:
+                from django.core.cache import cache
+                cache.delete('active_events')
+                cache.delete('ms_ambar_active_events_public')
+                cache.delete(f'event_{event.id}')
+            except Exception as cache_err:
+                logger.warning(f"[CHECKOUT/CACHE] Error al invalidar caché tras corte de venta: {cache_err}")
+            return Response({
+                'error': 'Venta en línea finalizada por inicio del evento. Adquiere tus boletos directamente en la taquilla del recinto.',
+                'code': 'ONLINE_SALES_CLOSED',
+                'cutoff': True
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         # --- 1. Validar Cupón si se proporcionó ---
         coupon_obj = None
         if coupon_code:
@@ -610,12 +740,26 @@ class TicketViewSet(viewsets.ModelViewSet):
                 logger.warning(f"[CHECKOUT/REJECTED] Asientos ocupados {list(occupied_seat_ids)} intentados por {email}")
                 return Response({'error': 'Uno o más asientos ya están reservados o pagados.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Prevención de Asiento Huérfano (Orphan Seat Prevention)
+            # Prevención de Asiento Huérfano (Orphan Seat Prevention / Soft Warning)
+            allow_orphan_seat = bool(request.data.get('allow_orphan_seat', False))
             from apps.tickets.services.coupon_validator import check_orphan_seats
-            no_orphans, orphan_err = check_orphan_seats(event, [int(s) for s in seat_ids if str(s).isdigit()], coupon=coupon_obj)
+            no_orphans, orphan_err, orphan_seat_ids = check_orphan_seats(
+                event,
+                [int(s) for s in seat_ids if str(s).isdigit()],
+                coupon=coupon_obj,
+                return_details=True
+            )
             if not no_orphans:
-                logger.warning(f"[CHECKOUT/REJECTED] Regla de asiento huérfano bloqueó compra: {orphan_err}")
-                return Response({'error': orphan_err}, status=status.HTTP_400_BAD_REQUEST)
+                if not allow_orphan_seat:
+                    logger.warning(f"[CHECKOUT/ORPHAN_WARNING] Selección deja asiento huérfano (asientos: {orphan_seat_ids}): {orphan_err}")
+                    return Response({
+                        'code': 'ORPHAN_SEAT_WARNING',
+                        'error': orphan_err,
+                        'message': orphan_err,
+                        'orphan_seat_ids': orphan_seat_ids
+                    }, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+                else:
+                    logger.info(f"[CHECKOUT/ORPHAN_OVERRIDDEN] Asiento huérfano confirmado por comprador ({email}): {orphan_seat_ids}")
 
             for s_id in seat_ids:
                 try:
@@ -1371,6 +1515,47 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
             return Response({
                 'error': f'Error al despachar el correo: {str(exc)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], url_path='reserved-sessions')
+    def reserved_sessions(self, request):
+        """
+        GET /api/tickets/admin/tickets/reserved-sessions/
+        Lista todas las reservaciones en estado 'reserved' para auditoría y control de butacas atascadas.
+        """
+        from apps.tickets.services.reservation_engine import get_reserved_sessions
+        event_id = request.query_params.get('event_id')
+        sessions = get_reserved_sessions(event_id=event_id)
+        return Response({
+            'status': 'success',
+            'count': len(sessions),
+            'sessions': sessions
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='release-seats')
+    def release_seats(self, request):
+        """
+        POST /api/tickets/admin/tickets/release-seats/
+        Liberación atómica de butacas en estado 'reserved':
+        Acepta ticket_ids, stripe_session_id o release_all_expired=True.
+        """
+        from apps.tickets.services.reservation_engine import release_reservations
+        ticket_ids = request.data.get('ticket_ids')
+        stripe_session_id = request.data.get('stripe_session_id')
+        release_all_expired = request.data.get('release_all_expired', False)
+        timeout_minutes = int(request.data.get('timeout_minutes', 15))
+
+        result = release_reservations(
+            ticket_ids=ticket_ids,
+            stripe_session_id=stripe_session_id,
+            release_all_expired=release_all_expired,
+            timeout_minutes=timeout_minutes,
+            admin_user=request.user if request.user.is_authenticated else None
+        )
+
+        if result.get('status') == 'error':
+            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class TicketCheckInView(APIView):

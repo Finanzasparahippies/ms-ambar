@@ -61,7 +61,7 @@ export const TicketPass: React.FC<TicketPassProps> = ({
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const ua = window.navigator.userAgent.toLowerCase();
-      if (/iphone|ipad|ipod/.test(ua)) {
+      if (/iphone|ipad|ipod|macintosh/.test(ua)) {
         setPlatform('ios');
       } else if (/android/.test(ua)) {
         setPlatform('android');

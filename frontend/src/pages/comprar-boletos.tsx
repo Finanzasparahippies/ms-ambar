@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlertCircle,
+  AlertTriangle,
   Calendar, CalendarX,
   Check, CheckCircle, Info,
   Mail, MapPin, Maximize2,
@@ -16,6 +17,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import React, { useEffect, useMemo, useState } from 'react';
+import BoxOfficeCutoffBanner from '../components/BoxOfficeCutoffBanner';
 import { isSeatAllowedByRestriction } from '../components/SeatingChart';
 import ThemedSection from '../components/ThemedSection';
 import TicketQRModal from '../components/TicketQRModal';
@@ -26,13 +28,13 @@ import { showAlert } from '../lib/notifications';
 import { SeatMapLoader, formatSeatAssignment, getSeatAssignmentParts } from '../lib/seatMapLoader';
 import { cn, getApiUrl } from '../lib/utils';
 
-const SeatingChart = dynamic(() => import('../components/SeatingChart'), {
+const SeatMap = dynamic(() => import('../components/SeatMap'), {
   ssr: false,
   loading: () => (
-    <div className="h-[30rem] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10">
-      <div className="w-8 h-8 rounded-full border-2 border-t-amber-honey border-amber-honey/20 animate-spin" />
-      <span className="text-xs uppercase font-bold tracking-widest text-amber-honey">
-        Cargando Mapa de Asientos...
+    <div className="h-[30rem] lg:h-[36.5rem] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10">
+      <div className="w-10 h-10 rounded-full border-4 border-t-amber-honey border-amber-honey/20 animate-spin" />
+      <span className="text-xs uppercase font-extrabold tracking-widest text-amber-honey animate-pulse">
+        Cargando Mapa de Asientos del Recinto...
       </span>
     </div>
   ),
@@ -160,6 +162,24 @@ const TourPage = () => {
   const router = useRouter();
   const [events, setEvents] = useState<any[]>([]);
   const [currentEvent, setCurrentEvent] = useState<any>(null);
+
+  const isMeetGreet = currentEvent?.event_type === 'meet_greet';
+  const isCurrentEventPast = useMemo(() => {
+    if (!currentEvent?.date) return false;
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return new Date(currentEvent.date) < startOfToday;
+  }, [currentEvent]);
+
+  const isOnlineSalesClosed = useMemo(() => {
+    if (!currentEvent) return false;
+    if (currentEvent.is_online_sales_active === false) return true;
+    if (currentEvent.is_cutoff_reached === true) return true;
+    if (currentEvent.cutoff_datetime) {
+      return new Date() >= new Date(currentEvent.cutoff_datetime);
+    }
+    return false;
+  }, [currentEvent]);
   const [seats, setSeats] = useState<any[]>([]);
   const [selectedSeats, setSelectedSeats] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
@@ -201,6 +221,8 @@ const TourPage = () => {
   const [createdTickets, setCreatedTickets] = useState<any[]>([]);
   const [ticketPassModalData, setTicketPassModalData] = useState<{ ticket: any; seat?: any } | null>(null);
   const [limitExceededModalData, setLimitExceededModalData] = useState<{ maxTickets: number; detail: string } | null>(null);
+  const [isOrphanModalOpen, setIsOrphanModalOpen] = useState(false);
+  const [allowOrphanSeat, setAllowOrphanSeat] = useState(false);
 
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
@@ -420,9 +442,11 @@ const TourPage = () => {
           const tables = els.filter((e: any) => e.type === 'table' || e.tableShape || String(e.label || '').trim().toLowerCase().startsWith('mesa'));
           if (tables.length > 0) {
             const tableIds = new Set(tables.map((t: any) => String(t.id)));
-            // Filtrar asientos huérfanos que no pertenecen a ninguna mesa del layout activo
+            // Mantener butacas independientes, zonas GA y asientos válidos asociados a mesas
             const validSeats = mappedSeats.filter((s: any) => {
               const tid = s.tableId || s.table_id;
+              const isTableSeat = Boolean(tid || String(s.row || '').toLowerCase().startsWith('mesa'));
+              if (!isTableSeat) return true; // Butacas de fila o GA regular
               if (tid && tableIds.has(String(tid))) return true;
               return tables.some((t: any) => Math.hypot(t.x - s.x, t.y - s.y) <= 80);
             });
@@ -442,6 +466,54 @@ const TourPage = () => {
   useEffect(() => {
     fetchSeats();
   }, [currentEvent]);
+
+  // Dynamic re-sync when sales status flips from closed to active: flush seats & refresh layout
+  const prevSalesClosedRef = React.useRef<boolean>(false);
+  useEffect(() => {
+    if (prevSalesClosedRef.current === true && !isOnlineSalesClosed) {
+      fetchSeats();
+    }
+    prevSalesClosedRef.current = Boolean(isOnlineSalesClosed);
+  }, [isOnlineSalesClosed]);
+
+  // Real-time Event Sync: Auto-refresh event state on window focus or periodic ticker
+  useEffect(() => {
+    const refreshEventState = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        api.get('/tickets/events/')
+          .then(res => {
+            const eventsData = res.data;
+            if (Array.isArray(eventsData) && eventsData.length > 0) {
+              setEvents(eventsData.filter((e: any) => e.is_active !== false));
+              if (currentEvent?.id) {
+                const refreshed = eventsData.find((e: any) => e.id === currentEvent.id);
+                if (refreshed) {
+                  setCurrentEvent((prev: any) => {
+                    if (!prev) return refreshed;
+                    if (
+                      prev.is_online_sales_active !== refreshed.is_online_sales_active ||
+                      prev.cutoff_datetime !== refreshed.cutoff_datetime ||
+                      prev.is_cutoff_reached !== refreshed.is_cutoff_reached
+                    ) {
+                      return { ...prev, ...refreshed };
+                    }
+                    return prev;
+                  });
+                }
+              }
+            }
+          })
+          .catch(() => { });
+      }
+    };
+
+    const interval = setInterval(refreshEventState, 15000);
+    window.addEventListener('focus', refreshEventState);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', refreshEventState);
+    };
+  }, [currentEvent?.id]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -583,14 +655,64 @@ const TourPage = () => {
     return Array.from(new Set(orphans));
   }, [seats, selectedSeats, appliedCoupon, activeAllowedRows, elements]);
 
+  // Si el usuario cambia su selección y ya no hay asientos huérfanos, resetear permiso
+  useEffect(() => {
+    if (orphanSeatIds.length === 0) {
+      setAllowOrphanSeat(false);
+    }
+  }, [orphanSeatIds.length]);
+
+  // Desglose descriptivo de la mesa y asientos huérfanos para el modal
+  const orphanSeatDetails = useMemo(() => {
+    if (!orphanSeatIds.length || !seats.length) return null;
+    const matched = seats.filter(s => orphanSeatIds.includes(String(s.id)));
+    if (!matched.length) return null;
+    const tables = Array.from(new Set(matched.map(s => {
+      const rowStr = String(s.row || '').trim();
+      return rowStr.toLowerCase().startsWith('mesa') ? rowStr : `Fila ${s.row}`;
+    })));
+    return {
+      orphanSeats: matched,
+      tableLabel: tables.join(', ') || 'la Mesa',
+      count: matched.length,
+      seatNumbers: matched.map(s => `#${s.number}`).join(', ')
+    };
+  }, [orphanSeatIds, seats]);
+
+  const handleConfirmOrphanOverride = () => {
+    setAllowOrphanSeat(true);
+    setIsOrphanModalOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleAddRemainingOrphanSeats = () => {
+    const remaining = seats.filter(s => orphanSeatIds.includes(String(s.id)));
+    setSelectedSeats(prev => {
+      const existingIds = new Set(prev.map(s => String(s.id)));
+      const toAdd = remaining.filter(s => !existingIds.has(String(s.id)));
+      return [...prev, ...toAdd];
+    });
+    setAllowOrphanSeat(false);
+    setIsOrphanModalOpen(false);
+  };
+
+  const handleDismissOrphanModal = () => {
+    setIsOrphanModalOpen(false);
+  };
+
   const handleProceedToCheckout = () => {
-    if (isCurrentEventPast) return;
-    if (orphanSeatIds.length > 0) {
+    if (isOnlineSalesClosed || isCurrentEventPast) {
       showAlert(
-        'Tu selección actual deja 1 asiento libre aislado en el recinto. Por favor selecciona asientos contiguos antes de proceder al pago.',
-        'Restricción de Asiento Huérfano',
+        'Venta en línea finalizada por inicio del evento. Adquiere tus boletos directamente en la taquilla del recinto.',
+        'Venta en Línea Cerrada',
         'warning'
       );
+      return;
+    }
+    // Si la selección deja un asiento huérfano y el usuario no lo ha confirmado previamente,
+    // se presenta el modal de confirmación no bloqueante
+    if (orphanSeatIds.length > 0 && !allowOrphanSeat) {
+      setIsOrphanModalOpen(true);
       return;
     }
     setIsCheckoutOpen(true);
@@ -645,14 +767,6 @@ const TourPage = () => {
     console.log(`[TicketPricing Debug] getEffectiveSeatlessPrice resolved: $${resolvedPrice} MXN | Source: ${source}`);
     return resolvedPrice;
   };
-
-  const isMeetGreet = currentEvent?.event_type === 'meet_greet';
-  const isCurrentEventPast = useMemo(() => {
-    if (!currentEvent?.date) return false;
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return new Date(currentEvent.date) < startOfToday;
-  }, [currentEvent]);
 
   // ── Cálculo de Disponibilidad de Butacas (Badge Header) ──────────────────
   const { totalSeatsCount, availableSeatsCount, occupancyPercentage } = useMemo(() => {
@@ -771,6 +885,7 @@ const TourPage = () => {
         phone,
         has_mg: isMeetGreet ? true : wantsMG,
         coupon_code: appliedCoupon ? appliedCoupon.code : (couponCode.trim() || undefined),
+        allow_orphan_seat: Boolean(allowOrphanSeat),
       };
 
       if (isMeetGreet) {
@@ -802,6 +917,11 @@ const TourPage = () => {
     } catch (err: any) {
       console.error("Error during checkout:", err);
       const data = err.response?.data;
+      if (data?.code === 'ORPHAN_SEAT_WARNING' || data?.error_code === 'ORPHAN_SEAT_WARNING') {
+        setIsCheckoutOpen(false);
+        setIsOrphanModalOpen(true);
+        return;
+      }
       if (data?.error_code === 'COMPLIMENTARY_ORDER_LIMIT_EXCEEDED' || data?.code === 'COMPLIMENTARY_ORDER_LIMIT_EXCEEDED') {
         setLimitExceededModalData({
           maxTickets: Number(data.max_tickets || appliedCoupon?.max_tickets || 1),
@@ -982,164 +1102,80 @@ const TourPage = () => {
 
                     {ticketMode === 'seat' ? (
                       <div className="space-y-3">
-                        {/* ── Banner de Guía para Cupón de Cortesía Activo ── */}
-                        {appliedCoupon?.allowed_mode === 'DESIGNATED_ROW' && activeAllowedRows.length > 0 && (
-                          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-600/20 border-2 border-amber-400/60 shadow-[0_0_25px_rgba(245,158,11,0.25)] flex items-center gap-3.5 backdrop-blur-md animate-fade-in">
-                            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-amber-500/25 border border-amber-400/50 text-amber-400 shrink-0">
-                              <Sparkles size={20} className="animate-spin-slow" />
-                              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
-                              </span>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-black uppercase tracking-[0.2em] text-amber-300">
-                                  Cortesía VIP Activa
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/30 text-amber-200 border border-amber-400/40">
-                                  Asignación Automática
-                                </span>
-                              </div>
-                              <p className="text-xs md:text-sm font-bold text-white mt-0.5 leading-snug">
-                                Tu cupón de cortesía aplica para las{' '}
-                                <strong className="text-amber-300 underline underline-offset-4 decoration-amber-400/60 decoration-2">
-                                  {activeRowName || (
-                                    (() => {
-                                      const tableRows = activeAllowedRows.filter(r => /^mesa\s+\d+/i.test(r.trim()));
-                                      if (tableRows.length > 1) {
-                                        return `mesas habilitadas [${tableRows[0]} a ${tableRows[tableRows.length - 1]}]`;
-                                      }
-                                      const first = activeAllowedRows[0];
-                                      return first?.toLowerCase().startsWith('fila') || first?.toLowerCase().startsWith('mesa')
-                                        ? first
-                                        : `Fila ${first || 'Designada'}`;
-                                    })()
-                                  )}
-                                </strong>
-                                . Selecciona tu asiento.
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* ── Banner de Prevención de Asiento Huérfano (Anti-Orphan Alert) ── */}
-                        {orphanSeatIds.length > 0 && (
-                          <div className="p-3.5 rounded-2xl bg-amber-950/70 border border-amber-500/50 text-amber-200 shadow-xl backdrop-blur-md flex items-start gap-3 animate-fade-in">
-                            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 text-sm font-bold mt-0.5">
-                              ⚠️
-                            </div>
-                            <div className="text-xs leading-relaxed flex-1">
-                              <span className="font-black uppercase tracking-wider text-amber-300 block mb-0.5">
-                                Regla de Adyacencia: Asiento Aislado Detectado
-                              </span>
-                              Tu selección actual deja un asiento libre aislado en el recinto. Te sugerimos seleccionar asientos contiguos para evitar restricciones antes del checkout.
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="relative group rounded-2xl xs:rounded-[2.5rem] overflow-hidden border border-nature-night/10 dark:border-white/10 shadow-2xl bg-[#0b0d17]">
-                          <div className="px-3 xs:px-6 py-3 bg-black/40 backdrop-blur-md border-b border-white/10 flex flex-wrap items-center justify-between gap-2.5 text-xs font-black uppercase tracking-wider text-white/70">
-                            <div className="flex flex-wrap items-center gap-4">
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full bg-blue-600 border border-blue-400/50 shadow-[0_0_8px_#2563eb]" /> Tu Selección
-                              </span>
-                              <span className="flex items-center gap-1.5">
-                                <span className="w-3 h-3 rounded-full bg-red-500/80 border border-red-400/50 shadow-[0_0_6px_#ef4444]" /> Ocupado
-                              </span>
-                              {appliedCoupon?.allowed_mode === 'DESIGNATED_ROW' && activeAllowedRows.length > 0 && (
-                                <span className="flex items-center gap-1.5 text-amber-300 font-black">
-                                  <span className="relative flex h-3 w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-400" />
-                                  </span>
-                                  Fila VIP Permitida
-                                </span>
-                              )}
-                              {orphanSeatIds.length > 0 && (
-                                <span className="flex items-center gap-1.5 text-amber-400 font-black">
-                                  <span className="w-3 h-3 rounded-full border-2 border-dashed border-amber-500 bg-amber-500/20" />
-                                  Asiento Aislado
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-xs tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
-                              Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
-                            </span>
-                          </div>
-
-                          {isLoading ? (
-                            <div className="h-[30rem] lg:h-[36.25rem] flex flex-col items-center justify-center gap-3 bg-nature-night/[0.01] dark:bg-white/[0.01]">
-                              <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
-                              <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
-                            </div>
-                          ) : (
-                            <div className={cn(
-                              "h-[25rem] xs:h-[30rem] lg:h-[36.25rem] relative w-full overflow-hidden",
-                              isCurrentEventPast && "pointer-events-none opacity-85"
-                            )}>
-                              {isCurrentEventPast && (
-                                <div className="absolute inset-0 bg-nature-night/40 backdrop-blur-[2px] z-30 flex items-center justify-center p-6 text-center">
-                                  <div className="bg-white/95 dark:bg-nature-night/95 backdrop-blur-md p-6 rounded-3xl border border-amber-honey/30 shadow-2xl max-w-sm">
-                                    <p className="text-xs font-black uppercase tracking-[0.25em] text-amber-honey mb-1">Mapa Informativo</p>
-                                    <p className="text-sm font-black text-nature-night dark:text-white uppercase">Venta Concluida para este Recinto</p>
-                                  </div>
-                                </div>
-                              )}
-                              <SeatingChart
-                                seats={seats}
-                                onSelect={handleSelectionChange}
-                                selectedIds={selectedSeats.map(s => String(s.id))}
-                                theme={theme}
-                                elements={elements}
-                                allowZoom={allowCanvasZoom}
-                                restrictedRows={activeAllowedRows}
-                                orphanSeatIds={orphanSeatIds}
-                                onInvalidSelectionAttempt={handleInvalidSeatAttempt}
-                              />
-
-                              {/* Barra flotante de selección rápida para pantallas táctiles/móviles */}
-                              {selectedSeats.length > 0 && (
-                                <div className="absolute top-3 left-3 right-3 z-20 pointer-events-auto flex flex-col gap-1.5 md:hidden">
-                                  <div className="bg-nature-night/95 dark:bg-[#0b0d17]/95 backdrop-blur-xl border border-amber-honey/40 rounded-2xl p-2 shadow-2xl flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-none max-w-[calc(100%-75px)]">
-                                      {selectedSeats.map((seat: any) => {
-                                        const seatLabel = getSeatDisplayText(seat) || `Asiento ${seat.row}${seat.number}`;
-                                        return (
-                                          <div
-                                            key={String(seat.id)}
-                                            className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-honey/20 border border-amber-honey/40 text-amber-honey rounded-xl text-[11px] font-black shrink-0 animate-fadeIn"
-                                          >
-                                            <span className="truncate max-w-[120px]">{seatLabel}</span>
-                                            <button
-                                              type="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                setSelectedSeats(prev => prev.filter(s => String(s.id) !== String(seat.id)));
-                                              }}
-                                              className="w-6 h-6 rounded-full bg-amber-honey/30 active:bg-red-500 active:text-white flex items-center justify-center text-xs font-bold transition-colors"
-                                              title="Quitar asiento"
-                                              aria-label={`Quitar ${seatLabel}`}
-                                            >
-                                              ✕
-                                            </button>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => setSelectedSeats([])}
-                                      className="px-2.5 py-1.5 bg-red-500/20 active:bg-red-500/30 border border-red-500/30 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors"
-                                    >
-                                      Quitar
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          )}
+                        <div className="flex items-center justify-between px-1">
+                          <span className="text-xs uppercase font-extrabold tracking-widest text-slate-400">
+                            Mapa de Asientos Interactivo
+                          </span>
+                          <span className="text-xs tracking-widest font-black text-[var(--heading-color,#E5A93B)]">
+                            Precio Base Numerado: ${getSeatBasePrice().toLocaleString('es-MX')} MXN
+                          </span>
                         </div>
+
+                        {isLoading ? (
+                          <div className="h-[30rem] lg:h-[36.5rem] flex flex-col items-center justify-center gap-3 bg-nature-night/5 dark:bg-white/5 rounded-3xl border border-nature-night/10 dark:border-white/10 shadow-xl">
+                            <div className="w-10 h-10 rounded-full border-4 border-amber-honey/20 border-t-amber-honey animate-spin" />
+                            <div className="text-amber-honey animate-pulse font-extrabold text-xs uppercase tracking-[0.4em]">Tejiendo la Planta del Venue...</div>
+                          </div>
+                        ) : (
+                          <div className="relative w-full">
+                            <SeatMap
+                              key={`seatmap-${currentEvent?.id}-${isOnlineSalesClosed ? 'closed' : 'active'}`}
+                              seats={seats}
+                              elements={elements}
+                              selectedIds={selectedSeats.map(s => String(s.id))}
+                              onSelect={handleSelectionChange}
+                              theme={theme}
+                              allowZoom={allowCanvasZoom}
+                              activeAllowedRows={activeAllowedRows}
+                              activeRowName={activeRowName}
+                              isComplimentaryActive={appliedCoupon?.allowed_mode === 'DESIGNATED_ROW'}
+                              orphanSeatIds={orphanSeatIds}
+                              onInvalidSelectionAttempt={handleInvalidSeatAttempt}
+                              isReadOnly={isOnlineSalesClosed || isCurrentEventPast}
+                              readOnlyMessage={isOnlineSalesClosed ? "Venta en línea concluida · Consulta ubicaciones para taquilla física" : "Venta concluida para este recinto"}
+                            />
+
+                            {/* Barra flotante de selección rápida para pantallas táctiles/móviles */}
+                            {selectedSeats.length > 0 && !isOnlineSalesClosed && !isCurrentEventPast && (
+                              <div className="absolute top-14 left-3 right-3 z-30 pointer-events-auto flex flex-col gap-1.5 md:hidden">
+                                <div className="bg-nature-night/95 dark:bg-[#0b0d17]/95 backdrop-blur-xl border border-amber-honey/40 rounded-2xl p-2 shadow-2xl flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-none max-w-[calc(100%-75px)]">
+                                    {selectedSeats.map((seat: any) => {
+                                      const seatLabel = getSeatDisplayText(seat) || `Asiento ${seat.row}${seat.number}`;
+                                      return (
+                                        <div
+                                          key={String(seat.id)}
+                                          className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-honey/20 border border-amber-honey/40 text-amber-honey rounded-xl text-[11px] font-black shrink-0 animate-fadeIn"
+                                        >
+                                          <span className="truncate max-w-[120px]">{seatLabel}</span>
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedSeats(prev => prev.filter(s => String(s.id) !== String(seat.id)));
+                                            }}
+                                            className="w-6 h-6 rounded-full bg-amber-honey/30 active:bg-red-500 active:text-white flex items-center justify-center text-xs font-bold transition-colors"
+                                            title="Quitar asiento"
+                                            aria-label={`Quitar ${seatLabel}`}
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedSeats([])}
+                                    className="px-2.5 py-1.5 bg-red-500/20 active:bg-red-500/30 border border-red-500/30 text-red-400 rounded-xl text-[10px] font-black uppercase tracking-wider shrink-0 transition-colors"
+                                  >
+                                    Vaciar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="p-8 md:p-12 rounded-[2.5rem] border border-amber-honey/30 bg-nature-night/[0.02] dark:bg-white/[0.02] shadow-2xl space-y-6 text-center">
@@ -1603,23 +1639,30 @@ const TourPage = () => {
               )}
 
               <div className="mt-6 w-full">
-                <PremiumCTAButton
-                  disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
-                  onClick={handleProceedToCheckout}
-                >
-                  <span className="text-sm md:text-base font-black uppercase tracking-[0.2em] block">
-                    {isCurrentEventPast
-                      ? 'Venta Finalizada'
-                      : (baseTotal === 0 && appliedCoupon
-                        ? 'Reclamar Entrada VIP'
-                        : (checkoutTotal > 0
-                          ? `Pagar $${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`
-                          : 'Proceder al Pago'
+                {isOnlineSalesClosed ? (
+                  <BoxOfficeCutoffBanner
+                    venueName={currentEvent?.venue_name || 'London Pub'}
+                    doorsOpenTime={currentEvent?.local_doors_open ? new Date(currentEvent.local_doors_open).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '19:00 hrs'}
+                  />
+                ) : (
+                  <PremiumCTAButton
+                    disabled={isCurrentEventPast || (isMeetGreet ? false : (ticketMode === 'seatless' ? seatlessQuantity < 1 : selectedSeats.length === 0))}
+                    onClick={handleProceedToCheckout}
+                  >
+                    <span className="text-sm md:text-base font-black uppercase tracking-[0.2em] block">
+                      {isCurrentEventPast
+                        ? 'Venta Finalizada'
+                        : (baseTotal === 0 && appliedCoupon
+                          ? 'Reclamar Entrada VIP'
+                          : (checkoutTotal > 0
+                            ? `Pagar $${checkoutTotal.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MXN`
+                            : 'Proceder al Pago'
+                          )
                         )
-                      )
-                    }
-                  </span>
-                </PremiumCTAButton>
+                      }
+                    </span>
+                  </PremiumCTAButton>
+                )}
               </div>
             </motion.div>
           </div>
@@ -2155,6 +2198,76 @@ const TourPage = () => {
                 >
                   <X size={16} />
                   <span>Retirar cupón (mantener boletos a tarifa regular)</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ─── MODAL DE CONFIRMACIÓN: AVISO DE ASIENTO INDIVIDUAL EN MESA ─── */}
+      <AnimatePresence>
+        {isOrphanModalOpen && (
+          <div className="fixed inset-0 z-[120] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md rounded-[2.5rem] bg-gradient-to-b from-[#181a24] to-[#0e101a] border border-amber-500/30 p-6 md:p-8 shadow-2xl text-white backdrop-blur-2xl space-y-6 overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-36 h-36 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-36 h-36 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 shadow-lg shadow-amber-500/10">
+                  <AlertTriangle size={24} className="animate-pulse" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-400 block mb-1">
+                    Aviso de Asignación
+                  </span>
+                  <h3 className="text-xl font-black uppercase tracking-tight text-white leading-tight">
+                    Aviso de Asiento Individual en Mesa
+                  </h3>
+                </div>
+              </div>
+
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-xs leading-relaxed text-slate-300 space-y-2">
+                <p>
+                  Tu selección deja <strong className="text-amber-300 font-bold">1 asiento disponible</strong> en {orphanSeatDetails?.tableLabel || 'la mesa'} {orphanSeatDetails?.seatNumbers ? `(${orphanSeatDetails.seatNumbers})` : ''}.
+                </p>
+                <p className="text-slate-400">
+                  ¿Deseas continuar con tu compra o prefieres seleccionar la mesa completa para disfrutar el espacio exclusivo?
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                {orphanSeatDetails?.orphanSeats && orphanSeatDetails.orphanSeats.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleAddRemainingOrphanSeats}
+                    className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-gradient-to-r from-amber-400 via-amber-honey to-amber-500 text-slate-950 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-amber-400/20 flex items-center justify-center gap-2"
+                  >
+                    <Plus size={16} />
+                    Añadir asiento restante a mi orden
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleConfirmOrphanOverride}
+                  className="w-full py-3.5 px-4 rounded-xl text-xs font-black uppercase tracking-wider bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Check size={16} />
+                  Continuar de todos modos
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDismissOrphanModal}
+                  className="w-full py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-colors text-center"
+                >
+                  Modificar selección en el mapa
                 </button>
               </div>
             </motion.div>

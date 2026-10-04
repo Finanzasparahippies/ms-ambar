@@ -340,11 +340,15 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
     return () => observer.disconnect();
   }, []);
 
-  // Re-fit when initial seats/elements load or if zoom is disabled
+  // Re-fit when initial seats/elements load from async API
+  const prevItemCountRef = useRef<number>(0);
   useEffect(() => {
-    if ((seats.length > 0 || elements.length > 0) && (!hasAutoFittedRef.current || !allowZoom)) {
+    const currentCount = seats.length + elements.length;
+    if (currentCount > 0 && (prevItemCountRef.current === 0 || !hasAutoFittedRef.current || !allowZoom)) {
       handleFitToView();
+      hasAutoFittedRef.current = true;
     }
+    prevItemCountRef.current = currentCount;
   }, [seats.length, elements.length, allowZoom, handleFitToView]);
 
   // Non-passive native wheel listener with constrained zoom/pan bounds
@@ -948,14 +952,15 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
         ctx.restore();
       }
 
-      // Regla Anti-Asiento Huérfano: Resaltar en ámbar preventivo si este asiento quedaría aislado
+      // Regla Anti-Asiento Huérfano: Resaltar con pulso ámbar preventivo si este asiento quedaría aislado
       const isOrphanSeat = orphanSeatSet.has(String(seat.id));
       if (isOrphanSeat && !isSelected) {
         ctx.save();
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = '#D97706';
-        ctx.strokeStyle = '#D97706';
-        ctx.lineWidth = 2.5;
+        const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 250);
+        ctx.shadowBlur = 10 + 6 * pulse;
+        ctx.shadowColor = '#F59E0B';
+        ctx.strokeStyle = '#F59E0B';
+        ctx.lineWidth = 2.2 + 0.8 * pulse;
         ctx.setLineDash([4, 3]);
         ctx.beginPath();
         ctx.roundRect(-14, -14, 28, 28, 8);
@@ -964,10 +969,10 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
       }
 
       if (isSelected) {
-        fillColor = '#2563EB';
+        fillColor = '#10B981';
         strokeColor = '#ffffff';
         ctx.shadowBlur = 14;
-        ctx.shadowColor = '#2563EB';
+        ctx.shadowColor = '#10B981';
       } else if (isHovered && !isOccupied && isAllowedByRestriction) {
         fillColor = '#38bdf8';
         strokeColor = '#ffffff';
@@ -1384,7 +1389,7 @@ const SeatingChart: React.FC<SeatingChartProps> = ({
   const cursorClass = isPanning ? 'cursor-grabbing' : (activeTool !== 'select' || hoveredId) ? 'cursor-pointer' : 'cursor-default';
 
   return (
-    <div ref={containerRef} className={cn("w-full h-full relative overflow-hidden transition-colors duration-500", theme === 'dark' ? "bg-[#0b0d17]" : "bg-white", cursorClass)} onContextMenu={(e) => e.preventDefault()}>
+    <div ref={containerRef} className={cn("w-full h-full min-h-[350px] relative overflow-hidden transition-colors duration-500", theme === 'dark' ? "bg-[#0b0d17]" : "bg-white", cursorClass)} onContextMenu={(e) => e.preventDefault()}>
       <canvas
         ref={canvasRef}
         onMouseDown={handleMouseDown}

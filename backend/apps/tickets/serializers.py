@@ -156,6 +156,7 @@ class EventSerializer(serializers.ModelSerializer):
     numbered_seat_base_price = serializers.SerializerMethodField()
     price_with_fee = serializers.SerializerMethodField()
     theme_config = serializers.ReadOnlyField(source='get_theme_config')
+    is_cutoff_reached = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -165,7 +166,8 @@ class EventSerializer(serializers.ModelSerializer):
             'venue_name', 'venue_address', 'duration_minutes',
             'theater', 'theater_name', 'theater_location',
             'image', 'image_url', 'flyer', 'flyer_url',
-            'is_active', 'mg_price', 'mg_limit', 'mg_available',
+            'is_active', 'is_online_sales_active', 'cutoff_datetime', 'is_cutoff_reached',
+            'mg_price', 'mg_limit', 'mg_available',
             'allow_seatless_tickets', 'allow_numbered_tickets', 'seatless_ticket_price', 'numbered_ticket_price',
             'enable_dynamic_pricing', 'monthly_price_increment', 'effective_seatless_ticket_price',
             'price_multiplier', 'event_type',
@@ -268,6 +270,16 @@ class EventSerializer(serializers.ModelSerializer):
             logging.getLogger('apps.tickets').warning(f"Error al serializar local_doors_open para Event #{obj.id}: {exc}")
             return obj.doors_open.isoformat() if obj.doors_open else None
 
+    def get_is_cutoff_reached(self, obj):
+        try:
+            return bool(obj.is_cutoff_reached())
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').warning(
+                f"[SERIALIZER] Fallo evaluando is_cutoff_reached para Event #{getattr(obj, 'id', 'N/A')}: {exc}"
+            )
+            return not getattr(obj, 'is_online_sales_active', True)
+
     def get_base_price(self, obj):
         return obj.base_price
 
@@ -277,6 +289,20 @@ class EventSerializer(serializers.ModelSerializer):
     def get_price_with_fee(self, obj):
         """Returns fee breakdown for the lowest-priced ticket in this event."""
         return calculate_total_with_fee(obj.base_price)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        try:
+            cutoff_reached = bool(instance.is_cutoff_reached())
+            data['is_cutoff_reached'] = cutoff_reached
+            if cutoff_reached:
+                data['is_online_sales_active'] = False
+        except Exception as exc:
+            import logging
+            logging.getLogger('apps.tickets').warning(
+                f"[SERIALIZER] Error evaluando is_cutoff_reached en to_representation para Event #{getattr(instance, 'id', 'N/A')}: {exc}"
+            )
+        return data
 
 
 class TicketSerializer(serializers.ModelSerializer):
@@ -575,5 +601,25 @@ class AdminTicketSerializer(serializers.ModelSerializer):
             'discount_value': float(c.discount_value),
             'is_complimentary': c.is_complimentary
         }
+
+
+class CheckoutRequestSerializer(serializers.Serializer):
+    """
+    Especificación de contrato estricto para iniciación de compras / reservas.
+    Soporta el flag `allow_orphan_seat` para transformar el bloqueo en aviso permisivo.
+    """
+    email = serializers.EmailField(required=True)
+    event_id = serializers.IntegerField(required=True)
+    seat_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False,
+        default=list
+    )
+    quantity = serializers.IntegerField(default=1, min_value=1)
+    phone = serializers.CharField(required=False, allow_blank=True, default='')
+    has_mg = serializers.BooleanField(default=False)
+    coupon_code = serializers.CharField(required=False, allow_blank=True, default='')
+    is_seatless = serializers.BooleanField(default=False)
+    allow_orphan_seat = serializers.BooleanField(default=False, required=False)
 
 

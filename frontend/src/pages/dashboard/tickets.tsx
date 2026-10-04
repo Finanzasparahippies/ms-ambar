@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../../lib/api';
 import { showAlert, showConfirm, showToast } from '../../lib/notifications';
 import TicketPass from '../../components/TicketPass';
+import DigitalBoxOfficeControl from '../../components/DigitalBoxOfficeControl';
+import ReservedSeatsManager from '../../components/dashboard/ReservedSeatsManager';
 
 interface AdminTicket {
   id: number;
@@ -76,6 +78,7 @@ export default function TicketsManagementPage() {
   const [selectedEventId, setSelectedEventId] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'issued' | 'reserved'>('issued');
 
   // Modal states
   const [activeModalTicket, setActiveModalTicket] = useState<AdminTicket | null>(null);
@@ -125,6 +128,18 @@ export default function TicketsManagementPage() {
       .catch(err => console.error('Error fetching events:', err));
   }, []);
 
+  const currentEvent = useMemo(() => {
+    if (!events || events.length === 0) return null;
+    if (selectedEventId && selectedEventId !== 'all') {
+      return events.find((e: any) => String(e.id) === String(selectedEventId)) || events[0];
+    }
+    return events[0] || null;
+  }, [events, selectedEventId]);
+
+  const handleEventUpdated = (updatedEvent: any) => {
+    setEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, ...updatedEvent } : e));
+  };
+
   // 4. Fetch Tickets with Backend Filters
   const fetchTickets = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -144,9 +159,15 @@ export default function TicketsManagementPage() {
         params.append('search', debouncedSearch);
       }
 
-      const res = await api.get(`/tickets/admin/tickets/?${params.toString()}`);
-      const data = Array.isArray(res.data) ? res.data : (res.data?.results || []);
+      const [ticketsRes, eventsRes] = await Promise.all([
+        api.get(`/tickets/admin/tickets/?${params.toString()}`),
+        api.get('/tickets/events/').catch(() => null)
+      ]);
+      const data = Array.isArray(ticketsRes.data) ? ticketsRes.data : (ticketsRes.data?.results || []);
       setTickets(data);
+      if (eventsRes?.data && Array.isArray(eventsRes.data)) {
+        setEvents(eventsRes.data);
+      }
     } catch (err: any) {
       console.error('Error fetching admin tickets:', err);
       showToast('Error al actualizar la lista de boletos.', 'error');
@@ -338,11 +359,16 @@ export default function TicketsManagementPage() {
             </div>
 
             <div className="flex items-center gap-3 flex-wrap">
+              <DigitalBoxOfficeControl
+                event={currentEvent}
+                onEventUpdated={handleEventUpdated}
+              />
+
               <button
                 type="button"
                 onClick={() => fetchTickets()}
                 disabled={refreshing}
-                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-black uppercase tracking-wider px-4 py-3 rounded-xl transition-all disabled:opacity-50"
+                className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-black uppercase tracking-wider px-4 py-3 rounded-xl transition-all disabled:opacity-50 cursor-pointer"
                 title="Actualizar datos"
               >
                 <RefreshCw size={14} className={refreshing ? 'animate-spin text-amber-honey' : 'text-amber-honey'} />
@@ -351,7 +377,7 @@ export default function TicketsManagementPage() {
 
               <Link
                 href="/dashboard/scan-tickets"
-                className="flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(229,169,59,0.2)] active:scale-95"
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-honey to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 text-xs font-black uppercase tracking-wider px-5 py-3 rounded-xl transition-all shadow-[0_4px_20px_rgba(229,169,59,0.2)] active:scale-95 cursor-pointer"
               >
                 <QrCode size={15} /> Escáner Puerta
               </Link>
@@ -421,8 +447,44 @@ export default function TicketsManagementPage() {
             </div>
           </div>
 
-          {/* Interactive Filters Bar (Dark Glass) */}
-          <div className="bg-[#0c0f0d]/90 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl space-y-4">
+          {/* View Mode Tabs: Boletos Emitidos vs. Butacas Reservadas */}
+          <div className="flex items-center gap-2 mb-6 p-1.5 bg-black/40 border border-white/10 rounded-2xl w-fit">
+            <button
+              type="button"
+              onClick={() => setActiveTab('issued')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === 'issued'
+                  ? 'bg-amber-honey text-slate-950 shadow-md shadow-amber-honey/20'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Ticket size={14} />
+              <span>Boletos Emitidos ({stats.total})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('reserved')}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                activeTab === 'reserved'
+                  ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <ShieldCheck size={14} />
+              <span>Butacas Reservadas / En Proceso</span>
+            </button>
+          </div>
+
+          {activeTab === 'reserved' ? (
+            <ReservedSeatsManager
+              selectedEventId={selectedEventId}
+              onSeatsReleased={() => fetchTickets()}
+            />
+          ) : (
+            <>
+              {/* Interactive Filters Bar (Dark Glass) */}
+              <div className="bg-[#0c0f0d]/90 backdrop-blur-md border border-white/10 rounded-2xl p-4 sm:p-5 mb-6 shadow-xl space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4">
               {/* Buscador en tiempo real con debounce 300ms */}
               <div className="md:col-span-5 relative">
@@ -739,6 +801,8 @@ export default function TicketsManagementPage() {
               </table>
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* ══════ MODAL: PASE DIGITAL INTERACTIVO CON QR FUNCIONAL ══════ */}
