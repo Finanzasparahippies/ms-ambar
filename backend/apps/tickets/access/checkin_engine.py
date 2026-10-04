@@ -88,7 +88,7 @@ def process_ticket_checkin(
         try:
             with transaction.atomic():
                 ticket = (
-                    Ticket.objects.select_for_update(nowait=False)
+                    Ticket.objects.select_for_update(nowait=False, of=('self',))
                     .select_related('event', 'seat', 'ga_zone', 'seat__theater')
                     .filter(token=ticket_uuid)
                     .first()

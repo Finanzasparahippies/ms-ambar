@@ -421,7 +421,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         try:
             with transaction.atomic():
-                ticket = Ticket.objects.select_for_update().select_related('event', 'seat', 'ga_zone').get(token=token)
+                ticket = Ticket.objects.select_for_update(of=('self',)).select_related('event', 'seat', 'ga_zone').get(token=token)
                 
                 if ticket.status not in ['paid', 'used']:
                     return Response({
@@ -1215,7 +1215,7 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
         loc_label = request.data.get('location_label', '')
 
         with transaction.atomic():
-            ticket = Ticket.objects.select_for_update().select_related('event', 'seat', 'ga_zone', 'used_coupon').get(pk=pk)
+            ticket = Ticket.objects.select_for_update(of=('self',)).select_related('event', 'seat', 'ga_zone', 'used_coupon').get(pk=pk)
 
             if ticket.status == 'cancelled':
                 return Response({
@@ -1263,7 +1263,7 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
             return Response({'error': 'El parámetro new_seat_id es obligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
-            ticket = Ticket.objects.select_for_update().select_related('event', 'seat').get(pk=pk)
+            ticket = Ticket.objects.select_for_update(of=('self',)).select_related('event', 'seat').get(pk=pk)
 
             if ticket.status == 'cancelled':
                 return Response({'error': 'No se puede reasignar un boleto cancelado.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1317,7 +1317,7 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
         reason = request.data.get('reason', 'Cancelación administrativa')
 
         with transaction.atomic():
-            ticket = Ticket.objects.select_for_update().select_related('event', 'seat').get(pk=pk)
+            ticket = Ticket.objects.select_for_update(of=('self',)).select_related('event', 'seat').get(pk=pk)
 
             if ticket.status == 'cancelled':
                 return Response({

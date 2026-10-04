@@ -226,6 +226,10 @@ show_help() {
     echo "  certbot                 - Request Let's Encrypt SSL certificate"
     echo ""
     echo "=== UTILITIES ==="
+    echo "  ticket-audit <token_or_id> - Diagnostic audit for ticket token/ID against Stripe in prod (--fix supported)"
+    echo "  ticket-cancel <id>         - Force ticket cancellation and seat release in prod"
+    echo "  reconcile-stripe-prod      - Reconcile unconfirmed/stuck reservations against Stripe API"
+    echo "  clear-locks-prod <event_id>- Flush Redis reservation locks and stale holds for an event"
     echo "  purge-bots              - Purge bot/spam subscribers in dev backend (supports --dry-run)"
     echo "  purge-bots-staging      - Purge bot/spam subscribers in staging backend"
     echo "  purge-bots-prod         - Purge bot/spam subscribers in production backend"
@@ -234,6 +238,42 @@ show_help() {
 }
 
 case $COMMAND in
+    ticket-audit|ticket-audit-prod)
+        run_django_cmd_prod audit_ticket_token "$@"
+        ;;
+    ticket-audit-staging)
+        run_django_cmd_staging audit_ticket_token "$@"
+        ;;
+    ticket-audit-dev)
+        run_django_cmd_dev audit_ticket_token "$@"
+        ;;
+    ticket-cancel|ticket-cancel-prod)
+        run_django_cmd_prod cancel_ticket "$@"
+        ;;
+    ticket-cancel-staging)
+        run_django_cmd_staging cancel_ticket "$@"
+        ;;
+    ticket-cancel-dev)
+        run_django_cmd_dev cancel_ticket "$@"
+        ;;
+    reconcile-stripe-prod)
+        run_django_cmd_prod reconcile_stripe "$@"
+        ;;
+    reconcile-stripe-staging)
+        run_django_cmd_staging reconcile_stripe "$@"
+        ;;
+    reconcile-stripe-dev)
+        run_django_cmd_dev reconcile_stripe "$@"
+        ;;
+    clear-locks-prod)
+        run_django_cmd_prod clear_event_locks "$@"
+        ;;
+    clear-locks-staging)
+        run_django_cmd_staging clear_event_locks "$@"
+        ;;
+    clear-locks-dev)
+        run_django_cmd_dev clear_event_locks "$@"
+        ;;
     purge-bots|purge-bots-dev)
         run_django_cmd_dev purge_spam_bots "$@"
         ;;
