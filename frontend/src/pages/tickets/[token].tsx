@@ -261,8 +261,8 @@ export default function TicketPage() {
                 <MobileWalletBadges
                   ticketToken={ticket.token}
                   ticketId={ticket.id}
-                  applePassUrl={ticket.apple_pass_url || `/api/tickets/${ticket.token}/apple-pass/`}
-                  googleWalletUrl={ticket.google_wallet_link_url || `/api/tickets/${ticket.token}/google-wallet-link/`}
+                  applePassUrl={getApiUrl(ticket.apple_pass_url || `/tickets/${ticket.token}/apple-pass/`)}
+                  googleWalletUrl={getApiUrl(ticket.google_wallet_link_url || `/tickets/${ticket.token}/google-wallet-link/`)}
                 />
               </div>
             </div>

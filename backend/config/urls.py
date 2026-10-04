@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/events/<int:pk>/', EventViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='event-detail-direct'),
     path('api/events/', EventViewSet.as_view({'get': 'list', 'post': 'create'}), name='event-list-direct'),
     path('api/tickets/', include('apps.tickets.urls')),
+    path('api/api/tickets/', include('apps.tickets.urls')),
     path('api/shop/', include('apps.shop.urls')),
     path('api/users/', include('apps.users.urls')),
     path('api/performance/', include('apps.performance.urls')),

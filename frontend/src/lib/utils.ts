@@ -5,34 +5,46 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getApiUrl(): string {
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
+export function getApiUrl(path?: string): string {
+  let base = process.env.NEXT_PUBLIC_API_URL || '';
 
-  if (typeof window !== 'undefined') {
+  if (!base && typeof window !== 'undefined') {
     const { origin, hostname, protocol, port } = window.location;
 
     // GitHub Codespaces support
     if (origin.includes('github.dev')) {
-      return origin.replace(port, '8000') + '/api';
+      base = origin.replace(port, '8000') + '/api';
+    } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      // Localhost development on desktop
+      base = 'http://localhost:8000/api';
+    } else if (port === '3000') {
+      // Direct access via IP address (e.g. mobile device on local network http://192.168.x.x:3000)
+      base = `${protocol}//${hostname}:8000/api`;
+    } else {
+      // Staging / Production / Reverse Proxy behind Nginx
+      base = `${origin}/api`;
     }
-
-    // Localhost development on desktop
-    if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://localhost:8000/api';
-    }
-
-    // Direct access via IP address (e.g. mobile device on local network http://192.168.x.x:3000)
-    if (port === '3000') {
-      return `${protocol}//${hostname}:8000/api`;
-    }
-
-    // Staging / Production / Reverse Proxy behind Nginx
-    return `${origin}/api`;
   }
 
-  return 'http://localhost:8000/api';
+  if (!base) {
+    base = 'http://localhost:8000/api';
+  }
+
+  const cleanBase = base.replace(/\/api\/?$/, '');
+
+  if (!path) {
+    return `${cleanBase}/api`;
+  }
+
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return path;
+  }
+
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (cleanPath.startsWith('/api/')) {
+    return `${cleanBase}${cleanPath}`;
+  }
+  return `${cleanBase}/api${cleanPath}`;
 }
 
 /**

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getApiUrl } from '../lib/utils';
 
 export interface MobileWalletBadgesProps {
   ticketToken: string;
@@ -44,10 +45,9 @@ export const AppleWalletButton: React.FC<{
   isPriority?: boolean;
   className?: string;
 }> = ({ ticketToken, ticketId, customUrl, isPriority = false, className = '' }) => {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || '';
   const downloadUrl = customUrl
-    ? (customUrl.startsWith('http') ? customUrl : `${apiBase}${customUrl}`)
-    : `${apiBase}/api/tickets/${ticketToken}/apple-pass/`;
+    ? getApiUrl(customUrl)
+    : getApiUrl(`/tickets/${ticketToken}/apple-pass/`);
 
   const filename = `ms-ambar-ticket-${ticketId || ticketToken}.pkpass`;
 
@@ -119,8 +119,8 @@ export const MobileWalletBadges: React.FC<MobileWalletBadgesProps> = ({
 
     try {
       const endpoint = googleWalletUrl
-        ? (googleWalletUrl.startsWith('http') ? googleWalletUrl : `${apiBase}${googleWalletUrl}`)
-        : `${apiBase}/api/tickets/${ticketToken}/google-wallet-link/`;
+        ? getApiUrl(googleWalletUrl)
+        : getApiUrl(`/tickets/${ticketToken}/google-wallet-link/`);
 
       const res = await fetch(endpoint);
       if (!res.ok) {
