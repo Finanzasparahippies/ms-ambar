@@ -46,13 +46,21 @@ def extract_table_label(seat):
     return table_label
 
 
-def format_seat_assignment(seat):
+def format_seat_assignment(seat_or_ticket):
     """
     Formato canónico de asignación de asiento sin duplicaciones:
     'Sección VIP · Fila: F · Mesa: 4 · Asiento: 13'
+    Soporta instancias tanto de Seat como de Ticket.
     """
-    if not seat:
+    if not seat_or_ticket:
         return ""
+
+    seat = getattr(seat_or_ticket, 'seat', seat_or_ticket)
+    if not seat:
+        ga_zone = getattr(seat_or_ticket, 'ga_zone', None)
+        if ga_zone:
+            return f"Entrada General · {ga_zone.name}"
+        return "Entrada General (De pie)"
 
     parts = []
 

@@ -96,12 +96,12 @@ class Command(BaseCommand):
         self.stdout.write(f"\n{self.style.SUCCESS('[4. SEGURIDAD QR]')}")
         try:
             qr_payload = generate_qr_payload(ticket, format_type='compact')
-            is_valid, claims = verify_qr_payload(qr_payload)
+            qr_res = verify_qr_payload(qr_payload)
             self.stdout.write(f"  • Payload Compacto:{qr_payload[:40]}... (Total: {len(qr_payload)} chars)")
-            if is_valid:
+            if qr_res.get("valid"):
                 self.stdout.write(self.style.SUCCESS(f"  • Validación HMAC: ✅ VÁLIDA (Firmado con SHA-256)"))
             else:
-                self.stdout.write(self.style.ERROR(f"  • Validación HMAC: ❌ INVÁLIDA o expirada"))
+                self.stdout.write(self.style.ERROR(f"  • Validación HMAC: ❌ INVÁLIDA: {qr_res.get('error')}"))
         except Exception as qr_err:
             self.stdout.write(self.style.ERROR(f"  • Error QR: {qr_err}"))
 
@@ -139,7 +139,8 @@ class Command(BaseCommand):
         self.stdout.write(f"  • SA Key File:   {sa_file or 'No configurado'} ({'EXISTE' if sa_file and os.path.exists(sa_file) else 'NO ENCONTRADO'})")
         try:
             gw_svc = GoogleWalletService()
-            save_url = gw_svc.generate_save_url(ticket)
+            gw_res = gw_svc.generate_save_url(ticket)
+            save_url = gw_res.get('save_url', '') if isinstance(gw_res, dict) else str(gw_res)
             self.stdout.write(self.style.SUCCESS(
                 f"  • Save URL JWT:  ✅ GENERADA ({save_url[:50]}...)"
             ))
