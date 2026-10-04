@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import Suscribirse from '../pages/suscribirse';
@@ -65,14 +65,18 @@ describe('Suscribirse Page Component', () => {
     const postPromise = new Promise((resolve) => { resolvePost = resolve; });
     mockedApi.post.mockImplementationOnce(() => postPromise as any);
 
-    render(<Suscribirse />);
+    await act(async () => {
+      render(<Suscribirse />);
+    });
 
     const nameInput = screen.getByPlaceholderText('Tu Nombre');
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
-    await user.type(nameInput, 'Juan');
-    await user.type(emailInput, 'juan@example.com');
+    await act(async () => {
+      await user.type(nameInput, 'Juan');
+      await user.type(emailInput, 'juan@example.com');
+    });
 
     await act(async () => {
       await user.click(submitButton);
@@ -113,16 +117,20 @@ describe('Suscribirse Page Component', () => {
   test('simulates success in UI and cancels API post if honeypot website_hp is filled by a bot', async () => {
     const user = userEvent.setup();
 
-    render(<Suscribirse />);
+    await act(async () => {
+      render(<Suscribirse />);
+    });
 
     const nameInput = screen.getByPlaceholderText('Tu Nombre');
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const honeypotInput = document.querySelector('input[name="website_hp"]') as HTMLInputElement;
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
-    await user.type(nameInput, 'BotName');
-    await user.type(emailInput, 'spammer@botdomain.com');
-    await user.type(honeypotInput, 'http://spam-link.com');
+    await act(async () => {
+      await user.type(nameInput, 'BotName');
+      await user.type(emailInput, 'spammer@botdomain.com');
+      fireEvent.change(honeypotInput, { target: { value: 'http://spam-link.com' } });
+    });
 
     await act(async () => {
       await user.click(submitButton);
@@ -147,14 +155,18 @@ describe('Suscribirse Page Component', () => {
       }
     });
 
-    render(<Suscribirse />);
+    await act(async () => {
+      render(<Suscribirse />);
+    });
 
     const nameInput = screen.getByPlaceholderText('Tu Nombre');
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
-    await user.type(nameInput, 'Luis');
-    await user.type(emailInput, 'luis@example.com');
+    await act(async () => {
+      await user.type(nameInput, 'Luis');
+      await user.type(emailInput, 'luis@example.com');
+    });
 
     await act(async () => {
       await user.click(submitButton);
@@ -179,14 +191,18 @@ describe('Suscribirse Page Component', () => {
       }
     });
 
-    render(<Suscribirse />);
+    await act(async () => {
+      render(<Suscribirse />);
+    });
 
     const nameInput = screen.getByPlaceholderText('Tu Nombre');
     const emailInput = screen.getByPlaceholderText('Tu Correo Electrónico');
     const submitButton = screen.getByRole('button', { name: /Suscribirse/i });
 
-    await user.type(nameInput, 'María');
-    await user.type(emailInput, 'maria@example.com');
+    await act(async () => {
+      await user.type(nameInput, 'María');
+      await user.type(emailInput, 'maria@example.com');
+    });
 
     await act(async () => {
       await user.click(submitButton);

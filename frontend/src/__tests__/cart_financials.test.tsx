@@ -50,12 +50,18 @@ describe('Cart Financials & Shipping State Machine', () => {
     mockedApi.get.mockResolvedValue({ data: { default_packaging_type: 'box' } });
   });
 
-  test('does NOT add fallback shipping cost prematurely when cart has items requiring shipping', () => {
+  test('does NOT add fallback shipping cost prematurely when cart has items requiring shipping', async () => {
+    (api.get as jest.Mock).mockResolvedValue({ data: { default_packaging_type: 'envelope' } });
+
     render(
       <CartProvider>
         <TestCartComponent />
       </CartProvider>
     );
+
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith('/shop/shipping/config/');
+    });
 
     // Initial: empty
     expect(screen.getByTestId('requires-shipping')).toHaveTextContent('no');
@@ -72,16 +78,24 @@ describe('Cart Financials & Shipping State Machine', () => {
   });
 
   test('displays "Por calcular" and prompts to enter shipping address in cart footer', async () => {
+    (api.get as jest.Mock).mockResolvedValue({ data: { default_packaging_type: 'envelope' } });
+
     render(
       <CartProvider>
         <TestCartComponent />
       </CartProvider>
     );
 
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith('/shop/shipping/config/');
+    });
+
     fireEvent.click(screen.getByText('Agregar Playera'));
     fireEvent.click(screen.getByText('Abrir Carrito'));
 
-    expect(screen.getByText('Por calcular')).toBeInTheDocument();
-    expect(screen.getByText('Ingresar dirección de envío')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Por calcular')).toBeInTheDocument();
+      expect(screen.getByText('Ingresar dirección de envío')).toBeInTheDocument();
+    });
   });
 });
