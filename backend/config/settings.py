@@ -538,7 +538,12 @@ NECTAR_API_KEY = env("NECTAR_API_KEY", default=NECTAR_SECRET_KEY)
 # ------------------------------------------------------------------------------
 # 8. CONTROL DE ACCESOS CRIPTOGRÁFICO Y BILLETERAS MÓVILES (APPLE & GOOGLE)
 # ------------------------------------------------------------------------------
-QR_HMAC_SECRET_KEY = env("QR_HMAC_SECRET_KEY", default=SECRET_KEY)
+_raw_qr_hmac = env("QR_HMAC_SECRET_KEY", default=SECRET_KEY)
+if len(_raw_qr_hmac.encode('utf-8')) < 32:
+    import hashlib
+    QR_HMAC_SECRET_KEY = hashlib.sha256(_raw_qr_hmac.encode('utf-8')).hexdigest()
+else:
+    QR_HMAC_SECRET_KEY = _raw_qr_hmac
 
 # Apple Wallet (PassKit PKCS#7)
 APPLE_PASS_TYPE_ID = env("APPLE_PASS_TYPE_ID", default="pass.com.msambar.tickets")

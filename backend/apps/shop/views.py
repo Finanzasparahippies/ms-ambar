@@ -251,7 +251,7 @@ def handle_successful_payment(session):
                     logger.critical(f"[CHECKOUT/REFUND_FAILED] Falló reembolso de Stripe para PI {payment_intent}: {refund_err}")
 
             if session_id:
-                Ticket.objects.filter(stripe_session_id=session_id).update(status='cancelled')
+                Ticket.objects.filter(stripe_session_id=session_id).update(status='cancelled', seat=None)
             return
 
         logger.info(f"[CHECKOUT/STRIPE_WEBHOOK] [Email: {user_email} | EventID: {event_id} | TicketUUID: - | StripeID: {session_id}] Pago exitoso procesado. Payment Intent: {session.get('payment_intent')}, Estado: paid")

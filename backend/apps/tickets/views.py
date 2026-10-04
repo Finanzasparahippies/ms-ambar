@@ -1,5 +1,5 @@
 from django.utils import timezone
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
@@ -740,6 +740,9 @@ class TicketViewSet(viewsets.ModelViewSet):
                 logger.warning(f"[CHECKOUT/REJECTED] Asientos ocupados {list(occupied_seat_ids)} intentados por {email}")
                 return Response({'error': 'Uno o más asientos ya están reservados o pagados.'}, status=status.HTTP_400_BAD_REQUEST)
 
+            # Desvincular de inmediato asientos asociados a boletos cancelados para liberar la tupla (event, seat)
+            Ticket.objects.filter(event=event, seat_id__in=seat_ids, status='cancelled').update(seat=None)
+
             # Prevención de Asiento Huérfano (Orphan Seat Prevention / Soft Warning)
             allow_orphan_seat = bool(request.data.get('allow_orphan_seat', False))
             from apps.tickets.services.coupon_validator import check_orphan_seats
@@ -885,31 +888,44 @@ class TicketViewSet(viewsets.ModelViewSet):
                         created_vip_tickets.append(ticket)
                         logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: Sin asiento, Tipo: VIP")
                 else:
-                    locked_seats = list(Seat.objects.select_for_update(nowait=False).filter(id__in=[s.id for s in seats]))
-                    already_taken = Ticket.objects.filter(
-                        event=event,
-                        seat__in=locked_seats,
-                        status__in=['paid', 'reserved']
-                    ).exists()
-                    if already_taken:
-                        logger.warning(f"[CHECKOUT/REJECTED] Asientos ocupados concurrentemente durante lock: {[s.id for s in locked_seats]}")
-                        return Response({'error': 'Uno o más asientos acaban de ser ocupados por otra orden.'}, status=status.HTTP_400_BAD_REQUEST)
-
-                    for seat in locked_seats:
-                        ticket = Ticket.objects.create(
+                    try:
+                        locked_seats = list(Seat.objects.select_for_update(of=('self',), nowait=False).filter(id__in=[s.id for s in seats]))
+                        already_taken = Ticket.objects.select_for_update(of=('self',)).filter(
                             event=event,
-                            seat=seat,
-                            ga_zone=None,
-                            used_coupon=coupon_locked,
-                            user_email=email,
-                            user_phone=phone,
-                            status='paid',
-                            has_mg=has_mg,
-                            stripe_session_id=vip_session_id,
-                            amount_paid=0.00
-                        )
-                        created_vip_tickets.append(ticket)
-                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: VIP")
+                            seat__in=locked_seats,
+                            status__in=['paid', 'reserved']
+                        ).exists()
+                        if already_taken:
+                            logger.warning(f"[CHECKOUT/REJECTED] Asientos ocupados concurrentemente durante lock: {[s.id for s in locked_seats]}")
+                            return Response({
+                                'error': 'Uno o más asientos acaban de ser ocupados por otra orden.',
+                                'code': 'SEAT_ALREADY_TAKEN'
+                            }, status=status.HTTP_409_CONFLICT)
+
+                        # Purgar boletos cancelados previos para evitar violación de unique_together
+                        Ticket.objects.filter(event=event, seat__in=locked_seats, status='cancelled').delete()
+
+                        for seat in locked_seats:
+                            ticket = Ticket.objects.create(
+                                event=event,
+                                seat=seat,
+                                ga_zone=None,
+                                used_coupon=coupon_locked,
+                                user_email=email,
+                                user_phone=phone,
+                                status='paid',
+                                has_mg=has_mg,
+                                stripe_session_id=vip_session_id,
+                                amount_paid=0.00
+                            )
+                            created_vip_tickets.append(ticket)
+                            logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto VIP generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: VIP")
+                    except IntegrityError as ie:
+                        logger.error(f"[CHECKOUT/INTEGRITY_ERROR] Colisión de clave única al emitir cortesía VIP para {email}: {ie}")
+                        return Response({
+                            'error': 'Uno o más asientos acaban de ser tomados en otra transacción concurrente. Por favor selecciona otros asientos.',
+                            'code': 'SEAT_COLLISION'
+                        }, status=status.HTTP_409_CONFLICT)
 
                 try:
                     from apps.blog.utils import add_buyer_to_event_marketing_list
@@ -995,8 +1011,16 @@ class TicketViewSet(viewsets.ModelViewSet):
                 session_url = session.url
                 client_secret = getattr(session, 'client_secret', None) or session_id
             except Exception as e:
-                delivery_logger.warning(f"Error creating Stripe checkout session, falling back to mock: {e}")
-                use_mock = True
+                logger.error(f"[CHECKOUT/STRIPE_ERROR] Error al crear sesión de checkout de Stripe: {e}", exc_info=True)
+                if getattr(settings, 'TESTING', False):
+                    delivery_logger.warning("Fallo en Stripe durante TESTING, cayendo en mock.")
+                    use_mock = True
+                else:
+                    return Response({
+                        'error': 'No se pudo inicializar la pasarela de pagos seguros. Por favor intenta de nuevo en unos momentos.',
+                        'code': 'STRIPE_GATEWAY_ERROR',
+                        'detail': str(e)
+                    }, status=status.HTTP_502_BAD_GATEWAY)
 
         if use_mock:
             import uuid
@@ -1035,24 +1059,37 @@ class TicketViewSet(viewsets.ModelViewSet):
                         tipo_boleto = "VIP" if (is_comp or ticket.has_mg) else "Seatless"
                         logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: Sin asiento, Tipo: {tipo_boleto}")
                 else:
-                    for item in pricing['items']:
-                        seat = seat_map.get(item['seat_id'])
-                        is_comp = item['is_complimentary']
-                        ticket = Ticket.objects.create(
-                            event=event,
-                            seat=seat,
-                            ga_zone=None,
-                            used_coupon=coupon_obj if is_comp else None,
-                            user_email=email,
-                            user_phone=phone,
-                            status='paid',
-                            has_mg=has_mg,
-                            stripe_session_id=mock_session_id,
-                            amount_paid=0.00 if is_comp else item['final_price']
-                        )
-                        created_mock_tickets.append(ticket)
-                        tipo_boleto = "VIP" if (is_comp or ticket.has_mg) else "General"
-                        logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: {tipo_boleto}")
+                    try:
+                        # Desvincular de forma segura boletos cancelados previos de estas butacas
+                        seat_objs = [seat_map[item['seat_id']] for item in pricing['items'] if item.get('seat_id') in seat_map]
+                        Ticket.objects.filter(event=event, seat__in=seat_objs, status='cancelled').update(seat=None)
+
+                        for item in pricing['items']:
+                            seat = seat_map.get(item['seat_id'])
+                            is_comp = item['is_complimentary']
+                            # Asegurar desvinculación a nivel butaca individual
+                            Ticket.objects.filter(event=event, seat=seat, status='cancelled').update(seat=None)
+                            ticket = Ticket.objects.create(
+                                event=event,
+                                seat=seat,
+                                ga_zone=None,
+                                used_coupon=coupon_obj if is_comp else None,
+                                user_email=email,
+                                user_phone=phone,
+                                status='paid',
+                                has_mg=has_mg,
+                                stripe_session_id=mock_session_id,
+                                amount_paid=0.00 if is_comp else item['final_price']
+                            )
+                            created_mock_tickets.append(ticket)
+                            tipo_boleto = "VIP" if (is_comp or ticket.has_mg) else "General"
+                            logger.info(f"[TICKET/GENERATE] [Email: {ticket.user_email} | EventID: {ticket.event.id} | TicketUUID: {ticket.token} | StripeID: {ticket.stripe_session_id}] Boleto Mock generado. Asiento: {ticket.seat.row}{ticket.seat.number if ticket.seat else 'Sin asiento'}, Tipo: {tipo_boleto}")
+                    except IntegrityError as ie:
+                        logger.error(f"[CHECKOUT/INTEGRITY_ERROR] Colisión de clave única en mock checkout para {email}: {ie}")
+                        return Response({
+                            'error': 'Uno o más asientos acaban de ser tomados en otra transacción concurrente. Por favor selecciona otros asientos.',
+                            'code': 'SEAT_COLLISION'
+                        }, status=status.HTTP_409_CONFLICT)
 
             try:
                 from apps.blog.utils import add_buyer_to_event_marketing_list
@@ -1090,38 +1127,66 @@ class TicketViewSet(viewsets.ModelViewSet):
                     name=f"ticket-delivery-{mock_session_id[:8]}"
                 ).start()
         else:
-            # Pre-creación de boletos reservados para Stripe Real
-            if event.event_type != 'meet_greet' and not is_seatless:
-                for item in pricing['items']:
-                    seat = seat_map.get(item['seat_id'])
-                    is_comp = item['is_complimentary']
-                    Ticket.objects.create(
-                        event=event,
-                        seat=seat,
-                        ga_zone=None,
-                        used_coupon=coupon_obj if is_comp else None,
-                        user_email=email,
-                        user_phone=phone,
-                        status='reserved',
-                        has_mg=has_mg,
-                        stripe_session_id=session_id,
-                        amount_paid=0.00 if is_comp else None
-                    )
-            elif is_seatless and event.event_type != 'meet_greet':
-                for item in pricing['items']:
-                    is_comp = item['is_complimentary']
-                    Ticket.objects.create(
-                        event=event,
-                        seat=None,
-                        ga_zone=None,
-                        used_coupon=coupon_obj if is_comp else None,
-                        user_email=email,
-                        user_phone=phone,
-                        status='reserved',
-                        has_mg=has_mg,
-                        stripe_session_id=session_id,
-                        amount_paid=0.00 if is_comp else None
-                    )
+            # Pre-creación de boletos reservados para Stripe Real bajo transacción atómica
+            try:
+                with transaction.atomic():
+                    if event.event_type != 'meet_greet' and not is_seatless:
+                        seat_objs = [seat_map[item['seat_id']] for item in pricing['items'] if item.get('seat_id') in seat_map]
+                        locked_seats = list(Seat.objects.select_for_update(of=('self',), nowait=False).filter(id__in=[s.id for s in seat_objs]))
+
+                        existing_active = Ticket.objects.select_for_update(of=('self',)).filter(
+                            event=event,
+                            seat__in=locked_seats,
+                            status__in=['paid', 'reserved']
+                        )
+                        if existing_active.exists():
+                            occupied_ids = list(existing_active.values_list('seat_id', flat=True))
+                            logger.warning(f"[CHECKOUT/CONFLICT] Asientos ya ocupados durante reserva de Stripe: {occupied_ids}")
+                            return Response({
+                                'error': 'Uno o más asientos acaban de ser ocupados por otra orden.',
+                                'code': 'SEAT_ALREADY_TAKEN',
+                                'occupied_seats': occupied_ids
+                            }, status=status.HTTP_409_CONFLICT)
+
+                        # Purgar de forma segura boletos cancelados previos para evitar violación de unique_together
+                        Ticket.objects.filter(event=event, seat__in=locked_seats, status='cancelled').delete()
+
+                        for item in pricing['items']:
+                            seat = seat_map.get(item['seat_id'])
+                            is_comp = item['is_complimentary']
+                            Ticket.objects.create(
+                                event=event,
+                                seat=seat,
+                                ga_zone=None,
+                                used_coupon=coupon_obj if is_comp else None,
+                                user_email=email,
+                                user_phone=phone,
+                                status='reserved',
+                                has_mg=has_mg,
+                                stripe_session_id=session_id,
+                                amount_paid=0.00 if is_comp else None
+                            )
+                    elif is_seatless and event.event_type != 'meet_greet':
+                        for item in pricing['items']:
+                            is_comp = item['is_complimentary']
+                            Ticket.objects.create(
+                                event=event,
+                                seat=None,
+                                ga_zone=None,
+                                used_coupon=coupon_obj if is_comp else None,
+                                user_email=email,
+                                user_phone=phone,
+                                status='reserved',
+                                has_mg=has_mg,
+                                stripe_session_id=session_id,
+                                amount_paid=0.00 if is_comp else None
+                            )
+            except IntegrityError as ie:
+                logger.error(f"[CHECKOUT/INTEGRITY_ERROR] Colisión de clave única al crear boletos reservados para {email}: {ie}")
+                return Response({
+                    'error': 'Uno o más asientos acaban de ser tomados en otra transacción concurrente. Por favor selecciona otros asientos.',
+                    'code': 'SEAT_COLLISION'
+                }, status=status.HTTP_409_CONFLICT)
 
         serializer_data = self.get_serializer(created_mock_tickets, many=True).data if use_mock else []
         return Response({
@@ -1471,7 +1536,8 @@ class TicketManagementViewSet(viewsets.ModelViewSet):
 
             old_seat = ticket.seat
             ticket.status = 'cancelled'
-            ticket.save(update_fields=['status'])
+            ticket.seat = None
+            ticket.save(update_fields=['status', 'seat'])
 
             logger.info(
                 f"[ADMIN/CANCEL] Ticket #{ticket.id} ({ticket.user_email}) cancelado por admin {request.user.username}. Motivo: {reason}."

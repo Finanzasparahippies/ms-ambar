@@ -1,7 +1,7 @@
 import uuid
 from datetime import timedelta
 from unittest.mock import patch, MagicMock
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
@@ -153,3 +153,51 @@ class ReservedSeatsReleaseEngineTestCase(TestCase):
         t1.refresh_from_db()
         self.assertEqual(t1.status, 'cancelled')
         self.assertIsNone(t1.seat)
+
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_validkey123', STRIPE_WEBHOOK_SECRET='whsec_validkey123')
+    @patch('apps.shop.utils.create_ticket_checkout_session')
+    def test_checkout_repurchase_cancelled_seat(self, mock_stripe_session):
+        """
+        Valida que una butaca previamente vinculada a un boleto cancelado
+        pueda ser comprada de nuevo mediante checkout() sin lanzar IntegrityError ni HTTP 500.
+        """
+        mock_session = MagicMock()
+        mock_session.id = "cs_test_repurchase_123"
+        mock_session.url = "https://checkout.stripe.com/pay/cs_test_repurchase_123"
+        mock_session.client_secret = "cs_test_repurchase_123_secret"
+        mock_stripe_session.return_value = mock_session
+
+        # 1. Simular un boleto previamente cancelado en la base de datos para seat_1
+        cancelled_ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_1,
+            user_email="previous_buyer@test.com",
+            status="cancelled",
+            stripe_session_id="cs_old_cancelled_session"
+        )
+        self.assertEqual(cancelled_ticket.status, 'cancelled')
+
+        # 2. Un nuevo comprador intenta comprar seat_1 a través del endpoint de checkout
+        buyer_client = APIClient()
+        checkout_payload = {
+            'email': 'new_buyer@test.com',
+            'event_id': self.event.id,
+            'seat_ids': [self.seat_1.id],
+            'quantity': 1,
+            'phone': '5551234567'
+        }
+        res = buyer_client.post('/api/tickets/tickets/checkout/', checkout_payload, format='json')
+
+        # 3. La compra debe ser exitosa (HTTP 200) sin lanzar IntegrityError
+        self.assertEqual(res.status_code, 200, f"Checkout falló con código {res.status_code}: {res.data}")
+        self.assertEqual(res.data['status'], 'success')
+        self.assertEqual(res.data['session_id'], "cs_test_repurchase_123")
+
+        # 4. Verificar en base de datos que el nuevo boleto fue creado y el cancelado se desvinculó
+        cancelled_ticket.refresh_from_db()
+        self.assertIsNone(cancelled_ticket.seat, "El boleto cancelado debe haber desvinculado el asiento.")
+
+        new_ticket = Ticket.objects.get(event=self.event, seat=self.seat_1, status='reserved')
+        self.assertEqual(new_ticket.user_email, 'new_buyer@test.com')
+        self.assertEqual(new_ticket.stripe_session_id, "cs_test_repurchase_123")
+
