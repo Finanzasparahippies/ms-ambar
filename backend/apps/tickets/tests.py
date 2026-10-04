@@ -1239,6 +1239,75 @@ class TicketsAppTests(APITestCase):
         self.assertEqual(res_ok.status_code, status.HTTP_200_OK)
         self.assertEqual(res_ok.data.get('session_url'), 'https://checkout.stripe.com/test_orphan')
 
+    def test_redeem_unauthenticated_rejected_401_or_403(self):
+        """Verifica que un intento de canje sin autenticación sea rechazado de inmediato."""
+        ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_std,
+            user_email="fan@example.com",
+            status='paid'
+        )
+        self.client.force_authenticate(user=None)
+        res = self.client.post('/api/tickets/tickets/redeem/', {
+            'qr_payload': f"https://msambar.com/staff/scan?token={ticket.token}"
+        }, format='json')
+        self.assertIn(res.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+    def test_redeem_non_staff_rejected_403(self):
+        """Verifica que un usuario comprador autenticado pero sin rol de staff reciba HTTP 403."""
+        ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_vip,
+            user_email="fan2@example.com",
+            status='paid'
+        )
+        self.client.force_authenticate(user=self.user)  # buyer is not staff
+        res = self.client.post('/api/tickets/tickets/redeem/', {
+            'qr_payload': f"https://msambar.com/staff/scan?token={ticket.token}"
+        }, format='json')
+        self.assertEqual(res.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_redeem_staff_succeeds_and_logs_operator(self):
+        """Verifica que un operador staff autenticado canjee el boleto y registre la auditoría."""
+        from apps.tickets.models import TicketCheckInAudit
+        from apps.tickets.access.qr_crypto import generate_qr_payload
+
+        ticket = Ticket.objects.create(
+            event=self.event,
+            seat=self.seat_vip,
+            user_email="vip_holder@example.com",
+            user_phone="6621000000",
+            status='paid',
+            has_mg=True
+        )
+        qr_url = generate_qr_payload(ticket, format_type='url')
+
+        self.client.force_authenticate(user=self.admin_user)
+        res = self.client.post('/api/tickets/tickets/redeem/', {
+            'qr_payload': qr_url,
+            'scanner_device_id': 'staff-terminal-01',
+            'location': 'Puerta VIP'
+        }, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.data
+        self.assertEqual(data.get('code'), 'TICKET_SUCCESS')
+        self.assertEqual(data.get('attendee', {}).get('email'), 'vip_holder@example.com')
+        self.assertTrue(data.get('has_mg'))
+        self.assertIn('A', data.get('physical_location', ''))
+
+        # Verificar actualización del boleto
+        ticket.refresh_from_db()
+        self.assertTrue(ticket.is_scanned)
+        self.assertEqual(ticket.status, 'used')
+
+        # Verificar auditoría con operador
+        audit = TicketCheckInAudit.objects.filter(ticket=ticket).first()
+        self.assertIsNotNone(audit)
+        self.assertEqual(audit.operator, self.admin_user)
+        self.assertEqual(audit.status_result, TicketCheckInAudit.STATUS_SUCCESS)
+        self.assertEqual(audit.scanner_device_id, 'staff-terminal-01')
+
 
 
 

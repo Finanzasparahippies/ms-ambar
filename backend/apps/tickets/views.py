@@ -460,9 +460,9 @@ class TicketViewSet(viewsets.ModelViewSet):
     serializer_class = TicketSerializer
 
     def get_permissions(self):
-        if self.action in ['checkout', 'by_session', 'retrieve', 'apple_pass', 'google_wallet_link', 'redeem']:
+        if self.action in ['checkout', 'by_session', 'retrieve', 'apple_pass', 'google_wallet_link']:
             return [permissions.AllowAny()]
-        elif self.action in ['validate', 'toggle_checkin']:
+        elif self.action in ['validate', 'toggle_checkin', 'redeem']:
             return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated()]
 
@@ -582,11 +582,12 @@ class TicketViewSet(viewsets.ModelViewSet):
         except Ticket.DoesNotExist:
             return Response({'error': 'Boleto Inválido o Falsificado.'}, status=404)
 
-    @action(detail=False, methods=['post'], url_path='redeem', permission_classes=[permissions.AllowAny])
+    @action(detail=False, methods=['post'], url_path='redeem', permission_classes=[permissions.IsAuthenticated, permissions.IsAdminUser])
     def redeem(self, request):
         """
         Canje y redención atómica de boletos mediante payload de código QR o deep link.
         POST /api/tickets/tickets/redeem/
+        Requiere autenticación con rol de Staff o Superuser.
         """
         qr_payload = (
             request.data.get('qr_payload') or

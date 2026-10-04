@@ -127,10 +127,19 @@ def process_ticket_checkin(
                         f"Intento duplicado en '{scanner_device_id}' ({location})."
                     )
 
+                    # Obtener detalles del canje original previo
+                    prev_audit = TicketCheckInAudit.objects.filter(
+                        ticket=ticket,
+                        status_result=TicketCheckInAudit.STATUS_SUCCESS
+                    ).order_by('scanned_at').first()
+
+                    checked_in_by = prev_audit.operator_name if prev_audit and prev_audit.operator_name else "Staff Autorizado"
+
                     conflict_payload = {
                         "status": "ALREADY_USED",
                         "code": "TICKET_ALREADY_USED",
                         "checked_in_at": scanned_iso,
+                        "checked_in_by": checked_in_by,
                         "message": already_used_msg,
                         "ticket_id": ticket.id,
                         "event": ticket.event.title if ticket.event else "",
