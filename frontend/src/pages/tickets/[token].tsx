@@ -8,7 +8,8 @@ import { Calendar, MapPin, Armchair, Mail, ChevronLeft, ShieldCheck, AlertCircle
 import api from '../../lib/api';
 import { getApiUrl } from '../../lib/utils';
 import ThemedSection from '../../components/ThemedSection';
-import { formatSeatAssignment } from '../../lib/seatMapLoader';
+import { formatSeatAssignment, getSeatAssignmentParts } from '../../lib/seatMapLoader';
+import { MobileWalletBadges } from '../../components/AppleWalletButton';
 
 const formatoHoraOficial = (fechaString: string) => {
   if (!fechaString) return "--:--";
@@ -254,6 +255,16 @@ export default function TicketPage() {
                   Boleto Verificado y Activo
                 </div>
               )}
+
+              {/* Mobile Wallet Badges (Apple Wallet & Google Wallet) */}
+              <div className="w-full mt-6">
+                <MobileWalletBadges
+                  ticketToken={ticket.token}
+                  ticketId={ticket.id}
+                  applePassUrl={ticket.apple_pass_url || `/api/tickets/${ticket.token}/apple-pass/`}
+                  googleWalletUrl={ticket.google_wallet_link_url || `/api/tickets/${ticket.token}/google-wallet-link/`}
+                />
+              </div>
             </div>
 
             {/* Ticket Info Section */}
@@ -299,20 +310,42 @@ export default function TicketPage() {
                   <div className="col-span-2">
                     <div className="flex items-start gap-2.5">
                       <Armchair className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                      <div>
-                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-0.5">Ubicación / Asignación</span>
-                        <span className="text-xs text-neutral-200 font-medium block">
-                          {ticket.seat || ticket.seat_row ? (
-                            formatSeatAssignment({
-                              row_letter: ticket.seat?.row_letter || ticket.seat_row_letter,
-                              table_number: ticket.seat?.table_number || ticket.table_number,
-                              row: ticket.seat?.row || ticket.seat_row,
-                              number: ticket.seat?.number || ticket.seat_number || '—'
-                            })
-                          ) : (
-                            ticket.seat_display || 'Pase General'
-                          )}
-                        </span>
+                      <div className="w-full">
+                        <span className="text-[10px] uppercase text-neutral-500 font-mono tracking-widest block mb-1.5">Ubicación / Asignación</span>
+                        {(() => {
+                          const seatParts = getSeatAssignmentParts(ticket);
+                          if (seatParts.isGeneralAdmission) {
+                            return (
+                              <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-neutral-800/80 text-neutral-200 border border-neutral-700">
+                                {seatParts.sectionText || ticket.seat_display || 'Entrada General'}
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              {seatParts.sectionText && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                  {seatParts.sectionText}
+                                </span>
+                              )}
+                              {seatParts.tableText && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-800/80 text-neutral-200 border border-neutral-700/60">
+                                  {seatParts.tableText}
+                                </span>
+                              )}
+                              {seatParts.rowText && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-neutral-800/80 text-neutral-200 border border-neutral-700/60">
+                                  {seatParts.rowText}
+                                </span>
+                              )}
+                              {seatParts.seatText && (
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-neutral-800 text-white border border-neutral-600">
+                                  {seatParts.seatText}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

@@ -73,6 +73,7 @@ SafeImageField = HybridImageField
 class SeatSerializer(serializers.ModelSerializer):
     row_label = serializers.SerializerMethodField()
     row_letter = serializers.SerializerMethodField()
+    table_label = serializers.SerializerMethodField()
     is_complimentary_eligible = serializers.SerializerMethodField()
 
     class Meta:
@@ -80,8 +81,12 @@ class SeatSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'section', 'row', 'number', 'category', 'status',
             'base_price', 'x', 'y', 'angle', 'color', 'row_label',
-            'row_letter', 'is_complimentary_eligible'
+            'row_letter', 'table_label', 'is_complimentary_eligible'
         ]
+
+    def get_table_label(self, obj):
+        from apps.tickets.utils import extract_table_label
+        return extract_table_label(obj)
 
     def get_row_letter(self, obj):
         import re
@@ -312,6 +317,8 @@ class TicketSerializer(serializers.ModelSerializer):
     theater_name = serializers.SerializerMethodField()
     theater_location = serializers.SerializerMethodField()
     seat_display = serializers.SerializerMethodField()
+    section_name = serializers.SerializerMethodField()
+    seat_detail = SeatSerializer(source='seat', read_only=True)
     qr_payload = serializers.SerializerMethodField()
     apple_pass_url = serializers.SerializerMethodField()
     google_wallet_link_url = serializers.SerializerMethodField()
@@ -319,6 +326,15 @@ class TicketSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ticket
         fields = '__all__'
+
+    def get_section_name(self, obj):
+        if obj.seat and obj.seat.section:
+            return obj.seat.section
+        if obj.ga_zone:
+            return obj.ga_zone.name
+        if obj.event and obj.event.event_type == 'meet_greet':
+            return "Meet & Greet"
+        return "Entrada General"
 
     def get_qr_payload(self, obj):
         from apps.tickets.access.qr_crypto import generate_qr_payload
@@ -341,10 +357,10 @@ class TicketSerializer(serializers.ModelSerializer):
             from apps.tickets.utils import format_seat_assignment
             return format_seat_assignment(obj.seat)
         if obj.ga_zone:
-            return f"GA: {obj.ga_zone.name}"
+            return f"Zona: {obj.ga_zone.name}"
         if obj.event and obj.event.event_type == 'meet_greet':
-            return "Meet & Greet"
-        return "General / Sin Asiento"
+            return "Pase Meet & Greet"
+        return "Entrada General"
 
 
 class SiteSettingsSerializer(serializers.ModelSerializer):

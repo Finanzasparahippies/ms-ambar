@@ -21,113 +21,180 @@ export interface SeatDataInput {
 }
 
 export interface FormattedSeatParts {
+  sectionText?: string;
   rowText?: string;
   tableText?: string;
   seatText: string;
-  formattedText?: string;
+  formattedText: string;
+  isGeneralAdmission: boolean;
 }
 
 /**
  * Helper canónico de formateo de asignación de asiento.
- * Elimina prefijos redundantes ("Fila Fila F" -> "Fila: F", "Mesa Mesa 5" -> "Mesa: 5")
- * y retorna la jerarquía canónica: "Fila: F · Mesa: 4 · Asiento: 13"
+ * Retorna la jerarquía canónica: "Sección: VIP · Fila: F · Mesa: 4 · Asiento: 13"
+ * Maneja defensivamente objetos Seat, objetos Ticket y strings seat_display.
  */
-export function formatSeatAssignment(seat: {
+export function formatSeatAssignment(seat?: {
+  section?: string;
+  section_name?: string;
   row_letter?: string;
   table_number?: string | number;
-  number: number | string;
+  number?: number | string;
+  seat_number?: number | string;
   row?: string;
+  seat_row?: string;
   table_label?: string;
-}): string {
-  const parts: string[] = [];
-
-  // Extraer y limpiar letra de fila
-  let cleanRowLetter = seat.row_letter;
-  if (!cleanRowLetter && seat.row) {
-    const rawClean = String(seat.row).replace(/^fila\s*:?\s*/i, '').trim();
-    if (!rawClean.toLowerCase().startsWith('mesa')) {
-      cleanRowLetter = rawClean;
-    }
-  }
-
-  if (cleanRowLetter) {
-    const pureLetter = String(cleanRowLetter).replace(/^fila\s*:?\s*/i, '').trim();
-    if (pureLetter) {
-      parts.push(`Fila: ${pureLetter.toUpperCase()}`);
-    }
-  }
-
-  // Extraer y limpiar número de mesa
-  let cleanTableNum = seat.table_number;
-  if (cleanTableNum === undefined && seat.table_label) {
-    const match = String(seat.table_label).match(/\d+/);
-    if (match) cleanTableNum = match[0];
-  }
-  if (cleanTableNum === undefined && seat.row && String(seat.row).toLowerCase().includes('mesa')) {
-    const match = String(seat.row).match(/\d+/);
-    if (match) cleanTableNum = match[0];
-  }
-
-  if (cleanTableNum !== undefined && cleanTableNum !== null && String(cleanTableNum).trim() !== '') {
-    const pureTable = String(cleanTableNum).replace(/^mesa\s*:?\s*/i, '').trim();
-    if (pureTable) {
-      parts.push(`Mesa: ${pureTable}`);
-    }
-  }
-
-  const pureSeat = String(seat.number).replace(/^asiento\s*:?\s*/i, '').trim();
-  parts.push(`Asiento: ${pureSeat}`);
-  return parts.join(' · '); // Resultado canónico: "Fila: F · Mesa: 4 · Asiento: 13"
+  seat_display?: string;
+  seat?: any;
+  seat_detail?: any;
+  ga_zone?: any;
+  [key: string]: any;
+} | null): string {
+  if (!seat) return 'Entrada General';
+  return getSeatAssignmentParts(seat).formattedText;
 }
 
 /**
  * Retorna las partes estructuradas para renderizado jerárquico con estilos independientes.
+ * Descompone con seguridad boletos numerados, zonas generales y deserializaciones planas de DRF.
  */
-export function getSeatAssignmentParts(seat: {
-  row_letter?: string;
-  table_number?: string | number;
-  number: number | string;
-  row?: string;
-  table_label?: string;
-}): FormattedSeatParts {
-  let cleanRowLetter = seat.row_letter;
-  if (!cleanRowLetter && seat.row) {
-    const rawClean = String(seat.row).replace(/^fila\s*:?\s*/i, '').trim();
+export function getSeatAssignmentParts(input?: any): FormattedSeatParts {
+  if (!input) {
+    return {
+      seatText: 'Entrada General',
+      formattedText: 'Entrada General',
+      isGeneralAdmission: true,
+    };
+  }
+
+  // Si input es un string plano
+  if (typeof input === 'string') {
+    return {
+      seatText: input,
+      formattedText: input,
+      isGeneralAdmission: input.toLowerCase().includes('general') || input.toLowerCase().includes('meet'),
+    };
+  }
+
+  // Detectar objeto seat anidado si nos pasaron un Ticket
+  const actualSeat =
+    input.seat_detail && typeof input.seat_detail === 'object'
+      ? input.seat_detail
+      : typeof input.seat === 'object' && input.seat !== null
+      ? input.seat
+      : input;
+
+  // 1. Detección de Admisión General / Meet & Greet
+  const isGA = Boolean(
+    input.ga_zone ||
+    input.is_seatless ||
+    (input.seat_display && (
+      input.seat_display.toLowerCase().includes('general') ||
+      input.seat_display.toLowerCase().includes('meet & greet') ||
+      input.seat_display.toLowerCase().includes('sin asiento')
+    )) ||
+    (!actualSeat && !input.seat_row && !input.number && !input.seat_number)
+  );
+
+  if (isGA) {
+    const gaLabel =
+      input.ga_zone?.name ||
+      input.section_name ||
+      (input.seat_display && !input.seat_display.includes('—') ? input.seat_display : 'Entrada General');
+
+    return {
+      sectionText: gaLabel.toLowerCase().includes('general') ? undefined : gaLabel,
+      seatText: gaLabel,
+      formattedText: gaLabel,
+      isGeneralAdmission: true,
+    };
+  }
+
+  // 2. Extracción y normalización de Sección
+  let sectionText: string | undefined = undefined;
+  const rawSection = actualSeat?.section || input.section || input.section_name;
+  if (rawSection) {
+    const cleanSection = String(rawSection).replace(/^secci[oó]n\s*:?\s*/i, '').trim();
+    if (cleanSection && cleanSection.toLowerCase() !== 'general') {
+      sectionText = `Sección: ${cleanSection}`;
+    }
+  }
+
+  // 3. Extracción y normalización de Fila
+  let rowText: string | undefined = undefined;
+  let cleanRowLetter = actualSeat?.row_letter || input.row_letter;
+  const rawRow = actualSeat?.row || input.seat_row || input.row;
+  if (!cleanRowLetter && rawRow) {
+    const rawClean = String(rawRow).replace(/^fila\s*:?\s*/i, '').trim();
     if (!rawClean.toLowerCase().startsWith('mesa')) {
       cleanRowLetter = rawClean;
     }
   }
-
-  let rowText: string | undefined = undefined;
   if (cleanRowLetter) {
     const pureLetter = String(cleanRowLetter).replace(/^fila\s*:?\s*/i, '').trim();
-    if (pureLetter) rowText = `Fila: ${pureLetter.toUpperCase()}`;
+    if (pureLetter) {
+      rowText = `Fila: ${pureLetter.toUpperCase()}`;
+    }
   }
 
-  let cleanTableNum = seat.table_number;
-  if (cleanTableNum === undefined && seat.table_label) {
-    const match = String(seat.table_label).match(/\d+/);
-    if (match) cleanTableNum = match[0];
-  }
-  if (cleanTableNum === undefined && seat.row && String(seat.row).toLowerCase().includes('mesa')) {
-    const match = String(seat.row).match(/\d+/);
-    if (match) cleanTableNum = match[0];
-  }
-
+  // 4. Extracción y normalización de Mesa
   let tableText: string | undefined = undefined;
+  let cleanTableNum = actualSeat?.table_number ?? input.table_number;
+  const rawTableLabel = actualSeat?.table_label ?? input.table_label;
+  if (cleanTableNum === undefined && rawTableLabel) {
+    const match = String(rawTableLabel).match(/\d+/);
+    if (match) cleanTableNum = match[0];
+  }
+  if (cleanTableNum === undefined && rawRow && String(rawRow).toLowerCase().includes('mesa')) {
+    const match = String(rawRow).match(/\d+/);
+    if (match) cleanTableNum = match[0];
+  }
   if (cleanTableNum !== undefined && cleanTableNum !== null && String(cleanTableNum).trim() !== '') {
     const pureTable = String(cleanTableNum).replace(/^mesa\s*:?\s*/i, '').trim();
-    if (pureTable) tableText = `Mesa: ${pureTable}`;
+    if (pureTable) {
+      tableText = `Mesa: ${pureTable}`;
+    }
   }
 
-  const pureSeat = String(seat.number).replace(/^asiento\s*:?\s*/i, '').trim();
-  const seatText = `Asiento: ${pureSeat}`;
+  // 5. Extracción y normalización de Asiento
+  const rawSeatNumber = actualSeat?.number ?? input.seat_number ?? input.number;
+  let pureSeat: string | null = null;
+  if (
+    rawSeatNumber !== undefined &&
+    rawSeatNumber !== null &&
+    String(rawSeatNumber).trim() !== '' &&
+    String(rawSeatNumber).trim() !== '—'
+  ) {
+    pureSeat = String(rawSeatNumber).replace(/^asiento\s*:?\s*/i, '').trim();
+  }
+
+  // Fallback inteligente: si pureSeat no se pudo extraer (ej. seat era sólo un ID numérico),
+  // descomponer el string seat_display que genera el backend
+  if (!pureSeat && input.seat_display && typeof input.seat_display === 'string' && !input.seat_display.includes('—')) {
+    const chunks = input.seat_display.split('·').map((c: string) => c.trim());
+    for (const chunk of chunks) {
+      if (/^secci[oó]n/i.test(chunk) && !sectionText) sectionText = chunk;
+      else if (/^mesa/i.test(chunk) && !tableText) tableText = chunk;
+      else if (/^fila/i.test(chunk) && !rowText) rowText = chunk;
+      else if (/^asiento/i.test(chunk)) pureSeat = chunk.replace(/^asiento\s*:?\s*/i, '').trim();
+    }
+  }
+
+  const seatText = pureSeat ? `Asiento: ${pureSeat}` : 'Asiento Asignado';
+
+  const parts: string[] = [];
+  if (sectionText) parts.push(sectionText);
+  if (rowText) parts.push(rowText);
+  if (tableText) parts.push(tableText);
+  parts.push(seatText);
 
   return {
+    sectionText,
     rowText,
     tableText,
     seatText,
-    formattedText: formatSeatAssignment(seat)
+    formattedText: parts.join(' · '),
+    isGeneralAdmission: false,
   };
 }
 

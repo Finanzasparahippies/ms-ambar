@@ -15,17 +15,16 @@ from config.email_waterfall import dispatch_email_async
 logger = logging.getLogger(__name__)
 
 
-def format_seat_assignment(seat):
+def extract_table_label(seat):
     """
-    Formato canónico de asignación de asiento sin duplicaciones ('Fila: F · Mesa: 4 · Asiento: 13').
+    Extrae la etiqueta de mesa vinculada a un asiento desde el layout del teatro o del campo row.
     """
     if not seat:
-        return ""
-    row_raw = str(getattr(seat, 'row', '') or '').strip()
-    row_clean = re.sub(r'^fila\s*:?\s*', '', row_raw, flags=re.IGNORECASE).strip()
-
+        return None
     table_label = None
     theater = getattr(seat, 'theater', None)
+    row_raw = str(getattr(seat, 'row', '') or '').strip()
+    row_clean = re.sub(r'^fila\s*:?\s*', '', row_raw, flags=re.IGNORECASE).strip()
     if theater and isinstance(theater.layout, dict):
         layout_seats = theater.layout.get('seats', [])
         layout_elements = theater.layout.get('map_elements', [])
@@ -42,11 +41,36 @@ def format_seat_assignment(seat):
                 if math.hypot(el.get('x', 0) - getattr(seat, 'x', 0), el.get('y', 0) - getattr(seat, 'y', 0)) <= 80:
                     table_label = el.get('label')
                     break
+    if not table_label and row_raw.lower().startswith('mesa'):
+        table_label = row_raw
+    return table_label
+
+
+def format_seat_assignment(seat):
+    """
+    Formato canónico de asignación de asiento sin duplicaciones:
+    'Sección VIP · Fila: F · Mesa: 4 · Asiento: 13'
+    """
+    if not seat:
+        return ""
 
     parts = []
+
+    # 1. Sección física
+    section_raw = str(getattr(seat, 'section', '') or '').strip()
+    if section_raw:
+        clean_section = re.sub(r'^secci[oó]n\s*:?\s*', '', section_raw, flags=re.IGNORECASE).strip()
+        if clean_section and clean_section.lower() != 'general':
+            parts.append(f"Sección {clean_section}")
+
+    # 2. Fila
+    row_raw = str(getattr(seat, 'row', '') or '').strip()
+    row_clean = re.sub(r'^fila\s*:?\s*', '', row_raw, flags=re.IGNORECASE).strip()
     if row_clean and not row_clean.lower().startswith('mesa'):
         parts.append(f"Fila {row_clean.upper()}")
 
+    # 3. Mesa
+    table_label = extract_table_label(seat)
     if table_label:
         pure_tbl = re.sub(r'^mesa\s*:?\s*', '', str(table_label), flags=re.IGNORECASE).strip()
         if pure_tbl:
@@ -56,9 +80,12 @@ def format_seat_assignment(seat):
         if pure_tbl:
             parts.append(f"Mesa {pure_tbl}")
 
-    pure_num = re.sub(r'^asiento\s*:?\s*', '', str(seat.number), flags=re.IGNORECASE).strip()
-    parts.append(f"Asiento {pure_num}")
-    return " · ".join(parts)
+    # 4. Asiento
+    pure_num = re.sub(r'^asiento\s*:?\s*', '', str(getattr(seat, 'number', '') or '')).strip()
+    if pure_num:
+        parts.append(f"Asiento {pure_num}")
+
+    return " · ".join(parts) if parts else "Asiento Asignado"
 
 def generate_ticket_qr(ticket):
     """
