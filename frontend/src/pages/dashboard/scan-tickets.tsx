@@ -37,6 +37,7 @@ export default function ScanTicketsPage() {
   const [scanStatusType, setScanStatusType] = useState<'success' | 'already_used' | 'error' | null>(null);
 
   const html5QrCodeRef = useRef<any>(null);
+  const lastScanTimeRef = useRef<number>(0);
   const readerId = "qr-reader-container";
 
   // 1. Auth check
@@ -150,22 +151,27 @@ export default function ScanTicketsPage() {
     try {
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length > 0) {
-        setCameras(devices);
-        const backCamera = devices.find(d =>
-          d.label.toLowerCase().includes('back') ||
-          d.label.toLowerCase().includes('trasera') ||
-          d.label.toLowerCase().includes('environment') ||
-          d.label.toLowerCase().includes('entorno')
-        );
-        const defaultCamId = backCamera ? backCamera.id : devices[0].id;
+        // Filtrar enumerateDevices para excluir cámaras frontales / selfie
+        const rearDevices = devices.filter(d => {
+          const l = (d.label || '').toLowerCase();
+          return !l.includes('front') && !l.includes('delantera') && !l.includes('selfie') && !l.includes('user');
+        });
+        const curatedCameras = rearDevices.length > 0 ? rearDevices : devices;
+        setCameras(curatedCameras);
+
+        const backCamera = curatedCameras.find(d => {
+          const l = (d.label || '').toLowerCase();
+          return l.includes('back') || l.includes('trasera') || l.includes('environment') || l.includes('entorno');
+        });
+        const defaultCamId = backCamera ? backCamera.id : curatedCameras[0].id;
         setSelectedCameraId(defaultCamId);
       }
       // Start with environment facingMode to force rear-facing camera autofocus
-      initScannerInstance(Html5Qrcode, { facingMode: "environment" });
+      initScannerInstance(Html5Qrcode, { facingMode: { ideal: "environment" }, width: { ideal: 1280 } });
     } catch (e) {
       console.warn("Camera enumeration failed, fallback directly to facingMode:", e);
       try {
-        initScannerInstance(Html5Qrcode, { facingMode: "environment" });
+        initScannerInstance(Html5Qrcode, { facingMode: { ideal: "environment" }, width: { ideal: 1280 } });
       } catch (err) {
         console.error("Camera access failed:", err);
         alert("Error al acceder a la cámara. Por favor concede permisos.");
@@ -237,16 +243,27 @@ export default function ScanTicketsPage() {
     // If a result is already showing, ignore new scans
     if (scanResult || scanError || isValidating) return;
 
-    let token = decodedText.trim();
-    // Parse UUID if it is a full URL e.g. https://msambar.com/tickets/UUID
-    if (token.includes('/tickets/')) {
+    const trimmed = decodedText.trim();
+    let token = trimmed;
+    let sig: string | undefined;
+    let ts: string | undefined;
+
+    // Check if canonical URL e.g. https://msambar.com/staff/scan?token=UUID&sig=HEX
+    if (trimmed.includes('?')) {
+      try {
+        const urlObj = new URL(trimmed, typeof window !== 'undefined' ? window.location.origin : 'https://msambar.com');
+        token = urlObj.searchParams.get('token') || token;
+        sig = urlObj.searchParams.get('sig') || undefined;
+        ts = urlObj.searchParams.get('ts') || undefined;
+      } catch {
+        // ignore parse error
+      }
+    } else if (token.includes('/tickets/')) {
       const parts = token.split('/tickets/');
       if (parts.length > 1) {
-        // Grab the UUID token (removing query params if any)
         token = parts[1].split('?')[0].split('#')[0];
       }
     } else if (token.startsWith('{')) {
-      // Handle JSON data format
       try {
         const obj = JSON.parse(token);
         if (obj.token) token = obj.token;
@@ -255,10 +272,10 @@ export default function ScanTicketsPage() {
       }
     }
 
-    validateTicketToken(token);
+    validateTicketToken(token, trimmed, sig, ts);
   };
 
-  const validateTicketToken = async (token: string) => {
+  const validateTicketToken = async (token: string, rawPayload?: string, sig?: string, ts?: string) => {
     if (!token) return;
     setIsValidating(true);
     stopScanner(); // Pause camera reader during api validation
@@ -267,12 +284,14 @@ export default function ScanTicketsPage() {
 
     try {
       const payload: Record<string, any> = {
-        qr_payload: token,
+        qr_payload: rawPayload || token,
         token: token,
         scanner_device_id: 'dashboard-scanner-01',
         location: 'Acceso Taquilla Principal',
         idempotency_key: idempotencyKey
       };
+      if (sig) payload.sig = sig;
+      if (ts) payload.ts = ts;
       if (selectedEventId) payload.event_id = selectedEventId;
 
       const res = await api.post('/tickets/scanner/check-in/', payload, {

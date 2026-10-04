@@ -582,6 +582,52 @@ class TicketViewSet(viewsets.ModelViewSet):
         except Ticket.DoesNotExist:
             return Response({'error': 'Boleto Inválido o Falsificado.'}, status=404)
 
+    @action(detail=False, methods=['post'], url_path='redeem', permission_classes=[permissions.AllowAny])
+    def redeem(self, request):
+        """
+        Canje y redención atómica de boletos mediante payload de código QR o deep link.
+        POST /api/tickets/tickets/redeem/
+        """
+        qr_payload = (
+            request.data.get('qr_payload') or
+            request.data.get('token') or
+            request.query_params.get('token')
+        )
+        if not qr_payload:
+            return Response({
+                "status": "BAD_REQUEST",
+                "code": "TICKET_INVALID",
+                "message": "qr_payload o token es requerido para procesar el canje."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Si vino signature separada en request.data o query params
+        sig = request.data.get('sig') or request.query_params.get('sig')
+        ts = request.data.get('ts') or request.query_params.get('ts')
+        if sig and 'sig=' not in str(qr_payload) and ':' not in str(qr_payload):
+            if ts:
+                qr_payload = f"{qr_payload}:{ts}:{sig}"
+            else:
+                qr_payload = f"{qr_payload}:{sig}"
+
+        scanner_device_id = str(request.data.get('scanner_device_id', 'gate-scanner')).strip() or 'gate-scanner'
+        location = str(request.data.get('location', 'Acceso Principal')).strip() or 'Acceso Principal'
+        idempotency_key = (
+            request.data.get('idempotency_key') or
+            request.headers.get('X-Idempotency-Key')
+        )
+
+        from apps.tickets.access.checkin_engine import process_ticket_checkin
+
+        result = process_ticket_checkin(
+            qr_payload=qr_payload,
+            scanner_device_id=scanner_device_id,
+            location=location,
+            operator=request.user if request.user.is_authenticated else None,
+            idempotency_key=idempotency_key
+        )
+
+        return Response(result["data"], status=result["status_code"])
+
     @action(detail=True, methods=['post'], url_path='toggle_checkin')
     def toggle_checkin(self, request, pk=None):
         """

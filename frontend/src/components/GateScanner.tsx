@@ -22,6 +22,7 @@ export const GateScanner: React.FC<{ eventId?: string | number; deviceId?: strin
   const [scanResult, setScanResult] = useState<CheckInResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const lastScanTimeRef = useRef<number>(0);
   const containerId = 'qr-reader-gate-viewport';
 
   // Haptic feedback & Web Audio API fallback
@@ -58,6 +59,10 @@ export const GateScanner: React.FC<{ eventId?: string | number; deviceId?: strin
   };
 
   const handleQrDecoded = useCallback(async (rawPayload: string) => {
+    const now = Date.now();
+    if (now - lastScanTimeRef.current < 300) return;
+    lastScanTimeRef.current = now;
+
     if (fsmState === 'VALIDATING') return;
 
     if (scannerRef.current) {
@@ -71,11 +76,29 @@ export const GateScanner: React.FC<{ eventId?: string | number; deviceId?: strin
     setFsmState('VALIDATING');
     const idempotencyKey = `${deviceId}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
+    // Parse token/sig if formatted as verification URL
+    let token = rawPayload.trim();
+    let sig: string | undefined;
+    let ts: string | undefined;
+    if (rawPayload.includes('?')) {
+      try {
+        const urlObj = new URL(rawPayload.trim(), typeof window !== 'undefined' ? window.location.origin : 'https://msambar.com');
+        token = urlObj.searchParams.get('token') || token;
+        sig = urlObj.searchParams.get('sig') || undefined;
+        ts = urlObj.searchParams.get('ts') || undefined;
+      } catch {
+        // fallback to raw
+      }
+    }
+
     try {
       const response = await api.post(
         '/tickets/scanner/check-in/',
         {
           qr_payload: rawPayload.trim(),
+          token: token,
+          sig: sig,
+          ts: ts,
           scanner_device_id: deviceId,
           location: 'Acceso Taquilla Principal',
           idempotency_key: idempotencyKey,
@@ -124,8 +147,8 @@ export const GateScanner: React.FC<{ eventId?: string | number; deviceId?: strin
       }
 
       await scannerRef.current.start(
-        { facingMode: 'environment' },
-        { fps: 15, qrbox: { width: 260, height: 260 } },
+        { facingMode: { ideal: 'environment' } },
+        { fps: 15, qrbox: { width: 260, height: 260 }, aspectRatio: 1.0 },
         handleQrDecoded,
         () => { /* Ignorar frames sin QR */ }
       );

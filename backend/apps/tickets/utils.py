@@ -97,16 +97,19 @@ def format_seat_assignment(seat_or_ticket):
 
 def generate_ticket_qr(ticket):
     """
-    Generates a QR code PNG image for a ticket token.
-    Returns raw bytes of the PNG image.
+    Genera la imagen PNG del código QR de acceso oficial.
+    Utiliza el deep link universal con firma criptográfica HMAC-SHA256:
+    https://msambar.com/staff/scan?token={token}&sig={signature}&ts={timestamp}
     """
+    from apps.tickets.access.qr_crypto import generate_qr_payload
+    data = generate_qr_payload(ticket, format_type='url')
+
     qr = qrcode.QRCode(
-        version=1,
+        version=None,
         error_correction=qrcode.constants.ERROR_CORRECT_M,
         box_size=10,
         border=4,
     )
-    data = f"{settings.FRONTEND_URL}/tickets/{ticket.token}"
     qr.add_data(data)
     qr.make(fit=True)
 

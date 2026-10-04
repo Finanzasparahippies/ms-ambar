@@ -338,7 +338,7 @@ class TicketSerializer(serializers.ModelSerializer):
 
     def get_qr_payload(self, obj):
         from apps.tickets.access.qr_crypto import generate_qr_payload
-        return generate_qr_payload(obj, format_type='compact')
+        return generate_qr_payload(obj, format_type='url')
 
     def get_apple_pass_url(self, obj):
         return f"/api/tickets/{obj.token}/apple-pass/"

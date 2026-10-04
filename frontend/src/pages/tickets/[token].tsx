@@ -234,11 +234,10 @@ export default function TicketPage() {
 
               <div className="bg-white p-4 rounded-3xl shadow-[0_0_30px_rgba(255,255,255,0.08)] mb-6 transition-transform duration-300 hover:scale-105">
                 <QRCodeSVG
-                  value={JSON.stringify({
-                    token: ticket.token,
-                    event: ticket.event_title,
-                    seat: ticket.seat_display
-                  })}
+                  value={
+                    ticket.qr_payload ||
+                    `${typeof window !== 'undefined' ? window.location.origin : 'https://msambar.com'}/staff/scan?token=${ticket.token}`
+                  }
                   size={200}
                   level="H"
                 />

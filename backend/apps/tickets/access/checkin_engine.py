@@ -68,7 +68,7 @@ def process_ticket_checkin(
             operator_name=operator_name,
             idempotency_key=idempotency_key,
             status_result=TicketCheckInAudit.STATUS_INVALID,
-            response_payload={"error": error_msg},
+            response_payload={"error": error_msg, "code": "TICKET_INVALID"},
             notes=f"Fallo de verificación criptográfica: {error_msg} | Payload recibido: {qr_payload[:50]}..."
         )
         return {
@@ -76,6 +76,7 @@ def process_ticket_checkin(
             "status_code": 400,
             "data": {
                 "status": "INVALID_QR",
+                "code": "TICKET_INVALID",
                 "message": error_msg
             }
         }
@@ -128,6 +129,7 @@ def process_ticket_checkin(
 
                     conflict_payload = {
                         "status": "ALREADY_USED",
+                        "code": "TICKET_ALREADY_USED",
                         "checked_in_at": scanned_iso,
                         "message": already_used_msg,
                         "ticket_id": ticket.id,
@@ -216,6 +218,7 @@ def process_ticket_checkin(
 
                 success_response = {
                     "status": "SUCCESS",
+                    "code": "TICKET_SUCCESS",
                     "message": "Acceso permitido.",
                     "physical_location": physical_location,
                     "attendee": {

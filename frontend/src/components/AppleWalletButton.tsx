@@ -142,8 +142,13 @@ export const MobileWalletBadges: React.FC<MobileWalletBadgesProps> = ({
   };
 
   return (
-    <div className={`w-full flex flex-col sm:flex-row items-center gap-3 ${className}`}>
-      {/* 1. Botón Apple Wallet */}
+    <div className={`w-full flex justify-center items-center ${className}`}>
+      {/* 
+        [TEMPORARY FREEZE] Apple Wallet CTA desactivado temporalmente mientras concluye
+        la activación del Developer Program institucional y la firma de Pass Type ID.
+        Se reactivará descomentando el siguiente bloque una vez instalados los certificados.
+      */}
+      {/* 
       <AppleWalletButton
         ticketToken={ticketToken}
         ticketId={ticketId}
@@ -151,9 +156,10 @@ export const MobileWalletBadges: React.FC<MobileWalletBadgesProps> = ({
         isPriority={isApple}
         className={isApple ? 'order-1' : isAndroid ? 'order-2' : 'order-1'}
       />
+      */}
 
-      {/* 2. Botón Google Wallet */}
-      <div className={`relative group w-full ${isAndroid ? 'order-1' : 'order-2'}`}>
+      {/* 2. Botón Google Wallet (Centrado) */}
+      <div className="relative group w-full max-w-sm">
         {isAndroid && (
           <span className="absolute -top-2.5 right-3 bg-[#4285F4] text-white text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md z-10 animate-pulse">
             Recomendado para Android
@@ -163,11 +169,7 @@ export const MobileWalletBadges: React.FC<MobileWalletBadgesProps> = ({
           onClick={handleGoogleWalletClick}
           disabled={isGoogleLoading}
           type="button"
-          className={`w-full flex items-center justify-center gap-3 bg-[#11131c] hover:bg-[#1a1e2d] active:scale-[0.98] transition-all duration-200 py-3.5 px-5 rounded-2xl border ${
-            isAndroid
-              ? 'border-[#4285F4]/70 shadow-[0_0_20px_rgba(66,133,244,0.25)]'
-              : 'border-white/20 hover:border-white/40'
-          } text-white select-none cursor-pointer disabled:opacity-50`}
+          className="w-full flex items-center justify-center gap-3 bg-[#11131c] hover:bg-[#1a1e2d] active:scale-[0.98] transition-all duration-200 py-3.5 px-5 rounded-2xl border border-white/20 hover:border-white/40 text-white select-none cursor-pointer disabled:opacity-50"
           title="Guardar en Google Wallet"
         >
           {isGoogleLoading ? (
