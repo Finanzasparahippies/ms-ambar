@@ -1189,6 +1189,7 @@ class TicketsAppTests(APITestCase):
         is_valid, _ = coupon.is_valid_for_event(self.event, user_email="otro@example.com")
         self.assertTrue(is_valid)
 
+    @override_settings(TESTING=False, STRIPE_SECRET_KEY='sk_test_valid_key', STRIPE_WEBHOOK_SECRET='whsec_valid_key')
     @patch('stripe.checkout.Session.create')
     def test_checkout_orphan_seat_warning_and_override(self, mock_stripe):
         """
